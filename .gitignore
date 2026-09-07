@@ -44,8 +44,5 @@ __pycache__/
 coverage/
 .cache/
 
-tests/
-**/test_*.js
-**/*test*.js
-!
-tests/README.md
+# Keep project validation scripts in the tests folder if needed
+# Do not ignore the tests directory itself in this repository.
