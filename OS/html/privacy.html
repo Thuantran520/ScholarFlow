@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title id="page-title">Chính Sách Quyền Riêng Tư – ScholarFlow</title>
+  <link rel="icon" type="image/png" href="../../icon.svg">
+  <link rel="stylesheet" href="../css/privacy.css">
+  <link rel="stylesheet" href="../css/content.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="header-left">
+        <div class="logo">
+          <img src="../../icon.svg" alt="ScholarFlow Logo">
+        </div>
+        <div class="title-box">
+          <h1 id="doc-title">ScholarFlow – Chính Sách Quyền Riêng Tư</h1>
+          <p id="last-updated">Cập nhật lần cuối: Tháng 09/2026 | Phiên bản 2.2.1</p>
+        </div>
+      </div>
+      <div class="lang-switcher">
+        <select id="select-privacy-lang" class="lang-select" title="Language / Ngôn ngữ">
+          <option value="vi" id="opt-vi">🇻🇳 Tiếng Việt</option>
+          <option value="en" id="opt-en">🇬🇧 English</option>
+          <option value="zh" id="opt-zh">🇨🇳 中文</option>
+          <option value="ru" id="opt-ru">🇷🇺 Русский</option>
+          <option value="ja" id="opt-ja">🇯🇵 日本語</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="badge-bar">
+      <div class="badge-verified" id="verified-badge">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>
+        <span id="verified-badge-text">Cam kết 100% Cục Bộ – Tuyệt Đối Không Thu Thập Dữ Liệu Cá Nhân</span>
+      </div>
+      <div class="badge-compliance" id="compliance-badge">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        <span id="compliance-badge-text">Tuân thủ Chrome Web Store &amp; Mozilla Add-ons Policies</span>
+      </div>
+    </div>
+
+    <div class="highlight-card">
+      <strong id="summary-title">Tuyên Bố Cốt Lõi (Privacy by Design): </strong>
+      <span id="summary-desc">ScholarFlow được phát triển theo tiêu chuẩn Privacy by Design. Mọi dữ liệu trích dẫn, ảnh chụp, video và lớp che mờ đều được xử lý 100% cục bộ trên trình duyệt của bạn. Tiện ích không có máy chủ lưu trữ dữ liệu, không có analytics và không bán dữ liệu người dùng.</span>
+    </div>
+
+    <h2 id="sec1-title">1. Các Loại Dữ Liệu Được Tiện Ích Xử Lý</h2>
+    <p id="sec1-p">ScholarFlow chỉ kích hoạt khi bạn chủ động thao tác trên trang web:</p>
+    <ul>
+      <li id="sec1-li1"><strong>Dữ liệu trích dẫn thư mục:</strong> Tiêu đề bài viết, tên tác giả, ngày công bố, tạp chí, số DOI và URL. Dữ liệu này chỉ dùng để định dạng trích dẫn theo chuẩn IEEE, APA 7, Harvard, MLA 9, BibTeX và lưu vào bộ nhớ cục bộ chrome.storage.local của trình duyệt bạn.</li>
+      <li id="sec1-li2"><strong>Ảnh chụp màn hình &amp; Video ghi lại:</strong> Toàn bộ khung hình chụp cuộn và luồng video quay lại màn hình được mã hóa trực tiếp trong RAM máy tính và cho phép bạn tải về máy cá nhân (PNG/WebM). Không có dữ liệu nào được truyền qua mạng.</li>
+      <li id="sec1-li3"><strong>Che mờ bảo mật phần tử (Redaction):</strong> Hiệu ứng làm mờ (blur) hoặc che đen (blackout) được áp dụng trực tiếp lên cây DOM tại trình duyệt cá nhân nhằm hỗ trợ chụp ảnh/chia sẻ an toàn mà không lộ thông tin cá nhân.</li>
+      <li id="sec1-li4"><strong>Cookie Phiên Đăng Nhập (Cookie Manager — v2.3.0+):</strong> Tính năng Quản lý Cookie cho phép bạn đọc và ghi cookie của trang web hiện tại <em>theo yêu cầu chủ động từ bạn</em>. Cookie chỉ được xử lý cục bộ trong trình duyệt, <strong>không bao giờ được truyền lên máy chủ của ScholarFlow</strong>. File xuất cookie (.json hoặc chuỗi) được lưu trực tiếp về máy tính của bạn và hoàn toàn nằm trong tầm kiểm soát của bạn.</li>
+    </ul>
+
+    <h2 id="sec2-title">2. Minh Bạch Quyền Hạn Trình Duyệt (Browser Permissions)</h2>
+    <p id="sec2-p">Tuân thủ chính sách sử dụng quyền hạn tối thiểu (Principle of Least Privilege) của Google và Mozilla:</p>
+    <ul>
+      <li id="sec2-li1"><code>activeTab</code>: Đọc metadata bài báo và chụp màn hình tab đang mở duy nhất khi bạn bấm kích hoạt tiện ích.</li>
+      <li id="sec2-li2"><code>scripting</code>: Cho phép hiển thị khung chọn vùng chụp và bộ công cụ che mờ đối tượng theo lệnh của bạn.</li>
+      <li id="sec2-li3"><code>storage</code>: Lưu trữ danh mục trích dẫn đã lưu và các tùy chọn cá nhân hóa hoàn toàn cục bộ trên máy của bạn.</li>
+      <li id="sec2-li4"><code>clipboardWrite</code>: Cho phép sao chép nhanh trích dẫn chuẩn hoặc ảnh chụp vào khay nhớ tạm clipboard.</li>
+      <li id="sec2-li5"><code>sidePanel</code> (Chrome/Edge): Hiển thị giao diện thanh bên tiện lợi khi nghiên cứu tài liệu song song.</li>
+      <li id="sec2-li6"><code>cookies</code>: <strong>Chỉ được dùng cho tính năng Cookie Manager.</strong> Quyền này cho phép tiện ích đọc và ghi cookie của trang web hiện tại <em>theo lệnh trực tiếp của bạn</em>. Tiện ích không tự động đọc, không ghi lại lịch sử và không chia sẻ cookie với bất kỳ bên thứ ba nào.</li>
+    </ul>
+
+    <div class="note-box" id="cookie-note" style="border-left: 3px solid #f59e0b; background: rgba(245,158,11,0.08); margin-bottom: 12px;">
+      ⚠️ <strong>Lưu ý Bảo Mật Cookie:</strong> Cookie phiên đăng nhập là thông tin nhạy cảm. Chỉ xuất và chia sẻ file cookie với những người/thiết bị mà bạn tin tưởng tuyệt đối. ScholarFlow không chịu trách nhiệm về hậu quả nếu file cookie bị lộ ra bên ngoài do hành động của người dùng.
+    </div>
+
+    <h2 id="sec3-title">3. Kết Nối Mạng Xác Minh Học Thuật Bên Thứ Ba</h2>
+    <p id="sec3-p">Để kiểm tra độ uy tín và đối soát định danh bài báo, tiện ích chỉ gửi các truy vấn GET công khai tới các cơ sở dữ liệu mở quốc tế:</p>
+    <ul>
+      <li id="sec3-li1"><strong>Crossref API &amp; doi.org:</strong> Đối soát mã định danh số đối tượng DOI chính thức.</li>
+      <li id="sec3-li2"><strong>OpenAlex API (api.openalex.org):</strong> Tra cứu thông tin bài báo trong kho dữ liệu mở 250M+ công trình toàn cầu.</li>
+      <li id="sec3-li3"><strong>arXiv API (export.arxiv.org):</strong> Truy xuất tác giả và năm công bố tài liệu toán học, máy tính.</li>
+      <li id="sec3-li4"><strong>YouTube oEmbed:</strong> Nhận diện tiêu đề và kênh chính thức khi bạn trích dẫn video giáo dục.</li>
+    </ul>
+    <div class="note-box" id="sec3-note">
+      Mọi yêu cầu mạng trên đều là các truy vấn công khai, ẩn danh, <strong>không gửi kèm cookie, không gửi ID người dùng và không gửi lịch sử duyệt web</strong>.
+    </div>
+
+    <h2 id="sec4-title">4. Quyền Kiểm Soát &amp; Xóa Dữ Liệu (GDPR &amp; CCPA)</h2>
+    <p id="sec4-p">Bạn nắm toàn quyền kiểm soát dữ liệu của mình:</p>
+    <ul>
+      <li id="sec4-li1"><strong>Quyền xóa bỏ (Right to Erasure):</strong> Bạn có thể xóa từng mục hoặc xóa toàn bộ danh mục trích dẫn bất kỳ lúc nào bằng nút 'Xóa toàn bộ' trong ứng dụng.</li>
+      <li id="sec4-li2"><strong>Xuất dữ liệu:</strong> Bạn có thể xuất toàn bộ trích dẫn đã lưu ra file .bib tiêu chuẩn để lưu trữ độc lập.</li>
+      <li id="sec4-li3"><strong>Cookie hoàn toàn do bạn kiểm soát:</strong> Tiện ích không tự động lưu hay đồng bộ cookie. Mọi thao tác xuất/nhập đều phải do bạn chủ động bấm nút. Bạn có thể xóa cookie bất kỳ lúc nào qua tính năng quản lý cookie của trình duyệt.</li>
+    </ul>
+
+    <h2 id="sec5-title">5. Mã Nguồn Mở &amp; Giấy Phép</h2>
+    <p id="sec5-p">ScholarFlow là phần mềm mã nguồn mở được phát hành theo giấy phép <strong>MIT License</strong>. Bất kỳ ai cũng có thể kiểm tra toàn bộ mã nguồn của tiện ích để xác nhận rằng không hề có mã theo dõi hay hành vi độc hại nào.</p>
+
+    <div class="footer">
+      <div id="footer-text">© 2026 ScholarFlow. Giấy phép MIT. Được phát triển vì cộng đồng nghiên cứu khoa học toàn cầu.</div>
+      <div>
+        <button id="btn-close-page" class="back-btn">Đóng trang này</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/privacy.js"></script>
+  <script src="../js/content.js"></script>
+</body>
+</html>

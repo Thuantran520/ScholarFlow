@@ -1,0 +1,430 @@
+/* Web Super Assistant - In-Page Styles */
+
+/* 1. Global inspect cursor when active */
+html.super-inspecting-active,
+html.super-inspecting-active * {
+  cursor: crosshair !important;
+}
+
+/* 2. Top-Level Floating Highlighter Box (Never clipped by overflow or covered by z-index!) */
+#super-inspect-highlighter-box {
+  position: fixed !important;
+  pointer-events: none !important;
+  z-index: 2147483647 !important;
+  border-radius: 4px !important;
+  box-sizing: border-box !important;
+  transition: all 0.05s ease-out !important;
+  display: none;
+}
+
+#super-inspect-highlighter-box.mode-redact {
+  border: 3px solid #f43f5e !important;
+  background-color: rgba(244, 63, 94, 0.18) !important;
+  box-shadow: 0 0 16px rgba(244, 63, 94, 0.8), inset 0 0 10px rgba(244, 63, 94, 0.25) !important;
+}
+
+#super-inspect-highlighter-box.mode-remove {
+  border: 3px dashed #f59e0b !important;
+  background-color: rgba(245, 158, 11, 0.22) !important;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.85), inset 0 0 10px rgba(245, 158, 11, 0.25) !important;
+}
+
+#super-inspect-highlighter-box.mode-locked {
+  border: 2px dashed #94a3b8 !important;
+  background-color: rgba(148, 163, 184, 0.14) !important;
+  box-shadow: 0 0 12px rgba(148, 163, 184, 0.45) !important;
+}
+
+#super-inspect-highlighter-box.mode-capture {
+  border: 3px solid #0ea5e9 !important;
+  background-color: rgba(14, 165, 233, 0.22) !important;
+  box-shadow: 0 0 18px rgba(14, 165, 233, 0.9), inset 0 0 10px rgba(14, 165, 233, 0.3) !important;
+}
+
+:root {
+  --super-blur-val: 12px;
+}
+
+/* 3. Hover state on ALREADY REDACTED elements (Click to un-redact) */
+.super-inspect-hover-remove {
+  outline: 3px dashed #f59e0b !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.8), inset 0 0 12px rgba(245, 158, 11, 0.3) !important;
+  background-color: rgba(245, 158, 11, 0.2) !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+}
+
+/* Pulse highlight when hovering an item in the sidebar list */
+.super-element-highlight-pulse {
+  outline: 3px solid #38bdf8 !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.9) !important;
+  animation: superPulse 1s infinite alternate !important;
+}
+
+@keyframes superPulse {
+  from { outline-color: #38bdf8; box-shadow: 0 0 10px rgba(56, 189, 248, 0.5); }
+  to { outline-color: #0284c7; box-shadow: 0 0 24px rgba(56, 189, 248, 1); }
+}
+
+/* Removal confirmation flash */
+.super-remove-flash {
+  position: absolute !important;
+  box-shadow: 0 0 0 3px #f59e0b, inset 0 0 20px rgba(245, 158, 11, 0.4) !important;
+  background-color: rgba(245, 158, 11, 0.25) !important;
+  border-radius: 4px !important;
+  pointer-events: none !important;
+  z-index: 2147483647 !important;
+  animation: superFlashFade 0.45s ease-out forwards !important;
+}
+
+/* 4. Mouse Tooltip Tag Badge */
+#super-element-tag-badge {
+  position: fixed !important;
+  z-index: 2147483647 !important;
+  background: #0f172a !important;
+  border: 1px solid #38bdf8 !important;
+  color: #f8fafc !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  font-size: 11px !important;
+  padding: 5px 10px !important;
+  border-radius: 6px !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6) !important;
+  pointer-events: none !important;
+  display: none;
+  white-space: nowrap !important;
+}
+
+#super-element-tag-badge strong {
+  color: #38bdf8 !important;
+}
+
+#super-element-tag-badge b {
+  color: #f43f5e !important;
+}
+
+#super-element-tag-badge.is-remove-badge {
+  background: rgba(180, 83, 9, 0.96) !important;
+  border-color: #f59e0b !important;
+  color: #ffffff !important;
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.5) !important;
+}
+
+#super-element-tag-badge.is-capture-badge {
+  background: rgba(15, 23, 42, 0.96) !important;
+  border-color: #38bdf8 !important;
+  color: #ffffff !important;
+  box-shadow: 0 6px 20px rgba(14, 165, 233, 0.5) !important;
+}
+
+#super-element-tag-badge.is-locked-badge {
+  background: rgba(15, 23, 42, 0.96) !important;
+  border-color: #64748b !important;
+  color: #f1f5f9 !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6) !important;
+}
+
+#super-element-tag-badge.is-locked-badge b {
+  color: #94a3b8 !important;
+}
+
+/* 5. Click Flash Confirmation Indicator */
+.super-redact-flash {
+  position: absolute !important;
+  box-shadow: 0 0 0 3px #10b981, inset 0 0 20px rgba(16, 185, 129, 0.4) !important;
+  background-color: rgba(16, 185, 129, 0.25) !important;
+  border-radius: 4px !important;
+  pointer-events: none !important;
+  z-index: 2147483647 !important;
+  animation: superFlashAnim 0.45s ease-out forwards !important;
+}
+
+.super-capture-flash {
+  position: absolute !important;
+  box-shadow: 0 0 0 3px #0ea5e9, inset 0 0 20px rgba(14, 165, 233, 0.4) !important;
+  background-color: rgba(14, 165, 233, 0.25) !important;
+  border-radius: 4px !important;
+  pointer-events: none !important;
+  z-index: 2147483647 !important;
+  animation: superFlashAnim 0.45s ease-out forwards !important;
+}
+
+@keyframes superFlashAnim {
+  0% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.02); }
+}
+
+/* 6. Redaction / Blur Styles (Baked directly into DOM for Screenshots!) */
+.super-redact-blur {
+  filter: blur(var(--super-blur-val, 12px)) !important;
+  user-select: none !important;
+  pointer-events: auto !important;
+}
+
+.super-redact-blackout {
+  background-color: #000000 !important;
+  color: transparent !important;
+  text-shadow: none !important;
+  border-radius: 3px !important;
+  user-select: none !important;
+}
+
+.super-redact-blackout * {
+  visibility: hidden !important;
+}
+
+.super-redact-pixelate {
+  filter: contrast(180%) blur(6px) !important;
+  user-select: none !important;
+}
+
+.super-redact-hide {
+  visibility: hidden !important;
+}
+
+html.super-inspecting-active .super-redact-hide {
+  visibility: visible !important;
+  opacity: 0.25 !important;
+  outline: 2px dashed #f59e0b !important;
+  outline-offset: 1px !important;
+}
+
+.super-redact-remove {
+  display: none !important;
+}
+
+/* 7. Temporarily un-mask all redacted elements to preview original page */
+html.super-redactions-paused .super-redact-blur {
+  filter: none !important;
+  user-select: auto !important;
+}
+
+html.super-redactions-paused .super-redact-blackout {
+  background-color: transparent !important;
+  color: inherit !important;
+}
+
+html.super-redactions-paused .super-redact-blackout * {
+  visibility: visible !important;
+}
+
+/* 8. In-Page High Visibility Countdown HUD */
+#super-inpage-countdown-hud {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  z-index: 2147483647 !important;
+  background: rgba(15, 23, 42, 0.95) !important;
+  border: 3px solid #38bdf8 !important;
+  border-radius: 18px !important;
+  padding: 22px 34px !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.85), 0 0 30px rgba(56, 189, 248, 0.6) !important;
+  text-align: center !important;
+  pointer-events: none !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  animation: superCountdownPop 0.25s ease-out !important;
+}
+
+#super-inpage-countdown-hud .hud-title {
+  color: #94a3b8 !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+  margin-bottom: 6px !important;
+}
+
+#super-inpage-countdown-hud .hud-number {
+  font-size: 64px !important;
+  font-weight: 900 !important;
+  color: #38bdf8 !important;
+  line-height: 1 !important;
+  text-shadow: 0 0 20px rgba(56, 189, 248, 0.9) !important;
+  font-family: ui-monospace, SFMono-Regular, monospace !important;
+}
+
+#super-inpage-countdown-hud .hud-sub {
+  color: #e2e8f0 !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  margin-top: 8px !important;
+}
+
+@keyframes superCountdownPop {
+  0% { transform: translate(-50%, -50%) scale(0.7); opacity: 0; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+html.super-redactions-paused .super-redact-pixelate {
+  filter: none !important;
+  user-select: auto !important;
+}
+
+html.super-redactions-paused .super-redact-hide {
+  visibility: visible !important;
+}
+
+/* ==========================================================================
+   9. Interactive Snipper & Element Capture Tool (with Fine-tuning Handles)
+   ========================================================================== */
+#super-snip-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483640 !important;
+  cursor: crosshair !important;
+  user-select: none !important;
+  pointer-events: auto !important;
+  background: rgba(15, 23, 42, 0.08) !important;
+}
+
+#super-snip-box {
+  position: fixed !important;
+  border: 2px solid #38bdf8 !important;
+  box-shadow: 0 0 0 99999px rgba(15, 23, 42, 0.45), 0 0 18px rgba(56, 189, 248, 0.7) !important;
+  border-radius: 4px !important;
+  pointer-events: auto !important;
+  cursor: move !important;
+  box-sizing: border-box !important;
+  display: none;
+  z-index: 2147483642 !important;
+}
+
+#super-snip-hover-box {
+  position: fixed !important;
+  border: 2px dashed #06b6d4 !important;
+  background: rgba(6, 182, 212, 0.14) !important;
+  box-shadow: 0 0 14px rgba(6, 182, 212, 0.45) !important;
+  pointer-events: none !important;
+  border-radius: 4px !important;
+  transition: all 0.04s ease-out !important;
+  box-sizing: border-box !important;
+  display: none;
+  z-index: 2147483641 !important;
+}
+
+#super-snip-tag-badge {
+  position: fixed !important;
+  z-index: 2147483646 !important;
+  pointer-events: none !important;
+  background: rgba(15, 23, 42, 0.95) !important;
+  border: 1px solid #38bdf8 !important;
+  border-radius: 6px !important;
+  padding: 3px 9px !important;
+  color: #f8fafc !important;
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6) !important;
+  display: none;
+  white-space: nowrap !important;
+}
+
+.super-snip-handle {
+  position: absolute !important;
+  width: 10px !important;
+  height: 10px !important;
+  background: #38bdf8 !important;
+  border: 2px solid #ffffff !important;
+  border-radius: 50% !important;
+  box-sizing: border-box !important;
+  z-index: 2147483644 !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5) !important;
+}
+
+.super-snip-handle.nw { top: -5px !important; left: -5px !important; cursor: nwse-resize !important; }
+.super-snip-handle.n  { top: -5px !important; left: 50% !important; transform: translateX(-50%) !important; cursor: ns-resize !important; }
+.super-snip-handle.ne { top: -5px !important; right: -5px !important; cursor: nesw-resize !important; }
+.super-snip-handle.e  { top: 50% !important; right: -5px !important; transform: translateY(-50%) !important; cursor: ew-resize !important; }
+.super-snip-handle.se { bottom: -5px !important; right: -5px !important; cursor: nwse-resize !important; }
+.super-snip-handle.s  { bottom: -5px !important; left: 50% !important; transform: translateX(-50%) !important; cursor: ns-resize !important; }
+.super-snip-handle.sw { bottom: -5px !important; left: -5px !important; cursor: nesw-resize !important; }
+.super-snip-handle.w  { top: 50% !important; left: -5px !important; transform: translateY(-50%) !important; cursor: ew-resize !important; }
+
+#super-snip-toolbar {
+  position: absolute !important;
+  bottom: -44px !important;
+  right: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  background: #0f172a !important;
+  border: 1.5px solid #38bdf8 !important;
+  border-radius: 8px !important;
+  padding: 5px 9px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.75) !important;
+  z-index: 2147483645 !important;
+  white-space: nowrap !important;
+  pointer-events: auto !important;
+}
+
+#super-snip-toolbar.toolbar-top {
+  bottom: auto !important;
+  top: -46px !important;
+}
+
+.super-snip-size-badge {
+  font-family: ui-monospace, SFMono-Regular, monospace !important;
+  font-size: 11px !important;
+  color: #38bdf8 !important;
+  font-weight: 700 !important;
+  padding: 2px 4px !important;
+}
+
+.super-snip-btn {
+  border: none !important;
+  border-radius: 5px !important;
+  padding: 4px 10px !important;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  transition: all 0.15s ease !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+}
+
+.super-snip-btn-confirm {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4) !important;
+}
+.super-snip-btn-confirm:hover {
+  filter: brightness(1.15) !important;
+  transform: scale(1.03) !important;
+}
+
+.super-snip-btn-cancel {
+  background: rgba(239, 68, 68, 0.2) !important;
+  border: 1px solid rgba(239, 68, 68, 0.4) !important;
+  color: #f87171 !important;
+}
+.super-snip-btn-cancel:hover {
+  background: rgba(239, 68, 68, 0.35) !important;
+  color: #ffffff !important;
+}
+
+#super-snip-guide-pill {
+  position: fixed !important;
+  top: 18px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  background: rgba(15, 23, 42, 0.95) !important;
+  border: 1.5px solid #38bdf8 !important;
+  border-radius: 20px !important;
+  padding: 7px 18px !important;
+  color: #f8fafc !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7), 0 0 16px rgba(56, 189, 248, 0.3) !important;
+  pointer-events: none !important;
+  z-index: 2147483647 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+

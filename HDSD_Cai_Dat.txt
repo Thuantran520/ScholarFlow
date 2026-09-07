@@ -1,0 +1,148 @@
+================================================================================
+   HƯỚNG DẪN CÀI ĐẶT & SỬ DỤNG TAKAEXTENSION (SIÊU TIỆN ÍCH TRÌNH DUYỆT)
+   Tương thích 100%: Google Chrome, Microsoft Edge, Brave, Cốc Cốc & Mozilla Firefox
+================================================================================
+
+📁 VỊ TRÍ THƯ MỤC:
+   C:\TakaExtension
+   (Hoặc C:\Tools\TakaExtension)
+
+--------------------------------------------------------------------------------
+1. CÁCH CÀI ĐẶT VÀO MOZILLA FIREFOX (ĐÃ CẤU HÌNH SẴN MẶC ĐỊNH)
+--------------------------------------------------------------------------------
+1. Mở trình duyệt Firefox, gõ vào thanh địa chỉ:
+   about:debugging#/runtime/this-firefox
+2. Bấm vào "This Firefox" ở thanh menu bên trái.
+3. Bấm nút "Tải tiện ích bổ sung tạm thời..." (Load Temporary Add-on...).
+4. Tìm đến thư mục C:\TakaExtension và chọn tệp:
+   manifest.json
+5. Tiện ích sẽ được cài đặt ngay lập tức với 0 lỗi!
+
+--------------------------------------------------------------------------------
+2. CÁCH CÀI ĐẶT VÀO GOOGLE CHROME / MICROSOFT EDGE / BRAVE / CỐC CỐC
+--------------------------------------------------------------------------------
+1. Vào thư mục C:\TakaExtension, nhấp đúp chạy tệp:
+   Doi_Sang_Chrome.bat
+   (Để chuyển cấu hình manifest sang chuẩn Service Worker của Chrome).
+2. Mở trình duyệt Chrome hoặc Edge.
+3. Truy cập vào thanh địa chỉ:
+   - Chrome / Brave / Cốc Cốc: chrome://extensions
+   - Microsoft Edge:           edge://extensions
+4. Bật công tắc "Chế độ dành cho nhà phát triển" (Developer mode) ở góc trên bên phải.
+5. Bấm nút "Tải tiện ích đã giải nén" (Load unpacked).
+6. Chọn thư mục: C:\TakaExtension
+7. Nhấn vào biểu tượng Mảnh ghép (🧩) -> Ghim (Pin 📌) icon chiếc mũ 🎓 lên thanh công cụ.
+
+*Lưu ý: Nếu muốn quay lại Firefox, chỉ cần nhấp đúp chạy Doi_Sang_Firefox.bat.
+
+--------------------------------------------------------------------------------
+3. HƯỚNG DẪN SỬ DỤNG CÁC SIÊU TÍNH NĂNG
+--------------------------------------------------------------------------------
+⚡ 0. CƠ CHẾ SIÊU TIẾT KIỆM TÀI NGUYÊN (ZERO BACKGROUND FOOTPRINT):
+   - Tiện ích KHÔNG tự ý inject hay chạy ngầm trên các tab bạn mở (tiết kiệm 100% RAM & CPU).
+   - Chỉ khi bạn mở tiện ích lên và thao tác trên tab đang xem, script mới được kích hoạt tức thì.
+
+🎯 A. CHỌN ĐỐI TƯỢNG ĐỂ CHE MỜ / BẢO MẬT (ELEMENT REDACTION):
+   - Chuyển sang tab "🛡️ Che Mờ & Bảo Mật".
+   - Bấm nút "🎯 Bật chọn che" (hoặc "⏹️ Tắt chọn" riêng biệt khi muốn dừng, phím tắt ESC).
+   - Khung viền chọn màu đỏ nổi ở tầng hiển thị cao nhất (Fixed Z-Index cực đại),
+     đảm bảo KHÔNG BAO GIỜ bị các thẻ khác hay vùng `overflow:hidden` che khuất!
+   - Rê chuột vào bất kỳ đoạn chữ, hình ảnh, email, số điện thoại, thẻ ngân hàng...
+     trên trang web -> Bấm chuột trái là phần tử đó được che mờ ngay lập tức!
+   - ⚡ GỠ BỎ CHE TỪNG ĐỐI TƯỢNG CỰC KỲ DỄ DÀNG:
+     + Cách 1: Click chuột trực tiếp lại vào phần tử đã che trên trang web để gỡ bỏ!
+     + Cách 2: Trong mục "Danh sách phần tử đã che" ở thanh bên, các phần tử hiển thị
+       dưới dạng thẻ Card đẹp mắt có số thứ tự (#1, #2...), nhãn thẻ, kiểu che và trích đoạn.
+       Rê chuột vào thẻ để soi vị trí trên trang và bấm nút [✕] để gỡ bỏ che riêng phần tử đó.
+   - Có nút riêng biệt "🙈 Bật che" và "👁️ Tắt che (Xem gốc)": Tạm thời ẩn các lớp che
+     để đọc lại trang gốc bất kỳ lúc nào mà không làm mất danh sách phần tử đã chọn!
+   - Tùy chọn kiểu che:
+     + Làm mờ (Blur) có thanh trượt chỉnh độ mờ (4px đến 30px).
+     + Hộp đen (Blackout) che kín như tài liệu mật.
+     + Điểm ảnh (Pixelate) dạng khảm mosaic.
+     + Ẩn phần tử (Hide).
+   - ĐẶC BIỆT: Phần che mờ được gắn trực tiếp vào mã trang web (DOM), do đó khi
+     bạn dùng nút chụp của trình duyệt hay Windows Snipping Tool (Win + Shift + S),
+     ảnh chụp ra sẽ CÓ SẴN PHẦN CHE MỜ, không cần phải mở Paint/Photoshop sửa lại!
+   - Có nút [↩ Hoàn tác] và [🗑️ Khôi phục lại trang gốc] bất kỳ lúc nào.
+
+📸 B. CHỤP ẢNH MÀN HÌNH & QUAY VIDEO TRANG WEB THÔNG MINH:
+   - Chuyển sang tab "📸 Chụp & Quay Video".
+   - 1. Chụp ảnh màn hình:
+      + 🎯 TÍNH NĂNG MỚI: "Chọn thẻ / Kéo vùng chụp (Kèm tinh chỉnh 8 góc)":
+        * Bấm "🎯 Chọn thẻ / Kéo vùng chụp", thanh điều khiển chuyên nghiệp sẽ xuất hiện trên màn hình.
+        * 2 chế độ linh hoạt trong 1:
+          1. Tự động hít vào thẻ (Auto-Snap): Rê chuột vào bảng, bài viết, khung card, ảnh -> Viền vàng hổ phách sáng lên. Bấm chuột trái là khung chụp tự động khóa chuẩn khít quanh phần tử đó!
+          2. Hoặc Kéo chuột tự do: Kéo thả chuột bất kỳ vị trí nào để vẽ vùng chọn mong muốn.
+        * 8 nút điều chỉnh kích thước (Handles): Sau khi chọn (dù bằng click thẻ hay kéo chuột), bạn hoàn toàn có thể kéo 8 nút ở các góc và cạnh (trên, dưới, trái, phải, 4 góc) để mở rộng hoặc thu hẹp khung chụp chuẩn xác từng pixel.
+        * Di chuyển vùng chụp: Bấm giữ và kéo bên trong khung để di chuyển vùng chụp tới bất kỳ vị trí nào.
+        * Bảng điều khiển nổi hiển thị kích thước trực tiếp [W × H px], nút "📸 Chụp ngay (Enter)" và "✕ Hủy (Esc)".
+        * Triệt tiêu hoàn toàn lỗi ảnh trắng/trong suốt: Ảnh xuất ra luôn sắc nét, căn chỉnh đúng tỷ lệ màn hình.
+        * Có thể nhấn [ESC] hoặc bấm nút "✕ Hủy" để thoát bất kỳ lúc nào.
+     + Tinh chỉnh chụp ảnh cao cấp:
+       * Công tắc trượt "📋 Tự động sao chép vào Clipboard": Chụp xong là có sẵn trong bộ nhớ tạm để Paste (Ctrl + V) ngay vào Word/Docs/Figma.
+       * Định dạng ảnh: PNG (Sắc nét 100%) hoặc JPEG (Dung lượng nhẹ).
+       * Hẹn giờ chụp: Chụp ngay (0s), hẹn giờ 2 giây hoặc 5 giây (kịp mở menu/tooltip trước khi chụp).
+     + "📸 Chụp vùng đang nhìn thấy (Visible)": Chụp tức thì khung nhìn hiện tại.
+     + "📜 Chụp toàn bộ trang từ trên xuống dưới": Hiệu ứng cuộn Animation mượt mà,
+       chuyên nghiệp (Cubic Ease-Out), tự động ẩn thanh cuộn (Scrollbar) và triệt tiêu
+       hoàn toàn lỗi chồng chữ hoặc lặp menu cố định.
+     + Tự động lưu thiết lập chụp ảnh cho các lần dùng sau.
+   - 2. Quay video trang web & màn hình (Web Video Recording):
+     + Toàn bộ checkbox chuyển thành công tắc gạt trượt (Switch Toggle) hiện đại:
+       * "🔊 Thu âm thanh từ tab / trang web": Bật/Tắt tùy ý (tắt âm giúp quay siêu mượt, nhẹ máy và dừng ngay tức thì).
+       * "📥 Tự động tải video khi bấm Dừng": Dừng quay là file .webm tự động tải về máy.
+       * Độ phân giải: 1080p (Full HD), 720p (HD Chuẩn), Gốc (Màn hình).
+       * Tốc độ khung hình: 30 FPS (Mượt mà), 60 FPS (Siêu nét).
+       * Đếm ngược trước khi quay: 3s (mặc định), 5s hoặc 0s (Quay ngay).
+     + ⏱️ BỘ ĐẾM NGƯỢC TRỰC QUAN & ÂM THANH BÁO HIỆU (HIGH-VISIBILITY COUNTDOWN):
+       * Đếm ngược kích hoạt NGAY SAU KHI bạn chọn xong màn hình/tab từ hộp thoại trình duyệt.
+       * Bảng thông báo HUD khổng lồ xuất hiện ở giữa trang web kèm màn hình đếm ngược số to 76px trên thanh tiện ích.
+       * Âm thanh báo hiệu thông minh qua Web Audio: Phát tiếng bíp chuẩn xác (520Hz) theo từng giây và tiếng chuông reo (880Hz) khi bắt đầu bấm máy ("Bíp... Bíp... Bíp... Ding!"), giúp bạn hoàn toàn chủ động thao tác.
+       * Có nút [✕ Hủy quay] bất cứ lúc nào trong khi đếm ngược.
+     + 💡 MẸO QUAY NHIỀU WEB / NHIỀU TAB LIÊN TỤC (MULTI-WEB RECORDING):
+       * Khi trình duyệt mở hộp thoại chọn nguồn quay: Hãy chọn thẻ "Toàn bộ màn hình" (Entire Screen) hoặc "Cửa sổ" (Window) thay vì chọn 1 tab Chrome đơn lẻ.
+       * Lúc này, khi bạn nhấp vào link chuyển sang web khác hoặc dùng phím tắt Alt + Q để đổi trang, video vẫn tiếp tục quay mượt mà không bị ngắt hay đóng băng hình ảnh!
+     + Cơ chế ngắt luồng tức thì: Bấm "⏹️ Dừng & Lưu video" sẽ lập tức kết thúc quay ngay lập tức (không bị treo hay trễ).
+     + Trình xem trước Video trực tiếp: Hiển thị thời lượng, kích thước dung lượng (MB) và các nút "💾 Tải Video (.webm)", "🗑️ Xóa bản này".
+     + Tự động lưu thiết lập quay video vĩnh viễn.
+
+🎓 C. BỘ TRÍCH DẪN HỌC THUẬT TOÀN NĂNG & QUẢN LÝ DANH MỤC:
+   - Đầy đủ bộ phân tích 4 tầng (Google Scholar, Highwire, JSON-LD báo chí, Microdata).
+   - Đầy đủ các ô chỉnh sửa trực tiếp: Loại tài liệu, Tác giả, Tiêu đề, Năm/Ngày, Tạp chí, DOI, Tập/Số/Trang, URL.
+   - 🏷️ Bổ sung ô "Nhãn / Chuyên mục (Tag)" và "Ghi chú nghiên cứu (Notes)":
+     Dễ dàng phân loại bài viết theo chuyên đề (Vd: An ninh mạng, AI, Khóa luận...) và ghi chú trang sách/chương cần dẫn.
+   - ⚙️ Hộp "Tinh chỉnh trích dẫn" nâng cao:
+     * 📅 Kèm ngày truy cập ([Accessed: ...]): Tự động bật/tắt theo chuẩn quốc tế.
+     * Tên tác giả: Tùy chọn Chuẩn (V. A. Nguyen), Họ in hoa (NGUYEN, V. A.), hoặc Giữ nguyên gốc.
+     * Chuẩn mặc định: Tự động tải chuẩn bạn thường dùng nhất (IEEE, APA, BibTeX, Trong bài).
+     * 📋 Tự động sao chép khi bấm chuyển Tab chuẩn.
+   - ➕ LƯU TRÍCH DẪN & QUẢN LÝ DANH MỤC THAM KHẢO (ĐÃ FIX & NÂNG CẤP):
+     * Bấm nút "➕ Lưu" để lưu bài viết hiện tại vào danh mục tham khảo vĩnh viễn (lưu vào chrome.storage).
+     * Nút "📚 Xem danh mục đã lưu ([N])" mở bảng quản lý danh mục đa chức năng:
+       + 🔍 Tìm kiếm tức thì: Gõ từ khóa để lọc theo tác giả, tên bài, nhãn tag, ghi chú, năm...
+       + Đổi chuẩn xem trực tiếp: Xem cùng lúc danh mục theo chuẩn IEEE ([1], [2]...), APA 7th, BibTeX, MLA 9th.
+       + Mỗi mục trong danh sách:
+         - [📋 Copy]: Sao chép riêng mục đó.
+         - [✏️ Nạp form]: Nạp lại toàn bộ dữ liệu vào form để chỉnh sửa nhanh.
+         - [🗑️ Xóa]: Gỡ bỏ mục đó khỏi danh mục.
+       + Thao tác xuất hàng loạt:
+         - [📋 Sao chép tất cả]: Copy toàn bộ tài liệu theo chuẩn đang chọn để dán thẳng vào Word/bài báo.
+         - [📥 Xuất .bib]: Tải tệp `references.bib` dùng trực tiếp cho LaTeX / Overleaf.
+         - [📄 Xuất .txt]: Tải tệp `references.txt` danh mục tài liệu tham khảo cho Word.
+         - [🗑️ Xóa toàn bộ danh mục]: Xóa sạch có hộp thoại xác nhận an toàn.
+   - Tự động lưu nháp theo URL (Auto-save draft) không sợ mất dữ liệu khi chuyển tab.
+
+🌐 D. BỘ CHUYỂN ĐỔI 2 TRANG LIÊN KẾT SIÊU TỐC (DUAL-WEB QUICK SWITCHER):
+   - Tích hợp ngay phía trên cùng của thanh tiện ích: Thanh "🌐 2 Trang liên kết".
+   - Hiển thị trực quan 2 thẻ: Trang hiện tại (A) và Trang phụ liên kết (B).
+   - ⚡ PHÍM TẮT THẦN TỐC (Alt + Q):
+     + Bạn đang ở bất kỳ trang web nào, chỉ cần bấm tổ hợp phím:
+       [Alt + Q]
+       Trình duyệt sẽ lập tức chuyển ngay sang trang web phụ đối ứng (A ⇄ B)!
+     + Bấm lại [Alt + Q] lần nữa để quay trở về trang trước đó ngay lập tức.
+   - Thao tác chuột 1 chạm:
+     + Bấm vào nút "⇄ Đổi trang (Alt+Q)" hoặc click trực tiếp vào thẻ Trang B để đổi trang.
+     + Bấm nút "▼" để mở menu danh sách các tab đang mở và chọn trang bạn muốn ghép đôi.
+   - Cơ chế bắt cặp thông minh: Khi bạn đang đọc trang A rồi bấm mở một đường link sang trang B, tiện ích tự động gán B làm trang hiện tại và A làm trang liên kết, cho phép bấm [Alt + Q] quay lại ngay mà không cần tìm tab!
+================================================================================

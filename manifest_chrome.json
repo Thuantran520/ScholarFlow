@@ -1,0 +1,52 @@
+{
+  "manifest_version": 3,
+  "name": "ScholarFlow - Trợ Lý Học Thuật",
+  "version": "2.3.0",
+  "description": "ScholarFlow: Advanced academic assistant — International citations IEEE/APA/Harvard/MLA/BibTeX, smart screen capture & recording, privacy redaction and session Cookie Manager.",
+  "permissions": [
+    "tabs",
+    "activeTab",
+    "scripting",
+    "storage",
+    "clipboardWrite",
+    "sidePanel",
+    "cookies"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "OS/js/content.js"
+      ],
+      "css": [
+        "OS/css/content.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    },
+    "default_popup": "OS/html/popup.html",
+    "default_title": "ScholarFlow"
+  },
+  "side_panel": {
+    "default_path": "OS/html/sidebar.html"
+  },
+  "background": {
+    "service_worker": "OS/js/background.js"
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}

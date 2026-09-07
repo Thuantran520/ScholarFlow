@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ScholarFlow - Trợ Lý Nghiên Cứu &amp; Trích Dẫn Học Thuật</title>
+  <link rel="stylesheet" href="../css/popup.css">
+</head>
+<body class="is-popup">
+
+  <!-- Top Bar: Clean, Unified & Modern -->
+  <div class="header">
+    <div class="header-left">
+      <div class="header-icon-wrap">
+        <img src="../../icon.svg" alt="Icon" class="header-icon">
+      </div>
+      <div class="header-brand">
+        <span class="title">ScholarFlow</span>
+        <span class="version-tag">PRO</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="custom-dropdown-wrap" id="lang-dropdown-wrap">
+        <button type="button" class="custom-dropdown-btn lang-dropdown-btn" id="lang-dropdown-trigger" title="Language / Ngôn ngữ" data-i18n-title="tip_lang">
+          <span class="lang-btn-flag" id="lang-active-flag">🇻🇳</span>
+          <span class="lang-btn-text" id="lang-active-text">VI</span>
+          <svg class="dropdown-arrow" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <div class="custom-dropdown-menu lang-dropdown-menu" id="lang-dropdown-menu">
+          <div class="custom-dropdown-item active" data-lang="vi">
+            <span class="item-flag">🇻🇳</span>
+            <span class="item-label">Tiếng Việt</span>
+            <span class="item-code">VI</span>
+          </div>
+          <div class="custom-dropdown-item" data-lang="en">
+            <span class="item-flag">🇬🇧</span>
+            <span class="item-label">English</span>
+            <span class="item-code">EN</span>
+          </div>
+          <div class="custom-dropdown-item" data-lang="zh">
+            <span class="item-flag">🇨🇳</span>
+            <span class="item-label">中文</span>
+            <span class="item-code">ZH</span>
+          </div>
+          <div class="custom-dropdown-item" data-lang="ru">
+            <span class="item-flag">🇷🇺</span>
+            <span class="item-label">Русский</span>
+            <span class="item-code">RU</span>
+          </div>
+          <div class="custom-dropdown-item" data-lang="ja">
+            <span class="item-flag">🇯🇵</span>
+            <span class="item-label">日本語</span>
+            <span class="item-code">JA</span>
+          </div>
+        </div>
+        <select id="select-app-lang" style="display:none;" tabindex="-1" aria-hidden="true">
+          <option value="vi">🇻🇳 VI</option>
+          <option value="en">🇬🇧 EN</option>
+          <option value="zh">🇨🇳 中文</option>
+          <option value="ru">🇷🇺 RU</option>
+          <option value="ja">🇯🇵 日本語</option>
+        </select>
+      </div>
+      <button class="header-btn btn-trust-pill" id="btn-open-trust" title="Trung tâm uy tín, bảo mật & chuẩn" data-i18n-title="tip_trust_center">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+        <span class="header-btn-text" data-i18n="btn_trust">Uy tín</span>
+      </button>
+      <span class="badge is-detected" id="source-badge" data-i18n="badge_web">Web</span>
+    </div>
+  </div>
+
+  <!-- Main Navigation Segmented Controller -->
+  <div class="main-nav">
+    <button class="main-nav-btn active" data-target="tab-cite" title="Trích dẫn học thuật &amp; nghiên cứu" data-i18n-title="tip_tab_cite">
+      <span class="nav-icon" id="icon-tab-cite">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+      </span>
+      <span class="nav-label" data-i18n="nav_cite">Trích Dẫn</span>
+    </button>
+    <button class="main-nav-btn" data-target="tab-redact" title="Bảo mật thông tin, che mờ đối tượng" data-i18n-title="tip_tab_redact">
+      <span class="nav-icon" id="icon-tab-redact">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+      </span>
+      <span class="nav-label" data-i18n="nav_redact">Che Mờ</span>
+    </button>
+    <button class="main-nav-btn" data-target="tab-capture" title="Chụp ảnh đối tượng &amp; Quay video màn hình" data-i18n-title="tip_tab_capture">
+      <span class="nav-icon" id="icon-tab-capture">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+      </span>
+      <span class="nav-label" data-i18n="nav_capture">Chụp &amp; Quay</span>
+    </button>
+    <button class="main-nav-btn" data-target="tab-cookie" title="Quản lý xuất/nhập cookie trình duyệt" data-i18n-title="tip_tab_cookie">
+      <span class="nav-icon" id="icon-tab-cookie">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5z"></path></svg>
+      </span>
+      <span class="nav-label" data-i18n="nav_cookie">Cookie</span>
+    </button>
+  </div>
+
+  <!-- ══════════════════════ TAB 1: ACADEMIC CITATION ══════════════════════ -->
+  <div id="tab-cite" class="tab-section active">
+    <!-- Draft notification banner -->
+    <div id="draft-banner" class="draft-banner" style="display:none;">
+      <span data-i18n="draft_banner">Đang chỉnh sửa bản nháp</span>
+      <button id="btn-reset-draft" class="btn-text" data-i18n="btn_reset_draft">Lấy lại bản gốc</button>
+    </div>
+
+    <!-- 6-Style Citation Selector Grid -->
+    <div class="sub-tabs-grid">
+      <button class="sub-tab-btn active" data-tab="ieee" title="Chuẩn Viện Kỹ nghệ Điện - Điện tử (CNTT &amp; Kỹ thuật)" data-i18n-title="tip_ieee">IEEE</button>
+      <button class="sub-tab-btn" data-tab="apa" title="Chuẩn Hiệp hội Tâm lý học Hoa Kỳ ấn bản 7 (Khoa học &amp; Đồ án)" data-i18n-title="tip_apa">APA 7th</button>
+      <button class="sub-tab-btn" data-tab="harvard" title="Chuẩn Harvard Tác giả - Năm (Kinh tế &amp; Quản trị)" data-i18n-title="tip_harvard">Harvard</button>
+      <button class="sub-tab-btn" data-tab="bibtex" title="Chuẩn BibTeX cho LaTeX, Overleaf, ACM" data-i18n-title="tip_bibtex">BibTeX</button>
+      <button class="sub-tab-btn" data-tab="mla" title="Chuẩn Modern Language Association ấn bản 9 (Nhân văn &amp; Báo chí)" data-i18n-title="tip_mla">MLA 9th</button>
+      <button class="sub-tab-btn" data-tab="intext" title="Cách trích dẫn trong ngoặc hoặc mạch văn bài viết" data-i18n-title="tip_intext" data-i18n="subtab_intext">Trong bài</button>
+    </div>
+
+    <!-- Result Display Card -->
+    <div class="citation-box">
+      <div class="citation-box-header">
+        <span class="citation-box-badge" id="citation-box-style-label">Định dạng: IEEE</span>
+        <span id="citation-box-source-badge" class="badge" style="font-size:9.5px; padding:1px 6px;" data-i18n="badge_web">Trang Web</span>
+      </div>
+      <div class="citation-content" id="citation-text" data-i18n="analyzing">Đang phân tích trang web...</div>
+    </div>
+
+    <!-- Action Buttons: Row 1 - Main Actions -->
+    <div class="actions-row" style="margin-bottom:6px;">
+      <button class="btn btn-primary" id="btn-copy-cite" style="flex:1.4; padding:8px 12px; font-size:12px;" title="Sao chép trích dẫn hiện tại vào Clipboard" data-i18n-title="tip_copy_cite">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        <span data-i18n="btn_copy">Sao chép</span>
+      </button>
+      <button class="btn btn-secondary" id="btn-refresh-cite" style="flex:1; padding:8px 12px; font-size:12px;" title="Tải lại và trích xuất dữ liệu mới nhất từ trang hiện tại" data-i18n-title="tip_refresh_cite">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+        <span data-i18n="btn_reload">Tải lại</span>
+      </button>
+    </div>
+
+    <!-- Action Buttons: Row 2 - Utilities -->
+    <div class="actions-row" style="margin-bottom:10px;">
+      <button class="btn btn-secondary" id="btn-save-biblio" style="flex:1; padding:7px 6px; font-size:11.5px;" title="Lưu vào danh mục tài liệu tham khảo [1], [2]..." data-i18n-title="tip_save_biblio">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+        <span data-i18n="btn_save_biblio">Lưu</span>
+      </button>
+      <button class="btn btn-secondary" id="btn-download-bib" style="flex:1; padding:7px 6px; font-size:11.5px;" title="Tải tệp .bib cho LaTeX / Overleaf" data-i18n-title="tip_download_bib">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        <span data-i18n="btn_export_bib">Xuất .bib</span>
+      </button>
+      <button class="btn btn-secondary" id="btn-upload-local-pdf" style="flex:1; padding:7px 6px; font-size:11.5px;" title="Nạp file PDF từ máy tính hoặc kéo thả để trích xuất tự động" data-i18n-title="tip_upload_pdf">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+        <span data-i18n="btn_upload_pdf">Nạp PDF</span>
+      </button>
+      <input type="file" id="input-local-pdf-file" accept=".pdf,application/pdf" style="display:none;">
+    </div>
+
+    <!-- ════════ CARD 1: METADATA & AUTHORS EDITOR ════════ -->
+    <div class="feature-card" style="padding:10px; margin-bottom:10px;">
+      <div class="feature-title" style="font-size:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+        <span style="display:flex; align-items:center; gap:5px;">
+          <span data-i18n="meta_title">Thông tin nguồn trích dẫn</span>
+        </span>
+        <button id="btn-show-author-rules" class="author-rules-pill" data-i18n="btn_author_rules">Quy tắc tác giả</button>
+      </div>
+
+      <div class="form-group">
+        <label data-i18n="lbl_source_type">Loại tài liệu (Hợp chuẩn quốc tế)</label>
+        <select class="form-control" id="f-source-type">
+          <option value="academic" data-i18n="opt_source_academic">Bài báo học thuật / Tạp chí (Journal Article)</option>
+          <option value="conference" data-i18n="opt_source_conference">Kỷ yếu hội thảo khoa học (Conference Proceedings)</option>
+          <option value="webpage" data-i18n="opt_source_web">Trang web / Báo điện tử (Webpage)</option>
+          <option value="pdf" data-i18n="opt_source_pdf">Tài liệu PDF / Báo cáo kỹ thuật (PDF / Tech Report)</option>
+          <option value="software" data-i18n="opt_source_software">Kho mã nguồn GitHub / Phần mềm (Software)</option>
+          <option value="video" data-i18n="opt_source_youtube">Video trực tuyến (YouTube / Webinar)</option>
+          <option value="book" data-i18n="opt_source_book">Sách / Sách điện tử / Giáo trình (Book)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <label style="margin-bottom:0;" data-i18n="lbl_authors_hint">Tác giả (Cách nhau bằng dấu phẩy ',' hoặc 'and')</label>
+          <div style="display:flex; gap:4px;">
+            <button type="button" class="btn-author-quick" id="btn-quick-nodiacritics" data-i18n="btn_nodiacritics">Bỏ dấu</button>
+            <button type="button" class="btn-author-quick" id="btn-quick-uppercase" data-i18n="btn_uppercase">IN HOA</button>
+          </div>
+        </div>
+        <input type="text" class="form-control" id="f-authors" placeholder="Vd: A. Vaswani, Nguyễn Văn A hoặc Nguyen Van A" data-i18n-placeholder="placeholder_authors">
+      </div>
+
+      <div class="form-group">
+        <label data-i18n="lbl_title">Tiêu đề tài liệu / Bài viết</label>
+        <input type="text" class="form-control" id="f-title" placeholder="Tiêu đề bài báo hoặc trang web..." data-i18n-placeholder="placeholder_title">
+      </div>
+
+      <div class="row">
+        <div class="col form-group">
+          <label><span data-i18n="lbl_date">Năm / Ngày xuất bản</span></label>
+          <input type="text" class="form-control" id="f-date" placeholder="Vd: 2026 hoặc Sept. 5, 2026" data-i18n-placeholder="placeholder_date">
+        </div>
+        <div class="col form-group">
+          <label data-i18n="lbl_container">Tạp chí / Nền tảng / Nơi XB</label>
+          <input type="text" class="form-control" id="f-container" placeholder="Vd: The Hacker News / IEEE Trans." data-i18n-placeholder="placeholder_container">
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col form-group">
+          <label data-i18n="lbl_doi">Mã DOI (nếu có)</label>
+          <input type="text" class="form-control" id="f-doi" placeholder="10.xxxx/yyyy" data-i18n-placeholder="placeholder_doi">
+        </div>
+        <div class="col form-group">
+          <label data-i18n="lbl_pages">Tập/Số/Trang/Phiên bản</label>
+          <input type="text" class="form-control" id="f-pages" placeholder="vol. 1, pp. 1-10" data-i18n-placeholder="placeholder_pages">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label data-i18n="lbl_url">Đường dẫn URL</label>
+        <input type="text" class="form-control" id="f-url" placeholder="https://..." data-i18n-placeholder="placeholder_url">
+      </div>
+
+      <div class="row" style="margin-bottom:0;">
+        <div class="col form-group" style="margin-bottom:0;">
+          <label data-i18n="lbl_tag">Nhãn / Chuyên mục (Tag)</label>
+          <input type="text" class="form-control" id="f-tag" placeholder="Vd: An ninh mạng, AI..." data-i18n-placeholder="placeholder_tag">
+        </div>
+        <div class="col form-group" style="margin-bottom:0;">
+          <label data-i18n="lbl_notes">Ghi chú nghiên cứu</label>
+          <input type="text" class="form-control" id="f-notes" placeholder="Vd: Tham khảo chương 2..." data-i18n-placeholder="placeholder_notes">
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════ CARD 2: SOURCE VERIFICATION & FACT CHECKING ════════ -->
+    <div class="feature-card" style="border: 1px solid rgba(56, 189, 248, 0.3); background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.8) 100%); margin-bottom: 10px; padding: 10px;">
+      <div class="feature-title" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <span style="display:flex; align-items:center; gap:6px;">
+          <span data-i18n="verify_heading">Xác minh Tính xác thực của Nguồn</span>
+        </span>
+        <span class="badge is-detected" style="font-size:9.5px; padding:1px 7px;" data-i18n="badge_global_db">CSDL Quốc tế</span>
+      </div>
+      <p data-i18n="verify_desc" style="color:var(--text-muted); font-size:11px; margin-bottom:8px; line-height:1.4;">Đối soát trích dẫn với cơ sở dữ liệu học thuật toàn cầu (Crossref, OpenAlex, DOI) để kiểm tra tính chính xác và nhận diện nguồn nhân tạo từ mô hình ngôn ngữ lớn (LLM).</p>
+
+      <!-- Input box with clear button -->
+      <div style="position:relative; margin-bottom:8px;">
+        <textarea id="verify-input" class="form-control" rows="2" style="font-size:11px; resize:vertical; padding-right:26px;" placeholder="Dán trích dẫn (IEEE, APA...), tên bài báo, mã DOI (10.xxxx/...) hoặc liên kết cần đối soát..." data-i18n-placeholder="verify_placeholder"></textarea>
+        <button id="btn-clear-verify-input" title="Xóa nội dung" data-i18n-title="tip_clear_input" style="position:absolute; right:6px; top:6px; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:12px; display:none;">✕</button>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display:flex; gap:5px; margin-bottom:8px;">
+        <button class="btn btn-secondary" id="btn-paste-verify" style="flex:1; padding:6px 6px; font-size:11px;" title="Dán nhanh nội dung từ Clipboard" data-i18n-title="tip_verify_paste">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+          <span data-i18n="btn_paste_verify">Dán nhanh</span>
+        </button>
+        <button class="btn btn-secondary" id="btn-use-current-page-verify" style="flex:1; padding:6px 6px; font-size:11px;" title="Lấy tiêu đề trang web đang mở" data-i18n-title="tip_verify_current">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+          <span data-i18n="btn_use_current_page">Trang hiện tại</span>
+        </button>
+        <button class="btn btn-primary" id="btn-run-verify" style="flex:1.4; padding:6px 8px; font-size:11px; background:linear-gradient(135deg, #0284c7 0%, #0369a1 100%);">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <span data-i18n="btn_verify">Kiểm tra đối soát</span>
+        </button>
+      </div>
+
+      <!-- Results Container -->
+      <div id="verify-result-box" style="display:none; border-radius:8px; padding:10px; border:1px solid rgba(255,255,255,0.1); background:rgba(15,23,42,0.85);">
+        <div id="verify-status-banner" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid rgba(255,255,255,0.08);">
+          <div id="verify-status-title" data-i18n="verify_checking" style="font-weight:700; font-size:11.5px;">Đang kiểm tra...</div>
+          <span id="verify-confidence-badge" class="badge" style="font-size:9.5px; padding:1px 6px;">Đang xác minh</span>
+        </div>
+
+        <div id="verify-status-desc" style="font-size:11px; color:#cbd5e1; margin-bottom:8px; line-height:1.4;"></div>
+
+        <div id="verify-matched-details" style="display:none; background:rgba(30,41,59,0.7); border:1px solid rgba(56,189,248,0.2); border-radius:6px; padding:8px; margin-bottom:8px; font-size:11px;">
+          <div style="font-weight:700; color:#38bdf8; margin-bottom:4px; font-size:11.5px; word-break:break-word;" id="verify-matched-title">---</div>
+          <div style="color:#cbd5e1; margin-bottom:3px;" id="verify-matched-authors">Tác giả: ---</div>
+          <div style="color:#cbd5e1; margin-bottom:3px;" id="verify-matched-venue">Nơi XB: ---</div>
+          <div style="color:#cbd5e1; margin-bottom:3px; word-break:break-all;" id="verify-matched-doi">DOI: ---</div>
+        </div>
+
+        <div id="verify-action-links" style="display:flex; flex-direction:column; gap:5px;">
+          <button class="btn btn-primary" id="btn-open-real-source" style="width:100%; padding:7px; font-size:11px; display:none; background:linear-gradient(135deg, #10b981 0%, #059669 100%); border-color:rgba(16,185,129,0.4);" title="Mở trang bài báo chính thức (DOI / Publisher Link)" data-i18n-title="tip_verify_real">
+            <span data-i18n="btn_open_real_source">Mở trực tiếp bài báo gốc ↗</span>
+          </button>
+          <button class="btn btn-secondary" id="btn-open-oa-pdf" style="width:100%; padding:6px; font-size:11px; display:none; color:#38bdf8;" title="Mở bản PDF toàn văn miễn phí" data-i18n-title="tip_verify_pdf">
+            <span data-i18n="btn_open_oa_pdf">Đọc bản PDF toàn văn (Open Access) ↗</span>
+          </button>
+          <div style="display:flex; gap:4px;">
+            <button class="btn btn-secondary" id="btn-open-google" style="flex:1; padding:5px 2px; font-size:10.5px;" title="Tìm kiếm trên Google để đối soát bài viết, tin tức hoặc video" data-i18n-title="tip_verify_google">
+              Google ↗
+            </button>
+            <button class="btn btn-secondary" id="btn-open-scholar" style="flex:1; padding:5px 2px; font-size:10.5px;" title="Tìm kiếm trên kho dữ liệu Google Scholar" data-i18n-title="tip_verify_scholar">
+              Scholar ↗
+            </button>
+            <button class="btn btn-secondary" id="btn-open-crossref" style="flex:1; padding:5px 2px; font-size:10.5px;" title="Đối soát trên hệ thống chỉ số DOI Crossref" data-i18n-title="tip_verify_crossref">
+              Crossref ↗
+            </button>
+          </div>
+          <button class="btn btn-secondary" id="btn-apply-verified-to-form" style="width:100%; padding:6px; font-size:11px; margin-top:2px; color:var(--primary);" title="Điền thông tin chuẩn xác này vào khung chỉnh sửa trích dẫn" data-i18n-title="tip_verify_apply">
+            <span data-i18n="btn_apply_verified">Cập nhật thông tin đối soát vào trích dẫn</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════ CARD 3: PREFERENCES & BIBLIOGRAPHY ════════ -->
+    <div style="background:rgba(15,23,42,0.65); border:1px solid var(--card-border); border-radius:8px; padding:10px; margin-bottom:8px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span style="font-size:11.5px; font-weight:700; color:var(--primary); display:flex; align-items:center; gap:5px;">
+          <span data-i18n="pref_heading">Cài đặt trích dẫn</span>
+        </span>
+        <span style="font-size:10px; color:#10b981; font-weight:600;" id="cite-settings-status" data-i18n="pref_autosave">Tự động lưu</span>
+      </div>
+
+      <!-- Option 1: Auto include accessed date -->
+      <label class="switch-row">
+        <div class="switch-row-left">
+          <span class="switch-row-title"><span data-i18n="pref_accessed">Kèm ngày truy cập</span> ([Accessed: ...])</span>
+          <span class="switch-row-desc" data-i18n="pref_accessed_desc">Hiển thị ngày truy cập theo chuẩn quốc tế khi trích nguồn website.</span>
+        </div>
+        <div class="custom-switch">
+          <input type="checkbox" id="cite-pref-accessed" checked>
+          <span class="switch-slider"></span>
+        </div>
+      </label>
+
+      <!-- Option: Bỏ dấu tiếng Việt (Latin / ASCII) -->
+      <label class="switch-row">
+        <div class="switch-row-left">
+          <span class="switch-row-title" data-i18n="pref_nodiacritics">Chuẩn hóa tên Latin / Bỏ dấu tiếng Việt</span>
+          <span class="switch-row-desc" data-i18n="pref_nodiacritics_desc">Tự động bỏ dấu khi trích nguồn (Nguyễn Văn A ➔ Nguyen Van A / N. V. A) tương thích chuẩn quốc tế &amp; BibTeX.</span>
+        </div>
+        <div class="custom-switch">
+          <input type="checkbox" id="cite-pref-remove-diacritics">
+          <span class="switch-slider"></span>
+        </div>
+      </label>
+
+            <!-- Option 2: Author formatting & Default Style -->
+      <div class="row" style="margin-bottom:6px;">
+        <div class="col form-group" style="margin-bottom:0; position:relative;">
+          <label style="font-size:10.5px; font-weight:600; color:var(--text-muted);" data-i18n="pref_author_style">Định dạng tên tác giả:</label>
+          <div class="custom-select-wrap" id="wrap-author-style">
+            <button type="button" class="custom-select-trigger" id="btn-author-style" aria-haspopup="listbox">
+              <span class="custom-select-label" id="label-author-style" data-i18n="opt_author_standard">Chuẩn (Vd: A. Vaswani / N. V. A)</span>
+              <svg class="dropdown-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="custom-select-menu" id="menu-author-style" role="listbox">
+              <div class="custom-select-item selected" data-value="standard" data-i18n="opt_author_standard">Chuẩn (Vd: A. Vaswani / N. V. A)</div>
+              <div class="custom-select-item" data-value="last-first" data-i18n="opt_author_last_first">Họ trước (A, N. V.)</div>
+              <div class="custom-select-item" data-value="uppercase-last" data-i18n="opt_author_uppercase_last">Họ in hoa (A, N. V.)</div>
+              <div class="custom-select-item" data-value="uppercase-all" data-i18n="opt_author_uppercase_all">In hoa toàn bộ (NGUYEN VAN A)</div>
+              <div class="custom-select-item" data-value="original" data-i18n="opt_author_original">Giữ nguyên gốc (Nguyễn Văn A)</div>
+            </div>
+            <select class="form-control" id="cite-pref-author-style" style="display:none;" tabindex="-1" aria-hidden="true">
+              <option value="standard" data-i18n="opt_author_standard">Chuẩn (Vd: A. Vaswani / N. V. A)</option>
+              <option value="last-first" data-i18n="opt_author_last_first">Họ trước (A, N. V.)</option>
+              <option value="uppercase-last" data-i18n="opt_author_uppercase_last">Họ in hoa (A, N. V.)</option>
+              <option value="uppercase-all" data-i18n="opt_author_uppercase_all">In hoa toàn bộ (NGUYEN VAN A)</option>
+              <option value="original" data-i18n="opt_author_original">Giữ nguyên gốc (Nguyễn Văn A)</option>
+            </select>
+          </div>
+        </div>
+        <div class="col form-group" style="margin-bottom:0; position:relative;">
+          <label style="font-size:10.5px; font-weight:600; color:var(--text-muted);" data-i18n="pref_date_style">Định dạng thời gian:</label>
+          <div class="custom-select-wrap" id="wrap-date-style">
+            <button type="button" class="custom-select-trigger" id="btn-date-style" aria-haspopup="listbox">
+              <span class="custom-select-label" id="label-date-style">Tự động (Theo chuẩn)</span>
+              <svg class="dropdown-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="custom-select-menu" id="menu-date-style" role="listbox">
+              <div class="custom-select-item selected" data-value="auto" data-i18n="opt_date_auto">Tự động (Theo chuẩn)</div>
+              <div class="custom-select-item" data-value="year" data-i18n="opt_date_year">Chỉ lấy Năm (Vd: 2026)</div>
+              <div class="custom-select-item" data-value="full" data-i18n="opt_date_full">Đầy đủ ngày tháng (Vd: 15/10/2026)</div>
+            </div>
+            <select class="form-control" id="cite-pref-date-style" style="display:none;" tabindex="-1" aria-hidden="true">
+              <option value="auto" data-i18n="opt_date_auto">Tự động (Theo chuẩn)</option>
+              <option value="year" data-i18n="opt_date_year">Chỉ lấy Năm (Vd: 2026)</option>
+              <option value="full" data-i18n="opt_date_full">Đầy đủ ngày tháng (Vd: 15/10/2026)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Option 3: Auto Copy switch -->
+      <label class="switch-row" style="margin-bottom:0;">
+        <div class="switch-row-left">
+          <span class="switch-row-title" data-i18n="pref_autocopy">Tự sao chép khi bấm chuyển Tab chuẩn</span>
+          <span class="switch-row-desc" data-i18n="pref_autocopy_desc">Bấm chuyển sang IEEE / APA / BibTeX là tự chép ngay vào Clipboard.</span>
+        </div>
+        <div class="custom-switch">
+          <input type="checkbox" id="cite-pref-autocopy">
+          <span class="switch-slider"></span>
+        </div>
+      </label>
+    </div>
+
+    <!-- Bibliography quick button -->
+    <div>
+      <button class="btn btn-secondary" id="btn-open-biblio" style="width:100%; padding:8px; font-size:12px; font-weight:700;">
+        <span data-i18n="btn_manage_biblio">Quản lý danh mục đã lưu</span> (<span id="biblio-count">0</span>)
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════ TAB 2: ELEMENT REDACT & BLUR ══════════════════════ -->
+  <div id="tab-redact" class="tab-section">
+    <div class="feature-card">
+      <div class="feature-title" data-i18n="redact_heading">Che mờ &amp; Bảo mật thông tin trên trang</div>
+      <div style="background:rgba(15,23,42,0.6); border:1px solid var(--card-border); border-radius:6px; padding:8px 10px; margin-bottom:10px; font-size:11.5px; line-height:1.5;">
+        <div style="color:var(--primary); font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:5px;">
+          <span data-i18n="redact_guide_title">Hướng dẫn thao tác:</span>
+        </div>
+        <div style="color:var(--text); margin-bottom:4px;" data-i18n="redact_guide_desc_html" data-i18n-html="true">
+          • Bấm <b>Bật chọn che</b> → Rê chuột vào phần tử → <b>Click chuột trái</b> để che mờ / hộp đen.<br>
+          • Để gỡ bỏ che một phần tử, nhấp vào nút xóa tương ứng trong <b>Danh sách phần tử đã che</b> bên dưới.
+        </div>
+        <div style="color:#fbbf24; font-size:11px; margin-top:4px; border-top:1px dashed var(--card-border); padding-top:4px;" data-i18n="redact_shortcut_hint_html" data-i18n-html="true">
+          Phím tắt: Nhấn <b>[ESC]</b> trên bàn phím hoặc nút <b>Dừng chọn</b> để thoát bất kỳ lúc nào.
+        </div>
+      </div>
+
+      <!-- 2 Nút riêng biệt: Bật chọn che / Tắt chọn -->
+      <div class="actions-row" style="margin-bottom:10px;">
+        <button class="btn btn-primary" id="btn-start-inspect" style="flex:1; padding:9px 6px; font-size:12px; font-weight:700;" data-i18n="btn_start_inspect">Bật chọn che</button>
+        <button class="btn btn-secondary" id="btn-stop-inspect" style="flex:1; padding:9px 6px; font-size:12px; font-weight:600; opacity:0.65;" data-i18n="btn_stop_inspect">Dừng chọn</button>
+      </div>
+
+      <div class="feature-title" style="font-size:12px; margin-top:8px;" data-i18n="lbl_redact_style">Kiểu che bảo mật:</div>
+      <div class="radio-grid">
+        <label class="radio-card">
+          <input type="radio" name="redact-style" value="blur" checked>
+          <span data-i18n="opt_style_blur">Làm mờ (Blur)</span>
+        </label>
+        <label class="radio-card">
+          <input type="radio" name="redact-style" value="blackout">
+          <span data-i18n="opt_style_black">Hộp đen (Blackout)</span>
+        </label>
+        <label class="radio-card">
+          <input type="radio" name="redact-style" value="pixelate">
+          <span data-i18n="opt_style_pixel">Điểm ảnh (Pixelate)</span>
+        </label>
+        <label class="radio-card">
+          <input type="radio" name="redact-style" value="hide">
+          <span data-i18n="opt_style_hide">Ẩn phần tử (Hide)</span>
+        </label>
+      </div>
+
+      <div id="blur-slider-box" style="margin-top:6px;">
+        <label style="font-size:11px; color:var(--text-muted); font-weight:600;"><span data-i18n="lbl_blur_level">Mức độ mờ (Blur):</span> <span id="blur-val-text">12px</span></label>
+        <div class="slider-row">
+          <input type="range" id="blur-slider" min="4" max="30" value="12" step="2">
+        </div>
+      </div>
+    </div>
+
+    <!-- Redaction Management -->
+    <div class="feature-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span style="font-weight:600; font-size:12px;"><span data-i18n="lbl_redacted_count">Đã che:</span> <strong id="redact-count" style="color:var(--primary);">0</strong> <span data-i18n="lbl_elements">phần tử</span></span>
+        <button class="btn btn-secondary" id="btn-undo-redact" style="padding:4px 8px; font-size:11px;" data-i18n="btn_undo">Hoàn tác</button>
+      </div>
+
+      <!-- 2 Nút riêng biệt: Bật che / Tắt che (Xem gốc) -->
+      <div style="margin-bottom:8px;">
+        <div style="font-size:11px; color:var(--text-muted); font-weight:600; margin-bottom:4px;" data-i18n="lbl_display_redact">Hiển thị che trên trang:</div>
+        <div class="actions-row" style="margin-bottom:0;">
+          <button class="btn btn-success" id="btn-enable-redactions" style="flex:1; padding:7px 4px; font-size:11.5px; font-weight:700;" title="Bật lại hiệu ứng che mờ / hộp đen cho các phần tử" data-i18n-title="tip_enable_redact">
+            <span data-i18n="btn_enable_redact">Bật che</span>
+          </button>
+          <button class="btn btn-secondary" id="btn-disable-redactions" style="flex:1; padding:7px 4px; font-size:11.5px; font-weight:600; opacity:0.75;" title="Tạm thời tắt che để xem nội dung trang gốc" data-i18n-title="tip_disable_redact">
+            <span data-i18n="btn_disable_redact">Xem bản gốc</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Danh sách phần tử đã che & nút xóa từng phần tử -->
+      <div style="margin-top:10px; margin-bottom:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <span style="font-size:11px; color:var(--text-muted); font-weight:600;" data-i18n="lbl_redacted_list">Danh sách phần tử đã che:</span>
+          <span style="font-size:10px; color:#94a3b8;" data-i18n="lbl_hover_hint">Rê chuột để soi vị trí</span>
+        </div>
+        <div id="redacted-items-list" class="redacted-list-box">
+          <div class="empty-list-box">
+            <div class="empty-list-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:0.6;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            </div>
+            <div class="empty-list-title" data-i18n="lbl_no_redacted">Chưa có phần tử nào được che</div>
+            <div class="empty-list-sub" data-i18n="lbl_no_redacted_sub">Bấm "Bật chọn che" rồi nhấp vào đối tượng trên trang để bảo mật.</div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-secondary" id="btn-apply-all-style" style="width:100%; padding:7px; font-size:11.5px; margin-bottom:6px;">
+        <span data-i18n="btn_apply_all_style">Áp dụng kiểu này cho tất cả</span>
+      </button>
+      <button class="btn btn-danger" id="btn-clear-redact" style="width:100%; padding:7px; font-size:11.5px;">
+        <span data-i18n="btn_clear_redact">Khôi phục trang gốc (Xóa hết che)</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════ TAB 3: SMART SCREENSHOT & VIDEO RECORDING ══════════════════════ -->
+  <div id="tab-capture" class="tab-section">
+    <!-- Bộ Chuyển Đổi 2 Trang Liên Kết (Dual-Web Quick Switcher) -->
+    <div class="dual-tabs-bar" id="dual-tabs-bar">
+      <div class="dual-tabs-top">
+        <span class="dual-tabs-title">
+          <span data-i18n="dual_tab_title">2 Trang liên kết:</span>
+        </span>
+        <div style="display:flex; gap:4px; align-items:center;">
+          <button class="btn-text-small" id="btn-quick-swap-tabs" title="Chuyển đổi qua lại tức thì giữa 2 trang web (Phím tắt: Alt + Q)" data-i18n-title="tip_swap_tabs">
+            <span data-i18n="btn_swap_tabs">⇄ Đổi trang (Alt+Q)</span>
+          </button>
+          <button class="btn-text-small" id="btn-toggle-tab-picker" title="Chọn trang khác trong danh sách tab đang mở" data-i18n-title="tip_pick_tab" style="padding:2px 6px;">
+            <span data-i18n="btn_tab_picker">▼ Tab</span>
+          </button>
+        </div>
+      </div>
+      <div class="dual-tabs-row">
+        <div class="dual-tab-pill active" id="pill-tab-a" title="Trang hiện tại (A)" data-i18n-title="tip_tab_a">
+          <span class="tab-dot dot-current"></span>
+          <span class="tab-title-text" id="tab-a-title" data-i18n="tab_a_title">Trang hiện tại</span>
+        </div>
+        <div class="dual-swap-arrow" id="btn-swap-arrow" title="Bấm để đổi trang (Alt+Q)" data-i18n-title="tip_swap_arrow">⇄</div>
+        <div class="dual-tab-pill" id="pill-tab-b" title="Trang vừa xem / liên kết (B) - Bấm để chuyển sang" data-i18n-title="tip_tab_b">
+          <span class="tab-dot dot-linked"></span>
+          <span class="tab-title-text" id="tab-b-title" data-i18n="tab_b_empty">Chưa có trang phụ</span>
+        </div>
+      </div>
+      <div id="dual-tab-dropdown-box" style="display:none; margin-top:6px;">
+        <select id="select-linked-tab" class="form-control" style="font-size:11px; padding:4px 6px;">
+          <option value="" data-i18n="select_linked_tab_opt">-- Bấm chọn trang để liên kết qua lại --</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 1. Smart Screenshot Card -->
+    <div class="feature-card">
+      <div class="feature-title" data-i18n="cap_heading">Chụp ảnh màn hình</div>
+      <p data-i18n="cap_desc" style="color:var(--text-muted); font-size:11.5px; margin-bottom:10px; line-height:1.4;">Các đối tượng bạn vừa che mờ ở Tab 2 sẽ hiển thị trực tiếp trên bức ảnh chụp.</p>
+
+      <!-- Screenshot Settings Box -->
+      <div style="background:rgba(15,23,42,0.65); border:1px solid var(--card-border); border-radius:8px; padding:10px; margin-bottom:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span style="font-size:11.5px; font-weight:700; color:var(--primary); display:flex; align-items:center; gap:5px;">
+            <span data-i18n="cap_settings_title">Cài đặt chụp ảnh</span>
+          </span>
+          <span style="font-size:10px; color:#10b981; font-weight:600;" id="cap-settings-status" data-i18n="pref_autosave">Tự động lưu</span>
+        </div>
+
+        <!-- Auto Copy Switch -->
+        <label class="switch-row">
+          <div class="switch-row-left">
+            <span class="switch-row-title" data-i18n="pref_cap_autocopy">Tự động sao chép vào Clipboard</span>
+            <span class="switch-row-desc" data-i18n="pref_cap_autocopy_desc">Chụp xong là tự động dán (Ctrl + V) được ngay, không cần bấm Sao chép.</span>
+          </div>
+          <div class="custom-switch">
+            <input type="checkbox" id="cap-pref-autocopy" checked>
+            <span class="switch-slider"></span>
+          </div>
+        </label>
+
+        <!-- Format & Delay Row -->
+        <div class="row" style="margin-bottom:0;">
+          <div class="col form-group" style="margin-bottom:0;">
+            <label style="font-size:10.5px; font-weight:600; color:var(--text-muted);" data-i18n="lbl_cap_format">Định dạng ảnh:</label>
+            <select class="form-control" id="cap-pref-format" style="font-size:11px; padding:4px 6px;">
+              <option value="png">PNG</option>
+              <option value="jpeg">JPEG</option>
+            </select>
+          </div>
+          <div class="col form-group" style="margin-bottom:0;">
+            <label style="font-size:10.5px; font-weight:600; color:var(--text-muted);" data-i18n="lbl_cap_delay">Hẹn giờ chụp:</label>
+            <select class="form-control" id="cap-pref-delay" style="font-size:11px; padding:4px 6px;">
+              <option value="0" data-i18n="opt_delay_0">Chụp ngay (0s)</option>
+              <option value="2" data-i18n="opt_delay_2">Hẹn giờ 2 giây</option>
+              <option value="5" data-i18n="opt_delay_5">Hẹn giờ 5 giây</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Element & Table Capture Button -->
+      <button class="btn btn-primary" id="btn-cap-element" style="width:100%; margin-bottom:8px; padding:9px; background:linear-gradient(135deg, #06b6d4 0%, #0284c7 100%); color:#ffffff; border-color:rgba(6,182,212,0.4);" title="Click chọn thẻ/khung đối tượng hoặc kéo chuột tùy ý, có 8 góc tinh chỉnh kích thước trước khi bấm chụp!" data-i18n-title="tip_cap_element">
+        <span data-i18n="btn_cap_element">Chọn khung đối tượng / Kéo vùng chụp</span>
+      </button>
+
+      <!-- Active Element Picking Notification Banner -->
+      <div id="element-cap-active-banner" style="display:none; background:rgba(14,165,233,0.15); border:1px solid rgba(14,165,233,0.4); border-radius:8px; padding:8px 10px; margin-bottom:8px; font-size:11.5px;">
+        <div style="color:#38bdf8; font-weight:700; display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+          <span data-i18n="banner_cap_element_title">Chế độ chọn khung &amp; Kéo vùng chụp</span>
+          <button id="btn-cancel-cap-element" class="btn-text" style="color:#f87171; font-size:11px;" data-i18n="btn_cancel">[ESC] Hủy</button>
+        </div>
+        <div style="color:#cbd5e1; font-size:11px; line-height:1.4;" data-i18n="banner_cap_element_guide_html" data-i18n-html="true">
+          • <b>Click vào thẻ/khung</b> hoặc <b>kéo chuột</b> để chọn vùng.<br>
+          • Kéo <b>8 nút góc/cạnh</b> để tinh chỉnh vùng cần chụp.<br>
+          • Bấm <b>Chụp ngay (Enter)</b> để lưu ảnh.
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="btn-cap-visible" style="width:100%; margin-bottom:8px; padding:9px;">
+        <span data-i18n="btn_cap_visible">Chụp vùng hiển thị (Visible)</span>
+      </button>
+
+      <button class="btn btn-secondary" id="btn-cap-fullpage" style="width:100%; padding:9px;" title="Tự động cuộn và triệt tiêu lỗi trùng lặp menu thanh điều hướng cố định!" data-i18n-title="tip_cap_fullpage">
+        <span data-i18n="btn_cap_fullpage">Chụp toàn bộ trang (Full Page)</span>
+      </button>
+    </div>
+
+    <!-- Screenshot Result Preview -->
+    <div id="screenshot-preview-box" class="feature-card">
+      <div class="feature-title" style="font-size:12px;" data-i18n="lbl_screenshot_preview">Ảnh chụp màn hình</div>
+      <img id="screenshot-img" src="" alt="Screenshot">
+      <div class="actions-row">
+        <button class="btn btn-primary" id="btn-copy-screenshot" style="flex:1;">
+          <span data-i18n="btn_copy_screenshot">Sao chép ảnh</span>
+        </button>
+        <button class="btn btn-success" id="btn-download-screenshot" style="flex:1;">
+          <span data-i18n="btn_download_screenshot">Tải về máy</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 2. Screen & Tab Video Recording Card -->
+    <div class="feature-card">
+      <div class="feature-title" data-i18n="video_heading">Quay video màn hình &amp; tab</div>
+      <p data-i18n="video_desc" style="color:var(--text-muted); font-size:11.5px; margin-bottom:10px; line-height:1.4;">Ghi lại thao tác trực tiếp trên tab trang web hoặc toàn màn hình chất lượng cao.</p>
+
+      <!-- Video Recording Settings Box -->
+      <div style="background:rgba(15,23,42,0.65); border:1px solid var(--card-border); border-radius:8px; padding:10px; margin-bottom:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span style="font-size:11.5px; font-weight:700; color:var(--primary); display:flex; align-items:center; gap:5px;">
+            <span data-i18n="video_settings_title">Cài đặt quay video</span>
+          </span>
+          <span style="font-size:10px; color:#10b981; font-weight:600;" id="video-settings-status" data-i18n="pref_autosave">Tự động lưu</span>
+        </div>
+
+        <!-- Multi-Web Guidance Notice -->
+        <div style="background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.25); border-radius:6px; padding:7px 9px; margin-bottom:10px; font-size:11px; line-height:1.45; color:#cbd5e1;">
+          <div style="font-weight:700; color:#38bdf8; margin-bottom:2px; display:flex; align-items:center; gap:4px;">
+            <span data-i18n="video_multitab_hint_title">Gợi ý quay đa tab:</span>
+          </div>
+          <div data-i18n="video_multitab_hint_desc_html" data-i18n-html="true">
+            Khi trình duyệt mở hộp thoại chọn nguồn quay: Hãy chọn thẻ <b>"Toàn bộ màn hình" (Entire Screen)</b> hoặc <b>"Cửa sổ" (Window)</b>. Lúc này khi bạn bấm link chuyển sang web khác hoặc bấm <b>Alt + Q</b> đổi tab, video sẽ quay liên tục và không bị ngắt!
+          </div>
+        </div>
+
+        <!-- 1. Option: Audio Toggle (Custom Switch) -->
+        <label class="switch-row">
+          <div class="switch-row-left">
+            <span class="switch-row-title" data-i18n="pref_video_audio">Thu âm thanh từ tab / trang web</span>
+            <span class="switch-row-desc" data-i18n="pref_video_audio_desc">Tắt âm thanh giúp quay siêu mượt, nhẹ dung lượng &amp; dừng quay tức thì.</span>
+          </div>
+          <div class="custom-switch">
+            <input type="checkbox" id="video-pref-audio">
+            <span class="switch-slider"></span>
+          </div>
+        </label>
+
+        <!-- 2. Option: Auto Download Toggle (Custom Switch) -->
+        <label class="switch-row">
+          <div class="switch-row-left">
+            <span class="switch-row-title" data-i18n="pref_video_autodownload">Tự động tải video khi bấm Dừng</span>
+            <span class="switch-row-desc" data-i18n="pref_video_autodownload_desc">Tự động tải file .webm về máy ngay khi hoàn thành mà không cần bấm thêm.</span>
+          </div>
+          <div class="custom-switch">
+            <input type="checkbox" id="video-pref-autodownload">
+            <span class="switch-slider"></span>
+          </div>
+        </label>
+
+        <!-- 3. Option: Resolution, FPS & Countdown Row -->
+        <div class="row" style="margin-bottom:0;">
+          <div class="col form-group" style="margin-bottom:0;">
+            <label style="font-size:10.5px; font-weight:600; color:var(--text-muted);" data-i18n="lbl_video_res">Độ phân giải:</label>
+            <select class="form-control" id="video-pref-resolution" style="font-size:11px; padding:4px 6px;">
+              <option value="1080">1080p (Full HD)</option>
+              <option value="720">720p (HD)</option>
+              <option value="original">Original</option>
+            </select>
+          </div>
+          <div class="col form-group" style="margin-bottom:0;">
+            <label style="font-size:10.5px; font-weight:600; color:var(--text-muted);" data-i18n="lbl_video_fps">Khung hình (FPS):</label>
+            <select class="form-control" id="video-pref-fps" style="font-size:11px; padding:4px 6px;">
+              <option value="30">30 FPS</option>
+              <option value="60">60 FPS</option>
+            </select>
+          </div>
+          <div class="col form-group" style="margin-bottom:0;">
+            <label style="font-size:10.5px; font-weight:600; color:var(--text-muted);" data-i18n="lbl_video_countdown">Đếm ngược:</label>
+            <select class="form-control" id="video-pref-countdown" style="font-size:11px; padding:4px 6px;">
+              <option value="0" data-i18n="opt_delay_0">Quay ngay (0s)</option>
+              <option value="3" data-i18n="opt_delay_3" selected>Đếm ngược 3s</option>
+              <option value="5" data-i18n="opt_delay_5">Đếm ngược 5s</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Start recording button -->
+      <button class="btn btn-primary" id="btn-start-record" style="width:100%; padding:9px;">
+        <span data-i18n="btn_start_record">Bắt đầu quay video</span>
+      </button>
+
+      <!-- Active recording status bar -->
+      <div id="recording-active-bar" style="display:none; margin-top:8px; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.35); border-radius:8px; padding:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <div style="display:flex; align-items:center; gap:6px; font-weight:700; color:#f87171; font-size:12px;">
+            <span class="record-pulse-dot"></span>
+            <span data-i18n="lbl_recording_active">ĐANG QUAY:</span>
+            <span id="record-timer" style="font-family:ui-monospace, monospace; color:#ffffff; font-size:13px;">00:00</span>
+          </div>
+          <span id="record-audio-status" style="font-size:10.5px; color:#cbd5e1;" data-i18n="lbl_no_audio">(Không âm thanh)</span>
+        </div>
+        <div class="actions-row" style="margin-bottom:0;">
+          <button class="btn btn-success" id="btn-stop-record" style="flex:2; padding:7px;">
+            <span data-i18n="btn_stop_record">Dừng &amp; Lưu video</span>
+          </button>
+          <button class="btn btn-danger" id="btn-cancel-record" style="flex:1; padding:7px;">
+            <span data-i18n="btn_cancel_record">✕ Hủy</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Video Preview Box -->
+      <div id="video-preview-box" style="display:none; margin-top:10px; text-align:center;">
+        <div class="feature-title" style="font-size:12px; margin-bottom:6px;" data-i18n="lbl_video_finished">Video đã quay xong</div>
+        <video id="video-player" controls playsinline style="max-width:100%; max-height:200px; border-radius:6px; border:1px solid var(--card-border); margin-bottom:6px; background:#000;"></video>
+        <div id="video-info-text" style="font-size:11px; color:#94a3b8; margin-bottom:8px; font-family:ui-monospace, monospace;">
+          Thời lượng: 00:00 • Dung lượng: 0 MB
+        </div>
+        <div class="actions-row" style="margin-bottom:0;">
+          <button class="btn btn-success" id="btn-download-video" style="flex:2; padding:8px;">
+            <span data-i18n="btn_download_video">Tải Video (.webm)</span>
+          </button>
+          <button class="btn btn-secondary" id="btn-discard-video" style="flex:1; padding:8px;">
+            <span data-i18n="btn_discard_video">Hủy video này</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- High Visibility Animated Countdown Modal Overlay for Video Recording -->
+  <div id="video-countdown-overlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(15,23,42,0.96); backdrop-filter:blur(10px); z-index:9999; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px; box-sizing:border-box;">
+    <div style="font-size:12px; font-weight:700; color:#38bdf8; text-transform:uppercase; letter-spacing:1.5px; margin-bottom:12px;">
+      <span data-i18n="overlay_countdown_title">Chuẩn bị quay video</span>
+    </div>
+    <div id="sidebar-countdown-number" style="font-size:76px; font-weight:900; line-height:1; color:#38bdf8; text-shadow:0 0 35px rgba(56,189,248,0.85); margin-bottom:14px; animation:countdownZoom 1s infinite alternate ease-in-out; font-family:ui-monospace, monospace;">
+      3
+    </div>
+    <div id="sidebar-countdown-sub" style="font-size:11.5px; color:#cbd5e1; margin-bottom:18px; max-width:240px; line-height:1.45;" data-i18n="overlay_countdown_desc">Đã nhận luồng quay! Bạn có thể chuyển sang tab hoặc trang web cần thao tác ngay bây giờ.</div>
+    <button class="btn btn-danger" id="btn-cancel-countdown" style="padding:6px 16px; font-size:11.5px;">
+      <span data-i18n="btn_cancel_countdown">✕ Hủy quay</span>
+    </button>
+  </div>
+
+  <div id="notify" class="notify" data-i18n="notify_success">✓ Thành công!</div>
+
+  <!-- Modal Bibliography Manager -->
+  <div id="biblio-modal" class="modal-overlay">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span data-i18n="biblio_modal_title">Danh mục trích dẫn đã lưu</span>
+        <span class="biblio-index-pill" id="modal-biblio-count">0</span>
+      </div>
+      <button class="btn btn-secondary" id="btn-close-biblio" style="padding:4px 10px; font-size:12px;" data-i18n="btn_close">✕ Đóng</button>
+    </div>
+
+    <!-- Search & Filter Bar -->
+    <div style="margin-bottom:8px;">
+      <input type="text" id="biblio-search-input" class="form-control" placeholder="Tìm tác giả, tiêu đề, tag, năm..." data-i18n-placeholder="biblio_search_placeholder" style="font-size:11.5px; padding:6px 10px;">
+    </div>
+
+    <!-- Modal Style Switch Tabs -->
+    <div class="sub-tabs" style="margin-bottom:8px;">
+      <button class="sub-tab-btn active" id="modal-tab-ieee" data-modaltab="ieee">IEEE</button>
+      <button class="sub-tab-btn" id="modal-tab-apa" data-modaltab="apa">APA 7th</button>
+      <button class="sub-tab-btn" id="modal-tab-harvard" data-modaltab="harvard">Harvard</button>
+      <button class="sub-tab-btn" id="modal-tab-bibtex" data-modaltab="bibtex">BibTeX</button>
+      <button class="sub-tab-btn" id="modal-tab-mla" data-modaltab="mla">MLA 9th</button>
+    </div>
+
+    <!-- Items List Container -->
+    <div id="biblio-items" style="margin-bottom:10px; max-height:360px; overflow-y:auto;">
+      <!-- Dynamic cards rendered safely via document.createElement -->
+    </div>
+
+    <!-- Modal Action Buttons Row -->
+    <div class="actions-row" style="margin-bottom:6px;">
+      <button class="btn btn-primary" id="btn-copy-all-biblio" style="flex:1;" title="Sao chép toàn bộ danh mục tài liệu theo định dạng đang chọn" data-i18n-title="tip_copy_all">
+        <span data-i18n="btn_copy_all_biblio">Sao chép tất cả</span>
+      </button>
+      <button class="btn btn-secondary" id="btn-export-bib-all" style="flex:1;" title="Tải file references.bib cho LaTeX/Overleaf" data-i18n-title="tip_download_bib2" data-i18n="btn_export_bib_all">
+        Xuất .bib
+      </button>
+      <button class="btn btn-secondary" id="btn-export-txt-all" style="flex:1;" title="Tải file references.txt cho Word" data-i18n-title="tip_export_txt">
+        <span data-i18n="btn_export_txt_all">Xuất .txt</span>
+      </button>
+    </div>
+
+    <div style="text-align:right;">
+      <button class="btn btn-danger" id="btn-clear-all-biblio" style="width:100%; padding:6px; font-size:11px; opacity:0.85;">
+        <span data-i18n="btn_clear_all_biblio">Xóa toàn bộ danh mục đã lưu</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal: International Author Citation Rules Guide -->
+  <div id="author-rules-modal" class="modal-overlay">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span data-i18n="author_rules_modal_title">Quy tắc trích nhiều tác giả chuẩn quốc tế</span>
+      </div>
+      <button class="btn btn-secondary" id="btn-close-author-rules" style="padding:4px 10px; font-size:12px; flex-shrink:0;" data-i18n="btn_close">✕ Đóng</button>
+    </div>
+
+    <div style="font-size:11px; color:#94a3b8; margin-bottom:8px; line-height:1.4; flex-shrink:0;" data-i18n="author_rules_intro">
+      Khi bài báo hoặc tài liệu có nhiều tác giả tham gia, các tổ chức học thuật quốc tế (IEEE, APA 7th, Harvard, MLA 9th, BibTeX) quy định cách viết rất chặt chẽ như sau:
+    </div>
+
+    <div class="modal-body-scroll">
+      <!-- Rule IEEE -->
+      <div class="rule-card">
+        <div class="rule-card-title" data-i18n="author_rules_ieee_title">1. Chuẩn IEEE (CNTT &amp; Kỹ thuật - Viện IEEE)</div>
+        <div class="rule-card-body" data-i18n="author_rules_ieee_body_html" data-i18n-html="true">
+          • <b>1 tác giả:</b> Viết tắt tên đệm/tên gọi, họ giữ nguyên: <span class="rule-code">A. Vaswani</span><br>
+          • <b>2 tác giả:</b> Nối bằng chữ 'and': <span class="rule-code">A. Vaswani and N. Shazeer</span><br>
+          • <b>3 đến 6 tác giả:</b> Liệt kê đầy đủ tất cả tác giả, có dấu phẩy Oxford trước 'and': <span class="rule-code">A. Vaswani, N. Shazeer, N. Parmar, and J. Uszkoreit</span><br>
+          • <b>Trên 6 tác giả (&gt; 6):</b> Chỉ ghi tác giả đầu tiên kèm cụm 'et al.': <span class="rule-code">A. Vaswani et al.</span><br>
+          • <b>Trong bài:</b> Dùng ngoặc vuông số thứ tự <span class="rule-code">[1]</span> hoặc <span class="rule-code">theo Vaswani et al. [1]</span>.
+        </div>
+      </div>
+
+      <!-- Rule APA 7th -->
+      <div class="rule-card">
+        <div class="rule-card-title" data-i18n="author_rules_apa_title">2. Chuẩn APA 7th (Hiệp hội Tâm lý học Hoa Kỳ - Mới nhất)</div>
+        <div class="rule-card-body" data-i18n="author_rules_apa_body_html" data-i18n-html="true">
+          • <b>1 tác giả:</b> Họ viết trước, chữ cái đầu tên sau: <span class="rule-code">Vaswani, A.</span><br>
+          • <b>2 tác giả:</b> Nối bằng ký tự '&amp;': <span class="rule-code">Vaswani, A., &amp; Shazeer, N.</span><br>
+          • <b>3 đến 20 tác giả:</b> Liệt kê TẤT CẢ các tác giả, dấu phẩy và ký tự '&amp;' trước tác giả cuối: <span class="rule-code">Vaswani, A., Shazeer, N., &amp; Parmar, N.</span><br>
+          • <b>Từ 21 tác giả trở lên:</b> Liệt kê 19 tác giả đầu, thêm dấu ba chấm <span class="rule-code">...</span> rồi ghi tên tác giả cuối cùng (không có &amp;).<br>
+          • <b>Trong bài (In-Text):</b> Từ <b>3 tác giả trở lên</b>, chuẩn APA 7th quy định dùng ngay <span class="rule-code">(Vaswani et al., 2017)</span> ngay từ lần nhắc đầu tiên!
+        </div>
+      </div>
+
+      <!-- Rule Harvard -->
+      <div class="rule-card">
+        <div class="rule-card-title" data-i18n="author_rules_harvard_title">3. Chuẩn Harvard (Kinh tế, Quản trị, Châu Âu &amp; Úc)</div>
+        <div class="rule-card-body" data-i18n="author_rules_harvard_body_html" data-i18n-html="true">
+          • <b>1 tác giả:</b> <span class="rule-code">Vaswani, A. (2017)</span><br>
+          • <b>2 tác giả:</b> <span class="rule-code">Vaswani, A. and Shazeer, N. (2017)</span><br>
+          • <b>3 tác giả:</b> <span class="rule-code">Vaswani, A., Shazeer, N. and Parmar, N. (2017)</span><br>
+          • <b>Từ 4 tác giả trở lên:</b> Dùng et al.: <span class="rule-code">Vaswani, A. et al. (2017)</span>
+        </div>
+      </div>
+
+      <!-- Rule MLA 9th -->
+      <div class="rule-card">
+        <div class="rule-card-title" data-i18n="author_rules_mla_title">4. Chuẩn MLA 9th (Ngôn ngữ, Nhân văn &amp; Báo chí)</div>
+        <div class="rule-card-body" data-i18n="author_rules_mla_body_html" data-i18n-html="true">
+          • <b>1 tác giả:</b> <span class="rule-code">Vaswani, Ashish.</span><br>
+          • <b>2 tác giả:</b> Tác giả 1 đảo họ, tác giả 2 để nguyên: <span class="rule-code">Vaswani, Ashish, and Noam Shazeer.</span><br>
+          • <b>Từ 3 tác giả trở lên:</b> <span class="rule-code">Vaswani, Ashish, et al.</span>
+        </div>
+      </div>
+
+      <!-- Rule BibTeX -->
+      <div class="rule-card">
+        <div class="rule-card-title" data-i18n="author_rules_bibtex_title">5. Chuẩn BibTeX (LaTeX / Overleaf / ACM)</div>
+        <div class="rule-card-body" data-i18n="author_rules_bibtex_body_html" data-i18n-html="true">
+          • Bắt buộc nối tất cả các tác giả bằng chữ <span class="rule-code">and</span>: <br>
+          <span class="rule-code">author = {Vaswani, Ashish and Shazeer, Noam and Parmar, Niki}</span><br>
+          • <b>Tổ chức / Cơ quan:</b> Bọc 2 cặp ngoặc nhọn <span class="rule-code">author = {{OpenAI Research}}</span> để BibTeX không chia nhầm họ tên.
+        </div>
+      </div>
+
+      <!-- Quick input guide -->
+      <div class="rule-card" style="border-color:rgba(16,185,129,0.3); background:rgba(16,185,129,0.06);">
+        <div class="rule-card-title" style="color:#10b981;" data-i18n="author_rules_tip_title">Lưu ý nhập liệu nhanh</div>
+        <div class="rule-card-body" data-i18n="author_rules_tip_body_html" data-i18n-html="true">
+          Bạn chỉ cần gõ hoặc dán danh sách tác giả phân cách bằng dấu phẩy <span class="rule-code">,</span> hoặc chữ <span class="rule-code">and</span> hoặc chấm phẩy <span class="rule-code">;</span>. Tiện ích sẽ tự động tách tên, chuẩn hóa họ tên và áp dụng đúng quy chuẩn của từng chuẩn trích dẫn bạn chọn!
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Trung Tâm Uy Tín & Chuẩn Học Thuật (Trust, Standards & Privacy Center) -->
+  <div id="trust-modal" class="modal-overlay">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span style="display:inline-flex; align-items:center; gap:6px; min-width:0;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          <span data-i18n="trust_modal_title" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Trung Tâm Uy Tín &amp; Chuẩn Học Thuật</span>
+        </span>
+      </div>
+      <button class="btn btn-secondary" id="btn-close-trust" style="padding:4px 10px; font-size:12px; flex-shrink:0;" data-i18n="btn_close">✕ Đóng</button>
+    </div>
+
+    <div class="modal-body-scroll">
+      <!-- Card 1: 100% Client-side Privacy -->
+      <div class="rule-card" style="border-color:rgba(16,185,129,0.35); background:rgba(16,185,129,0.06);">
+        <div class="rule-card-title" style="color:#10b981;">
+          <span data-i18n="trust_card1_title">🛡️ 1. Chứng Nhận Quyền Riêng Tư 100% Cục Bộ (Zero Tracking)</span>
+          <span data-i18n="trust_store_verified" style="font-size:9.5px; background:rgba(16,185,129,0.2); color:#10b981; padding:2px 6px; border-radius:4px; font-weight:600; white-space:nowrap;">STORE VERIFIED</span>
+        </div>
+        <div class="rule-card-body" data-i18n="trust_card1_body_html" data-i18n-html="true">
+          • <b>Bảo vệ dữ liệu tuyệt đối:</b> Toàn bộ thông tin trích dẫn, hình ảnh chụp màn hình, video và các phần tử che mờ được xử lý và lưu trữ <b>100% cục bộ trên trình duyệt</b> của bạn.<br>
+          • <b>Không máy chủ trung gian:</b> Tiện ích không thu thập thông tin cá nhân, không có máy chủ theo dõi (telemetry) và không bao giờ bán dữ liệu.<br>
+          • <b>Tuân thủ quy định Store:</b> Đạt chuẩn chính sách dữ liệu người dùng của <b>Google Chrome Web Store</b> và <b>Mozilla Add-ons (AMO) Review Guidelines</b>.
+        </div>
+      </div>
+
+      <!-- Card 2: International Academic Standards -->
+      <div class="rule-card" style="border-color:rgba(56,189,248,0.35); background:rgba(56,189,248,0.06);">
+        <div class="rule-card-title" style="color:#38bdf8;" data-i18n="trust_card2_title">🎓 2. Tuân Thủ 6 Chuẩn Trích Dẫn Quốc Tế</div>
+        <div class="rule-card-body" data-i18n="trust_card2_body_html" data-i18n-html="true">
+          • <b>IEEE Standard 2026:</b> Viện Kỹ nghệ Điện &amp; Điện tử (CNTT, phần mềm, kỹ thuật).<br>
+          • <b>APA 7th Edition:</b> Hiệp hội Tâm lý học Hoa Kỳ (khoa học xã hội, giáo dục, tâm lý).<br>
+          • <b>Harvard Referencing:</b> Chuẩn Tác giả - Năm phổ biến tại Châu Âu &amp; khối Kinh tế.<br>
+          • <b>MLA 9th Edition:</b> Hiệp hội Ngôn ngữ Hiện đại (Văn học, nghệ thuật, nhân văn).<br>
+          • <b>BibTeX Standard:</b> Định dạng chuẩn cho LaTeX, Overleaf và ấn phẩm ACM.<br>
+          • <b>Trích dẫn trong bài (In-Text):</b> Tự động tạo định dạng phù hợp chuẩn (ví dụ: [1] cho IEEE, (Nguyễn et al., 2026) cho APA/Harvard).<br>
+          • <b>Hỗ trợ tên Tiếng Việt:</b> Tự động bỏ dấu và chuẩn hóa chữ hoa theo đúng yêu cầu bài báo quốc tế.
+        </div>
+      </div>
+
+      <!-- Card 3: Official Global Academic APIs -->
+      <div class="rule-card" style="border-color:rgba(129,140,248,0.35); background:rgba(129,140,248,0.06);">
+        <div class="rule-card-title" style="color:#818cf8;" data-i18n="trust_card3_title">🌐 3. Mạng Lưới Học Thuật Mở Toàn Cầu</div>
+        <div class="rule-card-body" data-i18n="trust_card3_body_html" data-i18n-html="true">
+          • <b>OpenAlex Integration:</b> Kết nối trực tiếp với 250+ triệu công trình nghiên cứu khoa học mở.<br>
+          • <b>Crossref Official Registry:</b> Kiểm tra và đối soát DOI với 150+ triệu bản ghi học thuật.<br>
+          • <b>ArXiv &amp; Semantic Scholar:</b> Hỗ trợ định danh nghiên cứu điện tử mở toàn cầu.
+        </div>
+      </div>
+
+      <!-- Card 4: Store & License Specs -->
+      <div class="rule-card" style="border-color:rgba(245,158,11,0.35); background:rgba(245,158,11,0.06);">
+        <div class="rule-card-title" style="color:#f59e0b;" data-i18n="trust_card4_title">⚖️ 4. Thông Tin Bản Quyền &amp; Kỹ Thuật</div>
+        <div class="rule-card-body" data-i18n="trust_card4_body_html" data-i18n-html="true">
+          • <b>Phiên bản:</b> ScholarFlow v2.3.0 (Stable Release)<br>
+          • <b>Kiến trúc:</b> Manifest V3 (Chromium 114+ &amp; Firefox 109+ Native Gecko)<br>
+          • <b>Bản quyền:</b> Bản quyền phần mềm thuộc về Minh Thuận<br>
+          • <b>Chính sách bảo mật:</b> <a href="privacy.html" target="_blank" style="color:#38bdf8; text-decoration:underline;">Xem toàn văn Chính Sách Quyền Riêng Tư (Privacy Policy)</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- ══════════════════════ TAB 4: COOKIE MANAGER ══════════════════════ -->
+  <div id="tab-cookie" class="tab-section">
+    <div class="feature-card">
+      <div class="feature-title" data-i18n="cookie_heading">Quản lý Phiên đăng nhập (Cookies)</div>
+      <div class="feature-desc" style="margin-bottom:10px;" data-i18n="cookie_desc">Xuất toàn bộ cookie của trang hiện tại để sử dụng trên máy khác, hoặc nạp cookie có sẵn để vượt qua tường lửa và màn hình đăng nhập.</div>
+      
+      <textarea id="cookie-raw-text" class="cookie-textarea" style="width:100%;height:72px;margin-bottom:10px;font-family:ui-monospace,Consolas,monospace;font-size:10.5px;resize:vertical;background:rgba(15,23,42,0.7);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);border-radius:8px;padding:8px 10px;outline:none;line-height:1.4;box-shadow:inset 0 2px 4px rgba(0,0,0,0.25);" placeholder="Dán chuỗi Cookie (key=value;...) vào đây để nạp, hoặc bấm Copy để lấy Cookie trang hiện tại..." data-i18n-placeholder="cookie_raw_placeholder"></textarea>
+      
+      <div style="display:flex; gap:8px; margin-bottom:8px;">
+        <button class="btn btn-secondary" id="btn-copy-raw-cookie" style="flex:1; padding:8px 4px; font-size:11px;" title="Copy toàn bộ Cookie dưới dạng chuỗi Text" data-i18n-title="tip_copy_raw_cookie">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+          <span data-i18n="btn_copy_raw_cookie">Copy dạng Chuỗi</span>
+        </button>
+        <button class="btn btn-primary" id="btn-import-raw-cookie" style="flex:1; padding:8px 4px; font-size:11px;" title="Nhập Cookie từ chuỗi Text bên trên" data-i18n-title="tip_import_raw_cookie">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          <span data-i18n="btn_import_raw_cookie">Nhập từ Chuỗi</span>
+        </button>
+      </div>
+
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-secondary" id="btn-export-cookie" style="flex:1; padding:8px 4px; font-size:11px; opacity:0.8;" title="Xuất toàn bộ Cookie của trang hiện tại (JSON)" data-i18n-title="tip_export_cookie">
+          <span data-i18n="btn_export_cookie">Xuất (.json)</span>
+        </button>
+        <button class="btn btn-secondary" id="btn-import-cookie" style="flex:1; padding:8px 4px; font-size:11px; opacity:0.8;" title="Nhập Cookie cho trang hiện tại (JSON)" data-i18n-title="tip_import_cookie">
+          <span data-i18n="btn_import_cookie">Nhập (.json)</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="footer-trust-bar">
+    <div class="trust-pill" title="Phiên bản hiện tại" data-i18n-title="tip_trust_version">
+      <span class="trust-dot dot-green"></span>
+      <span id="app-version-display">v2.3.0</span>
+    </div>
+    <div class="trust-divider">•</div>
+    <div class="trust-pill" title="Được phát triển bởi Minh Thuận" data-i18n-title="tip_trust_author">
+      <span>✨ Minh Thuận</span>
+    </div>
+    <div class="trust-divider">•</div>
+    <a href="privacy.html" target="_blank" id="link-privacy-policy" class="trust-link" data-i18n="trust_footer_privacy">Chính sách bảo mật</a>
+  </div>
+
+  <script src="../locales/vi.js"></script>
+  <script src="../locales/en.js"></script>
+  <script src="../locales/zh.js"></script>
+  <script src="../locales/ru.js"></script>
+  <script src="../locales/ja.js"></script>
+  <script src="../js/i18n.js"></script>
+  <script src="../js/sidebar.js"></script>
+</body>
+</html>
