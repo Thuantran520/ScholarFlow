@@ -8,7 +8,6 @@ yarn-error.log*
 # Build output and packaged artifacts
 dist/
 build/
-docs/
 *.zip
 *.crx
 *.xpi
