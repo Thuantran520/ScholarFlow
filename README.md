@@ -85,6 +85,21 @@ ScholarFlow/
     └── css/
 ```
 
+## GitHub Pages
+A lightweight landing page is available in the `docs/` folder for GitHub Pages hosting.
+
+To enable GitHub Pages:
+1. Open the repository on GitHub
+2. Go to Settings → Pages
+3. Select the `docs` folder as the source
+4. Save the configuration
+
+## Release & Store Packaging
+To produce browser-ready packages:
+- use the packaged manifests for Firefox and Chrome
+- build the zip artifact for testing or submission
+- validate the extension in each browser before pushing a store release
+
 ## License
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) for details.
 
