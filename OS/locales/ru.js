@@ -373,6 +373,11 @@ window.I18N_RU = {
   "Bấm \"Bật chọn che\" rồi nhấp vào đối tượng trên trang để bảo mật.": "Нажмите 'Скрыть элементы', затем выберите объекты на странице.",
   "Rê chuột để soi vị trí trên trang web, click để cuộn tới": "Наведите, чтобы найти на странице, кликните для перехода",
   "Gỡ bỏ che phần tử này": "Удалить скрытие этого элемента",
-  "Trang hiện tại": "Текущая страница",
-  "Chưa có trang phụ": "Нет связанной страницы"
-};
+     "Trang hiện tại": "Текущая страница",
+     "Chưa có trang phụ": "Нет связанной страницы",
+     "i18n_accessed": "Дата доступа",
+     "i18n_retrieved": "Получено",
+     "i18n_local_pdf": "Локальный документ",
+     "i18n_technical_report": "Технический отчет",
+     "i18n_pdf": "PDF"
+  };

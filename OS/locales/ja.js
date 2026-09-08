@@ -373,6 +373,11 @@ window.I18N_JA = {
   "Bấm \"Bật chọn che\" rồi nhấp vào đối tượng trên trang để bảo mật.": "「要素を隠す」をクリックし、ページ上のオブジェクトをクリックして保護します。",
   "Rê chuột để soi vị trí trên trang web, click để cuộn tới": "ホバーしてページ上の位置を確認、クリックしてスクロール",
   "Gỡ bỏ che phần tử này": "この要素の非表示を解除",
-  "Trang hiện tại": "現在のページ",
-  "Chưa có trang phụ": "リンクされたページなし"
-};
+     "Trang hiện tại": "現在のページ",
+     "Chưa có trang phụ": "リンクされたページなし",
+     "i18n_accessed": "アクセス日時",
+     "i18n_retrieved": "取得日",
+     "i18n_local_pdf": "ローカルドキュメント",
+     "i18n_technical_report": "技術報告書",
+     "i18n_pdf": "PDF"
+  };

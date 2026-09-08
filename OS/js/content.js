@@ -1489,6 +1489,41 @@
           sendResponse(extractPageCitationMetadata());
           break;
 
+        case "EXTRACT_PDF_BUFFER":
+          // Attempt to fetch PDF bytes from the page context (works when page is a PDF viewer or embed)
+          (async function() {
+            try {
+              let src = location.href || "";
+              const embed = document.querySelector('embed[type="application/pdf"], iframe[type="application/pdf"], iframe[src$=".pdf"], embed[src$=".pdf"], object[type="application/pdf"]');
+              if (embed) src = embed.src || embed.getAttribute('data') || src;
+              // Normalize relative src
+              if (src && !/^https?:\/\//i.test(src) && src.startsWith('/')) {
+                src = location.origin + src;
+              }
+              const res = await fetch(src);
+              if (!res || !res.ok) {
+                sendResponse(null);
+                return;
+              }
+              const ab = await res.arrayBuffer();
+              const uint8 = new Uint8Array(ab);
+              // convert to binary string in chunks to avoid stack/arg limits
+              let binary = "";
+              const chunk = 0x8000;
+              for (let i = 0; i < uint8.length; i += chunk) {
+                binary += String.fromCharCode.apply(null, uint8.subarray(i, i + chunk));
+              }
+              const base64 = btoa(binary);
+              const filename = (src.split('/').pop() || '').split('?')[0];
+              sendResponse({ base64, filename });
+            } catch (err) {
+              console.warn('EXTRACT_PDF_BUFFER failed:', err);
+              sendResponse(null);
+            }
+          })();
+          // Indicate async response
+          return true;
+
         case "PREPARE_FULLPAGE_SCROLL":
           sendResponse(prepareFullPageScroll());
           break;

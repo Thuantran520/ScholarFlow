@@ -358,7 +358,12 @@ window.I18N_VI = {
   "biblio_btn_copy": "📋 Copy",
   "biblio_btn_edit": "✏️ Nạp form",
   "biblio_btn_del": "🗑️ Xóa",
-  "btn_copied": "✓ Đã sao chép!",
-  "toast_settings_saved": "✓ Đã lưu cài đặt!",
-  "toast_autosave": "💾 Tự động lưu"
-};
+     "btn_copied": "✓ Đã sao chép!",
+     "toast_settings_saved": "✓ Đã lưu cài đặt!",
+     "toast_autosave": "💾 Tự động lưu",
+     "i18n_accessed": "Được truy cập",
+     "i18n_retrieved": "Truy xuất",
+     "i18n_local_pdf": "Tài liệu lưu trữ nội bộ",
+     "i18n_technical_report": "Báo cáo kỹ thuật",
+     "i18n_pdf": "PDF"
+  };

@@ -373,6 +373,11 @@ window.I18N_ZH = {
   "Bấm \"Bật chọn che\" rồi nhấp vào đối tượng trên trang để bảo mật.": "点击“选择脱敏”，然后点击页面上的对象进行保护。",
   "Rê chuột để soi vị trí trên trang web, click để cuộn tới": "悬停以在页面上定位，点击以滚动到",
   "Gỡ bỏ che phần tử này": "移除此元素的脱敏",
-  "Trang hiện tại": "当前页面",
-  "Chưa có trang phụ": "无关联页面"
-};
+     "Trang hiện tại": "当前页面",
+     "Chưa có trang phụ": "无关联页面",
+     "i18n_accessed": "已访问",
+     "i18n_retrieved": "检索于",
+     "i18n_local_pdf": "本地文档",
+     "i18n_technical_report": "技术报告",
+     "i18n_pdf": "PDF"
+  };
