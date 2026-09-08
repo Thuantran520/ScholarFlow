@@ -7,6 +7,9 @@ if (typeof chrome === "undefined" && typeof browser !== "undefined") {
 // Supported: Vietnamese (vi), English (en), Chinese (zh), Russian (ru), Japanese (ja)
 "use strict";
 
+// Module-scoped current language state to avoid accidental global ReferenceError
+let currentAppLanguage = "vi";
+
 const I18N_DATA = {
   "vi": typeof window.I18N_VI !== 'undefined' ? window.I18N_VI : {},
   "en": typeof window.I18N_EN !== 'undefined' ? window.I18N_EN : {},
@@ -20,7 +23,7 @@ const I18N_DATA = {
  * 1. Target lang -> 2. English -> 3. Vietnamese -> 4. Key itself
  */
 function t(key, lang = null, params = null) {
-  const l = lang || currentAppLanguage || "vi";
+  const l = lang || (typeof currentAppLanguage !== 'undefined' ? currentAppLanguage : "vi");
   let text = "";
   if (I18N_DATA[l] && I18N_DATA[l][key] !== undefined) {
     text = I18N_DATA[l][key];

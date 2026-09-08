@@ -592,7 +592,17 @@ function cleanPdfFilenameToTitle(url, rawTitle = "") {
         last = last.replace(/\.pdf$/i, "");
         if (!/^[\da-f]{16,}$/i.test(last) && !/^\d+$/.test(last)) {
           clean = last.replace(/[-_+]/g, " ").replace(/\s+/g, " ").trim();
-          clean = clean.replace(/\b[a-z]/g, c => c.toUpperCase());
+          // Only capitalize if not already mixed case or contains diacriticals
+          // Check if text has significant capitalization already
+          const hasUpperCase = /[A-ZÀÁẢÃẠĂẰẮẲẴẶÂẦẤẨẪẬÈÉẺẼẸÊỀẾỂỄỆÌÍỈĨỊÒÓỎÕỌÔỒỐỔỖỘƠỜỚỞỠỢÙÚỦŨỤƯỪỨỬỮỰỲÝỶỸỴ]/.test(clean);
+          const hasLowerCase = /[a-zàáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵ]/.test(clean);
+          // If title already has mixed case, don't force uppercase first letter
+          if (hasUpperCase && hasLowerCase) {
+            // Already has capitalization, keep as-is
+          } else {
+            // Safe to capitalize: capitalize first letter and word boundaries (Latin only)
+            clean = clean.replace(/\b([a-z])/g, c => c.toUpperCase());
+          }
         }
       }
     } catch (e) {}
@@ -600,7 +610,11 @@ function cleanPdfFilenameToTitle(url, rawTitle = "") {
 
   if (!clean && rawTitle) {
     clean = rawTitle.replace(/\.pdf$/i, "").replace(/[-_+]/g, " ").trim();
-    clean = clean.replace(/\b[a-z]/g, c => c.toUpperCase());
+    const hasUpperCase = /[A-ZÀÁẢÃẠĂẰẮẲẴẶÂẦẤẨẪẬÈÉẺẼẸÊỀẾỂỄỆÌÍỈĨỊÒÓỎÕỌÔỒỐỔỖỘƠỜỚỞỠỢÙÚỦŨỤƯỪỨỬỮỰỲÝỶỸỴ]/.test(clean);
+    const hasLowerCase = /[a-zàáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵ]/.test(clean);
+    if (!(hasUpperCase && hasLowerCase)) {
+      clean = clean.replace(/\b([a-z])/g, c => c.toUpperCase());
+    }
   }
   return clean || "Tài liệu PDF / Báo cáo kỹ thuật";
 }
@@ -668,6 +682,18 @@ function parsePdfText(text, filename = "", url = "") {
       title = decodePdfString(raw);
     }
   }
+
+  // 2b. Fallback to /Subject if /Title is missing or too generic
+  if (!title || /^(?:untitled|document|\.pdf|unnamed|new document)$/i.test(title)) {
+    const mSubject = text.match(/\/Subject\s*(?:\(([^)\\]*(?:\\.[^)\\]*)*)\)|<([0-9a-fA-F\s]+)>)/);
+    if (mSubject) {
+      const raw = mSubject[2] ? "<" + mSubject[2] + ">" : mSubject[1];
+      const subject = decodePdfString(raw);
+      if (subject && subject.length > 3) {
+        title = subject;
+      }
+    }
+  }
   if (!authors) {
     const mAuthor = text.match(/\/Author\s*(?:\(([^)\\]*(?:\\.[^)\\]*)*)\)|<([0-9a-fA-F\s]+)>)/);
     if (mAuthor) {
@@ -682,6 +708,14 @@ function parsePdfText(text, filename = "", url = "") {
     }
   }
 
+  // Fallback to /ModDate if /CreationDate not found
+  if (!date) {
+    const mModDate = text.match(/\/ModDate\s*\((?:D:)?(\d{4})(\d{2})?(\d{2})?/i);
+    if (mModDate) {
+      date = mModDate[1] + (mModDate[2] ? "-" + mModDate[2] : "") + (mModDate[3] ? "-" + mModDate[3] : "");
+    }
+  }
+
   // Check /Producer for potential publisher
   const mProducer = text.match(/\/Producer\s*(?:\(([^)\\]*(?:\\.[^)\\]*)*)\)|<([0-9a-fA-F\s]+)>)/);
   if (mProducer) {
@@ -692,8 +726,17 @@ function parsePdfText(text, filename = "", url = "") {
   }
 
   title = title.replace(/^microsoft word\s*-\s*/i, "").trim();
-  if (!title || /^(?:untitled|document|\.pdf)$/i.test(title)) {
-    title = cleanPdfFilenameToTitle(url, filename);
+
+  // Smart fallback: if extracted title is too short or too generic, depend on filename
+  const isTitleGeneric = !title || 
+                         /^(?:untitled|document|\.pdf|unnamed|new document|page)$/i.test(title) ||
+                         title.length < 5;
+
+  if (isTitleGeneric) {
+    const filenameTitle = cleanPdfFilenameToTitle(url, filename);
+    if (filenameTitle && filenameTitle.length > title.length) {
+      title = filenameTitle;
+    }
   }
 
   if (!container && url) {
@@ -705,6 +748,14 @@ function parsePdfText(text, filename = "", url = "") {
     if (yMatch) date = yMatch[1];
   }
 
+  // Extract keywords (optional - can be used for tagging)
+  let keywords = "";
+  const mKeywords = text.match(/\/Keywords\s*(?:\(([^)\\]*(?:\\.[^)\\]*)*)\)|<([0-9a-fA-F\s]+)>)/);
+  if (mKeywords) {
+    const raw = mKeywords[2] ? "<" + mKeywords[2] + ">" : mKeywords[1];
+    keywords = decodePdfString(raw);
+  }
+
   return {
     sourceType: "pdf",
     title,
@@ -713,12 +764,14 @@ function parsePdfText(text, filename = "", url = "") {
     container,
     pages: "",
     url: url || "",
-    doi: ""
+    doi: "",
+    keywords: keywords  // Added for future tagging features
   };
 }
 
 function parsePdfBuffer(buf, filename = "") {
-  const slice = buf.slice(0, Math.min(buf.byteLength, 65536));
+  // Increase buffer to 256KB to capture more metadata (PDF metadata is typically at start)
+  const slice = buf.slice(0, Math.min(buf.byteLength, 262144));
   const bytes = new Uint8Array(slice);
   let text = "";
   for (let i = 0; i < bytes.length; i++) {
@@ -849,7 +902,8 @@ async function extractPdfMetadataFromUrl(url, pageTitle = "") {
         const meta = parsePdfText(bufText, pageTitle, url);
         if (meta.title && meta.title.length > 3) {
           if (url.startsWith("file://")) {
-            meta.container = meta.container || "Tài liệu lưu trữ nội bộ / Local PDF";
+            const localLabel = `${window.i18n.t('i18n_local_pdf')} / ${window.i18n.t('i18n_pdf')}`;
+            meta.container = meta.container || localLabel;
           }
           return meta;
         }
@@ -857,16 +911,38 @@ async function extractPdfMetadataFromUrl(url, pageTitle = "") {
     } catch (e) {
       console.warn("PDF stream/file fetch failed:", e);
     }
+
+    // Fallback: try to request full PDF bytes from content script (useful for file:// or in-browser PDF viewers)
+    try {
+      const tabPdf = await sendTabMessage({ action: "EXTRACT_PDF_BUFFER" });
+      if (tabPdf && tabPdf.base64) {
+        const bstr = atob(tabPdf.base64);
+        const len = bstr.length;
+        const u8 = new Uint8Array(len);
+        for (let i = 0; i < len; i++) u8[i] = bstr.charCodeAt(i);
+        const meta2 = parsePdfBuffer(u8.buffer, tabPdf.filename || pageTitle || url);
+        if (meta2 && meta2.title && meta2.title.length > 3) {
+          if (url.startsWith("file://")) {
+            const localLabel = `${window.i18n.t('i18n_local_pdf')} / ${window.i18n.t('i18n_pdf')}`;
+            meta2.container = meta2.container || localLabel;
+          }
+          return meta2;
+        }
+      }
+    } catch (ex) {
+      console.warn("PDF buffer extraction via content script failed:", ex);
+    }
   }
 
   // 5. Fallback from Filename & URL
   const isLocalFile = url.startsWith("file://");
+  const localLabel = isLocalFile ? `${window.i18n.t('i18n_local_pdf')} / ${window.i18n.t('i18n_pdf')}` : null;
   return {
     sourceType: "pdf",
     title: cleanPdfFilenameToTitle(url, pageTitle),
     authors: "",
     date: (url.match(/\b(19\d\d|20\d\d)\b/) || [""])[0],
-    container: isLocalFile ? "Tài liệu lưu trữ nội bộ / Local PDF" : (inferPublisherFromUrl(url) || "Báo cáo kỹ thuật"),
+    container: localLabel || (inferPublisherFromUrl(url) || window.i18n.t('i18n_technical_report')),
     pages: "",
     url: url,
     doi: ""
@@ -905,7 +981,7 @@ function buildIeeeCitation(meta) {
         resAcad += ` doi: ${meta.doi.trim().replace(/^https?:\/\/doi\.org\//, "")}.`;
       } else if (meta.url) {
         resAcad += ` [Online]. Available: ${meta.url}.`;
-        if (citationSettings.accessedDate) resAcad += ` [Accessed: ${meta.accessed || getTodayIeee()}].`;
+        if (citationSettings.accessedDate) resAcad += ` [${t('i18n_accessed')}: ${meta.accessed || getTodayIeee()}].`;
       }
       return resAcad;
 
@@ -917,7 +993,7 @@ function buildIeeeCitation(meta) {
         resConf += ` doi: ${meta.doi.trim().replace(/^https?:\/\/doi\.org\//, "")}.`;
       } else if (meta.url) {
         resConf += ` [Online]. Available: ${meta.url}.`;
-        if (citationSettings.accessedDate) resConf += ` [Accessed: ${meta.accessed || getTodayIeee()}].`;
+        if (citationSettings.accessedDate) resConf += ` [${t('i18n_accessed')}: ${meta.accessed || getTodayIeee()}].`;
       }
       return resConf;
 
@@ -950,7 +1026,7 @@ function buildIeeeCitation(meta) {
           resRep += ` [Accessed: ${meta.accessed || getTodayIeee()}].`;
         }
       } else if (meta.url && meta.url.startsWith("file://")) {
-        resRep += ` [Tài liệu lưu trữ nội bộ].`;
+        // Local PDF - don't add extra note since container is already included
       }
       return resRep;
 
@@ -1239,9 +1315,8 @@ function buildBibtexCitation(meta) {
   if (meta.doi) lines.push(`  doi = {${meta.doi.trim().replace(/^https?:\/\/doi\.org\//, "")}},`);
   if (meta.url && !meta.url.startsWith("file://")) {
     lines.push(`  url = {${meta.url}}`);
-  } else if (meta.url && meta.url.startsWith("file://")) {
-    lines.push("  note = {[Tài liệu lưu trữ nội bộ]}");
   }
+  // Note: container is already included as 'institution' for local files via line 1251
   lines.push(`}`);
   return lines.join("\n");
 }

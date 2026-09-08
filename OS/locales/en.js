@@ -373,6 +373,11 @@ window.I18N_EN = {
   "Bấm \"Bật chọn che\" rồi nhấp vào đối tượng trên trang để bảo mật.": "Click 'Select Redact' then click objects on the page to secure.",
   "Rê chuột để soi vị trí trên trang web, click để cuộn tới": "Hover to locate on page, click to scroll to",
   "Gỡ bỏ che phần tử này": "Remove redaction for this element",
-  "Trang hiện tại": "Current Page",
-  "Chưa có trang phụ": "No linked page"
-};
+     "Trang hiện tại": "Current Page",
+     "Chưa có trang phụ": "No linked page",
+     "i18n_accessed": "Accessed",
+     "i18n_retrieved": "Retrieved",
+     "i18n_local_pdf": "Local Document",
+     "i18n_technical_report": "Technical Report",
+     "i18n_pdf": "PDF"
+  };
