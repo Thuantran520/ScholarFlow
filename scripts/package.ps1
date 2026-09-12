@@ -1,9 +1,20 @@
 param(
     [string]$Version = "",
-    [switch]$SkipChecks
+    [switch]$SkipChecks,
+    [string]$Branch = ""
 )
 
 $ErrorActionPreference = "Stop"
+
+# ---------------------------------------------------------------------------
+# Branch label: sanitized (no path separators / invalid Windows characters) so
+# it can be embedded in zip filenames and artifact names. GitHub Actions passes
+# a normalized branch name via -Branch; local builds leave it empty.
+# ---------------------------------------------------------------------------
+$branchLabel = ""
+if (-not [string]::IsNullOrWhiteSpace($Branch)) {
+    $branchLabel = ($Branch -replace '[\\/:*?"<>|]', '-').Trim()
+}
 
 $rootDir = Split-Path -Parent $PSScriptRoot
 $distDir = Join-Path $rootDir "dist"
@@ -82,11 +93,15 @@ function Create-ExtensionZip {
 }
 
 Write-Host "========================================================" -ForegroundColor Cyan
-Write-Host "  TIEN HANH DONG GOI EXTENSION SCHOLARFLOW v$Version" -ForegroundColor Cyan
+$heading = "  TIEN HANH DONG GOI EXTENSION SCHOLARFLOW v$Version"
+if ($branchLabel) { $heading += "  [branch: $branchLabel]" }
+Write-Host $heading -ForegroundColor Cyan
 Write-Host "========================================================" -ForegroundColor Cyan
 
 # 1. Firefox Package
-$firefoxZip = Join-Path $distDir "ScholarFlow_v$Version`_Firefox.zip"
+$firefoxName = "ScholarFlow_v${Version}_Firefox.zip"
+if ($branchLabel) { $firefoxName = "ScholarFlow_v${Version}_${branchLabel}_Firefox.zip" }
+$firefoxZip = Join-Path $distDir $firefoxName
 $manifestFirefox = Join-Path $rootDir "manifest_firefox.json"
 Create-ExtensionZip -ZipPath $firefoxZip -ManifestSource $manifestFirefox
 
@@ -95,7 +110,9 @@ $firefoxAlias = Join-Path $distDir "ScholarFlow_Firefox.zip"
 Copy-Item $firefoxZip $firefoxAlias -Force
 
 # 2. Chrome Package
-$chromeZip = Join-Path $distDir "ScholarFlow_v$Version`_Chrome.zip"
+$chromeName = "ScholarFlow_v${Version}_Chrome.zip"
+if ($branchLabel) { $chromeName = "ScholarFlow_v${Version}_${branchLabel}_Chrome.zip" }
+$chromeZip = Join-Path $distDir $chromeName
 $manifestChrome = Join-Path $rootDir "manifest_chrome.json"
 Create-ExtensionZip -ZipPath $chromeZip -ManifestSource $manifestChrome
 

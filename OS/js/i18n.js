@@ -36,7 +36,20 @@ function t(key, lang = null, params = null) {
     text = key;
   }
 
-  if (params && typeof params === "object") {
+  if (typeof text === "function") {
+    try {
+      text = Array.isArray(params) ? text(...params)
+        : (params && typeof params === "object" ? text(params) : text());
+    } catch (e) { text = key; }
+  }
+
+  if (Array.isArray(params)) {
+    for (let i = 0; i < params.length; i++) {
+      if (params[i] !== undefined && params[i] !== null) {
+        text = text.split("{" + i + "}").join(String(params[i]));
+      }
+    }
+  } else if (params && typeof params === "object") {
     for (const [k, v] of Object.entries(params)) {
       text = text.split("{" + k + "}").join(v !== undefined && v !== null ? v : "");
     }
@@ -160,8 +173,12 @@ function onReady(fn) {
   }
 }
 
-// Initialize on DOM ready (with immediate fallback if already loaded)
+// Initialize on DOM ready (with immediate fallback if already loaded).
+// Pages that fully control their own language flow (e.g. privacy.html) can set
+// window.SCHOLARFLOW_I18N_AUTO = false before DOMContentLoaded to opt out.
 onReady(() => {
+  if (typeof window !== "undefined" && window.SCHOLARFLOW_I18N_AUTO === false) return;
+
   if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
     chrome.storage.local.get("app_language", (res) => {
       const savedLang = (res && res.app_language) || "vi";

@@ -1,0 +1,30 @@
+{
+  "version": "2.4.2",
+  "source": "OS/js/sidebar.js",
+  "description": "Splits the monolithic sidebar.js controller into feature modules. Load order is derived from each module's lowest source line, so concatenating the modules in this order reproduces the original file byte-for-byte.",
+  "modules": [
+    { "file": "OS/js/core/browser.js",   "note": "Browser compat layer + unified storage helpers (storGet/storSet/storRemove)", "ranges": [[1, 68]] },
+    { "file": "OS/js/core/constants.js", "note": "Shared constants, org detection, author-name cleaning, getI18nText",          "ranges": [[69, 114]] },
+    { "file": "OS/js/core/state.js",     "note": "Global session state (active tab, extracted meta, redaction, capture)",        "ranges": [[115, 138]] },
+    { "file": "OS/js/utils/names.js",    "note": "Vietnamese diacritic removal + author display-name normalization",             "ranges": [[139, 227]] },
+    { "file": "OS/js/citation/state.js", "note": "Citation settings + bibliography/capture state",                               "ranges": [[228, 240]] },
+    { "file": "OS/js/editor/notes.js",   "note": "Research-notes markdown-lite composer (toolbar, preview, counts)",            "ranges": [[241, 571]] },
+    { "file": "OS/js/citation/authors.js", "note": "Multi-author parsing & formatting for IEEE/APA/Harvard/MLA/BibTeX",         "ranges": [[572, 1006]] },
+    { "file": "OS/js/citation/dates.js", "note": "Comprehensive date parsing + citation date formatting",                       "ranges": [[1007, 1052]] },
+    { "file": "OS/js/citation/pdf.js",   "note": "PDF URL/metadata extraction, local PDF buffer parsing",                       "ranges": [[1053, 1472]] },
+    { "file": "OS/js/citation/builders.js", "note": "IEEE/APA/Harvard/MLA/BibTeX/in-text citation builders",                  "ranges": [[1473, 2024]] },
+    { "file": "OS/js/citation/ui.js",    "note": "Citation display updates, input sync, source badges, toast engine",          "ranges": [[2025, 2339]] },
+    { "file": "OS/js/citation/draft.js", "note": "Per-URL draft auto-save",                                                      "ranges": [[2340, 2402]] },
+    { "file": "OS/js/citation/selects.js", "note": "Custom select dropdown rendering/sync",                                     "ranges": [[2403, 2488]] },
+    { "file": "OS/js/citation/biblio.js", "note": "Citation settings, saved-bibliography manager, RIS/BIB/TXT exports",         "ranges": [[2489, 2890]] },
+    { "file": "OS/js/verify.js",         "note": "Academic source verifier (Crossref/OpenAlex/arXiv/YouTube) + anti-hallucination", "ranges": [[2891, 3764]] },
+    { "file": "OS/js/redact.js",         "note": "Tab 2: element redact & blur controller",                                      "ranges": [[3765, 3984]] },
+    { "file": "OS/js/core/active-tab.js", "note": "Robust active-tab resolution (3-tier fallback)",                              "ranges": [[3985, 4043]] },
+    { "file": "OS/js/tabs/dual-tabs.js", "note": "Dual-web quick switcher (2 linked tabs)",                                     "ranges": [[4044, 4156]] },
+    { "file": "OS/js/core/messaging.js", "note": "Content-script injection + safe sendTabMessage (Chrome/Firefox)",             "ranges": [[4157, 4269]] },
+    { "file": "OS/js/tabs/capture.js",   "note": "Tab 3: smart screenshot, element/table capture, marquee snip",                "ranges": [[4270, 4907]] },
+    { "file": "OS/js/tabs/video.js",     "note": "Tab 3: screen/tab video recording engine (WebM)",                             "ranges": [[4908, 5309]] },
+    { "file": "OS/js/init.js",           "note": "DOM-ready bootstrap + full event wiring for every tab",                        "ranges": [[5310, 7493]] },
+    { "file": "OS/js/tabs/calendar.js",  "note": "Calendar (ICS subscription) module incl. manual events",                       "ranges": [[7494, 8530]] }
+  ]
+}

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ScholarFlow - Trợ Lý Nghiên Cứu &amp; Trích Dẫn Học Thuật</title>
   <link rel="stylesheet" href="../css/popup.css">
+  <link rel="stylesheet" href="../css/main-nav.css">
 </head>
 <body class="is-popup">
 
@@ -70,32 +71,50 @@
   </div>
 
   <!-- Main Navigation Segmented Controller -->
-  <div class="main-nav">
-    <button class="main-nav-btn active" data-target="tab-cite" title="Trích dẫn học thuật &amp; nghiên cứu" data-i18n-title="tip_tab_cite">
-      <span class="nav-icon" id="icon-tab-cite">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-      </span>
-      <span class="nav-label" data-i18n="nav_cite">Trích Dẫn</span>
+  <!-- @@NAV@@ -->
+  <div class="main-nav-bar">
+    <button id="nav-scroll-left" class="nav-scroll-arrow is-hidden" title="Cuộn trái" data-i18n-title="tip_scroll_left">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
     </button>
-    <button class="main-nav-btn" data-target="tab-redact" title="Bảo mật thông tin, che mờ đối tượng" data-i18n-title="tip_tab_redact">
-      <span class="nav-icon" id="icon-tab-redact">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-      </span>
-      <span class="nav-label" data-i18n="nav_redact">Che Mờ</span>
-    </button>
-    <button class="main-nav-btn" data-target="tab-capture" title="Chụp ảnh đối tượng &amp; Quay video màn hình" data-i18n-title="tip_tab_capture">
-      <span class="nav-icon" id="icon-tab-capture">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
-      </span>
-      <span class="nav-label" data-i18n="nav_capture">Chụp &amp; Quay</span>
-    </button>
-    <button class="main-nav-btn" data-target="tab-cookie" title="Quản lý xuất/nhập cookie trình duyệt" data-i18n-title="tip_tab_cookie">
-      <span class="nav-icon" id="icon-tab-cookie">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5z"></path></svg>
-      </span>
-      <span class="nav-label" data-i18n="nav_cookie">Cookie</span>
+    <div id="nav-wrapper" class="main-nav">
+      <button class="main-nav-btn active" data-target="tab-cite" title="Trích dẫn học thuật &amp; nghiên cứu" data-i18n-title="tip_tab_cite">
+        <span class="nav-icon" id="icon-tab-cite"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg></span>
+        <span class="nav-label" data-i18n="nav_cite">Trích Dẫn</span>
+      </button>
+      <button class="main-nav-btn" data-target="tab-redact" title="Bảo mật thông tin, che mờ đối tượng" data-i18n-title="tip_tab_redact">
+        <span class="nav-icon" id="icon-tab-redact"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></span>
+        <span class="nav-label" data-i18n="nav_redact">Che Mờ</span>
+      </button>
+      <button class="main-nav-btn" data-target="tab-capture" title="Chụp ảnh đối tượng &amp; Quay video màn hình" data-i18n-title="tip_tab_capture">
+        <span class="nav-icon" id="icon-tab-capture"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg></span>
+        <span class="nav-label" data-i18n="nav_capture">Chụp &amp; Quay</span>
+      </button>
+      <button class="main-nav-btn" data-target="tab-cookie" title="Quản lý xuất/nhập cookie trình duyệt" data-i18n-title="tip_tab_cookie">
+        <span class="nav-icon" id="icon-tab-cookie"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5z"></path></svg></span>
+        <span class="nav-label" data-i18n="nav_cookie">Cookie</span>
+      </button>
+      <button class="main-nav-btn" data-target="tab-autofill" title="Tự động điền dữ liệu mẫu" data-i18n-title="tip_tab_autofill">
+        <span class="nav-icon" id="icon-tab-autofill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></span>
+        <span class="nav-label" data-i18n="nav_autofill">Điền Data</span>
+      </button>
+      <button class="main-nav-btn" data-target="tab-todo" title="Danh sách công việc hàng ngày" data-i18n-title="tip_tab_todo">
+        <span class="nav-icon" id="icon-tab-todo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></span>
+        <span class="nav-label" data-i18n="nav_todo">Todo List</span>
+      </button>
+      <button class="main-nav-btn" data-target="tab-cal" title="Lịch học tập từ link ICS" data-i18n-title="tip_tab_cal">
+        <span class="nav-icon" id="icon-tab-cal"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></span>
+        <span class="nav-label" data-i18n="nav_cal">Lịch</span>
+      </button>
+    </div>
+    <button id="nav-scroll-right" class="nav-scroll-arrow" title="Cuộn phải" data-i18n-title="tip_scroll_right">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
     </button>
   </div>
+  <!-- @@NAV-END@@ -->
+
+
+
+
 
   <!-- ══════════════════════ TAB 1: ACADEMIC CITATION ══════════════════════ -->
   <div id="tab-cite" class="tab-section active">
@@ -1050,6 +1069,196 @@
     </div>
   </div>
 
+  <!-- ══════════════════════ TAB 5: AUTO-FILL ══════════════════════ -->
+  <div id="tab-autofill" class="tab-section">
+    <div class="feature-title" data-i18n="autofill_title">Tự Động Điền Data</div>
+    <p style="color:var(--text-muted); font-size:11.5px; margin-bottom:10px; line-height:1.4;" data-i18n="autofill_desc">
+      Thêm các trường dữ liệu hay dùng (Email, SĐT, Địa chỉ, Mã số thuế...) để điền nhanh vào form trên web.
+    </p>
+
+    <!-- New Item Form -->
+    <div style="background:rgba(15,23,42,0.65); border:1px solid var(--card-border); border-radius:8px; padding:10px; margin-bottom:10px;">
+      <div style="font-size:11.5px; font-weight:700; color:var(--primary); margin-bottom:8px;" data-i18n="autofill_add_header">Thêm trường mới</div>
+      <input type="text" class="form-control" id="autofill-name" placeholder="Tên trường (vd: Email công ty)" data-i18n-placeholder="autofill_name_placeholder" style="margin-bottom:6px; font-size:11px; padding:6px;">
+      <textarea class="form-control" id="autofill-value" placeholder="Giá trị (vd: contact@company.com)" data-i18n-placeholder="autofill_val_placeholder" style="margin-bottom:8px; font-size:11px; padding:6px; min-height:40px; resize:vertical;"></textarea>
+      <button class="btn btn-primary" id="btn-autofill-add" style="width:100%; padding:7px;" data-i18n="autofill_btn_add">Thêm vào danh sách</button>
+    </div>
+
+    <!-- Saved Items List -->
+    <div class="feature-title" style="font-size:12px; margin-top:10px;" data-i18n="autofill_list_title">Danh sách dữ liệu mẫu</div>
+    <div id="autofill-list" style="display: flex; flex-direction: column; gap: 8px;">
+      <!-- JavaScript will populate items here -->
+    </div>
+  </div>
+
+  <!-- ══════════════════════ TAB 6: TODO LIST ══════════════════════ -->
+  <div id="tab-todo" class="tab-section">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+      <div class="feature-title" style="margin-bottom:0;" data-i18n="todo_title">Todo List</div>
+      <span id="todo-badge-stats" style="font-size:11px; font-weight:700; color:#38bdf8; background:rgba(56,189,248,0.12); padding:2px 8px; border-radius:12px; border:1px solid rgba(56,189,248,0.25);">0/0</span>
+    </div>
+    <p style="color:var(--text-muted); font-size:11.5px; margin-bottom:8px; line-height:1.4;" data-i18n="todo_desc">Ghi chú nhanh các công việc cần làm.</p>
+
+    <!-- Progress Bar -->
+    <div style="background:rgba(15,23,42,0.6); border-radius:6px; height:6px; overflow:hidden; margin-bottom:12px; border:1px solid rgba(255,255,255,0.06);">
+      <div id="todo-progress-bar" style="background:linear-gradient(90deg, #0ea5e9, #10b981); height:100%; width:0%; transition:width 0.3s ease;"></div>
+    </div>
+
+    <!-- Add Task Card -->
+    <div class="feature-card" style="padding:10px 12px; margin-bottom:12px; background:rgba(15,23,42,0.5); border:1px solid rgba(56,189,248,0.2); border-radius:10px;">
+      <div style="display:flex; gap:6px; margin-bottom:8px;">
+        <input type="text" id="todo-input" class="form-control" placeholder="Thêm việc mới..." data-i18n-placeholder="todo_placeholder" style="flex:1; font-size:13px; padding:7px 10px;">
+        <select id="todo-priority-select" class="form-control" style="width:110px; font-size:11.5px; padding:6px 6px; cursor:pointer;">
+          <option value="normal" data-i18n="todo_priority_normal">🟡 Vừa</option>
+          <option value="urgent" data-i18n="todo_priority_urgent">🔴 Gấp</option>
+          <option value="low" data-i18n="todo_priority_low">🟢 Thấp</option>
+        </select>
+        <button id="btn-todo-add" class="btn btn-primary" style="padding:7px 12px; font-size:12px; font-weight:700;" data-i18n="todo_btn_add">Thêm</button>
+      </div>
+
+      <!-- Extra detail note input -->
+      <input type="text" id="todo-detail-input" class="form-control" placeholder="Ghi chú chi tiết, tài liệu hoặc link (tùy chọn)..." data-i18n-placeholder="todo_detail_placeholder" style="font-size:11.5px; padding:6px 10px; background:rgba(0,0,0,0.25); border-color:rgba(255,255,255,0.08);">
+    </div>
+
+    <!-- Filter & Toolbar Buttons -->
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px; margin-bottom:10px;">
+      <div class="todo-filter-group" style="display:flex; gap:4px;">
+        <button type="button" class="btn-text-small todo-filter-btn active" data-filter="all" id="filter-all" data-i18n="todo_filter_all">Tất cả</button>
+        <button type="button" class="btn-text-small todo-filter-btn" data-filter="active" id="filter-active" data-i18n="todo_filter_active">Chưa xong</button>
+        <button type="button" class="btn-text-small todo-filter-btn" data-filter="done" id="filter-done" data-i18n="todo_filter_done">Đã xong</button>
+      </div>
+      <div style="display:flex; gap:6px;">
+        <button type="button" class="todo-tool-btn" id="btn-todo-copy-all" title="Sao chép toàn bộ danh sách" data-i18n="todo_btn_copy_all">📋 Copy</button>
+        <button type="button" class="todo-tool-btn" id="btn-todo-export" title="Xuất file văn bản" data-i18n="todo_btn_export">📥 Xuất TXT</button>
+        <button type="button" class="todo-tool-btn todo-tool-btn-danger" id="btn-todo-clear-done" title="Dọn dẹp các mục đã hoàn thành" data-i18n="todo_btn_clear_done">🧹 Dọn việc xong</button>
+      </div>
+    </div>
+
+    <!-- Task List Container -->
+    <div id="todo-list" style="display: flex; flex-direction: column; gap: 8px;">
+      <!-- TODO items -->
+    </div>
+  </div>
+
+  <!-- ══════════════════════ TAB 7: CALENDAR (ICS) ══════════════════════ -->
+  <div id="tab-cal" class="tab-section">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+      <div class="feature-title" style="margin-bottom:0;" data-i18n="cal_title">Lịch học tập</div>
+      <div style="display:flex; gap:4px; align-items:center;">
+        <button id="btn-cal-refresh-all" class="cal-tool-btn" title="Cập nhật lại toàn bộ lịch đã nhập" data-i18n-title="tip_cal_refresh_all">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+          <span data-i18n="cal_btn_refresh_all">Cập nhật</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="feature-card" style="padding:10px 12px; margin-bottom:10px;">
+      <div style="font-size:11.5px; font-weight:700; color:var(--primary); margin-bottom:6px; display:flex; align-items:center; gap:5px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+        <span data-i18n="cal_add_header">Nhập link lịch (ICS / iCal)</span>
+      </div>
+      <div style="display:flex; gap:6px;">
+        <input type="url" id="cal-feed-input" class="form-control" placeholder="https://.../calendar.ics" data-i18n-placeholder="cal_add_placeholder" style="flex:1; font-size:11.5px; padding:6px 8px;">
+        <button id="btn-cal-add" class="btn btn-primary" style="padding:7px 12px; font-size:11.5px; font-weight:700; flex-shrink:0;" data-i18n="cal_btn_add">＋ Nhập</button>
+      </div>
+      <div style="display:flex; align-items:center; gap:5px; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.04em; margin-top:9px;">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+        <span data-i18n="cal_legend_header">Lịch đã nhập (bấm mắt để ẩn/hiện)</span>
+      </div>
+      <div id="cal-feed-list" style="display:flex; flex-direction:column; gap:6px; margin-top:6px;"></div>
+    </div>
+
+    <div class="feature-card" style="padding:10px 12px; margin-bottom:10px;">
+      <button type="button" id="btn-cal-manual-toggle" class="cal-manual-toggle">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        <span data-i18n="cal_manual_toggle">Thêm sự kiện thủ công</span>
+      </button>
+      <div id="cal-manual-form" style="display:none; margin-top:10px;">
+        <div style="display:flex; gap:6px; margin-bottom:6px;">
+          <input type="text" id="cal-manual-title" class="form-control" placeholder="Tên sự kiện..." data-i18n-placeholder="cal_manual_title_ph" style="flex:1; font-size:11.5px; padding:6px 8px;">
+          <input type="text" id="cal-manual-loc" class="form-control" placeholder="Địa điểm (tùy chọn)" data-i18n-placeholder="cal_manual_loc_ph" style="width:132px; font-size:11.5px; padding:6px 8px;">
+        </div>
+        <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px; flex-wrap:wrap;">
+          <label class="cal-manual-lbl" data-i18n="cal_manual_start">Bắt đầu</label>
+          <input type="date" id="cal-manual-start-date" class="form-control" style="font-size:11px; padding:5px 6px;">
+          <input type="time" id="cal-manual-start-time" class="form-control" style="font-size:11px; padding:5px 6px;">
+          <label class="cal-manual-lbl" data-i18n="cal_manual_end">Kết thúc</label>
+          <input type="date" id="cal-manual-end-date" class="form-control" style="font-size:11px; padding:5px 6px;">
+          <input type="time" id="cal-manual-end-time" class="form-control" style="font-size:11px; padding:5px 6px;">
+        </div>
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:7px; flex-wrap:wrap;">
+          <label class="cal-switch" data-i18n-title="cal_manual_allday_tip">
+            <input type="checkbox" id="cal-manual-allday">
+            <span class="cal-switch-track" aria-hidden="true"></span>
+            <span class="cal-switch-lbl" data-i18n="cal_manual_allday">Cả ngày</span>
+          </label>
+          <label class="cal-manual-lbl" data-i18n="cal_manual_color">Màu sắc</label>
+          <div id="cal-manual-color" class="cal-color-bar"></div>
+          <label class="cal-color-custom" data-i18n-title="cal_manual_color_rgb_tip">
+            <input type="color" id="cal-manual-color-rgb" value="#38bdf8">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
+          </label>
+          <span class="cal-color-hex" id="cal-manual-hex">#38bdf8</span>
+        </div>
+        <div style="display:flex; gap:6px; margin-bottom:7px; flex-wrap:wrap; align-items:center;">
+          <label class="cal-manual-lbl" data-i18n="cal_manual_freq">Lặp lại</label>
+          <select id="cal-manual-freq" class="form-control" style="width:104px; font-size:11px; padding:5px 6px;">
+            <option value="none" data-i18n="cal_manual_freq_none">Không lặp</option>
+            <option value="daily" data-i18n="cal_manual_freq_daily">Hằng ngày</option>
+            <option value="weekly" data-i18n="cal_manual_freq_weekly">Hằng tuần</option>
+            <option value="monthly" data-i18n="cal_manual_freq_monthly">Hằng tháng</option>
+            <option value="yearly" data-i18n="cal_manual_freq_yearly">Hằng năm</option>
+          </select>
+          <label class="cal-manual-lbl" data-i18n="cal_manual_endlabel">Điểm dừng</label>
+          <select id="cal-manual-end" class="form-control" style="width:96px; font-size:11px; padding:5px 6px;">
+            <option value="never" data-i18n="cal_manual_end_never">Không (mãi mãi)</option>
+            <option value="until" data-i18n="cal_manual_end_until">Đến ngày</option>
+            <option value="count" data-i18n="cal_manual_end_count">Sau N lần</option>
+          </select>
+          <input type="date" id="cal-manual-until" class="form-control" style="display:none; font-size:11px; padding:5px 6px;">
+          <input type="number" id="cal-manual-count" class="form-control" style="display:none; font-size:11px; padding:5px 6px; width:68px;" min="1" value="5">
+        </div>
+        <button type="button" id="btn-cal-manual-save" class="btn btn-primary" style="padding:7px 14px; font-size:11.5px; font-weight:700;" data-i18n="cal_manual_save">＋ Thêm sự kiện</button>
+      </div>
+    </div>
+
+    <div class="feature-card" style="padding:10px 12px; margin-bottom:10px;">
+      <div class="cal-view-switch" id="cal-view-switch">
+        <button type="button" class="cal-view-btn active" data-mode="month" title="Xem theo tháng" data-i18n-title="cal_view_month_tip">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          <span data-i18n="cal_view_month">Tháng</span>
+        </button>
+        <button type="button" class="cal-view-btn" data-mode="week" title="Xem theo tuần" data-i18n-title="cal_view_week_tip">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line><line x1="8.5" y1="10" x2="8.5" y2="21"></line><line x1="15.5" y1="10" x2="15.5" y2="21"></line><line x1="12" y1="10" x2="12" y2="21"></line></svg>
+          <span data-i18n="cal_view_week">Tuần</span>
+        </button>
+        <button type="button" class="cal-view-btn" data-mode="list" title="Xem theo danh sách" data-i18n-title="cal_view_list_tip">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+          <span data-i18n="cal_view_list">Danh sách</span>
+        </button>
+      </div>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+        <button id="btn-cal-prev" class="cal-nav-btn" data-i18n-aria="cal_btn_prev" aria-label="Tháng trước">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </button>
+        <div id="cal-month-label" style="font-size:14px; font-weight:800; color:#e2e8f0; letter-spacing:0.01em;">Tháng 9, 2026</div>
+        <button id="btn-cal-next" class="cal-nav-btn" data-i18n-aria="cal_btn_next" aria-label="Tháng sau">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+      </div>
+      <div style="display:flex; justify-content:center; margin-bottom:8px;">
+        <button id="btn-cal-today" class="cal-today-btn" data-i18n="cal_btn_today">Hôm nay</button>
+      </div>
+      <div id="cal-grid" class="cal-grid"></div>
+      <div id="cal-list" class="cal-list" style="display:none;"></div>
+    </div>
+
+    <div class="feature-card" style="padding:10px 12px;">
+      <div id="cal-day-head" style="font-size:12px; font-weight:700; color:#38bdf8; margin-bottom:8px;">Chọn ngày để xem lịch học</div>
+      <div id="cal-day-events" style="display:flex; flex-direction:column; gap:8px;"></div>
+    </div>
+  </div>
+
 
   <div class="footer-trust-bar">
     <div class="trust-pill" title="Phiên bản hiện tại" data-i18n-title="tip_trust_version">
@@ -1070,6 +1279,30 @@
   <script src="../locales/ru.js"></script>
   <script src="../locales/ja.js"></script>
   <script src="../js/i18n.js"></script>
-  <script src="../js/sidebar.js"></script>
+  <!-- Sidebar controller modules (load order matters - see scripts/split/split_manifest.json) -->
+  <script src="../js/core/browser.js"></script>
+  <script src="../js/core/constants.js"></script>
+  <script src="../js/core/state.js"></script>
+  <script src="../js/utils/names.js"></script>
+  <script src="../js/citation/state.js"></script>
+  <script src="../js/editor/notes.js"></script>
+  <script src="../js/citation/authors.js"></script>
+  <script src="../js/citation/dates.js"></script>
+  <script src="../js/citation/pdf.js"></script>
+  <script src="../js/citation/builders.js"></script>
+  <script src="../js/citation/ui.js"></script>
+  <script src="../js/citation/draft.js"></script>
+  <script src="../js/citation/selects.js"></script>
+  <script src="../js/citation/biblio.js"></script>
+  <script src="../js/verify.js"></script>
+  <script src="../js/redact.js"></script>
+  <script src="../js/core/active-tab.js"></script>
+  <script src="../js/tabs/dual-tabs.js"></script>
+  <script src="../js/core/messaging.js"></script>
+  <script src="../js/tabs/capture.js"></script>
+  <script src="../js/tabs/video.js"></script>
+  <script src="../js/init.js"></script>
+  <script src="../js/tabs/calendar.js"></script>
+  <script src="../js/debug.js"></script>
 </body>
 </html>

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ScholarFlow - Trợ Lý Nghiên Cứu &amp; Trích Dẫn Học Thuật</title>
   <link rel="stylesheet" href="../css/sidebar.css">
+  <link rel="stylesheet" href="../css/main-nav.css">
 </head>
 <body>
 
@@ -70,36 +71,37 @@
   </div>
 
   <!-- Main Navigation Segmented Controller -->
-  <div class="main-nav-bar" style="position: relative; display: flex; align-items: center; margin-bottom: 12px; background: rgba(15, 23, 42, 0.45); backdrop-filter: blur(8px); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.08); padding: 3px 4px; gap: 2px;">
+  <!-- @@NAV@@ -->
+  <div class="main-nav-bar">
     <button id="nav-scroll-left" class="nav-scroll-arrow is-hidden" title="Cuộn trái" data-i18n-title="tip_scroll_left">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
     </button>
-    <div id="nav-wrapper" class="main-nav" style="flex: 1; min-width: 0; display: flex; overflow-x: auto; scroll-behavior: smooth; gap: 4px; flex-wrap: nowrap; scrollbar-width: none; -ms-overflow-style: none; scroll-snap-type: x mandatory; margin-bottom: 0; padding: 2px 0; background: transparent; border: none;">
-      <button class="main-nav-btn active" data-target="tab-cite" title="Trích dẫn học thuật & nghiên cứu" data-i18n-title="tip_tab_cite" style="flex: 0 0 calc(25% - 3px); min-width: calc(25% - 3px);">
+    <div id="nav-wrapper" class="main-nav">
+      <button class="main-nav-btn active" data-target="tab-cite" title="Trích dẫn học thuật &amp; nghiên cứu" data-i18n-title="tip_tab_cite">
         <span class="nav-icon" id="icon-tab-cite"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg></span>
         <span class="nav-label" data-i18n="nav_cite">Trích Dẫn</span>
       </button>
-      <button class="main-nav-btn" data-target="tab-redact" title="Bảo mật thông tin, che mờ đối tượng" data-i18n-title="tip_tab_redact" style="flex: 0 0 calc(25% - 3px); min-width: calc(25% - 3px);">
+      <button class="main-nav-btn" data-target="tab-redact" title="Bảo mật thông tin, che mờ đối tượng" data-i18n-title="tip_tab_redact">
         <span class="nav-icon" id="icon-tab-redact"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></span>
         <span class="nav-label" data-i18n="nav_redact">Che Mờ</span>
       </button>
-      <button class="main-nav-btn" data-target="tab-capture" title="Chụp ảnh đối tượng & Quay video màn hình" data-i18n-title="tip_tab_capture" style="flex: 0 0 calc(25% - 3px); min-width: calc(25% - 3px);">
+      <button class="main-nav-btn" data-target="tab-capture" title="Chụp ảnh đối tượng &amp; Quay video màn hình" data-i18n-title="tip_tab_capture">
         <span class="nav-icon" id="icon-tab-capture"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg></span>
-        <span class="nav-label" data-i18n="nav_capture">Chụp & Quay</span>
+        <span class="nav-label" data-i18n="nav_capture">Chụp &amp; Quay</span>
       </button>
-      <button class="main-nav-btn" data-target="tab-cookie" title="Quản lý xuất/nhập cookie trình duyệt" data-i18n-title="tip_tab_cookie" style="flex: 0 0 calc(25% - 3px); min-width: calc(25% - 3px);">
+      <button class="main-nav-btn" data-target="tab-cookie" title="Quản lý xuất/nhập cookie trình duyệt" data-i18n-title="tip_tab_cookie">
         <span class="nav-icon" id="icon-tab-cookie"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5z"></path></svg></span>
         <span class="nav-label" data-i18n="nav_cookie">Cookie</span>
       </button>
-      <button class="main-nav-btn" data-target="tab-autofill" title="Tự động điền dữ liệu mẫu" data-i18n-title="tip_tab_autofill" style="flex: 0 0 calc(25% - 3px); min-width: calc(25% - 3px);">
+      <button class="main-nav-btn" data-target="tab-autofill" title="Tự động điền dữ liệu mẫu" data-i18n-title="tip_tab_autofill">
         <span class="nav-icon" id="icon-tab-autofill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></span>
         <span class="nav-label" data-i18n="nav_autofill">Điền Data</span>
       </button>
-      <button class="main-nav-btn" data-target="tab-todo" title="Danh sách công việc hàng ngày" data-i18n-title="tip_tab_todo" style="flex: 0 0 calc(25% - 3px); min-width: calc(25% - 3px);">
+      <button class="main-nav-btn" data-target="tab-todo" title="Danh sách công việc hàng ngày" data-i18n-title="tip_tab_todo">
         <span class="nav-icon" id="icon-tab-todo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></span>
         <span class="nav-label" data-i18n="nav_todo">Todo List</span>
       </button>
-      <button class="main-nav-btn" data-target="tab-cal" title="Lịch học tập từ link ICS" data-i18n-title="tip_tab_cal" style="flex: 0 0 calc(25% - 3px); min-width: calc(25% - 3px);">
+      <button class="main-nav-btn" data-target="tab-cal" title="Lịch học tập từ link ICS" data-i18n-title="tip_tab_cal">
         <span class="nav-icon" id="icon-tab-cal"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></span>
         <span class="nav-label" data-i18n="nav_cal">Lịch</span>
       </button>
@@ -108,6 +110,11 @@
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
     </button>
   </div>
+  <!-- @@NAV-END@@ -->
+
+
+
+
   <div id="tab-cite" class="tab-section active">
     <!-- Draft notification banner -->
     <div id="draft-banner" class="draft-banner" style="display:none;">
@@ -1282,6 +1289,30 @@
   <script src="../locales/ru.js"></script>
   <script src="../locales/ja.js"></script>
   <script src="../js/i18n.js"></script>
-  <script src="../js/sidebar.js"></script>
+  <!-- Sidebar controller modules (load order matters - see scripts/split/split_manifest.json) -->
+  <script src="../js/core/browser.js"></script>
+  <script src="../js/core/constants.js"></script>
+  <script src="../js/core/state.js"></script>
+  <script src="../js/utils/names.js"></script>
+  <script src="../js/citation/state.js"></script>
+  <script src="../js/editor/notes.js"></script>
+  <script src="../js/citation/authors.js"></script>
+  <script src="../js/citation/dates.js"></script>
+  <script src="../js/citation/pdf.js"></script>
+  <script src="../js/citation/builders.js"></script>
+  <script src="../js/citation/ui.js"></script>
+  <script src="../js/citation/draft.js"></script>
+  <script src="../js/citation/selects.js"></script>
+  <script src="../js/citation/biblio.js"></script>
+  <script src="../js/verify.js"></script>
+  <script src="../js/redact.js"></script>
+  <script src="../js/core/active-tab.js"></script>
+  <script src="../js/tabs/dual-tabs.js"></script>
+  <script src="../js/core/messaging.js"></script>
+  <script src="../js/tabs/capture.js"></script>
+  <script src="../js/tabs/video.js"></script>
+  <script src="../js/init.js"></script>
+  <script src="../js/tabs/calendar.js"></script>
+  <script src="../js/debug.js"></script>
 </body>
 </html>

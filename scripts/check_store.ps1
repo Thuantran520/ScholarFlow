@@ -222,6 +222,19 @@ foreach ($html in @(Get-ChildItem -Path (Join-Path $root "OS\html") -Filter *.ht
 }
 
 # ---------------------------------------------------------------------------
+# 5.5 I18n integrity (single source of truth = OS/locales/*.js)
+# ---------------------------------------------------------------------------
+$i18nCheck = Join-Path $PSScriptRoot "i18n\check_locales.ps1"
+if (Test-Path -LiteralPath $i18nCheck) {
+    & pwsh -NoProfile -ExecutionPolicy Bypass -File $i18nCheck
+    if ($LASTEXITCODE -eq 0) { Add-Result "i18n locale integrity" "PASS" }
+    else { Add-Result "i18n locale integrity" "FAIL" "scripts\i18n\check_locales.ps1 exited $LASTEXITCODE" }
+}
+else {
+    Add-Result "i18n locale integrity" "WARN" "scripts\i18n\check_locales.ps1 missing"
+}
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 $fail = @($results | Where-Object { $_.Status -eq "FAIL" }).Count

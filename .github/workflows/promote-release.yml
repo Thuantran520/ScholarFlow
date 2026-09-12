@@ -1,0 +1,146 @@
+name: Promote Version Branch to Release
+
+# Manual promotion workflow (release must go through a protected review + CI):
+#   When a version branch (e.g. 2.4.2) is finalized, run this workflow and pick
+#   it as `source_branch`. Instead of pushing directly, it opens (or
+#   re-arms) a pull request `source_branch -> release` and enables auto-merge.
+#
+#   Because the `release` branch is protected (branch protection rule):
+#     * the PR must pass the required status check `build`
+#       (runs npm test + pre-packaging checks), and
+#     * at least one approving review from a contributor with write access
+#       is required.
+#   GitHub auto-merge only merges once BOTH conditions are true - so a release
+#   can never land without passing tests AND being approved by a contributor.
+#
+#   This job also builds the release zips from the promoted snapshot so the
+#   scholarflow-release artifact is available immediately.
+#
+#   Prereqs (one time, repo admin):
+#     * scripts/protect_release.ps1 -Apply  -> branch protection on `release`
+#     * Repository Settings > General > Pull Requests > "Allow auto-merge"
+#       must be enabled, otherwise `gh pr merge --auto` errors out.
+on:
+  workflow_dispatch:
+    inputs:
+      source_branch:
+        description: "Version branch to promote (e.g. 2.4.2)"
+        required: true
+        type: string
+      allow_older:
+        description: "Allow promoting a version older than the current release"
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: scholarflow-promote-${{ inputs.source_branch }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  promote:
+    name: Promote ${{ inputs.source_branch }} to release
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout source branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_branch }}
+          fetch-depth: 0
+
+      - name: Validate branch + read source manifest version
+        id: ver
+        shell: pwsh
+        run: |
+          if (-not "${{ inputs.source_branch }}") { throw "source_branch input is required" }
+          git ls-remote --exit-code --heads origin "${{ inputs.source_branch }}"
+          if ($LASTEXITCODE -ne 0) { throw "branch '${{ inputs.source_branch }}' does not exist on origin" }
+          $m = Get-Content manifest_firefox.json -Raw -Encoding UTF8 | ConvertFrom-Json
+          if (-not $m.version) { throw "manifest_firefox.json is missing a version field" }
+          "source_version=$($m.version)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "Promoting version branch '${{ inputs.source_branch }}' at v$($m.version)"
+
+      - name: Newest-version guard (compare with current release)
+        shell: pwsh
+        run: |
+          $srcVer = [version]"${{ steps.ver.outputs.source_version }}"
+          git fetch --depth 1 origin release 2>$null
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "release branch does not exist yet - nothing to compare, skipping guard"
+            exit 0
+          }
+          $json = git show FETCH_HEAD:manifest_firefox.json
+          if ($LASTEXITCODE -ne 0) { throw "release branch has no manifest_firefox.json" }
+          $relVer = [version](($json | ConvertFrom-Json).version)
+          Write-Host "current release v$relVer"
+          if ($srcVer -lt $relVer) {
+            if ("${{ inputs.allow_older }}" -eq "true") {
+              Write-Host "Older version promoted (allow_older=true override)."
+            } else {
+              throw "Refusing to promote v$srcVer : release is already at v$relVer and must stay the newest. Re-run with allow_older=true to override."
+            }
+          }
+
+      - name: Open / re-arm release pull request (source -> release)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $head  = "${{ inputs.source_branch }}"
+          $title = "Release v${{ steps.ver.outputs.source_version }} ($head)"
+
+          $bodyText = @(
+            "Automated release promotion from the finalized version branch '$head'."
+            ""
+            "This PR requires:"
+            "- the 'build' check to pass (npm test + pre-packaging checks), and"
+            "- at least one approving review by a contributor with write access."
+            ""
+            "Auto-merge is enabled; it will only merge when both conditions are satisfied."
+          ) -join [Environment]::NewLine
+
+          $existing = gh pr list --repo "${{ github.repository }}" --base release --head $head --state open --json number --jq '.[0].number'
+          if ($existing) {
+            Write-Host "Release PR #$existing already open - re-arming auto-merge."
+            gh pr merge $existing --auto --squash --delete-branch=false --repo "${{ github.repository }}"
+          } else {
+            gh pr create --repo "${{ github.repository }}" --base release --head $head --title $title --body $bodyText
+            if ($LASTEXITCODE -ne 0) { throw "gh pr create failed" }
+            gh pr merge --auto --squash --delete-branch=false --repo "${{ github.repository }}"
+          }
+
+          $url = gh pr view --repo "${{ github.repository }}" --json url --jq '.url'
+          Write-Host "Release PR: $url"
+
+      - name: Setup Node.js (test + pre-packaging checks)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install test dependencies
+        run: npm ci
+
+      - name: npm audit (vulnerability gate)
+        run: npm audit --audit-level=high
+
+      - name: Run test scripts (jsdom smoke tests + i18n integration)
+        run: npm test
+
+      - name: Run pre-packaging checks + build release zips
+        shell: pwsh
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/package.ps1 -Branch "release"
+
+      - name: Upload release packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: scholarflow-release
+          path: |
+            dist/*.zip
+          if-no-files-found: error
+          retention-days: 14

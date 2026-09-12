@@ -1,5 +1,9 @@
-// Web Super Assistant - In-Page Content Script
-// Handles: Interactive Element Redactor / Blur / Blackout, Citation Extraction, Sticky Header Stabilizer for Full-Page Screenshots
+// ---------------------------------------------------------------------------
+// ScholarFlow in-page content-script i18n (GENERATED)
+// Regenerate with: node scripts/i18n/generate_content_i18n.js
+// Source of truth  : OS/locales/*.js (content_* keys)
+// Do NOT edit manually - manual edits are overwritten on regeneration.
+// ---------------------------------------------------------------------------
 
 
   let currentAppLang = "vi";
@@ -29,10 +33,10 @@
       badge_secured: " • ĐÃ BẢO MẬT • ",
       badge_remove_hint: "Gỡ bỏ tại danh sách thanh bên",
       badge_click_to: " • Bấm để ",
-      style_blur: (px) => `Làm mờ (${px}px)`,
-      style_blackout: () => "Hộp đen",
-      style_pixelate: () => "Điểm ảnh",
-      style_hide: () => "Ẩn phần tử",
+      style_blur: "Làm mờ ({0}px)",
+      style_blackout: "Hộp đen",
+      style_pixelate: "Điểm ảnh",
+      style_hide: "Ẩn phần tử",
       toast_already_redacted: "🛡️ Đối tượng này đã được che. Dùng danh sách ở thanh bên để gỡ bỏ.",
       snip_video_prep_title: "🎥 CHUẨN BỊ QUAY VIDEO",
       snip_video_prep_sub: "Đã chọn trang web! Sẵn sàng thao tác...",
@@ -47,7 +51,7 @@
       snip_esc_cancel: "[Esc] Hủy",
       snip_click_to_pick: "🎯 Click để chọn thẻ",
       snip_btn_capture: "📸 Chụp ngay",
-      snip_btn_cancel: "✕ Hủy"
+      snip_btn_cancel: "✕ Hủy",
     },
     en: {
       img_prefix: "Image",
@@ -56,10 +60,10 @@
       badge_secured: " • SECURED • ",
       badge_remove_hint: "Remove via sidebar list",
       badge_click_to: " • Click to ",
-      style_blur: (px) => `Blur (${px}px)`,
-      style_blackout: () => "Blackout",
-      style_pixelate: () => "Pixelate",
-      style_hide: () => "Hide Element",
+      style_blur: "Blur ({0}px)",
+      style_blackout: "Blackout",
+      style_pixelate: "Pixelate",
+      style_hide: "Hide Element",
       toast_already_redacted: "🛡️ This element is already redacted. Remove it via the sidebar list.",
       snip_video_prep_title: "🎥 PREPARING VIDEO RECORDING",
       snip_video_prep_sub: "Web page selected! Ready to operate...",
@@ -74,7 +78,7 @@
       snip_esc_cancel: "[Esc] Cancel",
       snip_click_to_pick: "🎯 Click to select element",
       snip_btn_capture: "📸 Capture Now",
-      snip_btn_cancel: "✕ Cancel"
+      snip_btn_cancel: "✕ Cancel",
     },
     zh: {
       img_prefix: "图片",
@@ -83,10 +87,10 @@
       badge_secured: " • 已脱敏保护 • ",
       badge_remove_hint: "在侧边栏列表中移除",
       badge_click_to: " • 点击以 ",
-      style_blur: (px) => `模糊 (${px}px)`,
-      style_blackout: () => "黑框遮盖",
-      style_pixelate: () => "马赛克",
-      style_hide: () => "隐藏元素",
+      style_blur: "模糊 ({0}px)",
+      style_blackout: "黑框遮盖",
+      style_pixelate: "马赛克",
+      style_hide: "隐藏元素",
       toast_already_redacted: "🛡️ 该元素已被遮盖。可在侧边栏中移除。",
       snip_video_prep_title: "🎥 准备录屏",
       snip_video_prep_sub: "已选择网页！准备就绪...",
@@ -101,7 +105,7 @@
       snip_esc_cancel: "[Esc] 取消",
       snip_click_to_pick: "🎯 点击选择此元素",
       snip_btn_capture: "📸 立即截图",
-      snip_btn_cancel: "✕ 取消"
+      snip_btn_cancel: "✕ 取消",
     },
     ru: {
       img_prefix: "Изображение",
@@ -110,10 +114,10 @@
       badge_secured: " • СКРЫТО • ",
       badge_remove_hint: "Удалить в боковой панели",
       badge_click_to: " • Нажмите: ",
-      style_blur: (px) => `Размытие (${px}px)`,
-      style_blackout: () => "Черный блок",
-      style_pixelate: () => "Пикселизация",
-      style_hide: () => "Скрыть элемент",
+      style_blur: "Размытие ({0}px)",
+      style_blackout: "Черный блок",
+      style_pixelate: "Пикселизация",
+      style_hide: "Скрыть элемент",
       toast_already_redacted: "🛡️ Этот элемент уже скрыт. Удалите его через боковую панель.",
       snip_video_prep_title: "🎥 ПОДГОТОВКА К ЗАПИСИ",
       snip_video_prep_sub: "Страница выбрана! Готово к работе...",
@@ -128,7 +132,7 @@
       snip_esc_cancel: "[Esc] Отмена",
       snip_click_to_pick: "🎯 Кликните для выбора элемента",
       snip_btn_capture: "📸 Сделать снимок",
-      snip_btn_cancel: "✕ Отмена"
+      snip_btn_cancel: "✕ Отмена",
     },
     ja: {
       img_prefix: "画像",
@@ -137,10 +141,10 @@
       badge_secured: " • 保護済み • ",
       badge_remove_hint: "サイドバーリストから解除",
       badge_click_to: " • クリックして ",
-      style_blur: (px) => `ぼかし (${px}px)`,
-      style_blackout: () => "ブラックアウト",
-      style_pixelate: () => "モザイク",
-      style_hide: () => "要素を非表示",
+      style_blur: "ぼかし ({0}px)",
+      style_blackout: "ブラックアウト",
+      style_pixelate: "モザイク",
+      style_hide: "要素を非表示",
       toast_already_redacted: "🛡️ この要素は既に保護されています。サイドバーから解除できます。",
       snip_video_prep_title: "🎥 録画の準備完了",
       snip_video_prep_sub: "ページを選択しました！操作可能...",
@@ -155,8 +159,8 @@
       snip_esc_cancel: "[Esc] キャンセル",
       snip_click_to_pick: "🎯 クリックして要素を選択",
       snip_btn_capture: "📸 キャプチャ",
-      snip_btn_cancel: "✕ キャンセル"
-    }
+      snip_btn_cancel: "✕ キャンセル",
+    },
   };
 
   function tContent(key, ...args) {
@@ -164,7 +168,14 @@
       const dict = (CONTENT_I18N && (CONTENT_I18N[currentAppLang] || CONTENT_I18N.vi)) || {};
       const val = dict[key] || (CONTENT_I18N && CONTENT_I18N.vi ? CONTENT_I18N.vi[key] : "") || "";
       if (typeof val === "function") return val(...args);
-      return val;
+      if (typeof val !== "string") return String(val);
+      let out = val;
+      for (let i = 0; i < args.length && i < 10; i++) {
+        if (args[i] !== undefined && args[i] !== null) {
+          out = out.split("{" + i + "}").join(String(args[i]));
+        }
+      }
+      return out;
     } catch (e) {
       return "";
     }
