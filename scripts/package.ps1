@@ -1,5 +1,5 @@
 param(
-    [string]$Version = "2.4.1"
+    [string]$Version = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -8,6 +8,19 @@ $rootDir = Split-Path -Parent $PSScriptRoot
 $distDir = Join-Path $rootDir "dist"
 if (-not (Test-Path $distDir)) {
     New-Item -ItemType Directory -Path $distDir | Out-Null
+}
+
+if ([string]::IsNullOrWhiteSpace($Version)) {
+    $manifestPath = Join-Path $rootDir "manifest_firefox.json"
+    if (Test-Path $manifestPath) {
+        try {
+            $manifestObj = Get-Content $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+            $Version = $manifestObj.version
+        } catch {}
+    }
+    if ([string]::IsNullOrWhiteSpace($Version)) {
+        $Version = "2.4.1"
+    }
 }
 
 Add-Type -AssemblyName System.IO.Compression
