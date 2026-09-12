@@ -1,8 +1,11 @@
 /* Web Super Assistant - In-Page Styles */
 
-/* 1. Global inspect cursor when active */
+/* 1. Global inspect and snip cursor when active */
 html.super-inspecting-active,
-html.super-inspecting-active * {
+html.super-inspecting-active *,
+html.super-snip-active,
+html.super-snip-active *,
+html.super-snip-active body {
   cursor: crosshair !important;
 }
 
@@ -180,14 +183,18 @@ html.super-inspecting-active * {
 }
 
 .super-redact-hide {
-  visibility: hidden !important;
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 html.super-inspecting-active .super-redact-hide {
+  display: block !important; 
   visibility: visible !important;
   opacity: 0.25 !important;
   outline: 2px dashed #f59e0b !important;
   outline-offset: 1px !important;
+  pointer-events: auto !important;
 }
 
 .super-redact-remove {
@@ -263,7 +270,9 @@ html.super-redactions-paused .super-redact-pixelate {
 }
 
 html.super-redactions-paused .super-redact-hide {
+  display: block !important;
   visibility: visible !important;
+  opacity: 1 !important;
 }
 
 /* ==========================================================================
@@ -289,6 +298,11 @@ html.super-redactions-paused .super-redact-hide {
   box-sizing: border-box !important;
   display: none;
   z-index: 2147483642 !important;
+}
+
+#super-snip-box.is-drawing {
+  pointer-events: none !important;
+  cursor: crosshair !important;
 }
 
 #super-snip-hover-box {

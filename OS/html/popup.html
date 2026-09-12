@@ -119,7 +119,7 @@
     <div class="citation-box">
       <div class="citation-box-header">
         <span class="citation-box-badge" id="citation-box-style-label">Định dạng: IEEE</span>
-        <span id="citation-box-source-badge" class="badge" style="font-size:9.5px; padding:1px 6px;" data-i18n="badge_web">Trang Web</span>
+        <span id="citation-box-source-badge" class="badge" style="font-size:9.5px; padding:1px 6px;" data-i18n="badge_web">Trang Web</span>        <span id="citation-box-metrics-badge" class="badge" style="font-size:9.5px; padding:1px 6px; display:none; background:var(--primary); color:white; margin-left:4px;" title="Lượt trích dẫn (OpenAlex)"></span>
       </div>
       <div class="citation-content" id="citation-text" data-i18n="analyzing">Đang phân tích trang web...</div>
     </div>
@@ -142,9 +142,9 @@
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
         <span data-i18n="btn_save_biblio">Lưu</span>
       </button>
-      <button class="btn btn-secondary" id="btn-download-bib" style="flex:1; padding:7px 6px; font-size:11.5px;" title="Tải tệp .bib cho LaTeX / Overleaf" data-i18n-title="tip_download_bib">
+      <button class="btn btn-secondary" id="btn-download-ris" style="flex:1; padding:7px 6px; font-size:11.5px;" title="Tải tệp .ris cho Zotero, EndNote, Mendeley" data-i18n-title="tip_download_ris">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-        <span data-i18n="btn_export_bib">Xuất .bib</span>
+        <span data-i18n="btn_export_ris">Xuất .ris</span>
       </button>
       <button class="btn btn-secondary" id="btn-upload-local-pdf" style="flex:1; padding:7px 6px; font-size:11.5px;" title="Nạp file PDF từ máy tính hoặc kéo thả để trích xuất tự động" data-i18n-title="tip_upload_pdf">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
@@ -342,21 +342,23 @@
           <label style="font-size:10.5px; font-weight:600; color:var(--text-muted);" data-i18n="pref_author_style">Định dạng tên tác giả:</label>
           <div class="custom-select-wrap" id="wrap-author-style">
             <button type="button" class="custom-select-trigger" id="btn-author-style" aria-haspopup="listbox">
-              <span class="custom-select-label" id="label-author-style" data-i18n="opt_author_standard">Chuẩn (Vd: A. Vaswani / N. V. A)</span>
+              <span class="custom-select-label" id="label-author-style" data-i18n="opt_author_standard">Chuẩn (Vd: A. Vaswani / V. A. Nguyễn)</span>
               <svg class="dropdown-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
             </button>
             <div class="custom-select-menu" id="menu-author-style" role="listbox">
-              <div class="custom-select-item selected" data-value="standard" data-i18n="opt_author_standard">Chuẩn (Vd: A. Vaswani / N. V. A)</div>
-              <div class="custom-select-item" data-value="last-first" data-i18n="opt_author_last_first">Họ trước (A, N. V.)</div>
-              <div class="custom-select-item" data-value="uppercase-last" data-i18n="opt_author_uppercase_last">Họ in hoa (A, N. V.)</div>
+              <div class="custom-select-item selected" data-value="standard" data-i18n="opt_author_standard">Chuẩn (Vd: A. Vaswani / V. A. Nguyễn)</div>
+              <div class="custom-select-item" data-value="last-first" data-i18n="opt_author_last_first">Họ trước (Nguyễn, V. A. / Vaswani, A.)</div>
+              <div class="custom-select-item" data-value="uppercase-last" data-i18n="opt_author_uppercase_last">Họ in hoa (NGUYỄN, V. A. / VASWANI, A.)</div>
               <div class="custom-select-item" data-value="uppercase-all" data-i18n="opt_author_uppercase_all">In hoa toàn bộ (NGUYEN VAN A)</div>
+              <div class="custom-select-item" data-value="full">Tên đầy đủ (Liliana Porras-Hurtado / Nguyễn Văn A)</div>
               <div class="custom-select-item" data-value="original" data-i18n="opt_author_original">Giữ nguyên gốc (Nguyễn Văn A)</div>
             </div>
             <select class="form-control" id="cite-pref-author-style" style="display:none;" tabindex="-1" aria-hidden="true">
-              <option value="standard" data-i18n="opt_author_standard">Chuẩn (Vd: A. Vaswani / N. V. A)</option>
-              <option value="last-first" data-i18n="opt_author_last_first">Họ trước (A, N. V.)</option>
-              <option value="uppercase-last" data-i18n="opt_author_uppercase_last">Họ in hoa (A, N. V.)</option>
+              <option value="standard" data-i18n="opt_author_standard">Chuẩn (Vd: A. Vaswani / V. A. Nguyễn)</option>
+              <option value="last-first" data-i18n="opt_author_last_first">Họ trước (Nguyễn, V. A. / Vaswani, A.)</option>
+              <option value="uppercase-last" data-i18n="opt_author_uppercase_last">Họ in hoa (NGUYỄN, V. A. / VASWANI, A.)</option>
               <option value="uppercase-all" data-i18n="opt_author_uppercase_all">In hoa toàn bộ (NGUYEN VAN A)</option>
+              <option value="full">Tên đầy đủ (Liliana Porras-Hurtado / Nguyễn Văn A)</option>
               <option value="original" data-i18n="opt_author_original">Giữ nguyên gốc (Nguyễn Văn A)</option>
             </select>
           </div>
@@ -614,9 +616,11 @@
       <img id="screenshot-img" src="" alt="Screenshot">
       <div class="actions-row">
         <button class="btn btn-primary" id="btn-copy-screenshot" style="flex:1;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
           <span data-i18n="btn_copy_screenshot">Sao chép ảnh</span>
         </button>
         <button class="btn btn-success" id="btn-download-screenshot" style="flex:1;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
           <span data-i18n="btn_download_screenshot">Tải về máy</span>
         </button>
       </div>
@@ -690,12 +694,30 @@
           <div class="col form-group" style="margin-bottom:0;">
             <label style="font-size:10.5px; font-weight:600; color:var(--text-muted);" data-i18n="lbl_video_countdown">Đếm ngược:</label>
             <select class="form-control" id="video-pref-countdown" style="font-size:11px; padding:4px 6px;">
-              <option value="0" data-i18n="opt_delay_0">Quay ngay (0s)</option>
-              <option value="3" data-i18n="opt_delay_3" selected>Đếm ngược 3s</option>
-              <option value="5" data-i18n="opt_delay_5">Đếm ngược 5s</option>
+              <option value="0" data-i18n="opt_video_delay_0">Quay ngay (0s)</option>
+              <option value="3" data-i18n="opt_video_delay_3" selected>Đếm ngược 3s</option>
+              <option value="5" data-i18n="opt_video_delay_5">Đếm ngược 5s</option>
             </select>
           </div>
         </div>
+      </div>
+
+      <!-- Teleprompter / Script Box -->
+      <div style="background:rgba(15,23,42,0.65); border:1px solid var(--card-border); border-radius:8px; padding:10px; margin-bottom:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <div style="font-size:11.5px; font-weight:700; color:var(--primary);" data-i18n="script_heading">Kịch bản quay (Teleprompter)</div>
+          <div style="display:flex; gap:6px;">
+            <button id="btn-save-prompter" class="btn-text-small" title="Lưu kịch bản" style="padding:2px 6px; font-size:10.5px; color:#10b981; background:rgba(16,185,129,0.1); border-radius:4px; cursor:pointer; border:1px solid rgba(16,185,129,0.2);">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:2px; vertical-align:middle; position:relative; top:-1px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+              <span data-i18n="script_save">Lưu</span>
+            </button>
+            <button id="btn-popout-prompter" class="btn-text-small" title="Mở thành cửa sổ nổi độc lập để tàng hình khi quay Window" style="padding:2px 6px; font-size:10.5px; color:#38bdf8; background:rgba(56,189,248,0.1); border-radius:4px; cursor:pointer; border:1px solid rgba(56,189,248,0.2);">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:3px; vertical-align:middle; position:relative; top:-1px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+              <span data-i18n="script_popout">Cửa sổ nổi</span>
+            </button>
+          </div>
+        </div>
+        <textarea id="video-script-text" class="form-control" style="font-size:11.5px; line-height:1.5; min-height:80px; resize:vertical; background:rgba(0,0,0,0.3); border-color:rgba(255,255,255,0.1);" placeholder="Nhập hoặc dán kịch bản thuyết minh vào đây để đọc trong lúc quay video..." data-i18n-placeholder="script_placeholder"></textarea>
       </div>
 
       <!-- Start recording button -->
@@ -783,25 +805,37 @@
     </div>
 
     <!-- Items List Container -->
-    <div id="biblio-items" style="margin-bottom:10px; max-height:360px; overflow-y:auto;">
+    <div id="biblio-items" style="margin-bottom:8px; flex:1; min-height:80px; overflow-y:auto;">
       <!-- Dynamic cards rendered safely via document.createElement -->
     </div>
 
     <!-- Modal Action Buttons Row -->
-    <div class="actions-row" style="margin-bottom:6px;">
-      <button class="btn btn-primary" id="btn-copy-all-biblio" style="flex:1;" title="Sao chép toàn bộ danh mục tài liệu theo định dạng đang chọn" data-i18n-title="tip_copy_all">
+    <div class="biblio-modal-actions" style="margin-top:auto; padding-top:8px; border-top:1px solid var(--card-border);">
+      <!-- Row 1: Primary Action (Copy All) -->
+      <button class="btn btn-primary biblio-action-btn-primary" id="btn-copy-all-biblio" title="Sao chép toàn bộ danh mục tài liệu theo định dạng đang chọn" data-i18n-title="tip_copy_all">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
         <span data-i18n="btn_copy_all_biblio">Sao chép tất cả</span>
       </button>
-      <button class="btn btn-secondary" id="btn-export-bib-all" style="flex:1;" title="Tải file references.bib cho LaTeX/Overleaf" data-i18n-title="tip_download_bib2" data-i18n="btn_export_bib_all">
-        Xuất .bib
-      </button>
-      <button class="btn btn-secondary" id="btn-export-txt-all" style="flex:1;" title="Tải file references.txt cho Word" data-i18n-title="tip_export_txt">
-        <span data-i18n="btn_export_txt_all">Xuất .txt</span>
-      </button>
-    </div>
 
-    <div style="text-align:right;">
-      <button class="btn btn-danger" id="btn-clear-all-biblio" style="width:100%; padding:6px; font-size:11px; opacity:0.85;">
+      <!-- Row 2: Export Formats (.bib, .ris, .txt) -->
+      <div class="biblio-export-row">
+        <button class="btn btn-secondary biblio-export-btn" id="btn-export-bib-all" title="Tải file references.bib cho LaTeX/Overleaf" data-i18n-title="tip_download_bib2">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+          <span data-i18n="btn_export_bib_all">Xuất .bib</span>
+        </button>
+        <button class="btn btn-secondary biblio-export-btn" id="btn-export-ris-all" title="Tải file .ris cho Zotero/EndNote" data-i18n-title="tip_export_ris">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          <span data-i18n="btn_export_ris">Xuất .ris</span>
+        </button>
+        <button class="btn btn-secondary biblio-export-btn" id="btn-export-txt-all" title="Tải file references.txt cho Word" data-i18n-title="tip_export_txt">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+          <span data-i18n="btn_export_txt_all">Xuất .txt</span>
+        </button>
+      </div>
+
+      <!-- Row 3: Destructive Action (Clear All) -->
+      <button class="btn biblio-clear-btn" id="btn-clear-all-biblio" title="Xóa sạch toàn bộ danh mục trích dẫn đã lưu" data-i18n-title="tip_clear_all_biblio">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
         <span data-i18n="btn_clear_all_biblio">Xóa toàn bộ danh mục đã lưu</span>
       </button>
     </div>
@@ -940,7 +974,7 @@
       <div class="rule-card" style="border-color:rgba(245,158,11,0.35); background:rgba(245,158,11,0.06);">
         <div class="rule-card-title" style="color:#f59e0b;" data-i18n="trust_card4_title">⚖️ 4. Thông Tin Bản Quyền &amp; Kỹ Thuật</div>
         <div class="rule-card-body" data-i18n="trust_card4_body_html" data-i18n-html="true">
-          • <b>Phiên bản:</b> ScholarFlow v2.4.0 (Stable Release)<br>
+          • <b>Phiên bản:</b> ScholarFlow v2.4.1_beta<br>
           • <b>Kiến trúc:</b> Manifest V3 (Chromium 114+ &amp; Firefox 109+ Native Gecko)<br>
           • <b>Bản quyền:</b> Bản quyền phần mềm thuộc về Minh Thuận<br>
           • <b>Chính sách bảo mật:</b> <a href="privacy.html" target="_blank" style="color:#38bdf8; text-decoration:underline;">Xem toàn văn Chính Sách Quyền Riêng Tư (Privacy Policy)</a>
@@ -975,6 +1009,14 @@
           <span data-i18n="btn_import_cookie">Nhập (.json)</span>
         </button>
       </div>
+      <div style="margin-top:12px; border-top:1px solid rgba(255,255,255,0.1); padding-top:12px;">
+        <div class="feature-title" style="color:#ef4444;" data-i18n="cookie_clear_heading">Vượt Tường Lửa (Bypass Paywall)</div>
+        <div class="feature-desc" style="margin-bottom:10px;" data-i18n="cookie_clear_desc">Xóa sạch toàn bộ Cookie, Cache và bộ nhớ cục bộ của trang web này để khởi tạo lại phiên truy cập mới.</div>
+        <button class="btn btn-danger" id="btn-clear-site-data" style="width:100%; padding:8px 4px; font-size:11px;" title="Xóa Cookie, Cache, LocalStorage và Tải lại trang">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          <span data-i18n="btn_clear_site_data">Xóa Dấu Vết & Tải Lại Trang</span>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -982,7 +1024,7 @@
   <div class="footer-trust-bar">
     <div class="trust-pill" title="Phiên bản hiện tại" data-i18n-title="tip_trust_version">
       <span class="trust-dot dot-green"></span>
-      <span id="app-version-display">v2.4.0</span>
+      <span id="app-version-display">v2.4.1_beta</span>
     </div>
     <div class="trust-divider">•</div>
     <div class="trust-pill" title="Được phát triển bởi Minh Thuận" data-i18n-title="tip_trust_author">

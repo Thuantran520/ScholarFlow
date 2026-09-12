@@ -17,6 +17,7 @@ const I18N_DATA = {
   "ru": typeof window.I18N_RU !== 'undefined' ? window.I18N_RU : {},
   "ja": typeof window.I18N_JA !== 'undefined' ? window.I18N_JA : {}
 };
+try { window.I18N_DATA = I18N_DATA; } catch (e) {}
 
 /**
  * Universal translation getter with fallback:

@@ -125,4 +125,60 @@ const runtimeApi = browserRuntimeApi || chromeRuntimeApi;
 
     return true;
   }
+  if (request.action === "DOWNLOAD_PDF_IN_BACKGROUND") {
+    fetch(request.url)
+      .then(res => {
+        if (!res.ok) throw new Error("HTTP Status " + res.status);
+        return res.arrayBuffer();
+      })
+      .then(ab => {
+        let binary = "";
+        const bytes = new Uint8Array(ab);
+        const chunk = 0x8000;
+        for (let i = 0; i < bytes.length; i += chunk) {
+          binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+        }
+        const base64 = btoa(binary);
+        const filename = (request.url.split('/').pop() || 'document.pdf').split('?')[0];
+        
+        sendResponse({ base64: base64, filename: filename });
+      })
+      .catch(err => {
+        console.error("Lỗi fetch PDF từ Background:", err);
+        sendResponse(null);
+      });
+      
+    return true; 
+  }
+
 });
+
+// Context Menu Setup
+if (typeof chrome !== "undefined" && chrome.contextMenus) {
+  chrome.runtime.onInstalled.addListener(() => {
+    chrome.contextMenus.create({
+      id: "quote-to-cite",
+      title: "Lưu trích dẫn kèm trích đoạn",
+      contexts: ["selection"]
+    });
+  });
+
+  chrome.contextMenus.onClicked.addListener((info, tab) => {
+    if (info.menuItemId === "quote-to-cite" && info.selectionText) {
+      // We broadcast a message. The sidebar.js or content.js will intercept this.
+      // Send directly to the active tab so the sidebar can catch it, or if sidebar is open it will listen to runtime.onMessage
+      chrome.runtime.sendMessage({
+        action: "QUOTE_TO_CITE",
+        selectionText: info.selectionText,
+        pageUrl: info.pageUrl
+      });
+      // Also open side panel automatically if possible
+      try {
+        const sp = chrome["sidePanel"];
+        if (sp && sp.open) {
+          sp.open({ tabId: tab.id, windowId: tab.windowId });
+        }
+      } catch (e) {}
+    }
+  });
+}

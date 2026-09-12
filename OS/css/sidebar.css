@@ -431,6 +431,32 @@
       border-color: rgba(56, 189, 248, 0.45);
       background: rgba(56, 189, 248, 0.15);
     }
+    .nav-scroll-arrow {
+      width: 22px;
+      min-width: 22px;
+      max-width: 22px;
+      height: 36px;
+      background: rgba(255, 255, 255, 0.05);
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px 2px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: opacity 0.18s ease, visibility 0.18s ease, background 0.15s ease;
+    }
+    .nav-scroll-arrow:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text);
+    }
+    .nav-scroll-arrow.is-hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
     /* Main Navigation Tabs - Modern Segmented Controller */
     .main-nav {
       display: flex;
@@ -1223,6 +1249,203 @@
       border-radius: 5px;
     }
 
+    /* Saved Bibliography Modal Enhanced Modern Styles */
+    #biblio-modal {
+      display: none;
+    }
+    #biblio-modal.is-active,
+    #biblio-modal[style*="display: block"],
+    #biblio-modal[style*="display: flex"] {
+      display: flex !important;
+    }
+
+    #biblio-modal .modal-header {
+      padding-bottom: 8px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    #biblio-modal #btn-close-biblio {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #94a3b8;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 11.5px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    #biblio-modal #btn-close-biblio:hover {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.35);
+      color: #fca5a5;
+    }
+
+    #biblio-modal #biblio-search-input {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      color: #f1f5f9;
+      transition: all 0.2s ease;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    #biblio-modal #biblio-search-input:focus {
+      border-color: rgba(56, 189, 248, 0.6);
+      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.15);
+      background: rgba(15, 23, 42, 0.85);
+      outline: none;
+    }
+
+    /* Modal Capsule Segmented Control for Format Tabs */
+    #biblio-modal .sub-tabs {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 3px;
+      gap: 3px;
+      display: flex;
+    }
+    #biblio-modal .sub-tab-btn {
+      flex: 1;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 500;
+      color: #94a3b8;
+      padding: 6px 2px;
+      border: 1px solid transparent;
+      background: transparent;
+      text-align: center;
+      transition: all 0.18s ease;
+    }
+    #biblio-modal .sub-tab-btn:hover {
+      color: #f1f5f9;
+      background: rgba(255, 255, 255, 0.06);
+    }
+    #biblio-modal .sub-tab-btn.active {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.2) 0%, rgba(14, 165, 233, 0.12) 100%);
+      color: #38bdf8;
+      border-color: rgba(56, 189, 248, 0.4);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+      font-weight: 600;
+    }
+
+    /* Modal Action Buttons Group */
+    .biblio-modal-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      margin-top: auto;
+      flex-shrink: 0;
+    }
+
+    /* Row 1: Primary Action (Copy All) */
+    .btn.biblio-action-btn-primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      width: 100%;
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      color: #ffffff;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      box-sizing: border-box;
+    }
+    .btn.biblio-action-btn-primary:hover {
+      background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+      border-color: rgba(56, 189, 248, 0.6);
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4);
+      transform: translateY(-1px);
+    }
+    .btn.biblio-action-btn-primary:active {
+      transform: translateY(0);
+    }
+    .btn.biblio-action-btn-primary svg {
+      flex-shrink: 0;
+    }
+
+    /* Row 2: Export Row (.bib, .ris, .txt) */
+    .biblio-export-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .btn.biblio-export-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 6px 4px;
+      font-size: 11px;
+      font-weight: 500;
+      border-radius: 7px;
+      background: rgba(30, 41, 59, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #cbd5e1;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      white-space: nowrap;
+      box-sizing: border-box;
+    }
+    .btn.biblio-export-btn:hover {
+      background: rgba(51, 65, 85, 0.8);
+      border-color: rgba(56, 189, 248, 0.35);
+      color: #38bdf8;
+      transform: translateY(-1px);
+    }
+    .btn.biblio-export-btn:active {
+      transform: translateY(0);
+    }
+    .btn.biblio-export-btn svg {
+      flex-shrink: 0;
+      opacity: 0.85;
+    }
+
+    /* Row 3: Destructive Action (Clear All) - Elegant Subtle Outline */
+    .btn.biblio-clear-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+      padding: 6px 12px;
+      font-size: 11px;
+      font-weight: 500;
+      border-radius: 7px;
+      background: rgba(239, 68, 68, 0.06);
+      border: 1px solid rgba(239, 68, 68, 0.22);
+      color: #f87171;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      box-sizing: border-box;
+    }
+    .btn.biblio-clear-btn:hover {
+      background: rgba(239, 68, 68, 0.16);
+      border-color: rgba(239, 68, 68, 0.45);
+      color: #fca5a5;
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
+    }
+    .btn.biblio-clear-btn:active {
+      transform: translateY(0);
+    }
+    .btn.biblio-clear-btn svg {
+      flex-shrink: 0;
+      opacity: 0.9;
+    }
+
     /* Dual-Web Quick Switcher Bar */
     .dual-tabs-bar {
   background: rgba(15, 23, 42, 0.4);
@@ -1337,14 +1560,15 @@
 /* Thêm màu sắc cho Error Popup */
 .notify-success {
   background: #059669 !important;
-
+}
 .notify-error {
   background: #dc2626 !important;
   border-left: 4px solid #991b1b;
-
+}
 .notify-warning {
   background: #d97706 !important;
   color: #fff !important;
+}
 
 
 
@@ -1376,3 +1600,268 @@
       color: #64748b;
       font-style: italic;
     }
+
+/* ==========================================================================
+   Enhanced To-Do List Styles (Beautified Cards, Priority Accents & Modern Checkbox)
+   ========================================================================== */
+.todo-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.8) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 3.5px solid #f59e0b;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.todo-card:hover {
+  border-color: rgba(56, 189, 248, 0.35);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  transform: translateY(-1px);
+}
+.todo-card.priority-urgent {
+  border-left: 3.5px solid #ef4444 !important;
+}
+.todo-card.priority-normal {
+  border-left: 3.5px solid #f59e0b !important;
+}
+.todo-card.priority-low {
+  border-left: 3.5px solid #10b981 !important;
+}
+.todo-card.is-done {
+  background: rgba(15, 23, 42, 0.45);
+  border-color: rgba(255, 255, 255, 0.04);
+  border-left: 3.5px solid #64748b !important;
+  box-shadow: none;
+  opacity: 0.72;
+}
+.todo-card-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+}
+/* Modern Custom Checkbox */
+.todo-checkbox-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  cursor: pointer;
+}
+.todo-checkbox-wrap input[type="checkbox"] {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  margin: 0;
+  cursor: pointer;
+  z-index: 2;
+}
+.todo-checkbox-box {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1.5px solid rgba(148, 163, 184, 0.45);
+  background: rgba(15, 23, 42, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  z-index: 1;
+}
+.todo-checkbox-wrap:hover .todo-checkbox-box {
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.25);
+}
+.todo-checkbox-wrap input[type="checkbox"]:checked + .todo-checkbox-box {
+  border-color: #0ea5e9;
+  background: #0ea5e9;
+  box-shadow: 0 0 10px rgba(14, 165, 233, 0.45);
+}
+.todo-checkbox-wrap .todo-check-icon {
+  display: none;
+}
+.todo-checkbox-wrap input[type="checkbox"]:checked + .todo-checkbox-box .todo-check-icon {
+  display: block;
+}
+/* Todo Text Content */
+.todo-text-content {
+  flex: 1;
+  min-width: 0;
+}
+.todo-title-text {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #f1f5f9;
+  line-height: 1.45;
+  word-break: break-word;
+  transition: color 0.2s ease;
+  letter-spacing: -0.01em;
+}
+.todo-card.is-done .todo-title-text {
+  text-decoration: line-through;
+  color: #64748b;
+}
+.todo-meta-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+.todo-priority-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1.5px 7px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  line-height: 1.3;
+}
+.todo-priority-urgent {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+.todo-priority-normal {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fcd34d;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+.todo-priority-low {
+  background: rgba(16, 185, 129, 0.15);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+.todo-date-badge {
+  font-size: 10px;
+  color: #64748b;
+  font-family: ui-monospace, Consolas, monospace;
+}
+/* Detail note callout */
+.todo-detail-box {
+  margin-top: 6px;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-left: 2px solid #38bdf8;
+  border-radius: 6px;
+  font-size: 11.5px;
+  color: #cbd5e1;
+  line-height: 1.45;
+  word-break: break-word;
+}
+/* Todo Action Buttons */
+.todo-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+.todo-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s ease;
+}
+.todo-action-btn.btn-edit {
+  color: #94a3b8;
+}
+.todo-action-btn.btn-edit:hover {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: rgba(56, 189, 248, 0.35);
+  color: #38bdf8;
+}
+.todo-action-btn.btn-del {
+  color: #94a3b8;
+}
+.todo-action-btn.btn-del:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #f87171;
+}
+/* Filter Tabs */
+.todo-filter-btn {
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  color: #94a3b8;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.todo-filter-btn:hover {
+  background: rgba(56, 189, 248, 0.1);
+  color: #e2e8f0;
+}
+.todo-filter-btn.active {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+/* Tool buttons (Copy, Export, Clear) */
+.todo-tool-btn {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  color: #cbd5e1;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.todo-tool-btn:hover {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: rgba(56, 189, 248, 0.35);
+  color: #38bdf8;
+}
+.todo-tool-btn-danger {
+  color: #fca5a5 !important;
+}
+.todo-tool-btn-danger:hover {
+  background: rgba(239, 68, 68, 0.15) !important;
+  border-color: rgba(239, 68, 68, 0.35) !important;
+  color: #f87171 !important;
+}
+/* Edit mode inputs inside card */
+.todo-edit-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+.todo-edit-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+

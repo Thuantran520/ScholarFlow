@@ -80,6 +80,15 @@ const ORG_NAMES = new Set([
 ]);
 const ORG_KEYWORDS = ["news", "team", "foundation", "institute", "corp", "inc", "llc", "labs", "group", "agency", "editorial"];
 
+const VIETNAMESE_SURNAMES = new Set([
+  "nguyễn", "nguyen", "trần", "tran", "lê", "le", "phạm", "pham", "hoàng", "hoang",
+  "huỳnh", "huynh", "phan", "vũ", "vu", "võ", "vo", "đặng", "dang", "bùi", "bui",
+  "đỗ", "do", "hồ", "ho", "ngô", "ngo", "dương", "duong", "lý", "ly", "đào", "dao",
+  "đoàn", "doan", "vương", "vuong", "trịnh", "trinh", "đinh", "dinh", "lâm", "lam",
+  "phùng", "phung", "mai", "tô", "to", "hà", "ha", "tạ", "ta", "trương", "truong",
+  "quách", "quach", "thân", "than", "tăng", "tang", "la", "lưu", "luu"
+]);
+
 function isOrganization(name) {
   if (!name) return false;
   const low = name.trim().toLowerCase();
@@ -136,6 +145,86 @@ function removeVietnameseDiacritics(str) {
     .replace(/Đ/g, "D");
 }
 
+function normalizeAuthorDisplayName(name) {
+  if (!name || typeof name !== "string") return "";
+  let s = cleanAuthorName(name);
+  if (!s) return "";
+  s = s.replace(/,\s*(jr\.?|sr\.?|iii|ii|iv)(?=\s*,|\s*$)/gi, " $1");
+  if (s.includes(",")) {
+    const p = s.split(",");
+    if (p.length === 2) {
+      const last = p[0].trim();
+      const first = p[1].trim();
+      if (last && first) {
+        const lastClean = removeVietnameseDiacritics(last).toLowerCase();
+        const isVn = VIETNAMESE_SURNAMES.has(last.toLowerCase()) || VIETNAMESE_SURNAMES.has(lastClean);
+        return isVn ? `${last} ${first}`.trim() : `${first} ${last}`.trim();
+      }
+    }
+  }
+  return s;
+}
+
+function normalizeAuthorsString(raw) {
+  if (!raw) return "";
+  if (Array.isArray(raw)) {
+    return raw.map(x => normalizeAuthorDisplayName(typeof x === "string" ? x : (x?.name || ""))).filter(Boolean).join(", ");
+  }
+  let s = String(raw).trim();
+  if (!s) return "";
+  
+  if (s.includes(";") || s.includes("\n")) {
+    const sep = s.includes(";") ? ";" : "\n";
+    return s.split(sep)
+      .map(part => part.replace(/^\s*(?:and|và|&)\s+/i, "").trim())
+      .map(normalizeAuthorDisplayName)
+      .filter(Boolean)
+      .join(", ");
+  }
+  
+  let cleanStr = s.replace(/\s*&\s*/g, " and ").replace(/\s*&amp;\s*/g, " and ").replace(/\s+và\s+/gi, " and ");
+  if (/\s+and\s+/i.test(cleanStr) && !/,\s+and\s+/i.test(cleanStr)) {
+    const andParts = cleanStr.split(/\s+and\s+/i);
+    if (andParts.length === 2 && !andParts[0].includes(";") && andParts[0].split(",").length <= 2) {
+      return andParts.map(normalizeAuthorDisplayName).filter(Boolean).join(", ");
+    }
+  }
+  
+  const withCommas = cleanStr.replace(/,\s+and\s+/gi, ", ").replace(/\s+and\s+/gi, ", ").trim();
+  const parts = withCommas.split(",").map(p => p.trim()).filter(Boolean);
+  if (parts.length <= 1) {
+    return normalizeAuthorDisplayName(parts[0] || "");
+  }
+
+  if (parts.length === 2) {
+    const w0 = parts[0].trim().split(/\s+/).length;
+    const w1 = parts[1].trim().split(/\s+/).length;
+    if (w0 === 1 || w1 === 1 || /^[A-Z]\.(\s*[A-Z]\.)*$/i.test(parts[1].trim())) {
+      return normalizeAuthorDisplayName(parts[0] + ", " + parts[1]);
+    }
+  }
+  
+  // Check if parts are Last, First pairs
+  let isPairs = parts.length >= 4 && parts.length % 2 === 0;
+  if (isPairs) {
+    let allHaveMultipleWords = parts.every(p => p.trim().split(/\s+/).length >= 2);
+    if (allHaveMultipleWords) {
+      const oddAreInitials = parts.filter((_, idx) => idx % 2 === 1).every(p => /^[A-Z]\.(\s*[A-Z]\.)*$/i.test(p.trim()));
+      if (!oddAreInitials) isPairs = false;
+    }
+  }
+  
+  if (isPairs) {
+    const res = [];
+    for (let i = 0; i < parts.length; i += 2) {
+      res.push(normalizeAuthorDisplayName(parts[i] + ", " + parts[i + 1]));
+    }
+    return res.filter(Boolean).join(", ");
+  }
+  
+  return parts.map(normalizeAuthorDisplayName).filter(Boolean).join(", ");
+}
+
 // Citation Management & Customization State
 let savedBibliographies = [];
 let citationSettings = {
@@ -162,6 +251,29 @@ function getTodayApa() {
 // // ----------------------------------------------------------------------------
 // Citation Formatters & Multi-Author Parsing (IEEE, APA 7th, Harvard, MLA 9th, BibTeX)
 // ----------------------------------------------------------------------------
+function formatResearchNote(rawNote, lang = "vi", isHtml = false) {
+  if (!rawNote) return "";
+  let clean = rawNote.trim();
+  while (
+    (clean.startsWith('"') && clean.endsWith('"')) ||
+    (clean.startsWith('“') && clean.endsWith('”')) ||
+    (clean.startsWith('«') && clean.endsWith('»'))
+  ) {
+    clean = clean.slice(1, -1).trim();
+  }
+  if (!clean) return "";
+
+  const noteLabel = (window.i18n ? window.i18n.t("lbl_notes") : null) || 
+    (lang === "en" ? "Research Notes" : (lang === "zh" ? "研究笔记" : (lang === "ja" ? "研究メモ" : (lang === "ru" ? "Заметки к исследованию" : "Ghi chú nghiên cứu"))));
+
+  if (isHtml) {
+    const escaped = clean.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    return `<div style="margin-top:12px; padding-top:8px; border-top:1px dashed rgba(255,255,255,0.15); font-size:11px; line-height:1.55; color:#94a3b8; font-style:italic;"><div style="font-style:normal; font-weight:600; color:#cbd5e1; font-size:10px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:3px;">${noteLabel}:</div>"${escaped}"</div>`;
+  }
+
+  return `\n\n${noteLabel}:\n"${clean}"`;
+}
+
 function makeInitials(first) {
   if (!first) return "";
   first = first.trim();
@@ -187,11 +299,22 @@ function parseAuthorParts(name) {
     const last = p[0].trim();
     const first = p.slice(1).join(",").trim();
     const initials = makeInitials(first);
-    return { raw: name, first, last, initials, isOrg: false };
+    const lastLow = removeVietnameseDiacritics(last).toLowerCase();
+    const isVn = VIETNAMESE_SURNAMES.has(last.toLowerCase()) || VIETNAMESE_SURNAMES.has(lastLow);
+    const raw = isVn ? `${last} ${first}`.trim() : `${first} ${last}`.trim();
+    return { raw, first, last, initials, isOrg: false, isVietnamese: isVn };
   }
   const words = name.split(/\s+/).filter(Boolean);
   if (words.length <= 1) {
     return { raw: name, first: "", last: words[0] || "", initials: "", isOrg: false };
+  }
+  const firstWordLow = removeVietnameseDiacritics(words[0]).toLowerCase();
+  const isVnSurname = VIETNAMESE_SURNAMES.has(words[0].toLowerCase()) || VIETNAMESE_SURNAMES.has(firstWordLow);
+  if (isVnSurname && words.length >= 2) {
+    const last = words[0];
+    const first = words.slice(1).join(" ");
+    const initials = makeInitials(first);
+    return { raw: name, first, last, initials, isOrg: false, isVietnamese: true };
   }
   const last = words[words.length - 1];
   const first = words.slice(0, words.length - 1).join(" ");
@@ -202,7 +325,7 @@ function parseAuthorParts(name) {
 function parseAuthorsList(raw) {
   if (!raw) return [];
   if (Array.isArray(raw)) {
-    raw = raw.filter(Boolean).map(x => typeof x === "string" ? x : (x?.name || "")).join(", ");
+    raw = raw.filter(Boolean).map(x => typeof x === "string" ? x : (x?.name || "")).join("; ");
   }
   if (typeof raw !== "string") {
     raw = String(raw || "");
@@ -212,39 +335,59 @@ function parseAuthorsList(raw) {
   if (isOrganization(raw)) {
     return [{ raw, first: "", last: raw, initials: "", isOrg: true }];
   }
-  let rawList = [];
-  raw = raw.replace(/\s+and\s+/gi, ", ").replace(/\s+và\s+/gi, ", ").replace(/\s*&amp;\s*/gi, ", ").replace(/\s+&\s+/g, ", ");
 
-  if (raw.includes(";")) {
-    rawList = raw.split(";");
-  } else if (raw.includes("\n")) {
-    rawList = raw.split("\n");
-  } else if (raw.includes(",")) {
-    const commaParts = raw.split(",").map(s => s.trim()).filter(Boolean);
-    let looksLikePairs = commaParts.length >= 4 && commaParts.length % 2 === 0;
-    if (looksLikePairs) {
-      for (let i = 1; i < commaParts.length; i += 2) {
-        if (!/^[A-Z](\.|\b)/i.test(commaParts[i])) {
-          looksLikePairs = false;
-          break;
-        }
-      }
-    }
-    if (looksLikePairs) {
-      for (let i = 0; i < commaParts.length; i += 2) {
-        rawList.push(`${commaParts[i]}, ${commaParts[i + 1]}`);
-      }
-    } else {
-      rawList = commaParts;
-    }
-  } else {
-    rawList = [raw];
+  // If already semicolon or newline delimited
+  if (raw.includes(";") || raw.includes("\n")) {
+    const sep = raw.includes(";") ? ";" : "\n";
+    return raw.split(sep)
+      .map(s => s.replace(/^\s*(?:and|và|&)\s+/i, "").trim())
+      .map(cleanAuthorName)
+      .filter(Boolean)
+      .map(parseAuthorParts)
+      .filter(Boolean);
   }
-  return rawList
-    .map(s => cleanAuthorName(s))
-    .filter(Boolean)
-    .map(parseAuthorParts)
-    .filter(Boolean);
+
+  // Handle 'and' / 'và' / '&'
+  let cleanStr = raw.replace(/\s*&\s*/g, " and ").replace(/\s*&amp;\s*/g, " and ").replace(/\s+và\s+/gi, " and ");
+
+  // If there are exactly two authors joined by 'and' without Oxford comma:
+  // e.g. 'Vaswani, Ashish and Shazeer, Noam' or 'Ashish Vaswani and Noam Shazeer'
+  if (/\s+and\s+/i.test(cleanStr) && !/,\s+and\s+/i.test(cleanStr)) {
+    const andParts = cleanStr.split(/\s+and\s+/i);
+    if (andParts.length === 2 && !andParts[0].includes(";") && (andParts[0].split(",").length <= 2)) {
+      return andParts.map(s => cleanAuthorName(s)).filter(Boolean).map(parseAuthorParts).filter(Boolean);
+    }
+  }
+
+  // Normalise ', and ' -> ', '
+  const withCommas = cleanStr.replace(/,\s+and\s+/gi, ", ").replace(/\s+and\s+/gi, ", ").trim();
+  const parts = withCommas.split(",").map(s => s.trim()).filter(Boolean);
+
+  if (parts.length <= 1) {
+    return parts.map(cleanAuthorName).filter(Boolean).map(parseAuthorParts).filter(Boolean);
+  }
+
+  // Check if parts are pairs: Last, First, Last, First...
+  let isPairs = parts.length >= 4 && parts.length % 2 === 0;
+  if (isPairs) {
+    let allHaveMultipleWords = parts.every(p => p.trim().split(/\s+/).length >= 2);
+    if (allHaveMultipleWords) {
+      const oddAreInitials = parts.filter((_, idx) => idx % 2 === 1).every(p => /^[A-Z]\.(\s*[A-Z]\.)*$/i.test(p.trim()));
+      if (!oddAreInitials) {
+        isPairs = false;
+      }
+    }
+  }
+
+  if (isPairs) {
+    const authors = [];
+    for (let i = 0; i < parts.length; i += 2) {
+      authors.push(parseAuthorParts(cleanAuthorName(parts[i] + ", " + parts[i + 1])));
+    }
+    return authors.filter(Boolean);
+  }
+
+  return parts.map(cleanAuthorName).filter(Boolean).map(parseAuthorParts).filter(Boolean);
 }
 
 function formatSingleAuthor(author, style, formatType) {
@@ -263,8 +406,21 @@ function formatSingleAuthor(author, style, formatType) {
     initials = removeVietnameseDiacritics(initials);
   }
 
+  if (formatType === "ieee") {
+    if (citationSettings.authorStyle === "uppercase-all") {
+      return `${removeVietnameseDiacritics(initials)} ${removeVietnameseDiacritics(last)}`.toUpperCase().trim();
+    }
+    if (citationSettings.authorStyle === "uppercase-last") {
+      return initials ? `${initials} ${last.toUpperCase()}` : last.toUpperCase();
+    }
+    return initials ? `${initials} ${last}` : last;
+  }
+
   if (citationSettings.authorStyle === "original") return raw;
   if (citationSettings.authorStyle === "uppercase-all") return removeVietnameseDiacritics(raw).toUpperCase();
+  if (citationSettings.authorStyle === "full") {
+    return author.isVietnamese ? `${last} ${first}` : `${first} ${last}`.trim();
+  }
 
   const isUpperLast = citationSettings.authorStyle === "uppercase-last";
   const isLastFirst = citationSettings.authorStyle === "last-first";
@@ -274,9 +430,7 @@ function formatSingleAuthor(author, style, formatType) {
     return initials ? `${finalLast}, ${initials}` : finalLast;
   }
 
-  if (formatType === "ieee") {
-    return initials ? `${initials} ${finalLast}` : finalLast;
-  } else if (formatType === "apa") {
+  if (formatType === "apa") {
     return initials ? `${finalLast}, ${initials}` : finalLast;
   } else if (formatType === "harvard") {
     const hInitials = initials.replace(/\s+/g, "");
@@ -361,64 +515,83 @@ function parseComprehensiveDate(raw) {
   let s = raw.toString().trim();
   if (!s) return "";
 
+  // 0. Unix timestamp (seconds: 10 digits, or millis: 13 digits)
+  if (/^\d{10}$/.test(s)) {
+    const d = new Date(parseInt(s, 10) * 1000);
+    if (!isNaN(d.getTime()) && d.getFullYear() >= 1990 && d.getFullYear() <= 2035) {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+  }
+  if (/^\d{13}$/.test(s)) {
+    const d = new Date(parseInt(s, 10));
+    if (!isNaN(d.getTime()) && d.getFullYear() >= 1990 && d.getFullYear() <= 2035) {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+  }
+
   // Check if string contains multiple dates with explicit "published" vs "updated" labels
-  const pubSectionMatch = s.match(/(?:ngày\s*đăng|đăng\s*(?:ngày|lúc)?|xuất\s*bản|công\s*bố|published\s*(?:on|at)?|posted\s*(?:on|at)?)\s*[:\-–,]?\s*([^|\n–—]+?)(?=(?:\s*[-–—|•]\s*(?:cập\s*nhật|updated|modified|last\s*modified|last\s*updated))|\s*$)/i);
+  const pubSectionMatch = s.match(/(?:ngày\s*đăng|đăng\s*(?:ngày|lúc)?|xuất\s*bản|công\s*bố|published\s*(?:on|at)?|posted\s*(?:on|at)?|дата\s*публикации|опубликовано|发布时间|发布于|公開日|更新日|release\s*date)\s*[:\-–,]?\s*([^|\n–—]+?)(?=(?:\s*[-–—|•]\s*(?:cập\s*nhật|updated|modified|last\s*modified|last\s*updated))|\s*$)/i);
   if (pubSectionMatch) {
     s = pubSectionMatch[1].trim();
   }
 
-  // 0. Full ISO timestamp (e.g. "2009-10-24T23:57:33-07:00", "2005-04-23T20:31:52-07:00" or "2026-09-05T22:57:50Z")
-  // Extract the official publisher calendar date (YYYY-MM-DD) directly before 'T' without timezone date drift
-  const isoYmdMatch = s.match(/\b(19\d\d|20\d\d)-(\d{2})-(\d{2})(?:T|\s|$)/i);
+  // 1. Full ISO timestamp (e.g. "2009-10-24T23:57:33-07:00" or "2026-09-05T22:57:50Z" or "2024/05/18")
+  const isoYmdMatch = s.match(/\b(19\d\d|20\d\d)[-/.](\d{1,2})[-/.](\d{1,2})(?:T|\s|$|[^\d])/);
   if (isoYmdMatch) {
-    return `${isoYmdMatch[1]}-${isoYmdMatch[2]}-${isoYmdMatch[3]}`;
-  }
-
-  // 1. Remove prefixes like "Updated on:", "Published:", "Đăng lúc:", "Thứ...", "Đã công chiếu vào...", etc.
-  s = s.replace(/^(?:updated\s*(?:on|at)?|published\s*(?:on|at)?|posted\s*(?:on|at)?|modified\s*(?:on|at)?|uploaded\s*on|streamed\s*live\s*(?:on)?|streamed\s*(?:on)?|premiered\s*(?:on)?|đã\s*công\s*chiếu\s*(?:vào)?|đã\s*phát\s*trực\s*tiếp\s*(?:vào)?|công\s*chiếu\s*(?:vào)?|phát\s*trực\s*tiếp\s*(?:vào)?|đã\s*tải\s*lên\s*(?:vào)?|xuất bản|ngày đăng|đăng lúc|cập nhật|thứ\s+[a-z0-9]+|chủ nhật)\s*[:\-–,]?\s*/i, "").trim();
-
-  // 2. Relative dates: "X giờ trước", "X phút trước", "X ngày trước", "X tuần trước", "X tháng trước", "X năm trước", etc.
-  const now = new Date();
-  if (/(\d+)\s*(?:giờ|phút|giây|hours?|mins?|minutes?|secs?|seconds?)\s*(?:trước|ago)/i.test(s) || /vừa xong|just now/i.test(s)) {
-    return now.toISOString().split("T")[0];
-  }
-  const relDayMatch = s.match(/(\d+)\s*(?:ngày|days?)\s*(?:trước|ago)/i);
-  if (relDayMatch) {
-    const d = new Date(now.getTime() - parseInt(relDayMatch[1], 10) * 86400000);
-    return d.toISOString().split("T")[0];
-  }
-  const relWeekMatch = s.match(/(\d+)\s*(?:tuần|weeks?)\s*(?:trước|ago)/i);
-  if (relWeekMatch) {
-    const d = new Date(now.getTime() - parseInt(relWeekMatch[1], 10) * 7 * 86400000);
-    return d.toISOString().split("T")[0];
-  }
-  const relMonthMatch = s.match(/(\d+)\s*(?:tháng|months?)\s*(?:trước|ago)/i);
-  if (relMonthMatch) {
-    const d = new Date(now.getFullYear(), now.getMonth() - parseInt(relMonthMatch[1], 10), now.getDate());
-    return d.toISOString().split("T")[0];
-  }
-  const relYearMatch = s.match(/(\d+)\s*(?:năm|years?)\s*(?:trước|ago)/i);
-  if (relYearMatch) {
-    const yr = now.getFullYear() - parseInt(relYearMatch[1], 10);
-    return `${yr}`;
-  }
-  if (/hôm qua|yesterday/i.test(s)) {
-    const d = new Date(now.getTime() - 86400000);
-    return d.toISOString().split("T")[0];
-  }
-
-  // 3. ISO or YYYY-MM-DD (or with T or space)
-  const isoMatch = s.match(/\b(19\d\d|20\d\d)[-/.](\d{1,2})[-/.](\d{1,2})(?:T|\s|$|[^\d])/);
-  if (isoMatch) {
-    const y = isoMatch[1];
-    const m = isoMatch[2].padStart(2, "0");
-    const d = isoMatch[3].padStart(2, "0");
+    const y = isoYmdMatch[1];
+    const m = isoYmdMatch[2].padStart(2, "0");
+    const d = isoYmdMatch[3].padStart(2, "0");
     if (parseInt(m, 10) >= 1 && parseInt(m, 10) <= 12 && parseInt(d, 10) >= 1 && parseInt(d, 10) <= 31) {
       return `${y}-${m}-${d}`;
     }
   }
 
-  // 4. Vietnamese phrase: "ngày 06 tháng 09 năm 2026", "16 thg 8, 2026", "tháng ba, 2024"
+  // 2. Remove prefixes in Vietnamese, English, French, Spanish, Russian, Chinese, Japanese
+  s = s.replace(/^(?:updated\s*(?:on|at)?|published\s*(?:on|at)?|posted\s*(?:on|at)?|modified\s*(?:on|at)?|uploaded\s*on|streamed\s*live\s*(?:on)?|streamed\s*(?:on)?|premiered\s*(?:on)?|đã\s*công\s*chiếu\s*(?:vào)?|đã\s*phát\s*trực\s*tiếp\s*(?:vào)?|công\s*chiếu\s*(?:vào)?|phát\s*trực\s*tiếp\s*(?:vào)?|đã\s*tải\s*lên\s*(?:vào)?|xuất bản|ngày đăng|đăng lúc|cập nhật|thứ\s+[a-z0-9]+|chủ nhật|monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun|опубликовано|дата\s*публикации|发布时间|发布于|公開日)\s*[:\-–,]?\s*/i, "").trim();
+
+  // 3. Relative dates
+  const now = new Date();
+  if (/(\d+)\s*(?:giờ|phút|giây|hours?|mins?|minutes?|secs?|seconds?|часов?|минут?|小时|分钟|分前|時間前)\s*(?:trước|ago|назад|前)/i.test(s) || /vừa xong|just now|только что|刚刚/i.test(s)) {
+    return now.toISOString().split("T")[0];
+  }
+  const relDayMatch = s.match(/(\d+)\s*(?:ngày\s*trước|days?\s*ago|дней\s*назад|дня\s*назад|день\s*назад|天前|日前)/i);
+  if (relDayMatch) {
+    const d = new Date(now.getTime() - parseInt(relDayMatch[1], 10) * 86400000);
+    return d.toISOString().split("T")[0];
+  }
+  const relWeekMatch = s.match(/(\d+)\s*(?:tuần\s*trước|weeks?\s*ago|недел[ьия]\s*назад|周前|週間前)/i);
+  if (relWeekMatch) {
+    const d = new Date(now.getTime() - parseInt(relWeekMatch[1], 10) * 7 * 86400000);
+    return d.toISOString().split("T")[0];
+  }
+  const relMonthMatch = s.match(/(\d+)\s*(?:tháng\s*trước|months?\s*ago|месяц(?:ев|а)?\s*назад|个月前|ヶ月前)/i);
+  if (relMonthMatch) {
+    const d = new Date(now.getFullYear(), now.getMonth() - parseInt(relMonthMatch[1], 10), now.getDate());
+    return d.toISOString().split("T")[0];
+  }
+  const relYearMatch = s.match(/(\d+)\s*(?:năm\s*trước|years?\s*ago|лет\s*назад|года?\s*назад|年前)/i);
+  if (relYearMatch) {
+    const yr = now.getFullYear() - parseInt(relYearMatch[1], 10);
+    return `${yr}`;
+  }
+  if (/hôm qua|yesterday|вчера|昨天|昨日/i.test(s)) {
+    const d = new Date(now.getTime() - 86400000);
+    return d.toISOString().split("T")[0];
+  }
+
+  // 4. Chinese & Japanese: 2024年5月18日 or 2024年05月
+  const cjMatch = s.match(/\b(19\d\d|20\d\d)\s*年\s*(\d{1,2})\s*月(?:\s*(\d{1,2})\s*日)?/);
+  if (cjMatch) {
+    const y = cjMatch[1];
+    const m = cjMatch[2].padStart(2, "0");
+    if (cjMatch[3]) {
+      const d = cjMatch[3].padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    }
+    return `${y}-${m}`;
+  }
+
+  // 5. Vietnamese phrase: "ngày 06 tháng 09 năm 2026", "16 thg 8, 2026", "tháng ba, 2024"
   const vnWordMonths = {
     "một": "01", "giêng": "01", "hai": "02", "ba": "03", "bốn": "04", "tư": "04",
     "năm": "05", "sáu": "06", "bảy": "07", "tám": "08", "chín": "09",
@@ -440,41 +613,75 @@ function parseComprehensiveDate(raw) {
     return `${y}-${m}`;
   }
 
-  // 5. English Month names
-  const months = {
+  // 6. Multi-language Month Names (English, Russian, French, German, Spanish/Portuguese)
+  const allMonths = {
     jan: "01", january: "01", feb: "02", february: "02", mar: "03", march: "03", apr: "04", april: "04",
     may: "05", jun: "06", june: "06", jul: "07", july: "07", aug: "08", august: "08", sep: "09", sept: "09",
-    september: "09", oct: "10", october: "10", nov: "11", november: "11", dec: "12", december: "12"
+    september: "09", oct: "10", october: "10", nov: "11", november: "11", dec: "12", december: "12",
+    "января": "01", "январь": "01", "янв": "01",
+    "февраля": "02", "февраль": "02", "фев": "02",
+    "марта": "03", "март": "03", "мар": "03",
+    "апреля": "04", "апрель": "04", "апр": "04",
+    "мая": "05", "май": "05",
+    "июня": "06", "июнь": "06", "июн": "06",
+    "июля": "07", "июль": "07", "июл": "07",
+    "августа": "08", "август": "08", "авг": "08",
+    "сентября": "09", "сентябрь": "09", "сен": "09", "сент": "09",
+    "октября": "10", "октябрь": "10", "окт": "10",
+    "ноября": "11", "ноябрь": "11", "ноя": "11",
+    "декабря": "12", "декабрь": "12", "дек": "12",
+    "janvier": "01", "enero": "01", "janeiro": "01", "januar": "01",
+    "février": "02", "febrero": "02", "fevereiro": "02", "februar": "02",
+    "mars": "03", "marzo": "03", "março": "03", "märz": "03",
+    "avril": "04", "abril": "04",
+    "mai": "05", "mayo": "05", "maio": "05",
+    "juin": "06", "junio": "06", "junho": "06", "juni": "06",
+    "juillet": "07", "julio": "07", "julho": "07", "juli": "07",
+    "août": "08", "agosto": "08",
+    "septembre": "09", "setiembre": "09", "setembro": "09",
+    "octobre": "10", "octubre": "10", "outubro": "10", "oktober": "10",
+    "novembre": "11", "noviembre": "11", "novembro": "11",
+    "décembre": "12", "diciembre": "12", "dezembro": "12", "dezember": "12"
   };
-  const monthNamesRegex = "jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?";
 
-  // "September 6, 2026" or "September 6th, 2026"
-  const enMatch1 = s.match(new RegExp(`\\b(${monthNamesRegex})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?,?\\s+(19\\d\\d|20\\d\\d)\\b`, "i"));
-  if (enMatch1) {
-    const m = months[enMatch1[1].toLowerCase().replace(".", "")];
-    const d = enMatch1[2].padStart(2, "0");
-    const y = enMatch1[3];
+  const monthKeysRegex = Object.keys(allMonths).sort((a, b) => b.length - a.length).join("|");
+
+  // Format: "Month DD, YYYY" (e.g. September 12, 2026)
+  const mMatch1 = s.match(new RegExp(`\\b(${monthKeysRegex})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?,?\\s+(19\\d\\d|20\\d\\d)\\b`, "i"));
+  if (mMatch1) {
+    const m = allMonths[mMatch1[1].toLowerCase().replace(".", "")];
+    const d = mMatch1[2].padStart(2, "0");
+    const y = mMatch1[3];
     if (m) return `${y}-${m}-${d}`;
   }
 
-  // "6 September 2026" or "6th Sept 2026"
-  const enMatch2 = s.match(new RegExp(`\\b(\\d{1,2})(?:st|nd|rd|th)?\\s+(${monthNamesRegex})\\.?\\s*,?\\s+(19\\d\\d|20\\d\\d)\\b`, "i"));
-  if (enMatch2) {
-    const d = enMatch2[1].padStart(2, "0");
-    const m = months[enMatch2[2].toLowerCase().replace(".", "")];
-    const y = enMatch2[3];
+  // Format: "DD Month YYYY" or "DD de Month de YYYY" (e.g. 18 мая 2024, 18 de mayo de 2024, 12 Sep 2026)
+  const mMatch2 = s.match(new RegExp(`\\b(\\d{1,2})(?:st|nd|rd|th)?\\s*(?:de|d[\x27\x60])?\\s*(${monthKeysRegex})\\.?\\s*(?:de|,)?\\s+(19\\d\\d|20\\d\\d)\\b`, "i"));
+  if (mMatch2) {
+    const d = mMatch2[1].padStart(2, "0");
+    const m = allMonths[mMatch2[2].toLowerCase().replace(".", "")];
+    const y = mMatch2[3];
     if (m) return `${y}-${m}-${d}`;
   }
 
-  // Month + Year: "September 2026"
-  const enMatch3 = s.match(new RegExp(`\\b(${monthNamesRegex})\\.?\\s*,?\\s+(19\\d\\d|20\\d\\d)\\b`, "i"));
-  if (enMatch3) {
-    const m = months[enMatch3[1].toLowerCase().replace(".", "")];
-    const y = enMatch3[2];
+  // Format: "YYYY, Month DD" or "YYYY Month DD"
+  const mMatchYmd = s.match(new RegExp(`\\b(19\\d\\d|20\\d\\d),?\\s+(${monthKeysRegex})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?\\b`, "i"));
+  if (mMatchYmd) {
+    const y = mMatchYmd[1];
+    const m = allMonths[mMatchYmd[2].toLowerCase().replace(".", "")];
+    const d = mMatchYmd[3].padStart(2, "0");
+    if (m) return `${y}-${m}-${d}`;
+  }
+
+  // Format: Month + Year: "September 2026" or "мая 2024"
+  const mMatch3 = s.match(new RegExp(`\\b(${monthKeysRegex})\\.?\\s*,?\\s+(19\\d\\d|20\\d\\d)\\b`, "i"));
+  if (mMatch3) {
+    const m = allMonths[mMatch3[1].toLowerCase().replace(".", "")];
+    const y = mMatch3[2];
     if (m) return `${y}-${m}`;
   }
 
-  // 6. Day-Month-Year: "06/09/2026", "6.9.2026", "06-09-2026"
+  // 7. Day-Month-Year: "06/09/2026", "6.9.2026", "06-09-2026"
   const dmyMatch = s.match(/\b(\d{1,2})[./-](\d{1,2})[./-](19\d\d|20\d\d)\b/);
   if (dmyMatch) {
     const d = dmyMatch[1].padStart(2, "0");
@@ -485,11 +692,21 @@ function parseComprehensiveDate(raw) {
     }
   }
 
-  // 7. Year only
+  // 8. Year-Month: "2024-05", "2024/05", "2024.05"
+  const ymMatch = s.match(/\b(19\d\d|20\d\d)[-/.](\d{1,2})\b/);
+  if (ymMatch) {
+    const y = ymMatch[1];
+    const m = ymMatch[2].padStart(2, "0");
+    if (parseInt(m, 10) >= 1 && parseInt(m, 10) <= 12) {
+      return `${y}-${m}`;
+    }
+  }
+
+  // 9. Year only fallback
   const yMatch = s.match(/\b(19\d\d|20\d\d)\b/);
   if (yMatch) return yMatch[1];
 
-  return s.slice(0, 30);
+  return "";
 }
 
 function formatCitationDate(rawDate, style = "ieee") {
@@ -661,7 +878,7 @@ function parsePdfText(text, filename = "", url = "") {
   if (xmpCreator) {
     if (xmpCreator[1].includes("<rdf:li")) {
       const lis = Array.from(xmpCreator[1].matchAll(/<rdf:li[^>]*>([^<]+)<\/rdf:li>/gi)).map(m => m[1].trim());
-      if (lis.length > 0) authors = lis.join(", ");
+      if (lis.length > 0) authors = lis.join("; ");
     } else {
       authors = xmpCreator[1].trim();
     }
@@ -796,7 +1013,7 @@ async function extractPdfMetadataFromUrl(url, pageTitle = "") {
         const entry = xmlDoc.querySelector("entry");
         if (entry) {
           const title = entry.querySelector("title")?.textContent?.replace(/\s+/g, " ").trim() || "";
-          const authors = Array.from(entry.querySelectorAll("author name")).map(n => n.textContent.trim()).join(", ");
+          const authors = Array.from(entry.querySelectorAll("author name")).map(n => n.textContent.trim()).join("; ");
           const published = entry.querySelector("published")?.textContent || "";
           const date = published.slice(0, 10);
           return {
@@ -827,12 +1044,21 @@ async function extractPdfMetadataFromUrl(url, pageTitle = "") {
       if (doiRes.ok) {
         const data = await doiRes.json();
         const title = data.title || cleanPdfFilenameToTitle(url, pageTitle);
-        const authors = (data.author || []).map(a => `${a.given ? a.given + " " : ""}${a.family || a.name || ""}`).filter(Boolean).join(", ");
-        const year = data.issued?.["date-parts"]?.[0]?.[0] || "";
-        const month = data.issued?.["date-parts"]?.[0]?.[1] || "";
-        const day = data.issued?.["date-parts"]?.[0]?.[2] || "";
+        const authors = (data.author || []).map(a => `${a.given ? a.given + " " : ""}${a.family || a.name || ""}`).filter(Boolean).join("; ");
+        const dateParts = data.issued?.["date-parts"]?.[0]
+          || data["published-print"]?.["date-parts"]?.[0]
+          || data["published-online"]?.["date-parts"]?.[0]
+          || data.published?.["date-parts"]?.[0]
+          || data.created?.["date-parts"]?.[0]
+          || [];
+        const year = dateParts[0] || "";
+        const month = dateParts[1] || "";
+        const day = dateParts[2] || "";
         let date = year ? String(year) : "";
         if (year && month) date += `-${String(month).padStart(2, "0")}` + (day ? `-${String(day).padStart(2, "0")}` : "");
+        if (!date && data.deposited?.["date-parts"]?.[0]?.[0]) {
+          date = String(data.deposited["date-parts"][0][0]);
+        }
         const container = data["container-title"] || data.publisher || inferPublisherFromUrl(url);
         const pages = data.page ? `pp. ${data.page}` : "";
         return {
@@ -869,7 +1095,7 @@ async function extractPdfMetadataFromUrl(url, pageTitle = "") {
         };
         const title = getMeta("citation_title", "DC.Title") || cleanPdfFilenameToTitle(url, pageTitle);
         const authors = Array.from(doc.querySelectorAll('meta[name="citation_author" i], meta[name="DC.Creator.PersonalName" i]'))
-          .map(el => el.getAttribute("content")?.trim()).filter(Boolean).join(", ");
+          .map(el => normalizeAuthorDisplayName(el.getAttribute("content")?.trim())).filter(Boolean).join(", ");
         const container = getMeta("citation_journal_title", "DC.Source") || inferPublisherFromUrl(url);
         const date = getMeta("citation_date", "DC.Date.issued");
         const p1 = getMeta("citation_firstpage");
@@ -957,43 +1183,61 @@ function extractYear(raw) {
 }
 
 function generateBibtexKey(authors, date, title) {
-  const a = (authors.split(/[,;\s]/)[0] || "ref").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const auths = parseAuthorsList(authors);
+  const a = (auths[0]?.last || (authors ? authors.split(/[,;\s]/)[0] : "") || "ref").toLowerCase().replace(/[^a-z0-9]/g, "");
   const y = extractYear(date) || new Date().getFullYear().toString();
-  const w = title.toLowerCase().split(/[^a-z0-9]+/).filter(x => x.length > 2 && !["the", "and", "for"].includes(x))[0] || "article";
+  const w = (title || "").toLowerCase().split(/[^a-z0-9]+/).filter(x => x.length > 2 && !["the", "and", "for"].includes(x))[0] || "article";
   return `${a}${y}${w}`;
 }
 
 function buildIeeeCitation(meta) {
   const a = formatIeeeAuthors(meta.authors);
-  const cleanTitle = (meta.title || "Untitled").trim().replace(/[,\.]+$/, "");
+  let cleanTitle = (meta.title || "Untitled").trim()
+    .replace(/^(?:Frontiers|Nature|Science|Springer|Elsevier|Wiley|PLOS|ACM|IEEE)\s*\|\s*/i, "")
+    .replace(/[,\.]+$/, "");
   const y = extractYear(meta.date) || (meta.date ? meta.date.trim() : "n.d.");
   const dateIeee = meta.date ? formatCitationDate(meta.date, "ieee") : y;
   const dateIeeeMonthYear = citationSettings.dateStyle === "full" ? dateIeee : dateIeee.replace(/\s\d{1,2},/, "");
-  const prefix = a ? `${a}, ` : "";
+  
+  let prefix = "";
+  if (a && a.toLowerCase() !== cleanTitle.toLowerCase()) {
+    prefix = `${a}, `;
+  }
 
   switch (meta.sourceType) {
     case "academic":
       let resAcad = `${prefix}"${cleanTitle}," `;
       if (meta.container) resAcad += `*${meta.container.trim()}*, `;
-      if (meta.pages) resAcad += `${meta.pages.trim()}, `;
-      resAcad += `${dateIeeeMonthYear}.`;
+      if (meta.pages) {
+        let p = meta.pages.trim().replace(/[,\.]+$/, "");
+        if (/^\d+(?:[-–]\d+)?$/.test(p)) p = `pp. ${p}`;
+        resAcad += `${p}, `;
+      }
+      resAcad += `${dateIeeeMonthYear}`;
       if (meta.doi) {
-        resAcad += ` doi: ${meta.doi.trim().replace(/^https?:\/\/doi\.org\//, "")}.`;
+        resAcad += `, doi: ${meta.doi.trim().replace(/^https?:\/\/doi\.org\//, "")}.`;
       } else if (meta.url) {
-        resAcad += ` [Online]. Available: ${meta.url}.`;
+        resAcad += `. [Online]. Available: ${meta.url}.`;
         if (citationSettings.accessedDate) resAcad += ` [${t('i18n_accessed')}: ${meta.accessed || getTodayIeee()}].`;
+      } else {
+        resAcad += `.`;
       }
       return resAcad;
 
     case "conference":
       let resConf = `${prefix}"${cleanTitle}," in *${meta.container ? meta.container.trim() : "Proc. Conference"}*, ${dateIeeeMonthYear}`;
-      if (meta.pages) resConf += `, ${meta.pages.trim()}`;
-      resConf += `.`;
+      if (meta.pages) {
+        let p = meta.pages.trim().replace(/[,\.]+$/, "");
+        if (/^\d+(?:[-–]\d+)?$/.test(p)) p = `pp. ${p}`;
+        resConf += `, ${p}`;
+      }
       if (meta.doi) {
-        resConf += ` doi: ${meta.doi.trim().replace(/^https?:\/\/doi\.org\//, "")}.`;
+        resConf += `, doi: ${meta.doi.trim().replace(/^https?:\/\/doi\.org\//, "")}.`;
       } else if (meta.url) {
-        resConf += ` [Online]. Available: ${meta.url}.`;
+        resConf += `. [Online]. Available: ${meta.url}.`;
         if (citationSettings.accessedDate) resConf += ` [${t('i18n_accessed')}: ${meta.accessed || getTodayIeee()}].`;
+      } else {
+        resConf += `.`;
       }
       return resConf;
 
@@ -1001,8 +1245,12 @@ function buildIeeeCitation(meta) {
       let resBook = `${prefix}*${cleanTitle}*`;
       if (meta.pages && meta.pages.toLowerCase().includes("ed")) resBook += `, ${meta.pages.trim()}`;
       if (meta.container) resBook += `. ${meta.container.trim()}`;
-      resBook += `, ${dateIeee}.`;
-      if (meta.doi) resBook += ` doi: ${meta.doi.trim().replace(/^https?:\/\/doi\.org\//, "")}.`;
+      resBook += `, ${dateIeee}`;
+      if (meta.doi) {
+        resBook += `, doi: ${meta.doi.trim().replace(/^https?:\/\/doi\.org\//, "")}.`;
+      } else {
+        resBook += `.`;
+      }
       return resBook;
 
     case "pdf":
@@ -1017,16 +1265,16 @@ function buildIeeeCitation(meta) {
           repLabel = `Rep. ${pTrim}`;
         }
       }
-      let resRep = `${prefix}"${cleanTitle}," ${meta.container ? meta.container.trim() + ", " : ""}${repLabel}, ${dateIeee}.`;
+      let resRep = `${prefix}"${cleanTitle}," ${meta.container ? meta.container.trim() + ", " : ""}${repLabel}, ${dateIeee}`;
       if (meta.doi) {
-        resRep += ` doi: ${meta.doi.trim().replace(/^https?:\/\/doi\.org\//, "")}.`;
+        resRep += `, doi: ${meta.doi.trim().replace(/^https?:\/\/doi\.org\//, "")}.`;
       } else if (meta.url && !meta.url.startsWith("file://")) {
-        resRep += ` [Online]. Available: ${meta.url}.`;
+        resRep += `. [Online]. Available: ${meta.url}.`;
         if (citationSettings.accessedDate) {
           resRep += ` [Accessed: ${meta.accessed || getTodayIeee()}].`;
         }
-      } else if (meta.url && meta.url.startsWith("file://")) {
-        // Local PDF - don't add extra note since container is already included
+      } else {
+        resRep += `.`;
       }
       return resRep;
 
@@ -1044,7 +1292,7 @@ function buildIeeeCitation(meta) {
 
     default:
       let resWeb = `${prefix}"${cleanTitle}," `;
-      if (meta.container) resWeb += `*${meta.container.trim()}*, `;
+      if (meta.container && meta.container.trim() !== cleanTitle) resWeb += `*${meta.container.trim()}*, `;
       const wDateIeee = meta.date ? formatCitationDate(meta.date, "ieee") : y;
       resWeb += `${wDateIeee}. [Online]. Available: ${meta.url}.`;
       if (citationSettings.accessedDate) {
@@ -1281,14 +1529,47 @@ function buildBibtexCitation(meta) {
   if (authorField) {
     lines.push(`  author = {${authorField}},`);
   }
-  lines.push(`  title = {{${meta.title || "Untitled"}}},`);
+  const cleanTitle = (meta.title || "Untitled").trim().replace(/^(?:Frontiers|Nature|Science|Springer|Elsevier|Wiley|PLOS|ACM|IEEE)\s*\|\s*/i, "");
+  lines.push(`  title = {{${cleanTitle}}},`);
 
   if (type === "article") {
     if (meta.container) lines.push(`  journal = {${meta.container}},`);
-    if (meta.pages) lines.push(`  pages = {${meta.pages}},`);
+        if (meta.pages) {
+       let vol = "", num = "", pp = meta.pages;
+       const vMatch = pp.match(/vol\.?\s*(\d+)/i);
+       const nMatch = pp.match(/(?:no\.?|issue)\s*(\d+)/i);
+       if (vMatch) {
+           vol = vMatch[1];
+           pp = pp.replace(vMatch[0], "");
+       }
+       if (nMatch) {
+           num = nMatch[1];
+           pp = pp.replace(nMatch[0], "");
+       }
+       pp = pp.replace(/[^0-9\-–]/g, "").trim();
+       if (vol) lines.push(`  volume = {${vol}},`);
+       if (num) lines.push(`  number = {${num}},`);
+       if (pp) lines.push(`  pages = {${pp}},`);
+    }
   } else if (type === "inproceedings") {
     if (meta.container) lines.push(`  booktitle = {${meta.container}},`);
-    if (meta.pages) lines.push(`  pages = {${meta.pages}},`);
+        if (meta.pages) {
+       let vol = "", num = "", pp = meta.pages;
+       const vMatch = pp.match(/vol\.?\s*(\d+)/i);
+       const nMatch = pp.match(/(?:no\.?|issue)\s*(\d+)/i);
+       if (vMatch) {
+           vol = vMatch[1];
+           pp = pp.replace(vMatch[0], "");
+       }
+       if (nMatch) {
+           num = nMatch[1];
+           pp = pp.replace(nMatch[0], "");
+       }
+       pp = pp.replace(/[^0-9\-–]/g, "").trim();
+       if (vol) lines.push(`  volume = {${vol}},`);
+       if (num) lines.push(`  number = {${num}},`);
+       if (pp) lines.push(`  pages = {${pp}},`);
+    }
   } else if (type === "book") {
     if (meta.container) lines.push(`  publisher = {${meta.container}},`);
   } else if (type === "techreport") {
@@ -1314,9 +1595,19 @@ function buildBibtexCitation(meta) {
   lines.push(`  year = {${y}},`);
   if (meta.doi) lines.push(`  doi = {${meta.doi.trim().replace(/^https?:\/\/doi\.org\//, "")}},`);
   if (meta.url && !meta.url.startsWith("file://")) {
-    lines.push(`  url = {${meta.url}}`);
+    lines.push(`  url = {${meta.url}},`);
   }
-  // Note: container is already included as 'institution' for local files via line 1251
+  if (meta.notes) {
+    lines.push(`  note = {${meta.notes.replace(/[\r\n]+/g, " ").trim()}},`);
+  }
+  if (meta.tag) {
+    lines.push(`  keywords = {${meta.tag.trim()}},`);
+  }
+  // Trim trailing comma from last field line
+  if (lines.length > 1) {
+    const lastIdx = lines.length - 1;
+    lines[lastIdx] = lines[lastIdx].replace(/,$/, "");
+  }
   lines.push(`}`);
   return lines.join("\n");
 }
@@ -1444,6 +1735,11 @@ function updateCitationDisplay() {
   const labelEl = document.getElementById("citation-box-style-label");
   if (!box) return;
 
+  const activeNotes = (document.getElementById("f-notes")?.value || currentMeta.notes || "").trim();
+  currentMeta.notes = activeNotes;
+
+  updateSourceBadges(currentMeta.sourceType, currentMeta.container);
+
   box.classList.remove("bibtex-code");
 
   const lang = window.i18n ? window.i18n.getLanguage() : "vi";
@@ -1494,29 +1790,27 @@ function updateCitationDisplay() {
     labelEl.textContent = activeStyleDict[currentCitationTab] || activeStyleDict.ieee;
   }
 
-  switch (currentCitationTab) {
-    case "ieee":
-      box.textContent = buildIeeeCitation(currentMeta);
-      break;
-    case "apa":
-      box.textContent = buildApaCitation(currentMeta);
-      break;
-    case "harvard":
-      box.textContent = buildHarvardCitation(currentMeta);
-      break;
-    case "mla":
-      box.textContent = buildMlaCitation(currentMeta);
-      break;
-    case "bibtex":
-      box.classList.add("bibtex-code");
-      box.textContent = buildBibtexCitation(currentMeta);
-      break;
-    case "intext":
-      box.textContent = buildIntextCitation(currentMeta);
-      break;
-    default:
-      box.textContent = buildIeeeCitation(currentMeta);
-      break;
+  let formattedCite = getFormattedCitationByStyle(currentMeta, currentCitationTab, 1);
+  if (currentCitationTab !== "ieee" && currentCitationTab !== "apa" && currentCitationTab !== "harvard" && currentCitationTab !== "mla" && currentCitationTab !== "intext" && currentCitationTab !== "bibtex") {
+    formattedCite = buildIeeeCitation(currentMeta);
+  }
+  
+  if (currentCitationTab === "bibtex") {
+    box.classList.add("bibtex-code");
+    box.style.fontFamily = "ui-monospace, monospace";
+    box.style.whiteSpace = "pre-wrap";
+    box.style.color = "#a5f3fc";
+    box.textContent = formattedCite;
+  } else {
+    box.style.fontFamily = "";
+    box.style.whiteSpace = "";
+    box.style.color = "";
+    let htmlCite = formattedCite
+       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+       .replace(/\*([^\*]+)\*/g, "<i>$1</i>");
+    
+    const noteHtml = activeNotes ? formatResearchNote(activeNotes, lang, true) : "";
+    box.innerHTML = htmlCite + noteHtml;
   }
 }
 
@@ -1610,6 +1904,25 @@ function updateSourceBadges(type, container) {
     boxBadge.textContent = label;
     boxBadge.title = `Source: ${container || type || "Web"}`;
   }
+  const metricsBadge = document.getElementById("citation-box-metrics-badge");
+  if (metricsBadge) {
+    if (currentMeta && typeof currentMeta.cited_by_count === 'number') {
+      const count = currentMeta.cited_by_count;
+      const countFormatted = count.toLocaleString ? count.toLocaleString() : count;
+      const badgeText = (window.i18n && typeof window.i18n.t === "function") 
+        ? window.i18n.t("metrics_citations_count", null, { count: countFormatted }) 
+        : `🔄 ${countFormatted} trích dẫn`;
+      const badgeTitle = (window.i18n && typeof window.i18n.t === "function") 
+        ? window.i18n.t("metrics_citations_tooltip", null, { count: countFormatted }) 
+        : `Số lượt trích dẫn học thuật quốc tế (OpenAlex): ${countFormatted}`;
+      metricsBadge.textContent = badgeText;
+      metricsBadge.title = badgeTitle;
+      metricsBadge.style.display = "inline-flex";
+      metricsBadge.style.alignItems = "center";
+    } else {
+      metricsBadge.style.display = "none";
+    }
+  }
 }
 
 function syncInputs() {
@@ -1621,6 +1934,8 @@ function syncInputs() {
   const elDoi = document.getElementById("f-doi");
   const elPages = document.getElementById("f-pages");
   const elUrl = document.getElementById("f-url");
+  const elTag = document.getElementById("f-tag");
+  const elNotes = document.getElementById("f-notes");
 
   if (elSourceType) elSourceType.value = currentMeta.sourceType || "webpage";
   if (elAuthors) elAuthors.value = currentMeta.authors || "";
@@ -1630,6 +1945,8 @@ function syncInputs() {
   if (elDoi) elDoi.value = currentMeta.doi || "";
   if (elPages) elPages.value = currentMeta.pages || "";
   if (elUrl) elUrl.value = currentMeta.url || "";
+  if (elTag) elTag.value = currentMeta.tag || "";
+  if (elNotes) elNotes.value = currentMeta.notes || "";
 
   updateSourceBadges(currentMeta.sourceType, currentMeta.container);
 
@@ -1653,27 +1970,34 @@ function syncInputs() {
 }
 
 function syncMetaFromInputs() {
-  currentMeta.sourceType = document.getElementById("f-source-type").value;
-  currentMeta.authors = document.getElementById("f-authors").value;
-  currentMeta.title = document.getElementById("f-title").value;
-  const rawDate = document.getElementById("f-date").value;
-  currentMeta.date = parseComprehensiveDate(rawDate) || rawDate;
-  currentMeta.container = document.getElementById("f-container").value;
-  currentMeta.doi = document.getElementById("f-doi").value;
-  currentMeta.pages = document.getElementById("f-pages").value;
-  currentMeta.url = document.getElementById("f-url").value;
+  try {
+    currentMeta.sourceType = document.getElementById("f-source-type")?.value || currentMeta.sourceType || "webpage";
+    currentMeta.authors = document.getElementById("f-authors")?.value || "";
+    currentMeta.title = document.getElementById("f-title")?.value || "";
+    const rawDate = document.getElementById("f-date")?.value || "";
+    currentMeta.date = (typeof parseComprehensiveDate === "function" ? parseComprehensiveDate(rawDate) : null) || rawDate;
+    currentMeta.container = document.getElementById("f-container")?.value || "";
+    currentMeta.doi = document.getElementById("f-doi")?.value || "";
+    currentMeta.pages = document.getElementById("f-pages")?.value || "";
+    currentMeta.url = document.getElementById("f-url")?.value || "";
+    currentMeta.tag = document.getElementById("f-tag")?.value || "";
+    currentMeta.notes = document.getElementById("f-notes")?.value || "";
 
-  updateSourceBadges(currentMeta.sourceType, currentMeta.container);
+    updateSourceBadges(currentMeta.sourceType, currentMeta.container);
 
-  const elContainer = document.getElementById("f-container");
-  const elPages = document.getElementById("f-pages");
-  if (currentMeta.sourceType === "pdf") {
-    if (elContainer) elContainer.placeholder = "Tổ chức / Viện nghiên cứu (Vd: OpenAI, WHO, Viện Hàn lâm, Bộ TT&TT...)";
-    if (elPages) elPages.placeholder = "Mã báo cáo / Số trang (Vd: Tech. Rep. 102, hoặc pp. 1-45)";
+    const elContainer = document.getElementById("f-container");
+    const elPages = document.getElementById("f-pages");
+    if (currentMeta.sourceType === "pdf") {
+      if (elContainer) elContainer.placeholder = "Tổ chức / Viện nghiên cứu (Vd: OpenAI, WHO, Viện Hàn lâm, Bộ TT&TT...)";
+      if (elPages) elPages.placeholder = "Mã báo cáo / Số trang (Vd: Tech. Rep. 102, hoặc pp. 1-45)";
+    }
+
+    updateCitationDisplay();
+    saveDraft();
+  } catch (err) {
+    console.warn("syncMetaFromInputs error:", err);
+    updateCitationDisplay();
   }
-
-  updateCitationDisplay();
-  saveDraft();
 }
 
 function showToast(msgKey, type = 'success', variables = []) {
@@ -1685,13 +2009,30 @@ function showToast(msgKey, type = 'success', variables = []) {
   if (type) t.classList.add('notify-' + type);
   
   // Get translation from i18n
-  const currentLanguage = (window.i18n && typeof window.i18n.getCurrentLanguage === "function") ? window.i18n.getCurrentLanguage() : "vi";
-  let msg = (typeof I18N_DATA !== "undefined" && I18N_DATA && I18N_DATA[currentLanguage] && I18N_DATA[currentLanguage][msgKey]) ? I18N_DATA[currentLanguage][msgKey] : msgKey;
+  let msg = msgKey;
+  if (window.i18n && typeof window.i18n.t === "function") {
+    const curLang = (typeof window.i18n.getCurrentLanguage === "function") ? window.i18n.getCurrentLanguage() : (window.i18n.getLanguage ? window.i18n.getLanguage() : "vi");
+    const tr = window.i18n.t(msgKey, curLang);
+    if (tr && tr !== msgKey) {
+      msg = tr;
+    } else {
+      const dataObj = window.I18N_DATA || (window.i18n && window.i18n.DATA) || (typeof I18N_DATA !== "undefined" ? I18N_DATA : null);
+      if (dataObj && dataObj[curLang] && dataObj[curLang][msgKey]) {
+        msg = dataObj[curLang][msgKey];
+      }
+    }
+  }
   
   // Replace variables like {0}, {1} if any
-  variables.forEach((val, i) => {
-    msg = msg.replace('{' + i + '}', val);
-  });
+  if (Array.isArray(variables)) {
+    variables.forEach((val, i) => {
+      msg = msg.split('{' + i + '}').join(val !== undefined && val !== null ? val : "");
+    });
+  } else if (variables && typeof variables === "object") {
+    for (const [k, v] of Object.entries(variables)) {
+      msg = msg.split('{' + k + '}').join(v !== undefined && v !== null ? v : "");
+    }
+  }
   
   t.textContent = msg;
   t.classList.add('show');
@@ -1731,9 +2072,34 @@ function checkDraft(fresh) {
   const key = getDraftKey();
   storGet(key, (res) => {
     const d = res && res[key];
-    if (d && d.title && (d.authors !== fresh.authors || d.title !== fresh.title || d.date !== fresh.date)) {
+    if (!d) return;
+
+    const freshNotes = (fresh && fresh.notes) || "";
+    const freshTag = (fresh && fresh.tag) || "";
+    const freshTitle = (fresh && fresh.title) || "";
+    const freshAuthors = (fresh && fresh.authors) || "";
+    const freshDate = (fresh && fresh.date) || "";
+    const freshContainer = (fresh && fresh.container) || "";
+    const freshPages = (fresh && fresh.pages) || "";
+    const freshDoi = (fresh && fresh.doi) || "";
+
+    const hasDiff = 
+      (d.notes && d.notes.trim() !== freshNotes.trim()) ||
+      (d.tag && d.tag.trim() !== freshTag.trim()) ||
+      (d.title && d.title.trim() !== freshTitle.trim()) ||
+      (d.authors && d.authors.trim() !== freshAuthors.trim()) ||
+      (d.date && d.date.trim() !== freshDate.trim()) ||
+      (d.container && d.container.trim() !== freshContainer.trim()) ||
+      (d.pages && d.pages.trim() !== freshPages.trim()) ||
+      (d.doi && d.doi.trim() !== freshDoi.trim()) ||
+      (d.sourceType && d.sourceType !== (fresh && fresh.sourceType));
+
+    if (hasDiff) {
+      const citedCount = (currentMeta && typeof currentMeta.cited_by_count === "number") ? currentMeta.cited_by_count : d.cited_by_count;
       currentMeta = { ...d };
-      document.getElementById("draft-banner").style.display = "flex";
+      if (typeof citedCount === "number") currentMeta.cited_by_count = citedCount;
+      const draftBanner = document.getElementById("draft-banner");
+      if (draftBanner) draftBanner.style.display = "flex";
       syncInputs();
       updateCitationDisplay();
     }
@@ -1904,7 +2270,7 @@ function saveCurrentToBiblio() {
 
   const newItem = {
     id: "bib_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
-    meta: { ...currentMeta },
+    meta: { ...currentMeta, notes: notesVal, tag: tagVal },
     tag: tagVal,
     notes: notesVal,
     savedAt: Date.now()
@@ -1912,10 +2278,10 @@ function saveCurrentToBiblio() {
 
   if (existingIdx !== -1) {
     savedBibliographies[existingIdx] = newItem;
-    showToast("✓ Đã cập nhật mục trích dẫn trong danh mục!");
+    showToast("toast_biblio_updated");
   } else {
     savedBibliographies.unshift(newItem);
-    showToast(`✓ Đã lưu trích dẫn! ([${savedBibliographies.length}] mục)`);
+    showToast("toast_biblio_saved_count", "success", [savedBibliographies.length]);
   }
 
   storSet({ saved_bibliographies: savedBibliographies }, () => {
@@ -2014,24 +2380,32 @@ function renderBiblioModalList() {
     card.appendChild(top);
 
     // Citation formatted text
-    const citeTextEl = document.createElement("div");
+        const citeTextEl = document.createElement("div");
     citeTextEl.className = "biblio-card-text";
+    const formattedCite = getFormattedCitationByStyle(item.meta, currentModalTab, index + 1);
+    
+    let htmlCite = "";
     if (currentModalTab === "bibtex") {
       citeTextEl.className += " bibtex-code";
       citeTextEl.style.fontFamily = "ui-monospace, monospace";
       citeTextEl.style.whiteSpace = "pre-wrap";
       citeTextEl.style.color = "#a5f3fc";
+      citeTextEl.textContent = formattedCite;
+    } else {
+      htmlCite = formattedCite
+         .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+         .replace(/\*([^\*]+)\*/g, "<i>$1</i>");
+      citeTextEl.innerHTML = htmlCite;
     }
-    const formattedCite = getFormattedCitationByStyle(item.meta, currentModalTab, index + 1);
-    citeTextEl.textContent = formattedCite;
     card.appendChild(citeTextEl);
 
     // Notes if available
+    let noteHtml = "";
     if (item.notes) {
-      const notesEl = document.createElement("div");
-      notesEl.className = "biblio-card-notes";
-      notesEl.textContent = `Ghi chú: ${item.notes}`;
-      card.appendChild(notesEl);
+      noteHtml = formatResearchNote(item.notes, lang, true);
+      const noteWrap = document.createElement("div");
+      noteWrap.innerHTML = noteHtml;
+      card.appendChild(noteWrap.firstElementChild || noteWrap);
     }
 
     // Action buttons row
@@ -2040,44 +2414,64 @@ function renderBiblioModalList() {
 
     const btnCopy = document.createElement("button");
     btnCopy.className = "btn btn-primary biblio-card-btn";
-    btnCopy.textContent = window.i18n ? window.i18n.t("biblio_btn_copy") : "📋 Copy";
+    btnCopy.style.display = "inline-flex";
+    btnCopy.style.alignItems = "center";
+    btnCopy.style.gap = "4px";
+    btnCopy.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> <span>${window.i18n ? window.i18n.t("btn_copy") : "Sao chép"}</span>`;
     btnCopy.addEventListener("click", () => {
-      navigator.clipboard.writeText(formattedCite).then(() => {
-        showToast(`✔ Đã sao chép trích dẫn [${index + 1}]!`);
-      });
-    });
-
-    const btnEdit = document.createElement("button");
-    btnEdit.className = "btn btn-secondary biblio-card-btn";
-    btnEdit.textContent = window.i18n ? window.i18n.t("biblio_btn_edit") : "✏️ Nạp form";
-    btnEdit.addEventListener("click", () => {
-      currentMeta = { ...item.meta };
-      const tagInput = document.getElementById("f-tag");
-      const notesInput = document.getElementById("f-notes");
-      if (tagInput) tagInput.value = item.tag || "";
-      if (notesInput) notesInput.value = item.notes || "";
-      syncInputs();
-      updateCitationDisplay();
-      document.getElementById("biblio-modal").style.display = "none";
-      showToast("✓ Đã nạp thông tin tài liệu vào form!");
-    });
-
-    const btnDel = document.createElement("button");
-    btnDel.className = "btn btn-danger biblio-card-btn";
-    btnDel.textContent = window.i18n ? window.i18n.t("biblio_btn_del") : "🗑️ Xóa";
-    btnDel.addEventListener("click", () => {
-      const realIdx = savedBibliographies.findIndex(x => x.id === item.id);
-      if (realIdx !== -1) {
-        savedBibliographies.splice(realIdx, 1);
-        storSet({ saved_bibliographies: savedBibliographies }, () => {
-          updateBiblioBadges();
-          renderBiblioModalList();
-          showToast("✓ Đã xóa mục trích dẫn!");
+      const notePlain = item.notes ? formatResearchNote(item.notes, lang, false) : "";
+      const plainText = formattedCite + notePlain;
+      const richText = (htmlCite || formattedCite) + noteHtml;
+      
+      if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write && richText) {
+        const clipboardItem = new ClipboardItem({
+          "text/plain": new Blob([plainText], { type: "text/plain" }),
+          "text/html": new Blob([richText], { type: "text/html" })
+        });
+        
+        navigator.clipboard.write([clipboardItem]).then(() => {
+          showToast("toast_biblio_item_copied", "success", [index + 1]);
+        }).catch(() => {
+          navigator.clipboard.writeText(plainText).then(() => {
+             showToast("toast_biblio_item_copied", "success", [index + 1]);
+          });
+        });
+      } else {
+        navigator.clipboard.writeText(plainText).then(() => {
+          showToast("toast_biblio_item_copied", "success", [index + 1]);
         });
       }
     });
-
     actions.appendChild(btnCopy);
+      const btnEdit = document.createElement("button");
+      btnEdit.className = "btn btn-secondary biblio-card-btn";
+      btnEdit.textContent = window.i18n ? window.i18n.t("biblio_btn_edit") : "✏️ Nạp form";
+      btnEdit.addEventListener("click", () => {
+        currentMeta = { ...item.meta };
+        currentMeta.tag = item.tag || "";
+        currentMeta.notes = item.notes || "";
+        const tagInput = document.getElementById("f-tag");
+        const notesInput = document.getElementById("f-notes");
+        if (tagInput) tagInput.value = currentMeta.tag;
+        if (notesInput) notesInput.value = currentMeta.notes;
+        syncInputs();
+        updateCitationDisplay();
+        document.getElementById("biblio-modal").style.display = "none";
+        showToast("toast_biblio_loaded");
+      });
+
+      const btnDel = document.createElement("button");
+      btnDel.className = "btn btn-danger biblio-card-btn";
+      btnDel.textContent = window.i18n ? window.i18n.t("biblio_btn_del") : "🗑️ Xóa";
+      btnDel.addEventListener("click", () => {
+        if (confirm(window.i18n ? window.i18n.t("biblio_confirm_del") : "Bạn có chắc chắn muốn xóa tài liệu này?")) {
+          savedBibliographies.splice(index, 1);
+          chrome.storage.local.set({ savedBibliographies }, () => {
+            renderBiblioModalList();
+            showToast("toast_biblio_deleted");
+          });
+        }
+      });
     actions.appendChild(btnEdit);
     actions.appendChild(btnDel);
     card.appendChild(actions);
@@ -2090,12 +2484,48 @@ function copyAllBiblio() {
   if (savedBibliographies.length === 0) {
     return showToast("err_001", "warning");
   }
-  const allFormatted = savedBibliographies.map((item, i) => getFormattedCitationByStyle(item.meta, currentModalTab, i + 1)).join("\n\n");
+  const lang = window.i18n ? window.i18n.getLanguage() : "vi";
+  const allFormatted = savedBibliographies.map((item, i) => {
+    const cite = getFormattedCitationByStyle(item.meta, currentModalTab, i + 1);
+    const note = item.notes ? formatResearchNote(item.notes, lang, false) : "";
+    return cite + note;
+  }).join("\n\n");
   navigator.clipboard.writeText(allFormatted).then(() => {
-    showToast(`✔ Đã sao chép toàn bộ (${savedBibliographies.length}) tài liệu!`);
+    showToast("toast_biblio_copied_all", "success", [savedBibliographies.length]);
   });
 }
 
+function buildRisCitation(meta) {
+  let ris = "TY  - ";
+  switch (meta.sourceType) {
+    case "academic": ris += "JOUR\n"; break;
+    case "conference": ris += "CONF\n"; break;
+    case "book": ris += "BOOK\n"; break;
+    default: ris += "WEB\n"; break;
+  }
+  if (meta.title) ris += "TI  - " + meta.title.trim() + "\n";
+  if (meta.authors) {
+    meta.authors.split(';').forEach(a => {
+      if (a.trim()) ris += "AU  - " + a.trim() + "\n";
+    });
+  }
+  if (meta.container) ris += "JO  - " + meta.container.trim() + "\n";
+  if (meta.date) {
+    const parts = meta.date.split('-');
+    ris += "PY  - " + parts[0] + "\n";
+  }
+  if (meta.doi) ris += "DO  - " + meta.doi + "\n";
+  if (meta.url) ris += "UR  - " + meta.url + "\n";
+  if (meta.pages) ris += "SP  - " + meta.pages.replace("pp. ", "") + "\n";
+  if (meta.tag) {
+    meta.tag.split(',').forEach(t => {
+      if (t.trim()) ris += "KW  - " + t.trim() + "\n";
+    });
+  }
+  if (meta.notes) ris += "N1  - " + meta.notes.replace(/\n/g, " ") + "\n";
+  ris += "ER  - \n";
+  return ris;
+}
 function exportBibAll() {
   if (savedBibliographies.length === 0) {
     return showToast("err_001", "warning");
@@ -2108,14 +2538,33 @@ function exportBibAll() {
   a.download = `references_${Date.now()}.bib`;
   a.click();
   URL.revokeObjectURL(u);
-  showToast("📥 Đã tải file references.bib!");
+  showToast("toast_biblio_exported_bib");
 }
 
+function exportRisAll() {
+  if (savedBibliographies.length === 0) {
+    return showToast("err_001", "warning");
+  }
+  const allRis = savedBibliographies.map(item => buildRisCitation({ ...item.meta, notes: item.notes, tag: item.tag })).join("\n\n");
+  const blob = new Blob([allRis], { type: "application/x-research-info-systems;charset=utf-8" });
+  const u = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = u;
+  a.download = "references.ris";
+  a.click();
+  URL.revokeObjectURL(u);
+  showToast("toast_biblio_exported_ris");
+}
 function exportTxtAll() {
   if (savedBibliographies.length === 0) {
     return showToast("err_001", "warning");
   }
-  const allTxt = savedBibliographies.map((item, i) => getFormattedCitationByStyle(item.meta, currentModalTab, i + 1)).join("\n\n");
+  const lang = window.i18n ? window.i18n.getLanguage() : "vi";
+  const allTxt = savedBibliographies.map((item, i) => {
+    const cite = getFormattedCitationByStyle(item.meta, currentModalTab, i + 1);
+    const note = item.notes ? formatResearchNote(item.notes, lang, false) : "";
+    return cite + note;
+  }).join("\n\n");
   const blob = new Blob([allTxt], { type: "text/plain;charset=utf-8" });
   const u = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -2123,19 +2572,20 @@ function exportTxtAll() {
   a.download = `references_${currentModalTab}_${Date.now()}.txt`;
   a.click();
   URL.revokeObjectURL(u);
-  showToast("📄 Đã tải file references.txt!");
+  showToast("toast_biblio_exported_txt");
 }
 
 function clearAllBiblio() {
   if (savedBibliographies.length === 0) {
-    return showToast("⚠️ Danh mục đã trống sẵn!");
+    return showToast("toast_biblio_already_empty", "warning");
   }
-  if (confirm(`Bạn có chắc chắn muốn xóa sạch toàn bộ ${savedBibliographies.length} tài liệu trong danh mục đã lưu?`)) {
+  const confirmMsg = (window.i18n ? window.i18n.t("biblio_confirm_clear_all", null, { count: savedBibliographies.length }) : null) || `Bạn có chắc chắn muốn xóa sạch toàn bộ ${savedBibliographies.length} tài liệu trong danh mục đã lưu?`;
+  if (confirm(confirmMsg)) {
     savedBibliographies = [];
     storSet({ saved_bibliographies: [] }, () => {
       updateBiblioBadges();
       renderBiblioModalList();
-      showToast("✓ Đã xóa sạch danh mục!");
+      showToast("toast_biblio_cleared");
     });
   }
 }
@@ -2283,8 +2733,22 @@ async function verifyAcademicSource(rawText, tabMeta = null) {
         if (doiRes.ok) {
           const data = await doiRes.json();
           const verifiedTitle = data.title || liveTitle;
-          const authors = (data.author || []).map(a => `${a.given ? a.given + " " : ""}${a.family || a.name || ""}`).filter(Boolean).join(", ");
-          const year = data.issued?.["date-parts"]?.[0]?.[0] || data.created?.["date-parts"]?.[0]?.[0] || "";
+          const authors = (data.author || []).map(a => {
+            if (a.name) return normalizeAuthorDisplayName(a.name);
+            if (a.family && a.given) {
+              const lastLow = removeVietnameseDiacritics(a.family).toLowerCase();
+              const isVn = VIETNAMESE_SURNAMES.has(a.family.toLowerCase()) || VIETNAMESE_SURNAMES.has(lastLow);
+              return isVn ? `${a.family} ${a.given}`.trim() : `${a.given} ${a.family}`.trim();
+            }
+            return normalizeAuthorDisplayName(a.family || a.given || "");
+          }).filter(Boolean).join(", ");
+          const year = data.issued?.["date-parts"]?.[0]?.[0]
+            || data["published-print"]?.["date-parts"]?.[0]?.[0]
+            || data["published-online"]?.["date-parts"]?.[0]?.[0]
+            || data.published?.["date-parts"]?.[0]?.[0]
+            || data.created?.["date-parts"]?.[0]?.[0]
+            || data.deposited?.["date-parts"]?.[0]?.[0]
+            || "";
           const venue = data["container-title"] || data.publisher || liveContainer;
           const realUrl = data.URL || `https://doi.org/${liveDoi}`;
           return {
@@ -2381,9 +2845,9 @@ async function verifyAcademicSource(rawText, tabMeta = null) {
         ) || (doc.title ? doc.title.replace(/\s*[|\-–—].*$/, "").trim() : "");
 
         const pageAuthors = Array.from(doc.querySelectorAll('meta[name="citation_author" i], meta[name="DC.Creator.PersonalName" i], meta[name="DC.Creator" i]'))
-          .map(el => el.getAttribute("content")?.trim())
+          .map(el => normalizeAuthorDisplayName(el.getAttribute("content")?.trim()))
           .filter(Boolean)
-          .join(", ") || getMeta("author");
+          .join(", ") || normalizeAuthorDisplayName(getMeta("author"));
 
         const pageJournal = getMeta(
           "citation_journal_title",
@@ -2448,7 +2912,15 @@ async function verifyAcademicSource(rawText, tabMeta = null) {
       if (doiRes.ok) {
         const data = await doiRes.json();
         const verifiedTitle = data.title || queryTitle;
-        const authors = (data.author || []).map(a => `${a.given ? a.given + " " : ""}${a.family || a.name || ""}`).filter(Boolean).join(", ");
+        const authors = (data.author || []).map(a => {
+          if (a.name) return normalizeAuthorDisplayName(a.name);
+          if (a.family && a.given) {
+            const lastLow = removeVietnameseDiacritics(a.family).toLowerCase();
+            const isVn = VIETNAMESE_SURNAMES.has(a.family.toLowerCase()) || VIETNAMESE_SURNAMES.has(lastLow);
+            return isVn ? `${a.family} ${a.given}`.trim() : `${a.given} ${a.family}`.trim();
+          }
+          return normalizeAuthorDisplayName(a.family || a.given || "");
+        }).filter(Boolean).join(", ");
         const year = data.issued?.["date-parts"]?.[0]?.[0] || data.created?.["date-parts"]?.[0]?.[0] || "";
         const venue = data["container-title"] || data.publisher || "";
         const realUrl = data.URL || `https://doi.org/${detectedDoi}`;
@@ -2485,7 +2957,7 @@ async function verifyAcademicSource(rawText, tabMeta = null) {
         const entry = xmlDoc.querySelector("entry");
         if (entry) {
           const entryTitle = entry.querySelector("title")?.textContent?.replace(/\s+/g, " ").trim() || "";
-          const entryAuthors = Array.from(entry.querySelectorAll("author name")).map(n => n.textContent.trim()).join(", ");
+          const entryAuthors = Array.from(entry.querySelectorAll("author name")).map(n => n.textContent.trim()).join("; ");
           const published = entry.querySelector("published")?.textContent || "";
           const year = published.slice(0, 4);
           const pdfLink = `https://arxiv.org/pdf/${detectedArxiv}.pdf`;
@@ -2526,7 +2998,7 @@ async function verifyAcademicSource(rawText, tabMeta = null) {
           const similarity = computeStringSimilarity(queryTitle, bestTitle);
 
           if (similarity >= 0.70) {
-            const authors = (best.authorships || []).map(a => a.author?.display_name).filter(Boolean).join(", ");
+            const authors = (best.authorships || []).map(a => normalizeAuthorDisplayName(a.author?.display_name)).filter(Boolean).join(", ");
             const year = best.publication_year ? String(best.publication_year) : "";
             const venue = best.primary_location?.source?.display_name || "";
             const doi = best.doi ? best.doi.replace("https://doi.org/", "") : "";
@@ -2600,8 +3072,22 @@ async function verifyAcademicSource(rawText, tabMeta = null) {
           const similarity = computeStringSimilarity(queryTitle, bestTitle);
 
           if (similarity >= 0.65) {
-            const authors = (best.author || []).map(a => `${a.given ? a.given + " " : ""}${a.family || a.name || ""}`).filter(Boolean).join(", ");
-            const year = best.issued?.["date-parts"]?.[0]?.[0] || best.created?.["date-parts"]?.[0]?.[0] || "";
+            const authors = (best.author || []).map(a => {
+              if (a.name) return normalizeAuthorDisplayName(a.name);
+              if (a.family && a.given) {
+                const lastLow = removeVietnameseDiacritics(a.family).toLowerCase();
+                const isVn = VIETNAMESE_SURNAMES.has(a.family.toLowerCase()) || VIETNAMESE_SURNAMES.has(lastLow);
+                return isVn ? `${a.family} ${a.given}`.trim() : `${a.given} ${a.family}`.trim();
+              }
+              return normalizeAuthorDisplayName(a.family || a.given || "");
+            }).filter(Boolean).join(", ");
+            const year = best.issued?.["date-parts"]?.[0]?.[0]
+              || best["published-print"]?.["date-parts"]?.[0]?.[0]
+              || best["published-online"]?.["date-parts"]?.[0]?.[0]
+              || best.published?.["date-parts"]?.[0]?.[0]
+              || best.created?.["date-parts"]?.[0]?.[0]
+              || best.deposited?.["date-parts"]?.[0]?.[0]
+              || "";
             const venue = (best["container-title"] && best["container-title"][0]) ? best["container-title"][0] : best.publisher || "";
             const doi = best.DOI || "";
             const realUrl = best.URL || (doi ? `https://doi.org/${doi}` : "");
@@ -2899,7 +3385,7 @@ function renderVerifyResult(result, originalQuery) {
     btnApply.style.display = "block";
     btnApply.onclick = () => {
       if (result.title) document.getElementById("f-title").value = result.title;
-      if (result.authors) document.getElementById("f-authors").value = result.authors;
+      if (result.authors) document.getElementById("f-authors").value = normalizeAuthorsString(result.authors);
       if (result.year) document.getElementById("f-date").value = result.year;
       if (result.venue) document.getElementById("f-container").value = result.venue;
       if (result.doi) document.getElementById("f-doi").value = result.doi;
@@ -3361,29 +3847,47 @@ async function ensureContentScriptInjected(tabId) {
   // 1. Quick PING with timeout
   const ping = await Promise.race([
     safeSendTabMessage(tabId, { action: "PING" }),
-    new Promise(r => setTimeout(() => r(null), 200))
+    new Promise(r => setTimeout(() => r(null), 400))
   ]);
   if (ping && ping.pong) {
     return true;
   }
 
-  // 2. Inject content.css and content.js as fallback
+  // 2. Inject content CSS and modular scripts as fallback
   try {
     const scriptingApi = (typeof chrome !== "undefined" && chrome.scripting) 
       ? chrome.scripting 
       : ((typeof browser !== "undefined" && browser.scripting) ? browser.scripting : null);
 
+    const contentFiles = [
+      "OS/js/content/i18n.js",
+      "OS/js/content/inspect.js",
+      "OS/js/content/snip.js",
+      "OS/js/content/scroll.js",
+      "OS/js/content/citation.js",
+      "OS/js/content/main.js"
+    ];
+
     if (scriptingApi && scriptingApi.executeScript) {
       await scriptingApi.insertCSS({
         target: { tabId },
-        files: ["content.css"]
+        files: ["OS/css/content.css"]
       }).catch(() => {});
 
       await scriptingApi.executeScript({
         target: { tabId },
-        files: ["content.js"]
+        files: contentFiles
       }).catch(() => {});
 
+      await new Promise(r => setTimeout(r, 60));
+      return true;
+    }
+
+    const tabsApi = (typeof browser !== "undefined" && browser.tabs) ? browser.tabs : (typeof chrome !== "undefined" ? chrome.tabs : null);
+    if (tabsApi && tabsApi.executeScript) {
+      for (const f of contentFiles) {
+        await tabsApi.executeScript(tabId, { file: f }).catch(() => {});
+      }
       await new Promise(r => setTimeout(r, 60));
       return true;
     }
@@ -3510,7 +4014,7 @@ function getVisibleTabDataUrl(windowId = null) {
 async function captureVisibleScreen() {
   const delaySec = screenshotSettings.delay || 0;
   if (delaySec > 0) {
-    showToast(`⏳ Hẹn giờ: Chụp sau ${delaySec}s...`);
+    showToast("toast_screenshot_timer", "success", [delaySec]);
     await new Promise(r => setTimeout(r, delaySec * 1000));
   }
   const dataUrl = await getVisibleTabDataUrl();
@@ -3616,7 +4120,7 @@ function loadImage(src) {
 async function captureFullPageSmart() {
   const delaySec = screenshotSettings.delay || 0;
   if (delaySec > 0) {
-    showToast(`⏳ Hẹn giờ: Chụp toàn trang sau ${delaySec}s...`);
+    showToast("toast_screenshot_full_timer", "success", [delaySec]);
     await new Promise(r => setTimeout(r, delaySec * 1000));
   }
   showToast("⏳ Đang chuẩn bị chụp toàn trang...");
@@ -3783,7 +4287,7 @@ async function captureChosenElement(info) {
     const delaySec = parseInt(screenshotSettings.delay, 10) || 0;
     if (delaySec > 0) {
       for (let i = delaySec; i > 0; i--) {
-        showToast(`⏳ Bắt đầu chụp sau ${i}s...`);
+        showToast("toast_capture_countdown", "info", [i]);
         await new Promise(r => setTimeout(r, 1000));
       }
     }
@@ -3974,8 +4478,8 @@ async function captureChosenElement(info) {
       showToast("✔ Đã chụp thành công đối tượng!");
     }
   } catch (err) {
-    console.error("captureChosenElement error:", err); showToast("err_004", "error");
-    showToast("❌ Lỗi khi chụp đối tượng: " + (err.message || "Vui lòng thử lại!"));
+    console.error("captureChosenElement error:", err);
+    showToast("err_004", "error");
   }
 }
 
@@ -3996,7 +4500,7 @@ async function captureSnipRect(msg) {
     const delaySec = parseInt(screenshotSettings.delay, 10) || 0;
     if (delaySec > 0) {
       for (let i = delaySec; i > 0; i--) {
-        showToast(`⏳ Bắt đầu chụp sau ${i}s...`);
+        showToast("toast_capture_countdown", "info", [i]);
         await new Promise(r => setTimeout(r, 1000));
       }
     }
@@ -4018,10 +4522,29 @@ async function captureSnipRect(msg) {
     const sh = Math.max(1, Math.min(baseImg.height - sy, Math.round(msg.rect.height * scaleY)));
 
     const canvas = document.createElement("canvas");
-    canvas.width = sw;
-    canvas.height = sh;
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(baseImg, sx, sy, sw, sh, 0, 0, sw, sh);
+      canvas.width = sw;
+      canvas.height = sh;
+      const ctx = canvas.getContext("2d");
+
+      if (msg.borderRadius && msg.borderRadius !== "0px" && ctx.roundRect) {
+        let br = 0;
+        const match = msg.borderRadius.match(/(\d+(?:\.\d+)?)(px|%)/);
+        if (match) {
+          const val = parseFloat(match[1]);
+          if (match[2] === "%") {
+            br = (val / 100) * Math.min(sw, sh);
+          } else {
+            br = val * scaleX; 
+          }
+        }
+        if (br > 0) {
+          ctx.beginPath();
+          ctx.roundRect(0, 0, sw, sh, br);
+          ctx.clip();
+        }
+      }
+
+      ctx.drawImage(baseImg, sx, sy, sw, sh, 0, 0, sw, sh);
 
     const isJpeg = screenshotSettings.format === "jpeg";
     const finalDataUrl = canvas.toDataURL(isJpeg ? "image/jpeg" : "image/png", 0.92);
@@ -4031,8 +4554,8 @@ async function captureSnipRect(msg) {
       showToast("✔ Đã chụp thành công vùng chọn!");
     }
   } catch (err) {
-    console.error("captureSnipRect error:", err); showToast("err_004", "error");
-    showToast("❌ Lỗi chụp vùng chọn: " + (err.message || "Vui lòng thử lại!"));
+    console.error("captureSnipRect error:", err);
+    showToast("err_004", "error");
   }
 }
 
@@ -4113,12 +4636,14 @@ function loadVideoSettings() {
     const resSelect = document.getElementById("video-pref-resolution");
     const fpsSelect = document.getElementById("video-pref-fps");
     const cdSelect = document.getElementById("video-pref-countdown");
+    const scriptText = document.getElementById("video-script-text");
 
     if (audioCheck) audioCheck.checked = !!videoSettings.audio;
     if (autoDlCheck) autoDlCheck.checked = !!videoSettings.autoDownload;
     if (resSelect) resSelect.value = videoSettings.resolution || "1080";
     if (fpsSelect) fpsSelect.value = videoSettings.fps || "30";
     if (cdSelect) cdSelect.value = (videoSettings.countdown !== undefined ? videoSettings.countdown : "3").toString();
+    if (scriptText) scriptText.value = videoSettings.script || "";
   });
 }
 
@@ -4128,12 +4653,14 @@ function saveVideoSettings() {
   const resSelect = document.getElementById("video-pref-resolution");
   const fpsSelect = document.getElementById("video-pref-fps");
   const cdSelect = document.getElementById("video-pref-countdown");
+  const scriptText = document.getElementById("video-script-text");
 
   videoSettings.audio = audioCheck ? audioCheck.checked : false;
   videoSettings.autoDownload = autoDlCheck ? autoDlCheck.checked : false;
   videoSettings.resolution = resSelect ? resSelect.value : "1080";
   videoSettings.fps = fpsSelect ? fpsSelect.value : "30";
   videoSettings.countdown = cdSelect ? cdSelect.value : "3";
+  videoSettings.script = scriptText ? scriptText.value : "";
 
   storSet({ super_video_settings: videoSettings }, () => {
     const statusEl = document.getElementById("video-settings-status");
@@ -4452,8 +4979,22 @@ onReady(() => {
       document.querySelectorAll(".main-nav-btn").forEach(b => b.classList.remove("active"));
       document.querySelectorAll(".tab-section").forEach(s => s.classList.remove("active"));
       btn.classList.add("active");
-      const sec = document.getElementById(btn.dataset.target);
+      const target = btn.dataset.target;
+      const sec = document.getElementById(target);
       if (sec) sec.classList.add("active");
+      const navWrap = document.getElementById("nav-wrapper");
+      if (navWrap) {
+        const btnLeft = btn.offsetLeft;
+        const btnWidth = btn.offsetWidth;
+        const wrapWidth = navWrap.clientWidth;
+        navWrap.scrollTo({
+          left: btnLeft - (wrapWidth / 2) + (btnWidth / 2),
+          behavior: "smooth"
+        });
+      }
+      if (target === "tab-cookie") {
+        updateCookieTabUI();
+      }
     });
   });
 
@@ -4475,26 +5016,76 @@ onReady(() => {
 
   // Live input sync
   ["f-source-type", "f-authors", "f-title", "f-date", "f-container", "f-doi", "f-pages", "f-url", "f-tag", "f-notes"].forEach(id => {
-    document.getElementById(id)?.addEventListener("input", syncMetaFromInputs);
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener("input", syncMetaFromInputs);
+      el.addEventListener("change", syncMetaFromInputs);
+      if (id === "f-notes" || id === "f-title") {
+        el.addEventListener("keyup", syncMetaFromInputs);
+        el.addEventListener("paste", () => setTimeout(syncMetaFromInputs, 20));
+      }
+      if (id === "f-authors") {
+        el.addEventListener("blur", () => {
+          if (el.value && (el.value.includes(",") || el.value.includes(";"))) {
+            const norm = normalizeAuthorsString(el.value);
+            if (norm && norm !== el.value) {
+              el.value = norm;
+              currentMeta.authors = norm;
+              updateCitationDisplay();
+              saveDraft();
+            }
+          }
+        });
+      }
+    }
   });
 
-  // Copy citation with instant visual button feedback
+  // Copy citation with instant visual button feedback & Rich Text support (Italics for Word/Docs)
   document.getElementById("btn-copy-cite")?.addEventListener("click", () => {
-    const txt = document.getElementById("citation-text")?.textContent || "";
+    const box = document.getElementById("citation-text");
     const btn = document.getElementById("btn-copy-cite");
-    if (navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(txt).then(() => {
-        if (btn) {
-          const origText = btn.textContent;
-          btn.textContent = window.i18n ? window.i18n.t("btn_copied") : "✓ Đã sao chép!";
-          btn.style.background = "linear-gradient(135deg, #10b981 0%, #059669 100%)";
-          setTimeout(() => {
-            btn.textContent = origText;
-            btn.style.background = "";
-          }, 1400);
-        }
-        showToast(`✓ Đã sao chép (${(currentCitationTab || "").toUpperCase()})!`);
-      }).catch(() => {
+
+    let formattedCite = getFormattedCitationByStyle(currentMeta, currentCitationTab, 1);
+    if (currentCitationTab !== "ieee" && currentCitationTab !== "apa" && currentCitationTab !== "harvard" && currentCitationTab !== "mla" && currentCitationTab !== "intext" && currentCitationTab !== "bibtex") {
+      formattedCite = buildIeeeCitation(currentMeta);
+    }
+    const lang = window.i18n ? window.i18n.getLanguage() : "vi";
+    const activeNotes = (document.getElementById("f-notes")?.value || currentMeta.notes || "").trim();
+    const notePlain = activeNotes ? formatResearchNote(activeNotes, lang, false) : "";
+    const noteHtml = activeNotes ? formatResearchNote(activeNotes, lang, true) : "";
+    
+    let htmlCite = formattedCite
+       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+       .replace(/\*([^\*]+)\*/g, "<i>$1</i>");
+    const richHtml = htmlCite + noteHtml;
+    const txt = currentCitationTab === "bibtex" ? formattedCite : (formattedCite + notePlain);
+
+    const onCopySuccess = () => {
+      if (btn) {
+        const origHTML = btn.innerHTML;
+        btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> <span>${window.i18n ? window.i18n.t("btn_copied") : "Đã sao chép"}</span>`;
+        btn.style.background = "linear-gradient(135deg, #10b981 0%, #059669 100%)";
+        setTimeout(() => {
+          btn.innerHTML = origHTML;
+          btn.style.background = "";
+        }, 1400);
+      }
+      showToast("toast_citation_copied_style", "success", [(currentCitationTab || "").toUpperCase()]);
+    };
+
+    if (currentCitationTab !== "bibtex" && typeof ClipboardItem !== "undefined" && navigator.clipboard?.write && richHtml) {
+      const blobText = new Blob([txt], { type: "text/plain" });
+      const blobHtml = new Blob([richHtml], { type: "text/html" });
+      navigator.clipboard.write([
+        new ClipboardItem({
+          "text/plain": blobText,
+          "text/html": blobHtml
+        })
+      ]).then(onCopySuccess).catch(() => {
+        navigator.clipboard.writeText(txt).then(onCopySuccess).catch(() => showToast("⚠️ Không thể sao chép"));
+      });
+    } else if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(txt).then(onCopySuccess).catch(() => {
         showToast("⚠️ Không thể sao chép vào bộ nhớ tạm");
       });
     }
@@ -4532,7 +5123,7 @@ onReady(() => {
     inputPdf.addEventListener("change", (e) => {
       const file = e.target.files?.[0];
       if (!file) return;
-      showToast(`⏳ Đang đọc tệp PDF: ${file.name}...`);
+      showToast("toast_pdf_loading", "info", [file.name]);
       const reader = new FileReader();
       reader.onload = (evt) => {
         try {
@@ -4552,10 +5143,10 @@ onReady(() => {
           originalExtractedMeta = { ...currentMeta };
           syncInputs();
           updateCitationDisplay();
-          showToast(`✓ Đã nạp thông tin từ file ${file.name}!`);
+          showToast("toast_pdf_loaded", "success", [file.name]);
         } catch (err) {
-          console.error("Local PDF parsing error:", err); showToast("err_005", "error");
-          showToast("⚠️ Không thể trích xuất metadata từ tệp PDF này.");
+          console.error("Local PDF parsing error:", err);
+          showToast("toast_pdf_extract_err", "error");
         }
       };
       reader.readAsArrayBuffer(file);
@@ -4580,7 +5171,7 @@ onReady(() => {
       citeBox.style.background = "";
       const file = e.dataTransfer.files?.[0];
       if (file && (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf"))) {
-        showToast(`⏳ Đang đọc tệp PDF: ${file.name}...`);
+        showToast("toast_pdf_loading", "info", [file.name]);
         const reader = new FileReader();
         reader.onload = (evt) => {
           try {
@@ -4600,10 +5191,10 @@ onReady(() => {
             originalExtractedMeta = { ...currentMeta };
             syncInputs();
             updateCitationDisplay();
-            showToast(`✓ Đã nạp thông tin từ file ${file.name}!`);
+            showToast("toast_pdf_loaded", "success", [file.name]);
           } catch (err) {
-            console.error("Local PDF drag parsing error:", err); showToast("err_005", "error");
-            showToast("⚠️ Không thể trích xuất metadata từ tệp PDF này.");
+            console.error("Local PDF drag parsing error:", err);
+            showToast("toast_pdf_extract_err", "error");
           }
         };
         reader.readAsArrayBuffer(file);
@@ -4649,17 +5240,17 @@ onReady(() => {
       if (textarea) textarea.value = rawString;
       
       await navigator.clipboard.writeText(rawString);
-      showToast(`✓ Đã Copy ${cookies.length} cookie dưới dạng chuỗi!`);
+      showToast("toast_cookie_str_copied", "success", [cookies.length]);
     } catch (e) {
       console.error(e);
       showToast("toast_cookie_export_error", "error");
     }
   });
 
-  document.getElementById("btn-import-raw-cookie")?.addEventListener("click", async () => {
+document.getElementById("btn-import-raw-cookie")?.addEventListener("click", async () => {
     if (!currentTabUrl) return showToast("toast_cookie_export_no_url", "warning");
     const rawString = document.getElementById("cookie-raw-text")?.value.trim();
-    if (!rawString) return showToast("⚠️ Vui lòng dán chuỗi cookie (key=value;...) vào khung trước!", "warning");
+    if (!rawString) return showToast("toast_cookie_paste_needed", "warning");
     
     try {
       const cookiesApi = (typeof browser !== "undefined" && browser.cookies) ? browser.cookies : (typeof chrome !== "undefined" ? chrome.cookies : null);
@@ -4692,7 +5283,7 @@ onReady(() => {
       });
       const results = await Promise.all(setPromises);
       successCount = results.filter(r => r).length;
-      showToast(`✓ Đã nhập thành công ${successCount} cookie từ chuỗi!`);
+      showToast("toast_cookie_imported", "success", [successCount]);
       const tabsApi = (typeof browser !== "undefined" && browser.tabs) ? browser.tabs : (typeof chrome !== "undefined" ? chrome.tabs : null);
       if (tabsApi && currentTabObj?.id) tabsApi.reload(currentTabObj.id);
     } catch (e) {
@@ -4704,7 +5295,26 @@ onReady(() => {
   // -----------------------------------------
   // Cookie Manager: Import & Export JSON
   // -----------------------------------------
-  document.getElementById("btn-export-cookie")?.addEventListener("click", async () => {
+  
+  // Restored RIS Events
+  document.getElementById("btn-download-ris")?.addEventListener("click", () => {
+    if (!currentMeta.title) return showToast("Chưa có thông tin để xuất RIS!", "warning");
+    const risStr = buildRisCitation(currentMeta);
+    const blob = new Blob([risStr], { type: "application/x-research-info-systems;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = (currentMeta.title.substring(0, 40).replace(/[^a-zA-Z0-9]/g, "_") || "citation") + ".ris";
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast("💾 Đã tải xuống file RIS!", "success");
+  });
+
+  document.getElementById("btn-export-ris-all")?.addEventListener("click", () => {
+    exportRisAll();
+  });
+
+document.getElementById("btn-export-cookie")?.addEventListener("click", async () => {
     if (!currentTabUrl) return showToast("toast_cookie_export_no_url", "warning");
     try {
       const cookiesApi = (typeof browser !== "undefined" && browser.cookies) ? browser.cookies : (typeof chrome !== "undefined" ? chrome.cookies : null);
@@ -4808,6 +5418,168 @@ onReady(() => {
     });
   }
 
+  // -------------------------------------------------------------
+  // Live Domain Tracking & Cookie Utilities
+  // -------------------------------------------------------------
+  async function updateCookieTabUI() {
+    const domainEl = document.getElementById("cookie-current-domain");
+    const countEl = document.getElementById("cookie-total-count");
+    const rawTextEl = document.getElementById("cookie-raw-text");
+    if (!domainEl || !countEl) return;
+
+    if (!currentTabUrl || currentTabUrl.startsWith("about:") || currentTabUrl.startsWith("chrome:") || currentTabUrl.startsWith("moz-extension:")) {
+      domainEl.textContent = "Không hỗ trợ trang nội bộ";
+      countEl.textContent = "0";
+      return;
+    }
+
+    try {
+      const u = new URL(currentTabUrl);
+      domainEl.textContent = u.hostname;
+      const cookiesApi = (typeof browser !== "undefined" && browser.cookies) ? browser.cookies : ((typeof chrome !== "undefined" ? chrome.cookies : null));
+      if (cookiesApi) {
+        const cookies = await cookiesApi.getAll({ url: currentTabUrl });
+        const count = cookies ? cookies.length : 0;
+        countEl.textContent = count.toString();
+        if (rawTextEl && !rawTextEl.value && cookies && cookies.length > 0) {
+          rawTextEl.value = cookies.map(c => `${c.name}=${c.value}`).join("; ");
+        }
+      }
+    } catch (e) {
+      console.warn("updateCookieTabUI error:", e);
+    }
+  }
+
+  // Copy raw cookie string (name=value; name2=value2...)
+  document.getElementById("btn-copy-raw-cookie")?.addEventListener("click", async () => {
+    if (!currentTabUrl) return showToast("toast_cookie_no_url", "warning");
+    try {
+      const cookiesApi = (typeof browser !== "undefined" && browser.cookies) ? browser.cookies : (typeof chrome !== "undefined" ? chrome.cookies : null);
+      if (!cookiesApi) return showToast("toast_cookie_no_api", "error");
+      const cookies = await cookiesApi.getAll({ url: currentTabUrl });
+      if (!cookies || cookies.length === 0) return showToast("toast_cookie_none", "warning");
+      const rawStr = cookies.map(c => `${c.name}=${c.value}`).join("; ");
+      const rawTextEl = document.getElementById("cookie-raw-text");
+      if (rawTextEl) rawTextEl.value = rawStr;
+      await navigator.clipboard.writeText(rawStr);
+      showToast("toast_cookie_str_copied", "success", [cookies.length]);
+    } catch (e) {
+      console.error(e);
+      showToast("toast_cookie_copy_err", "error");
+    }
+  });
+
+  // Import raw cookie string (name=value; name2=value2...)
+  document.getElementById("btn-import-raw-cookie")?.addEventListener("click", async () => {
+    if (!currentTabUrl) return showToast("toast_cookie_no_url", "warning");
+    const rawTextEl = document.getElementById("cookie-raw-text");
+    const rawVal = (rawTextEl?.value || "").trim();
+    if (!rawVal) return showToast("toast_cookie_paste_needed", "warning");
+    try {
+      const cookiesApi = (typeof browser !== "undefined" && browser.cookies) ? browser.cookies : (typeof chrome !== "undefined" ? chrome.cookies : null);
+      if (!cookiesApi) return showToast("toast_cookie_no_api", "error");
+      const pairs = rawVal.split(";").map(s => s.trim()).filter(Boolean);
+      let success = 0;
+      for (const pair of pairs) {
+        const idx = pair.indexOf("=");
+        if (idx === -1) continue;
+        const name = pair.substring(0, idx).trim();
+        const value = pair.substring(idx + 1).trim();
+        try {
+          await cookiesApi.set({
+            url: currentTabUrl,
+            name,
+            value,
+            path: "/"
+          });
+          success++;
+        } catch (err) {}
+      }
+      showToast("toast_cookie_import_success", "success", [success, pairs.length]);
+      updateCookieTabUI();
+      const tabsApi = (typeof browser !== "undefined" && browser.tabs) ? browser.tabs : (typeof chrome !== "undefined" ? chrome.tabs : null);
+      if (tabsApi && currentTabObj?.id) {
+        tabsApi.reload(currentTabObj.id);
+      }
+    } catch (e) {
+      console.error(e);
+      showToast("toast_cookie_import_err", "error");
+    }
+  });
+
+  // Delete all cookies for current active page
+  document.getElementById("btn-delete-current-cookies")?.addEventListener("click", async () => {
+    if (!currentTabUrl) return showToast("toast_cookie_no_url", "warning");
+    try {
+      const cookiesApi = (typeof browser !== "undefined" && browser.cookies) ? browser.cookies : (typeof chrome !== "undefined" ? chrome.cookies : null);
+      if (!cookiesApi) return showToast("toast_cookie_no_api", "error");
+      const cookies = await cookiesApi.getAll({ url: currentTabUrl });
+      if (!cookies || cookies.length === 0) return showToast("toast_cookie_none", "warning");
+      let removed = 0;
+      for (const c of cookies) {
+        const u = "http" + (c.secure ? "s" : "") + "://" + c.domain.replace(/^\./, "") + c.path;
+        try {
+          await cookiesApi.remove({
+            url: u,
+            name: c.name,
+            storeId: c.storeId
+          });
+          removed++;
+        } catch (e) {}
+      }
+      const rawTextEl = document.getElementById("cookie-raw-text");
+      if (rawTextEl) rawTextEl.value = "";
+      showToast("toast_cookie_deleted", "success", [removed]);
+      updateCookieTabUI();
+      const tabsApi = (typeof browser !== "undefined" && browser.tabs) ? browser.tabs : (typeof chrome !== "undefined" ? chrome.tabs : null);
+      if (tabsApi && currentTabObj?.id) {
+        tabsApi.reload(currentTabObj.id);
+      }
+    } catch (e) {
+      console.error(e);
+      showToast("toast_cookie_del_err", "error");
+    }
+  });
+
+  // Bypass paywall: Clear all cookies + localStorage + sessionStorage and reload tab
+  document.getElementById("btn-clear-site-data")?.addEventListener("click", async () => {
+    if (!currentTabUrl) return showToast("Chưa có URL hợp lệ!", "warning");
+    try {
+      const cookiesApi = (typeof browser !== "undefined" && browser.cookies) ? browser.cookies : (typeof chrome !== "undefined" ? chrome.cookies : null);
+      if (cookiesApi) {
+        const cookies = await cookiesApi.getAll({ url: currentTabUrl });
+        if (cookies && cookies.length > 0) {
+          for (const c of cookies) {
+            const u = "http" + (c.secure ? "s" : "") + "://" + c.domain.replace(/^\./, "") + c.path;
+            await cookiesApi.remove({ url: u, name: c.name, storeId: c.storeId }).catch(() => {});
+          }
+        }
+      }
+      // Wipe localStorage, sessionStorage, cache in tab
+      const scriptingApi = (typeof chrome !== "undefined" && chrome.scripting) ? chrome.scripting : ((typeof browser !== "undefined" && browser.scripting) ? browser.scripting : null);
+      if (scriptingApi && currentTabObj?.id) {
+        await scriptingApi.executeScript({
+          target: { tabId: currentTabObj.id },
+          func: () => {
+            try { localStorage.clear(); } catch (e) {}
+            try { sessionStorage.clear(); } catch (e) {}
+            location.reload();
+          }
+        }).catch(() => {});
+      } else {
+        const tabsApi = (typeof browser !== "undefined" && browser.tabs) ? browser.tabs : (typeof chrome !== "undefined" ? chrome.tabs : null);
+        if (tabsApi && currentTabObj?.id) tabsApi.reload(currentTabObj.id);
+      }
+      const rawTextEl = document.getElementById("cookie-raw-text");
+      if (rawTextEl) rawTextEl.value = "";
+      showToast("🧹 Đã xóa sạch dữ liệu & đang tải lại trang!", "success");
+      setTimeout(updateCookieTabUI, 1000);
+    } catch (e) {
+      console.error(e);
+      showToast("Lỗi khi xóa dữ liệu trang!", "error");
+    }
+  });
+
 
 
   // Open Sidebar / Side Panel from Popup
@@ -4871,6 +5643,7 @@ onReady(() => {
   // Modal Bulk Action Buttons
   document.getElementById("btn-copy-all-biblio")?.addEventListener("click", copyAllBiblio);
   document.getElementById("btn-export-bib-all")?.addEventListener("click", exportBibAll);
+  document.getElementById("btn-export-ris-all")?.addEventListener("click", exportRisAll);
   document.getElementById("btn-export-txt-all")?.addEventListener("click", exportTxtAll);
   document.getElementById("btn-clear-all-biblio")?.addEventListener("click", clearAllBiblio);
 
@@ -5085,9 +5858,8 @@ onReady(() => {
     isElementCapturePicking = true;
     const banner = document.getElementById("element-cap-active-banner");
     if (banner) banner.style.display = "block";
-    sendTabMessage({ action: "START_ELEMENT_CAPTURE" }, () => {
-      showToast("🎯 Hãy rê chuột và click vào bảng hoặc thẻ cần chụp!");
-    });
+    showToast("🎯 Hãy rê chuột và click vào bảng hoặc thẻ cần chụp!");
+    sendTabMessage({ action: "START_ELEMENT_CAPTURE" });
   });
 
   document.getElementById("btn-cancel-cap-element")?.addEventListener("click", () => {
@@ -5151,7 +5923,37 @@ onReady(() => {
   document.getElementById("btn-cancel-countdown")?.addEventListener("click", cancelVideoCountdown);
 
   // Dual-Web Linked Tabs Controls & Shortcut
-  document.getElementById("btn-quick-swap-tabs")?.addEventListener("click", swapDualTabs);
+  
+  // Restored Prompter Events
+  
+  // Restored Script Text Event
+  let videoScriptTimer = null;
+  document.getElementById("video-script-text")?.addEventListener("input", () => {
+    clearTimeout(videoScriptTimer);
+    videoScriptTimer = setTimeout(saveVideoSettings, 500);
+  });
+
+document.getElementById("btn-save-prompter")?.addEventListener("click", () => {
+    saveVideoSettings();
+    showToast("✅ Đã lưu kịch bản!", "success");
+  });
+
+  document.getElementById("btn-popout-prompter")?.addEventListener("click", () => {
+    saveVideoSettings();
+    setTimeout(() => {
+      const wApi = (typeof browser !== "undefined" && browser.windows) ? browser.windows : (typeof chrome !== "undefined" ? chrome.windows : null);
+      if (wApi) {
+        wApi.create({
+          url: (typeof browser !== "undefined" ? browser.runtime.getURL("OS/html/prompter.html") : chrome.runtime.getURL("OS/html/prompter.html")),
+          type: "popup",
+          width: 380,
+          height: 480
+        });
+      }
+    }, 400);
+  });
+
+document.getElementById("btn-quick-swap-tabs")?.addEventListener("click", swapDualTabs);
   document.getElementById("btn-swap-arrow")?.addEventListener("click", swapDualTabs);
   document.getElementById("pill-tab-b")?.addEventListener("click", swapDualTabs);
   document.getElementById("btn-toggle-tab-picker")?.addEventListener("click", toggleDualTabDropdown);
@@ -5166,7 +5968,7 @@ onReady(() => {
           linkedTabObj = tab;
           updateDualTabsUI();
           toggleDualTabDropdown();
-          showToast(`✓ Đã liên kết với: ${(tab.title || "Tab").slice(0, 24)}... (Alt+Q)`);
+          showToast("toast_tab_linked", "success", [(tab.title || "Tab").slice(0, 24)]);
         }
       } catch (err) {}
     }
@@ -5237,6 +6039,9 @@ onReady(() => {
     const wasEmpty = !currentTabUrl || !currentMeta.title;
     currentTabUrl = tab.url || "";
 
+    const prevNotes = (document.getElementById("f-notes")?.value || currentMeta.notes || "").trim();
+    const prevTag = (document.getElementById("f-tag")?.value || currentMeta.tag || "").trim();
+
     if (forceReset || isDifferentUrl || wasEmpty) {
       currentMeta = {
         title: tab.title && tab.title !== "Untitled" ? tab.title : "",
@@ -5250,7 +6055,9 @@ onReady(() => {
         doi: "",
         url: currentTabUrl,
         container: "",
-        sourceType: "webpage"
+        sourceType: "webpage",
+        tag: prevTag,
+        notes: prevNotes
       };
       originalExtractedMeta = { ...currentMeta };
       syncInputs();
@@ -5262,6 +6069,91 @@ onReady(() => {
       if (pdfMeta) {
         currentMeta = { ...currentMeta, ...pdfMeta };
         originalExtractedMeta = { ...currentMeta };
+        // Auto-fetch clean metadata if DOI is found
+        const potentialDoi = currentMeta.doi || (currentTabUrl.match(/\b(10\.\d{4,9}\/[-._;()/:A-Za-z0-9]+)\b/i) || [])[1] || "";
+        if (potentialDoi) {
+           const doiClean = potentialDoi.replace(/[.,;)]+$/, "");
+           try {
+             const doiRes = await fetch(`https://doi.org/` + encodeURIComponent(doiClean), {
+               headers: { "Accept": "application/vnd.citationstyles.csl+json" }
+             });
+             if (doiRes.ok) {
+               const data = await doiRes.json();
+               if (data.title) currentMeta.title = data.title;
+               const dataAuthors = (data.author || []).map(a => {
+                 if (a.name) return normalizeAuthorDisplayName(a.name);
+                 if (a.family && a.given) {
+                   const lastLow = removeVietnameseDiacritics(a.family).toLowerCase();
+                   const isVn = VIETNAMESE_SURNAMES.has(a.family.toLowerCase()) || VIETNAMESE_SURNAMES.has(lastLow);
+                   return isVn ? `${a.family} ${a.given}`.trim() : `${a.given} ${a.family}`.trim();
+                 }
+                 return normalizeAuthorDisplayName(a.family || a.given || "");
+               }).filter(Boolean).join(", ");
+               if (dataAuthors) currentMeta.authors = dataAuthors;
+               const year = data.issued?.["date-parts"]?.[0]?.[0] || "";
+               const month = data.issued?.["date-parts"]?.[0]?.[1] || "";
+               const day = data.issued?.["date-parts"]?.[0]?.[2] || "";
+               let date = year ? String(year) : "";
+               if (year && month) date += `-${String(month).padStart(2, "0")}` + (day ? `-${String(day).padStart(2, "0")}` : "");
+               if (date) currentMeta.date = date;
+               const container = data["container-title"] || data.publisher;
+               if (container) currentMeta.container = container;
+               if (data.page) currentMeta.pages = `pp. ${data.page}`;
+               currentMeta.doi = doiClean;
+               if (data.URL) currentMeta.url = data.URL;
+               currentMeta.sourceType = "academic";
+             }
+             
+             // OpenAlex for cited_by_count
+             const oaRes = await fetch(`https://api.openalex.org/works/https://doi.org/` + encodeURIComponent(doiClean));
+             if (oaRes.ok) {
+                 const oaData = await oaRes.json();
+                 if (typeof oaData.cited_by_count === 'number') {
+                     currentMeta.cited_by_count = oaData.cited_by_count; updateCitationDisplay(); updateSourceBadges(currentMeta.sourceType, currentMeta.container);
+                 }
+             }
+           } catch (e) {
+             console.warn("Auto DOI/OpenAlex fetch failed:", e);
+           }
+        }
+        
+        // Also Auto-fetch for arXiv URL
+        const potentialArxiv = (currentTabUrl.match(/arxiv\.org\/(?:pdf|abs)\/(\d{4}\.\d{4,5}(?:v\d+)?)/i) || [])[1] || "";
+        if (potentialArxiv) {
+           try {
+             const axRes = await fetch(`https://export.arxiv.org/api/query?id_list=` + encodeURIComponent(potentialArxiv));
+             if (axRes.ok) {
+               const xmlText = await axRes.text();
+               const parser = new DOMParser();
+               const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+               const entry = xmlDoc.querySelector("entry");
+               if (entry) {
+                 const title = entry.querySelector("title")?.textContent?.replace(/\s+/g, " ").trim();
+                 if (title) currentMeta.title = title;
+                 const authors = Array.from(entry.querySelectorAll("author name")).map(n => normalizeAuthorDisplayName(n.textContent.trim())).filter(Boolean).join(", ");
+                 if (authors) currentMeta.authors = authors;
+                 const published = entry.querySelector("published")?.textContent || "";
+                 if (published) currentMeta.date = published.slice(0, 10);
+                 currentMeta.container = "arXiv preprint";
+                 currentMeta.pages = `Rep. arXiv:${potentialArxiv}`;
+                 currentMeta.doi = `arXiv:${potentialArxiv}`;
+                 currentMeta.url = `https://arxiv.org/abs/${potentialArxiv}`;
+                 currentMeta.sourceType = "academic";
+               }
+             }
+           } catch (e) {
+             console.warn("Auto arXiv fetch failed:", e);
+           }
+        }
+        
+        // Preserve existing user notes and tags
+        const userNotes = document.getElementById("f-notes")?.value || currentMeta.notes;
+        if (userNotes) currentMeta.notes = userNotes;
+        const userTag = document.getElementById("f-tag")?.value || currentMeta.tag;
+        if (userTag) currentMeta.tag = userTag;
+
+        originalExtractedMeta = { ...currentMeta };
+
         if (!ignoreDraft) {
           checkDraft(originalExtractedMeta || currentMeta);
         }
@@ -5272,8 +6164,8 @@ onReady(() => {
       const extracted = await sendTabMessage({ action: "EXTRACT_PAGE_METADATA" });
       if (extracted && (extracted.title || extracted.authors || extracted.date || extracted.container || extracted.doi)) {
         currentMeta = { ...currentMeta, ...extracted };
-        if (Array.isArray(currentMeta.authors)) {
-          currentMeta.authors = currentMeta.authors.filter(Boolean).join(", ");
+        if (currentMeta.authors) {
+          currentMeta.authors = normalizeAuthorsString(currentMeta.authors);
         }
         if (!currentMeta.title && tab.title) {
           currentMeta.title = tab.title;
@@ -5284,6 +6176,123 @@ onReady(() => {
         currentMeta.url = tab.url || currentTabUrl;
         originalExtractedMeta = { ...currentMeta };
       }
+
+      // 1. Clean site brand prefixes from title (e.g. "Frontiers | ...", "Nature | ...")
+      if (currentMeta.title) {
+        currentMeta.title = currentMeta.title.replace(/^(?:Frontiers|Nature|Science|Springer|Elsevier|Wiley|PLOS|ACM|IEEE)\s*\|\s*/i, "").trim();
+      }
+
+      // 2. Auto-detect DOI from URL if not yet extracted
+      if (!currentMeta.doi && currentTabUrl) {
+        const urlDoiMatch = currentTabUrl.match(/\b(10\.\d{4,9}\/[-._;()/:A-Za-z0-9]+)\b/);
+        if (urlDoiMatch) {
+          currentMeta.doi = urlDoiMatch[1].replace(/[\/#?]+$/, "");
+        }
+      }
+
+      // 3. Auto CrossRef enrichment for Academic web articles with DOI
+      if (currentMeta.doi) {
+        const isAcademicSite = /frontiersin\.org|nature\.com|sciencedirect\.com|springer\.com|wiley\.com|ieee\.org|acm\.org|biorxiv\.org|medrxiv\.org|plos\.org|cell\.com|pnas\.org|tandfonline\.com|sagepub\.com|oup\.com/i.test(currentTabUrl || "");
+        if (!currentMeta.authors || !currentMeta.container || !currentMeta.date || currentMeta.sourceType === "academic" || isAcademicSite) {
+          try {
+            const cleanDoi = currentMeta.doi.trim().replace(/^https?:\/\/doi\.org\//, "");
+            const crRes = await fetch(`https://api.crossref.org/works/${encodeURIComponent(cleanDoi)}`, {
+              headers: { "User-Agent": "ScholarFlow/2.4 (mailto:contact@scholarflow.org)" }
+            });
+            if (crRes.ok) {
+              const crData = await crRes.json();
+              const msg = crData.message;
+              if (msg) {
+                if (msg.title && msg.title[0]) {
+                  currentMeta.title = msg.title[0];
+                }
+                if (msg["container-title"] && msg["container-title"][0]) {
+                  currentMeta.container = msg["container-title"][0];
+                }
+                if (msg.author && Array.isArray(msg.author) && msg.author.length > 0) {
+                  currentMeta.authors = msg.author.map(a => {
+                    if (a.name) return normalizeAuthorDisplayName(a.name);
+                    if (a.family && a.given) {
+                      const lastLow = removeVietnameseDiacritics(a.family).toLowerCase();
+                      const isVn = VIETNAMESE_SURNAMES.has(a.family.toLowerCase()) || VIETNAMESE_SURNAMES.has(lastLow);
+                      return isVn ? `${a.family} ${a.given}`.trim() : `${a.given} ${a.family}`.trim();
+                    }
+                    return normalizeAuthorDisplayName(a.family || a.given || "");
+                  }).filter(Boolean).join(", ");
+                }
+                const dateObj = (msg.issued && msg.issued["date-parts"] && msg.issued["date-parts"][0])
+                  || (msg["published-print"] && msg["published-print"]["date-parts"] && msg["published-print"]["date-parts"][0])
+                  || (msg["published-online"] && msg["published-online"]["date-parts"] && msg["published-online"]["date-parts"][0])
+                  || (msg["published"] && msg["published"]["date-parts"] && msg["published"]["date-parts"][0])
+                  || (msg.created && msg.created["date-parts"] && msg.created["date-parts"][0]);
+                if (dateObj) {
+                  if (dateObj.length === 1) currentMeta.date = `${dateObj[0]}`;
+                  else if (dateObj.length === 2) currentMeta.date = `${dateObj[0]}-${String(dateObj[1]).padStart(2, "0")}`;
+                  else if (dateObj.length >= 3) currentMeta.date = `${dateObj[0]}-${String(dateObj[1]).padStart(2, "0")}-${String(dateObj[2]).padStart(2, "0")}`;
+                }
+                let pList = [];
+                if (msg.volume) pList.push(`vol. ${msg.volume}`);
+                if (msg.issue) pList.push(`no. ${msg.issue}`);
+                if (msg.page) pList.push(`pp. ${msg.page}`);
+                if (pList.length > 0) currentMeta.pages = pList.join(", ");
+                currentMeta.sourceType = "academic";
+                originalExtractedMeta = { ...currentMeta };
+              }
+            }
+          } catch (e) {
+            console.warn("Auto CrossRef fetch failed:", e);
+          }
+        }
+      }
+
+      // OpenAlex API Integration: Metrics badge (cited_by_count) and metadata synchronization
+      if (currentMeta.doi) {
+        try {
+          const cleanDoi = currentMeta.doi.trim().replace(/^https?:\/\/doi\.org\//, "");
+          const oaRes = await fetch(`https://api.openalex.org/works/https://doi.org/` + encodeURIComponent(cleanDoi));
+          if (oaRes.ok) {
+            const oaData = await oaRes.json();
+            if (typeof oaData.cited_by_count === "number") {
+              currentMeta.cited_by_count = oaData.cited_by_count;
+            }
+            if (!currentMeta.title || currentMeta.title === "Untitled") {
+              if (oaData.title) currentMeta.title = oaData.title;
+            }
+            if (!currentMeta.authors && oaData.authorships && Array.isArray(oaData.authorships)) {
+              const oaAuthors = oaData.authorships.map(a => normalizeAuthorDisplayName(a.author?.display_name)).filter(Boolean).join(", ");
+              if (oaAuthors) currentMeta.authors = oaAuthors;
+            }
+            if (!currentMeta.date) {
+              if (oaData.publication_date) currentMeta.date = oaData.publication_date;
+              else if (oaData.publication_year) currentMeta.date = String(oaData.publication_year);
+            }
+            if (!currentMeta.container && oaData.primary_location?.source?.display_name) {
+              currentMeta.container = oaData.primary_location.source.display_name;
+            }
+            if (!currentMeta.pages && oaData.biblio) {
+              let p = [];
+              if (oaData.biblio.volume) p.push(`vol. ${oaData.biblio.volume}`);
+              if (oaData.biblio.issue) p.push(`no. ${oaData.biblio.issue}`);
+              if (oaData.biblio.first_page) {
+                if (oaData.biblio.last_page) p.push(`pp. ${oaData.biblio.first_page}-${oaData.biblio.last_page}`);
+                else p.push(`p. ${oaData.biblio.first_page}`);
+              }
+              if (p.length > 0) currentMeta.pages = p.join(", ");
+            }
+            currentMeta.sourceType = "academic";
+            originalExtractedMeta = { ...currentMeta };
+            updateSourceBadges(currentMeta.sourceType, currentMeta.container);
+          }
+        } catch (e) {
+          console.warn("Auto OpenAlex fetch for webpage failed:", e);
+        }
+      }
+
+      // 4. Preserve existing user notes and tags
+      const userNotes = document.getElementById("f-notes")?.value || currentMeta.notes;
+      if (userNotes) currentMeta.notes = userNotes;
+      const userTag = document.getElementById("f-tag")?.value || currentMeta.tag;
+      if (userTag) currentMeta.tag = userTag;
 
       // Secondary fallback for YouTube: SPA navigation leaves stale DOM. Fetch HTML directly for accurate date/author.
       if (currentTabUrl && (currentTabUrl.includes("youtube.com/watch") || currentTabUrl.includes("youtu.be/"))) {
@@ -5399,6 +6408,8 @@ onReady(() => {
     renderBiblioModalList();
     updateDualTabsUI();
     populateDualTabDropdown();
+    if (typeof renderAutofillList === "function") renderAutofillList();
+    if (typeof renderTodoList === "function") renderTodoList();
 
     // Notify active content script about the language update
     const tabsApi = (typeof browser !== "undefined" && browser.tabs) ? browser.tabs : (typeof chrome !== "undefined" ? chrome.tabs : null);
@@ -5434,3 +6445,483 @@ onReady(() => {
   try { loadVideoSettings(); } catch (e) { console.warn(e); }
   try { syncActiveTabData(true); } catch (e) { console.warn(e); }
 });
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === "QUOTE_TO_CITE" && request.selectionText) {
+    const text = request.selectionText;
+    const fNotes = document.getElementById("f-notes");
+    if (fNotes) {
+      if (fNotes.value) fNotes.value += " | " + text;
+      else fNotes.value = `"${text}"`;
+      currentMeta.notes = fNotes.value;
+      updateCitationDisplay();
+      saveDraft();
+    }
+    showToast("✅ Đã chèn trích đoạn vào mục Ghi chú!");
+    
+    // Switch to tab 1
+    const tCite = document.querySelector('[data-target="tab-cite"]');
+    if (tCite) tCite.click();
+  }
+});
+  const navWrapper = document.getElementById("nav-wrapper");
+  const navScrollLeft = document.getElementById("nav-scroll-left");
+  const navScrollRight = document.getElementById("nav-scroll-right");
+
+  if (navWrapper && navScrollLeft && navScrollRight) {
+    function updateNavScrollButtons() {
+      if (navWrapper.scrollLeft > 4) {
+        navScrollLeft.classList.remove("is-hidden");
+      } else {
+        navScrollLeft.classList.add("is-hidden");
+      }
+      
+      if (navWrapper.scrollLeft < navWrapper.scrollWidth - navWrapper.clientWidth - 4) {
+        navScrollRight.classList.remove("is-hidden");
+      } else {
+        navScrollRight.classList.add("is-hidden");
+      }
+    }
+
+    navScrollLeft.addEventListener("click", () => {
+      navWrapper.scrollBy({ left: -100, behavior: "smooth" });
+    });
+
+    navScrollRight.addEventListener("click", () => {
+      navWrapper.scrollBy({ left: 100, behavior: "smooth" });
+    });
+
+    navWrapper.addEventListener("scroll", updateNavScrollButtons);
+    // Initial check
+    setTimeout(updateNavScrollButtons, 100);
+  }
+  /* -------------------------------------------------------------
+     TAB AUTOFILL
+  ------------------------------------------------------------- */
+  let savedAutofill = [];
+
+  function renderAutofillList() {
+    const list = document.getElementById("autofill-list");
+    if (!list) return;
+    list.innerHTML = "";
+    const delText = (window.i18n ? window.i18n.t("btn_delete") : null) || "Xóa";
+    const copyText = (window.i18n ? window.i18n.t("btn_copy") : null) || "Sao chép";
+
+    savedAutofill.forEach((item, index) => {
+      const div = document.createElement("div");
+      div.className = "feature-card";
+      div.style.display = "flex";
+      div.style.flexDirection = "column";
+      div.style.gap = "6px";
+      div.style.padding = "8px";
+      div.style.position = "relative";
+      div.innerHTML = `
+        <div style="font-weight:700; color:var(--primary); font-size:12px;">${item.name}</div>
+        <div style="font-family:ui-monospace, monospace; font-size:11px; background:rgba(0,0,0,0.2); padding:4px; border-radius:4px; white-space:pre-wrap; word-break:break-all;">${item.value}</div>
+        <button class="btn-text-small btn-del-autofill" data-index="${index}" style="position:absolute; top:8px; right:8px; color:#f87171;">${delText}</button>
+        <button class="btn btn-secondary btn-copy-autofill" data-index="${index}" style="padding:4px 8px; margin-top:4px; display:inline-flex; align-items:center; justify-content:center; gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span>${copyText}</span></button>
+      `;
+      list.appendChild(div);
+    });
+
+    list.querySelectorAll('.btn-del-autofill').forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        const idx = parseInt(e.target.getAttribute("data-index"), 10);
+        savedAutofill.splice(idx, 1);
+        storSet({ "sf_autofill": savedAutofill });
+        renderAutofillList();
+      });
+    });
+
+    list.querySelectorAll('.btn-copy-autofill').forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        const idx = parseInt(e.target.getAttribute("data-index"), 10);
+        const text = savedAutofill[idx].value;
+        navigator.clipboard.writeText(text).then(() => {
+          const toastCopied = (window.i18n ? window.i18n.t("autofill_toast_copied", null, { name: savedAutofill[idx].name }) : null) || `✓ Đã sao chép: ${savedAutofill[idx].name}`;
+          showToast(toastCopied);
+        });
+      });
+    });
+  }
+
+  const btnAddAutofill = document.getElementById("btn-autofill-add");
+  if (btnAddAutofill) {
+    btnAddAutofill.addEventListener("click", () => {
+      const nameInput = document.getElementById("autofill-name");
+      const valInput = document.getElementById("autofill-value");
+      const name = (nameInput.value || "").trim();
+      const value = (valInput.value || "").trim();
+      if (!name || !value) {
+        const warnMsg = (window.i18n ? window.i18n.t("autofill_toast_required") : null) || "Vui lòng nhập đủ tên và giá trị!";
+        showToast(warnMsg, "warning");
+        return;
+      }
+      savedAutofill.push({ name, value });
+      storSet({ "sf_autofill": savedAutofill });
+      nameInput.value = "";
+      valInput.value = "";
+      renderAutofillList();
+      const addedMsg = (window.i18n ? window.i18n.t("autofill_toast_added") : null) || "Đã thêm trường Autofill mới!";
+      showToast(addedMsg);
+    });
+  }
+
+  storGet("sf_autofill", (res) => {
+    if (res && res.sf_autofill) savedAutofill = res.sf_autofill;
+    renderAutofillList();
+  });
+
+  /* -------------------------------------------------------------
+     TAB TODO
+  ------------------------------------------------------------- */
+  let savedTodos = [];
+  let currentTodoFilter = "all";
+  let editingTodoIndex = -1;
+
+  function escapeHtmlTodo(str) {
+    if (!str) return "";
+    return String(str).replace(/[&<>"']/g, function(m) {
+      switch (m) {
+        case '&': return '&amp;';
+        case '<': return '&lt;';
+        case '>': return '&gt;';
+        case '"': return '&quot;';
+        case "'": return '&#39;';
+        default: return m;
+      }
+    });
+  }
+
+  function updateTodoStats() {
+    const total = savedTodos.length;
+    const done = savedTodos.filter(t => t.done).length;
+    const percent = total > 0 ? Math.round((done / total) * 100) : 0;
+
+    const badgeStats = document.getElementById("todo-badge-stats");
+    if (badgeStats) {
+      badgeStats.textContent = `${done}/${total}`;
+      const progressTooltip = (window.i18n ? window.i18n.t("todo_progress", null, { done, total, percent }) : null) || `Đã xong: ${done}/${total} việc (${percent}%)`;
+      badgeStats.setAttribute("title", progressTooltip);
+    }
+
+    const progressBar = document.getElementById("todo-progress-bar");
+    if (progressBar) {
+      progressBar.style.width = `${percent}%`;
+    }
+  }
+
+  function renderTodoList() {
+    const list = document.getElementById("todo-list");
+    if (!list) return;
+    list.innerHTML = "";
+
+    updateTodoStats();
+
+    const editText = (window.i18n ? window.i18n.t("todo_btn_edit") : null) || "Sửa";
+    const delText = (window.i18n ? window.i18n.t("btn_delete") : null) || "Xóa";
+    const saveText = (window.i18n ? window.i18n.t("todo_btn_save") : null) || "Lưu";
+    const cancelText = (window.i18n ? window.i18n.t("todo_btn_cancel") : null) || "Hủy";
+    const urgentText = (window.i18n ? window.i18n.t("todo_priority_urgent") : null) || "🔴 Gấp";
+    const normalText = (window.i18n ? window.i18n.t("todo_priority_normal") : null) || "🟡 Vừa";
+    const lowText = (window.i18n ? window.i18n.t("todo_priority_low") : null) || "🟢 Thấp";
+    const emptyText = (window.i18n ? window.i18n.t("todo_empty_list") : null) || "Chưa có việc nào trong danh sách. Hãy thêm nhiệm vụ nghiên cứu bên trên!";
+
+    const visibleTodos = savedTodos
+      .map((item, originalIndex) => ({ ...item, originalIndex }))
+      .filter(item => {
+        if (currentTodoFilter === "active") return !item.done;
+        if (currentTodoFilter === "done") return item.done;
+        return true;
+      });
+
+    if (visibleTodos.length === 0) {
+      const emptyDiv = document.createElement("div");
+      emptyDiv.style.textAlign = "center";
+      emptyDiv.style.padding = "24px 14px";
+      emptyDiv.style.color = "var(--text-muted)";
+      emptyDiv.style.fontSize = "12px";
+      emptyDiv.style.lineHeight = "1.5";
+      emptyDiv.style.border = "1px dashed rgba(255,255,255,0.12)";
+      emptyDiv.style.borderRadius = "8px";
+      emptyDiv.style.background = "rgba(15,23,42,0.3)";
+      emptyDiv.innerHTML = `<div style="font-size:18px; margin-bottom:4px;">📝</div><div>${emptyText}</div>`;
+      list.appendChild(emptyDiv);
+      return;
+    }
+
+    visibleTodos.forEach(({ originalIndex, ...item }) => {
+      const isEditing = (editingTodoIndex === originalIndex);
+      const priorityClass = `priority-${item.priority || 'normal'}`;
+      card.className = `todo-card ${priorityClass} ${item.done ? "is-done" : ""}`;
+      card.dataset.index = originalIndex;
+
+      if (isEditing) {
+        card.innerHTML = `
+          <div class="todo-edit-wrap">
+            <input type="text" class="form-control todo-edit-text" value="${escapeHtmlTodo(item.text)}" style="font-size:13px; padding:6px 10px; width:100%;">
+            <div style="display:flex; gap:6px;">
+              <select class="form-control todo-edit-priority" style="font-size:11.5px; width:100px; padding:4px 6px;">
+                <option value="normal" ${item.priority === "normal" || !item.priority ? "selected" : ""}>${normalText}</option>
+                <option value="urgent" ${item.priority === "urgent" ? "selected" : ""}>${urgentText}</option>
+                <option value="low" ${item.priority === "low" ? "selected" : ""}>${lowText}</option>
+              </select>
+              <input type="text" class="form-control todo-edit-detail" placeholder="Ghi chú chi tiết / link..." value="${escapeHtmlTodo(item.detail || '')}" style="font-size:11.5px; flex:1; padding:4px 8px;">
+            </div>
+            <div class="todo-edit-actions">
+              <button type="button" class="btn btn-secondary btn-cancel-edit" data-index="${originalIndex}" style="padding:4px 10px; font-size:11px;">${cancelText}</button>
+              <button type="button" class="btn btn-primary btn-save-edit" data-index="${originalIndex}" style="padding:4px 12px; font-size:11px; font-weight:700;">${saveText}</button>
+            </div>
+          </div>
+        `;
+      } else {
+        let priorityBadgeClass = "todo-priority-normal";
+        let priorityLabel = normalText;
+        if (item.priority === "urgent") {
+          priorityBadgeClass = "todo-priority-urgent";
+          priorityLabel = urgentText;
+        } else if (item.priority === "low") {
+          priorityBadgeClass = "todo-priority-low";
+          priorityLabel = lowText;
+        }
+
+        const dateHtml = item.createdAt ? `<span class="todo-date-badge">${escapeHtmlTodo(item.createdAt)}</span>` : "";
+        const detailHtml = item.detail ? `<div class="todo-detail-box">${escapeHtmlTodo(item.detail)}</div>` : "";
+
+        card.innerHTML = `
+          <div class="todo-card-main">
+            <label class="todo-checkbox-wrap" title="${item.done ? 'Đánh dấu chưa xong' : 'Đánh dấu hoàn thành'}">
+              <input type="checkbox" class="todo-check" data-index="${originalIndex}" ${item.done ? "checked" : ""}>
+              <div class="todo-checkbox-box">
+                <svg class="todo-check-icon" viewBox="0 0 24 24" width="11" height="11" stroke="#ffffff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+            </label>
+
+            <div class="todo-text-content">
+              <div class="todo-title-text">${escapeHtmlTodo(item.text)}</div>
+              <div class="todo-meta-row">
+                <span class="todo-priority-badge ${priorityBadgeClass}">${priorityLabel}</span>
+                ${dateHtml}
+              </div>
+              ${detailHtml}
+            </div>
+
+            <div class="todo-actions">
+              <button type="button" class="todo-action-btn btn-edit" data-index="${originalIndex}" title="${editText}">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+              </button>
+              <button type="button" class="todo-action-btn btn-del" data-index="${originalIndex}" title="${delText}">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+
+      list.appendChild(card);
+    });
+
+    list.querySelectorAll('.todo-check').forEach(chk => {
+      chk.addEventListener("change", (e) => {
+        const idx = parseInt(e.target.getAttribute("data-index"), 10);
+        if (savedTodos[idx]) {
+          savedTodos[idx].done = e.target.checked;
+          storSet({ "sf_todos": savedTodos });
+          renderTodoList();
+        }
+      });
+    });
+
+    list.querySelectorAll('.btn-del').forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        const idx = parseInt(e.currentTarget.getAttribute("data-index"), 10);
+        if (!isNaN(idx) && savedTodos[idx]) {
+          savedTodos.splice(idx, 1);
+          if (editingTodoIndex === idx) editingTodoIndex = -1;
+          storSet({ "sf_todos": savedTodos });
+          renderTodoList();
+        }
+      });
+    });
+
+    list.querySelectorAll('.btn-edit').forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        const idx = parseInt(e.currentTarget.getAttribute("data-index"), 10);
+        if (!isNaN(idx)) {
+          editingTodoIndex = idx;
+          renderTodoList();
+          const editInput = list.querySelector('.todo-edit-text');
+          if (editInput) {
+            editInput.focus();
+            editInput.select();
+          }
+        }
+      });
+    });
+
+    list.querySelectorAll('.btn-save-edit').forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        const idx = parseInt(e.currentTarget.getAttribute("data-index"), 10);
+        const card = e.currentTarget.closest('.todo-card');
+        if (card && savedTodos[idx]) {
+          const newText = (card.querySelector('.todo-edit-text')?.value || "").trim();
+          const newPriority = card.querySelector('.todo-edit-priority')?.value || "normal";
+          const newDetail = (card.querySelector('.todo-edit-detail')?.value || "").trim();
+
+          if (!newText) return;
+
+          savedTodos[idx].text = newText;
+          savedTodos[idx].priority = newPriority;
+          savedTodos[idx].detail = newDetail;
+          editingTodoIndex = -1;
+          storSet({ "sf_todos": savedTodos });
+          showToast("todo_toast_updated");
+          renderTodoList();
+        }
+      });
+    });
+
+    list.querySelectorAll('.btn-cancel-edit').forEach(btn => {
+      btn.addEventListener("click", () => {
+        editingTodoIndex = -1;
+        renderTodoList();
+      });
+    });
+  }
+
+  // Filter Buttons
+  const filterBtns = document.querySelectorAll('.todo-filter-btn');
+  filterBtns.forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      filterBtns.forEach(b => b.classList.remove("active"));
+      e.currentTarget.classList.add("active");
+      currentTodoFilter = e.currentTarget.getAttribute("data-filter") || "all";
+      renderTodoList();
+    });
+  });
+
+  // Add Task
+  const btnAddTodo = document.getElementById("btn-todo-add");
+  const inputTodo = document.getElementById("todo-input");
+  const selectPriority = document.getElementById("todo-priority-select");
+  const inputDetail = document.getElementById("todo-detail-input");
+
+  if (btnAddTodo && inputTodo) {
+    const addTodo = () => {
+      const text = (inputTodo.value || "").trim();
+      if (!text) {
+        inputTodo.focus();
+        return;
+      }
+      const priority = (selectPriority ? selectPriority.value : "normal") || "normal";
+      const detail = (inputDetail ? inputDetail.value : "").trim();
+
+      const now = new Date();
+      const timeStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+      savedTodos.unshift({
+        id: Date.now().toString(),
+        text: text,
+        detail: detail,
+        priority: priority,
+        done: false,
+        createdAt: timeStr
+      });
+
+      storSet({ "sf_todos": savedTodos });
+      inputTodo.value = "";
+      if (inputDetail) inputDetail.value = "";
+      if (selectPriority) selectPriority.value = "normal";
+      renderTodoList();
+    };
+
+    btnAddTodo.addEventListener("click", addTodo);
+    inputTodo.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") addTodo();
+    });
+    if (inputDetail) {
+      inputDetail.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") addTodo();
+      });
+    }
+  }
+
+  // Copy All Tasks
+  const btnCopyAll = document.getElementById("btn-todo-copy-all");
+  if (btnCopyAll) {
+    btnCopyAll.addEventListener("click", () => {
+      if (savedTodos.length === 0) return;
+      const lines = savedTodos.map(t => {
+        const mark = t.done ? "[x]" : "[ ]";
+        const pLabel = t.priority === "urgent" ? "(Gấp) " : (t.priority === "low" ? "(Thấp) " : "");
+        let line = `${mark} ${pLabel}${t.text}`;
+        if (t.detail) line += `\n    └ Ghi chú: ${t.detail}`;
+        return line;
+      });
+      const header = `📋 SCHOLARFLOW TODO LIST (${new Date().toLocaleDateString()}):\n----------------------------------------\n`;
+      const fullContent = header + lines.join("\n");
+      navigator.clipboard.writeText(fullContent).then(() => {
+        showToast("todo_toast_copied");
+      }).catch(err => {
+        console.error("Copy failed:", err);
+      });
+    });
+  }
+
+  // Export to TXT
+  const btnExport = document.getElementById("btn-todo-export");
+  if (btnExport) {
+    btnExport.addEventListener("click", () => {
+      if (savedTodos.length === 0) return;
+      const lines = savedTodos.map((t, idx) => {
+        const mark = t.done ? "[HOÀN THÀNH]" : "[CHƯA XONG]";
+        const pLabel = t.priority === "urgent" ? "[ƯU TIÊN GẤP]" : (t.priority === "low" ? "[ƯU TIÊN THẤP]" : "[BÌNH THƯỜNG]");
+        let line = `${idx + 1}. ${mark} ${pLabel} ${t.text}`;
+        if (t.createdAt) line += ` (Tạo lúc: ${t.createdAt})`;
+        if (t.detail) line += `\n   -> Ghi chú/Tham khảo: ${t.detail}`;
+        return line;
+      });
+      const content = `========================================\n SCHOLARFLOW RESEARCH TASK LIST\n Xuất lúc: ${new Date().toLocaleString()}\n========================================\n\n` + lines.join("\n\n");
+      const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `ScholarFlow_TodoList_${new Date().toISOString().slice(0, 10)}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast("todo_toast_exported");
+    });
+  }
+
+  // Clear Done Tasks
+  const btnClearDone = document.getElementById("btn-todo-clear-done");
+  if (btnClearDone) {
+    btnClearDone.addEventListener("click", () => {
+      const doneCount = savedTodos.filter(t => t.done).length;
+      if (doneCount === 0) return;
+      savedTodos = savedTodos.filter(t => !t.done);
+      editingTodoIndex = -1;
+      storSet({ "sf_todos": savedTodos });
+      const toastMsg = (window.i18n ? window.i18n.t("todo_toast_cleared", null, { count: doneCount }) : null) || `✓ Đã dọn dẹp ${doneCount} việc đã hoàn thành!`;
+      showToast(toastMsg);
+      renderTodoList();
+    });
+  }
+
+  storGet("sf_todos", (res) => {
+    if (res && res.sf_todos && Array.isArray(res.sf_todos)) {
+      savedTodos = res.sf_todos;
+    }
+    renderTodoList();
+  });
