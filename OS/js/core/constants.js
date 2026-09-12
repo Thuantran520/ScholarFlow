@@ -9,6 +9,16 @@ const getI18nText = (key, params = null) => (window.i18n ? window.i18n.t(key, nu
 const MONTHS_IEEE = ["", "Jan.", "Feb.", "Mar.", "Apr.", "May", "June", "July", "Aug.", "Sept.", "Oct.", "Nov.", "Dec."];
 const MONTHS_FULL = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
+function getTodayIeee() {
+  const d = new Date();
+  return `${MONTHS_IEEE[d.getMonth() + 1] || ""} ${d.getDate()}, ${d.getFullYear()}`;
+}
+
+function getTodayApa() {
+  const d = new Date();
+  return `${MONTHS_FULL[d.getMonth() + 1] || ""} ${d.getDate()}, ${d.getFullYear()}`;
+}
+
 const ORG_NAMES = new Set([
   "google", "microsoft", "openai", "meta", "apple", "amazon", "ibm", "intel",
   "the hacker news", "reuters", "bbc", "bbc news", "cnn", "associated press",
