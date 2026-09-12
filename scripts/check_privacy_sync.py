@@ -1,8 +1,10 @@
+import os
 import re
 import sys
 
-html_path = "/mnt/c/TakaExtension/OS/html/privacy.html"
-js_path = "/mnt/c/TakaExtension/OS/js/privacy.js"
+base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+html_path = os.path.join(base_dir, "OS", "html", "privacy.html")
+js_path = os.path.join(base_dir, "OS", "js", "privacy.js")
 
 with open(html_path, "r", encoding="utf-8") as f:
     html_content = f.read()
