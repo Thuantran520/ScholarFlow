@@ -1805,12 +1805,9 @@ function updateCitationDisplay() {
     box.style.fontFamily = "";
     box.style.whiteSpace = "";
     box.style.color = "";
-    let htmlCite = formattedCite
-       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-       .replace(/\*([^\*]+)\*/g, "<i>$1</i>");
-    
-    const noteHtml = activeNotes ? formatResearchNote(activeNotes, lang, true) : "";
-    box.innerHTML = htmlCite + noteHtml;
+    box.textContent = "";
+    appendFormattedText(box, formattedCite);
+    if (activeNotes) box.appendChild(createResearchNoteNode(activeNotes, lang));
   }
 }
 
@@ -2395,7 +2392,8 @@ function renderBiblioModalList() {
       htmlCite = formattedCite
          .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
          .replace(/\*([^\*]+)\*/g, "<i>$1</i>");
-      citeTextEl.innerHTML = htmlCite;
+      citeTextEl.textContent = "";
+      appendFormattedText(citeTextEl, formattedCite);
     }
     card.appendChild(citeTextEl);
 
@@ -2403,9 +2401,7 @@ function renderBiblioModalList() {
     let noteHtml = "";
     if (item.notes) {
       noteHtml = formatResearchNote(item.notes, lang, true);
-      const noteWrap = document.createElement("div");
-      noteWrap.innerHTML = noteHtml;
-      card.appendChild(noteWrap.firstElementChild || noteWrap);
+      card.appendChild(createResearchNoteNode(item.notes, lang));
     }
 
     // Action buttons row
@@ -2417,7 +2413,12 @@ function renderBiblioModalList() {
     btnCopy.style.display = "inline-flex";
     btnCopy.style.alignItems = "center";
     btnCopy.style.gap = "4px";
-    btnCopy.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> <span>${window.i18n ? window.i18n.t("btn_copy") : "Sao chép"}</span>`;
+    const btnCopyIcon = document.createElement("span");
+    btnCopyIcon.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+    const btnCopyLabel = document.createElement("span");
+    btnCopyLabel.textContent = window.i18n ? window.i18n.t("btn_copy") : "Sao chép";
+    btnCopy.appendChild(btnCopyIcon);
+    btnCopy.appendChild(btnCopyLabel);
     btnCopy.addEventListener("click", () => {
       const notePlain = item.notes ? formatResearchNote(item.notes, lang, false) : "";
       const plainText = formattedCite + notePlain;
@@ -3526,10 +3527,47 @@ function updateRedactionVisibilityUI() {
   }
 }
 
-function escapeHtml(str) {
-  return (str || "").replace(/[&<>"']/g, (m) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-  }[m]));
+function appendFormattedText(el, text) {
+  const parts = String(text || "").split(/\*([^\*]+)\*/);
+  for (let i = 0; i < parts.length; i++) {
+    if (!parts[i]) continue;
+    const node = document.createElement(i % 2 === 1 ? "i" : "span");
+    node.textContent = parts[i];
+    el.appendChild(node);
+  }
+}
+
+function createResearchNoteNode(note, lang) {
+  const noteLabel = (window.i18n ? window.i18n.t("lbl_notes") : null) ||
+    (lang === "en" ? "Research Notes" : (lang === "zh" ? "研究笔记" : (lang === "ja" ? "研究メモ" : (lang === "ru" ? "Заметки к исследованию" : "Ghi chú nghiên cứu"))));
+  let clean = String(note || "").trim();
+  while (
+    (clean.startsWith('"') && clean.endsWith('"')) ||
+    (clean.startsWith('“') && clean.endsWith('”')) ||
+    (clean.startsWith('«') && clean.endsWith('»'))
+  ) {
+    clean = clean.slice(1, -1).trim();
+  }
+  const wrap = document.createElement("div");
+  wrap.style.marginTop = "12px";
+  wrap.style.paddingTop = "8px";
+  wrap.style.borderTop = "1px dashed rgba(255,255,255,0.15)";
+  wrap.style.fontSize = "11px";
+  wrap.style.lineHeight = "1.55";
+  wrap.style.color = "#94a3b8";
+  wrap.style.fontStyle = "italic";
+  const label = document.createElement("div");
+  label.style.fontStyle = "normal";
+  label.style.fontWeight = "600";
+  label.style.color = "#cbd5e1";
+  label.style.fontSize = "10px";
+  label.style.textTransform = "uppercase";
+  label.style.letterSpacing = "0.5px";
+  label.style.marginBottom = "3px";
+  label.textContent = noteLabel + ":";
+  wrap.appendChild(label);
+  wrap.appendChild(document.createTextNode('"' + clean + '"'));
+  return wrap;
 }
 
 function renderRedactedList(list) {
@@ -5062,11 +5100,18 @@ onReady(() => {
 
     const onCopySuccess = () => {
       if (btn) {
-        const origHTML = btn.innerHTML;
-        btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> <span>${window.i18n ? window.i18n.t("btn_copied") : "Đã sao chép"}</span>`;
+        const savedChildren = Array.from(btn.childNodes).map((n) => n.cloneNode(true));
+        btn.textContent = "";
+        const checkIcon = document.createElement("span");
+        checkIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+        const checkLabel = document.createElement("span");
+        checkLabel.textContent = window.i18n ? window.i18n.t("btn_copied") : "Đã sao chép";
+        btn.appendChild(checkIcon);
+        btn.appendChild(checkLabel);
         btn.style.background = "linear-gradient(135deg, #10b981 0%, #059669 100%)";
         setTimeout(() => {
-          btn.innerHTML = origHTML;
+          btn.textContent = "";
+          savedChildren.forEach((n) => btn.appendChild(n));
           btn.style.background = "";
         }, 1400);
       }
@@ -6574,7 +6619,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   function renderAutofillList() {
     const list = document.getElementById("autofill-list");
     if (!list) return;
-    list.innerHTML = "";
+    list.textContent = "";
     const delText = (window.i18n ? window.i18n.t("btn_delete") : null) || "Xóa";
     const copyText = (window.i18n ? window.i18n.t("btn_copy") : null) || "Sao chép";
 
@@ -6586,12 +6631,51 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       div.style.gap = "6px";
       div.style.padding = "8px";
       div.style.position = "relative";
-      div.innerHTML = `
-        <div style="font-weight:700; color:var(--primary); font-size:12px;">${item.name}</div>
-        <div style="font-family:ui-monospace, monospace; font-size:11px; background:rgba(0,0,0,0.2); padding:4px; border-radius:4px; white-space:pre-wrap; word-break:break-all;">${item.value}</div>
-        <button class="btn-text-small btn-del-autofill" data-index="${index}" style="position:absolute; top:8px; right:8px; color:#f87171;">${delText}</button>
-        <button class="btn btn-secondary btn-copy-autofill" data-index="${index}" style="padding:4px 8px; margin-top:4px; display:inline-flex; align-items:center; justify-content:center; gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span>${copyText}</span></button>
-      `;
+      const autofillName = document.createElement("div");
+      autofillName.style.fontWeight = "700";
+      autofillName.style.color = "var(--primary)";
+      autofillName.style.fontSize = "12px";
+      autofillName.textContent = item.name;
+
+      const autofillValue = document.createElement("div");
+      autofillValue.style.fontFamily = "ui-monospace, monospace";
+      autofillValue.style.fontSize = "11px";
+      autofillValue.style.background = "rgba(0,0,0,0.2)";
+      autofillValue.style.padding = "4px";
+      autofillValue.style.borderRadius = "4px";
+      autofillValue.style.whiteSpace = "pre-wrap";
+      autofillValue.style.wordBreak = "break-all";
+      autofillValue.textContent = item.value;
+
+      const delAutofillBtn = document.createElement("button");
+      delAutofillBtn.className = "btn-text-small btn-del-autofill";
+      delAutofillBtn.setAttribute("data-index", index);
+      delAutofillBtn.style.position = "absolute";
+      delAutofillBtn.style.top = "8px";
+      delAutofillBtn.style.right = "8px";
+      delAutofillBtn.style.color = "#f87171";
+      delAutofillBtn.textContent = delText;
+
+      const copyAutofillBtn = document.createElement("button");
+      copyAutofillBtn.className = "btn btn-secondary btn-copy-autofill";
+      copyAutofillBtn.setAttribute("data-index", index);
+      copyAutofillBtn.style.padding = "4px 8px";
+      copyAutofillBtn.style.marginTop = "4px";
+      copyAutofillBtn.style.display = "inline-flex";
+      copyAutofillBtn.style.alignItems = "center";
+      copyAutofillBtn.style.justifyContent = "center";
+      copyAutofillBtn.style.gap = "4px";
+      const autofillCopyIcon = document.createElement("span");
+      autofillCopyIcon.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+      copyAutofillBtn.appendChild(autofillCopyIcon);
+      const autofillCopyLabel = document.createElement("span");
+      autofillCopyLabel.textContent = copyText;
+      copyAutofillBtn.appendChild(autofillCopyLabel);
+
+      div.appendChild(autofillName);
+      div.appendChild(autofillValue);
+      div.appendChild(delAutofillBtn);
+      div.appendChild(copyAutofillBtn);
       list.appendChild(div);
     });
 
@@ -6650,20 +6734,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   let currentTodoFilter = "all";
   let editingTodoIndex = -1;
 
-  function escapeHtmlTodo(str) {
-    if (!str) return "";
-    return String(str).replace(/[&<>"']/g, function(m) {
-      switch (m) {
-        case '&': return '&amp;';
-        case '<': return '&lt;';
-        case '>': return '&gt;';
-        case '"': return '&quot;';
-        case "'": return '&#39;';
-        default: return m;
-      }
-    });
-  }
-
   function updateTodoStats() {
     const total = savedTodos.length;
     const done = savedTodos.filter(t => t.done).length;
@@ -6685,7 +6755,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   function renderTodoList() {
     const list = document.getElementById("todo-list");
     if (!list) return;
-    list.innerHTML = "";
+    list.textContent = "";
 
     updateTodoStats();
 
@@ -6716,7 +6786,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       emptyDiv.style.border = "1px dashed rgba(255,255,255,0.12)";
       emptyDiv.style.borderRadius = "8px";
       emptyDiv.style.background = "rgba(15,23,42,0.3)";
-      emptyDiv.innerHTML = `<div style="font-size:18px; margin-bottom:4px;">📝</div><div>${emptyText}</div>`;
+      const emptyEmoji = document.createElement("div");
+      emptyEmoji.style.fontSize = "18px";
+      emptyEmoji.style.marginBottom = "4px";
+      emptyEmoji.textContent = "📝";
+      const emptyMessage = document.createElement("div");
+      emptyMessage.textContent = emptyText;
+      emptyDiv.appendChild(emptyEmoji);
+      emptyDiv.appendChild(emptyMessage);
       list.appendChild(emptyDiv);
       return;
     }
@@ -6729,23 +6806,71 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       card.dataset.index = originalIndex;
 
       if (isEditing) {
-        card.innerHTML = `
-          <div class="todo-edit-wrap">
-            <input type="text" class="form-control todo-edit-text" value="${escapeHtmlTodo(item.text)}" style="font-size:13px; padding:6px 10px; width:100%;">
-            <div style="display:flex; gap:6px;">
-              <select class="form-control todo-edit-priority" style="font-size:11.5px; width:100px; padding:4px 6px;">
-                <option value="normal" ${item.priority === "normal" || !item.priority ? "selected" : ""}>${normalText}</option>
-                <option value="urgent" ${item.priority === "urgent" ? "selected" : ""}>${urgentText}</option>
-                <option value="low" ${item.priority === "low" ? "selected" : ""}>${lowText}</option>
-              </select>
-              <input type="text" class="form-control todo-edit-detail" placeholder="Ghi chú chi tiết / link..." value="${escapeHtmlTodo(item.detail || '')}" style="font-size:11.5px; flex:1; padding:4px 8px;">
-            </div>
-            <div class="todo-edit-actions">
-              <button type="button" class="btn btn-secondary btn-cancel-edit" data-index="${originalIndex}" style="padding:4px 10px; font-size:11px;">${cancelText}</button>
-              <button type="button" class="btn btn-primary btn-save-edit" data-index="${originalIndex}" style="padding:4px 12px; font-size:11px; font-weight:700;">${saveText}</button>
-            </div>
-          </div>
-        `;
+        const wrap = document.createElement("div");
+        wrap.className = "todo-edit-wrap";
+
+        const textInput = document.createElement("input");
+        textInput.type = "text";
+        textInput.className = "form-control todo-edit-text";
+        textInput.value = item.text;
+        textInput.style.fontSize = "13px";
+        textInput.style.padding = "6px 10px";
+        textInput.style.width = "100%";
+        wrap.appendChild(textInput);
+
+        const editRow = document.createElement("div");
+        editRow.style.display = "flex";
+        editRow.style.gap = "6px";
+        const prioSelect = document.createElement("select");
+        prioSelect.className = "form-control todo-edit-priority";
+        prioSelect.style.fontSize = "11.5px";
+        prioSelect.style.width = "100px";
+        prioSelect.style.padding = "4px 6px";
+        const mkOption = (val, labelText) => {
+          const opt = document.createElement("option");
+          opt.value = val;
+          opt.textContent = labelText;
+          opt.selected = (item.priority === val) || (!item.priority && val === "normal");
+          return opt;
+        };
+        prioSelect.appendChild(mkOption("normal", normalText));
+        prioSelect.appendChild(mkOption("urgent", urgentText));
+        prioSelect.appendChild(mkOption("low", lowText));
+
+        const detailInput = document.createElement("input");
+        detailInput.type = "text";
+        detailInput.className = "form-control todo-edit-detail";
+        detailInput.placeholder = "Ghi chú chi tiết / link...";
+        detailInput.value = item.detail || "";
+        detailInput.style.fontSize = "11.5px";
+        detailInput.style.flex = "1";
+        detailInput.style.padding = "4px 8px";
+        editRow.appendChild(prioSelect);
+        editRow.appendChild(detailInput);
+        wrap.appendChild(editRow);
+
+        const editActions = document.createElement("div");
+        editActions.className = "todo-edit-actions";
+        const cancelEditBtn = document.createElement("button");
+        cancelEditBtn.type = "button";
+        cancelEditBtn.className = "btn btn-secondary btn-cancel-edit";
+        cancelEditBtn.setAttribute("data-index", originalIndex);
+        cancelEditBtn.style.padding = "4px 10px";
+        cancelEditBtn.style.fontSize = "11px";
+        cancelEditBtn.textContent = cancelText;
+        const saveEditBtn = document.createElement("button");
+        saveEditBtn.type = "button";
+        saveEditBtn.className = "btn btn-primary btn-save-edit";
+        saveEditBtn.setAttribute("data-index", originalIndex);
+        saveEditBtn.style.padding = "4px 12px";
+        saveEditBtn.style.fontSize = "11px";
+        saveEditBtn.style.fontWeight = "700";
+        saveEditBtn.textContent = saveText;
+        editActions.appendChild(cancelEditBtn);
+        editActions.appendChild(saveEditBtn);
+        wrap.appendChild(editActions);
+
+        card.appendChild(wrap);
       } else {
         let priorityBadgeClass = "todo-priority-normal";
         let priorityLabel = normalText;
@@ -6757,45 +6882,76 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           priorityLabel = lowText;
         }
 
-        const dateHtml = item.createdAt ? `<span class="todo-date-badge">${escapeHtmlTodo(item.createdAt)}</span>` : "";
-        const detailHtml = item.detail ? `<div class="todo-detail-box">${escapeHtmlTodo(item.detail)}</div>` : "";
+        const main = document.createElement("div");
+        main.className = "todo-card-main";
 
-        card.innerHTML = `
-          <div class="todo-card-main">
-            <label class="todo-checkbox-wrap" title="${item.done ? 'Đánh dấu chưa xong' : 'Đánh dấu hoàn thành'}">
-              <input type="checkbox" class="todo-check" data-index="${originalIndex}" ${item.done ? "checked" : ""}>
-              <div class="todo-checkbox-box">
-                <svg class="todo-check-icon" viewBox="0 0 24 24" width="11" height="11" stroke="#ffffff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-              </div>
-            </label>
+        const labelCheck = document.createElement("label");
+        labelCheck.className = "todo-checkbox-wrap";
+        labelCheck.title = item.done ? "Đánh dấu chưa xong" : "Đánh dấu hoàn thành";
+        const chk = document.createElement("input");
+        chk.type = "checkbox";
+        chk.className = "todo-check";
+        chk.setAttribute("data-index", originalIndex);
+        chk.checked = !!item.done;
+        const chkBox = document.createElement("div");
+        chkBox.className = "todo-checkbox-box";
+        const chkIcon = document.createElement("span");
+        chkIcon.innerHTML = '<svg class="todo-check-icon" viewBox="0 0 24 24" width="11" height="11" stroke="#ffffff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+        chkBox.appendChild(chkIcon);
+        labelCheck.appendChild(chk);
+        labelCheck.appendChild(chkBox);
 
-            <div class="todo-text-content">
-              <div class="todo-title-text">${escapeHtmlTodo(item.text)}</div>
-              <div class="todo-meta-row">
-                <span class="todo-priority-badge ${priorityBadgeClass}">${priorityLabel}</span>
-                ${dateHtml}
-              </div>
-              ${detailHtml}
-            </div>
+        const textWrap = document.createElement("div");
+        textWrap.className = "todo-text-content";
+        const titleEl = document.createElement("div");
+        titleEl.className = "todo-title-text";
+        titleEl.textContent = item.text;
+        const metaRow = document.createElement("div");
+        metaRow.className = "todo-meta-row";
+        const prioBadge = document.createElement("span");
+        prioBadge.className = `todo-priority-badge ${priorityBadgeClass}`;
+        prioBadge.textContent = priorityLabel;
+        metaRow.appendChild(prioBadge);
+        if (item.createdAt) {
+          const dateBadge = document.createElement("span");
+          dateBadge.className = "todo-date-badge";
+          dateBadge.textContent = item.createdAt;
+          metaRow.appendChild(dateBadge);
+        }
+        textWrap.appendChild(titleEl);
+        textWrap.appendChild(metaRow);
+        if (item.detail) {
+          const detailEl = document.createElement("div");
+          detailEl.className = "todo-detail-box";
+          detailEl.textContent = item.detail;
+          textWrap.appendChild(detailEl);
+        }
 
-            <div class="todo-actions">
-              <button type="button" class="todo-action-btn btn-edit" data-index="${originalIndex}" title="${editText}">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                </svg>
-              </button>
-              <button type="button" class="todo-action-btn btn-del" data-index="${originalIndex}" title="${delText}">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="3 6 5 6 21 6"></polyline>
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                </svg>
-              </button>
-            </div>
-          </div>
-        `;
+        const cardActions = document.createElement("div");
+        cardActions.className = "todo-actions";
+        const editActionBtn = document.createElement("button");
+        editActionBtn.type = "button";
+        editActionBtn.className = "todo-action-btn btn-edit";
+        editActionBtn.setAttribute("data-index", originalIndex);
+        editActionBtn.title = editText;
+        const editActionIcon = document.createElement("span");
+        editActionIcon.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>';
+        editActionBtn.appendChild(editActionIcon);
+        const delActionBtn = document.createElement("button");
+        delActionBtn.type = "button";
+        delActionBtn.className = "todo-action-btn btn-del";
+        delActionBtn.setAttribute("data-index", originalIndex);
+        delActionBtn.title = delText;
+        const delActionIcon = document.createElement("span");
+        delActionIcon.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>';
+        delActionBtn.appendChild(delActionIcon);
+        cardActions.appendChild(editActionBtn);
+        cardActions.appendChild(delActionBtn);
+
+        main.appendChild(labelCheck);
+        main.appendChild(textWrap);
+        main.appendChild(cardActions);
+        card.appendChild(main);
       }
 
 

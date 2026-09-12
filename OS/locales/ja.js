@@ -394,7 +394,7 @@ window.I18N_JA = {
    "nav_todo": "ToDo",
    "tip_citations_openalex": "OpenAlexとSemantic Scholarからの引用数",
    "tip_export_ris": "全引用ライブラリをRISファイルとして書き出し（EndNote、Zotero、Mendeley対応）",
-   "btn_export_ris": "📥 RISファイルを書き出し (EndNote/Zotero)",
+   "btn_export_ris": ".ris形式でエクスポート",
    "script_heading": "プレゼンスクリプト＆プロンプター",
    "tip_save_prompter": "スクリプト内容を保存",
    "script_save": "💾 スクリプト保存",
