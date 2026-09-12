@@ -223,16 +223,41 @@
           <label data-i18n="lbl_tag">Nhãn / Chuyên mục (Tag)</label>
           <input type="text" class="form-control" id="f-tag" placeholder="Vd: An ninh mạng, AI..." data-i18n-placeholder="placeholder_tag">
         </div>
-        <div class="col form-group" style="margin-bottom:0;">
-          <label data-i18n="lbl_notes">Ghi chú nghiên cứu</label>
-          <div style="position:relative;">
-            <input type="text" class="form-control" id="f-notes" style="padding-right:26px;" placeholder="Vd: Tham khảo chương 2..." data-i18n-placeholder="placeholder_notes">
-            <button type="button" id="btn-clear-notes" title="Xóa ghi chú" data-i18n-title="tip_clear_notes" style="position:absolute; right:6px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:12px; display:none; padding:2px; line-height:0;">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-            </button>
+      </div>
+
+      <div class="form-group notes-col" style="margin-bottom:0; margin-top:9px;">
+          <div class="notes-composer">
+            <div class="notes-composer-head">
+              <label class="notes-composer-label" for="f-notes" data-i18n="lbl_notes">Ghi chú nghiên cứu</label>
+              <span class="notes-count" id="notes-count"></span>
+            </div>
+            <div class="notes-composer-body">
+              <div style="position:relative;">
+                <textarea class="form-control" id="f-notes" rows="2" style="padding-right:30px; padding-top:8px; resize:none; min-height:48px; font-size:11px; line-height:1.55;" placeholder="Vd: Tham khảo chương 2... In đậm: **từ**, nghiêng: *từ*, link: [chữ](https://...)" data-i18n-placeholder="placeholder_notes"></textarea>
+                <button type="button" id="btn-clear-notes" title="Xóa ghi chú" data-i18n-title="tip_clear_notes" style="position:absolute; right:8px; top:8px; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:12px; display:none; padding:2px; line-height:0; border-radius:4px;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+              </div>
+              <div class="notes-toolbar" id="notes-toolbar">
+                <button type="button" class="notes-tool-btn" data-md="bold" data-i18n-title="notes_fmt_bold"><span class="ntb-b">B</span></button>
+                <button type="button" class="notes-tool-btn" data-md="italic" data-i18n-title="notes_fmt_italic"><span class="ntb-i">I</span></button>
+                <span class="notes-tb-sep" aria-hidden="true"></span>
+                <button type="button" class="notes-tool-btn" data-md="link" data-i18n-title="notes_fmt_link">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                </button>
+                <button type="button" class="notes-tool-btn" data-md="list" data-i18n-title="notes_fmt_list">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                </button>
+                <span class="notes-tb-sep" aria-hidden="true"></span>
+                <button type="button" class="notes-tool-btn notes-tool-btn-preview" data-md="preview" data-i18n-title="notes_fmt_preview" aria-pressed="false">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                  <span data-i18n="notes_preview_btn">Xem</span>
+                </button>
+              </div>
+            </div>
+            <div class="notes-preview" id="notes-preview" style="display:none;"></div>
           </div>
         </div>
-      </div>
     </div>
 
     <!-- ════════ CARD 2: SOURCE VERIFICATION & FACT CHECKING ════════ -->

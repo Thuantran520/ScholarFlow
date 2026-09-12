@@ -267,11 +267,306 @@ function formatResearchNote(rawNote, lang = "vi", isHtml = false) {
     (lang === "en" ? "Research Notes" : (lang === "zh" ? "研究笔记" : (lang === "ja" ? "研究メモ" : (lang === "ru" ? "Заметки к исследованию" : "Ghi chú nghiên cứu"))));
 
   if (isHtml) {
-    const escaped = clean.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    return `<div style="margin-top:12px; padding-top:8px; border-top:1px dashed rgba(255,255,255,0.15); font-size:11px; line-height:1.55; color:#94a3b8; font-style:italic;"><div style="font-style:normal; font-weight:600; color:#cbd5e1; font-size:10px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:3px;">${noteLabel}:</div>"${escaped}"</div>`;
+    const escaped = clean.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    const rendered = escaped
+      .replace(/\*\*\*([^*]+)\*\*\*/g, "<strong><em>$1</em></strong>")
+      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*([^*]+)\*/g, "<em>$1</em>")
+      .replace(/`([^`]+)`/g, "<code>$1</code>")
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2">$1</a>')
+      .replace(/\n/g, "<br>");
+    return `<div style="margin-top:12px; padding-top:8px; border-top:1px dashed rgba(255,255,255,0.15); font-size:11px; line-height:1.55; color:#94a3b8; font-style:italic;"><div style="font-style:normal; font-weight:600; color:#cbd5e1; font-size:10px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:3px;">${noteLabel}:</div>"${rendered}"</div>`;
   }
 
   return `\n\n${noteLabel}:\n"${clean}"`;
+}
+
+// ---- Notes: markdown-lite renderer (DOM-safe, no innerHTML) ----
+function notesAppendInline(parent, text) {
+  const tokenRe = /(\*\*\*[^*]+\*\*\*|\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|\[([^\]]+)\]\(((?:https?:\/\/)[^)\s]+)\))/g;
+  let last = 0;
+  let m;
+  while ((m = tokenRe.exec(text)) !== null) {
+    if (m.index > last) parent.appendChild(document.createTextNode(text.slice(last, m.index)));
+    const tok = m[0];
+    if (tok.length > 6 && tok.slice(0, 3) === "***" && tok.slice(-3) === "***") {
+      const s = document.createElement("strong");
+      const em = document.createElement("em");
+      em.textContent = tok.slice(3, -3);
+      s.appendChild(em);
+      parent.appendChild(s);
+    } else if (tok.length > 4 && tok.slice(0, 2) === "**" && tok.slice(-2) === "**") {
+      const s = document.createElement("strong");
+      s.textContent = tok.slice(2, -2);
+      parent.appendChild(s);
+    } else if (tok.length > 2 && tok[0] === "*" && tok.slice(-1) === "*") {
+      const s = document.createElement("em");
+      s.textContent = tok.slice(1, -1);
+      parent.appendChild(s);
+    } else if (tok[0] === "`") {
+      const s = document.createElement("code");
+      s.textContent = tok.slice(1, -1);
+      parent.appendChild(s);
+    } else if (m[2] !== undefined) {
+      const a = document.createElement("a");
+      a.href = m[3];
+      a.target = "_blank";
+      a.rel = "noreferrer";
+      a.textContent = m[2];
+      parent.appendChild(a);
+    }
+    last = tokenRe.lastIndex;
+  }
+  if (last < text.length) parent.appendChild(document.createTextNode(text.slice(last)));
+}
+
+function buildNoteMarkdownNode(text) {
+  const frag = document.createDocumentFragment();
+  const lines = String(text || "").replace(/\r\n/g, "\n").split("\n");
+  let i = 0;
+  const isUl = function (l) { return /^\s*[-*]\s+/.test(l); };
+  const isOl = function (l) { return /^\s*\d+[.)]\s+/.test(l); };
+  const isHead = function (l) { return /^#{1,3}\s+/.test(l); };
+  while (i < lines.length) {
+    if (!lines[i].trim()) { i++; continue; }
+    const line = lines[i];
+    if (isUl(line)) {
+      const ul = document.createElement("ul");
+      while (i < lines.length && isUl(lines[i])) {
+        const li = document.createElement("li");
+        notesAppendInline(li, lines[i].replace(/^\s*[-*]\s+/, ""));
+        ul.appendChild(li);
+        i++;
+      }
+      frag.appendChild(ul);
+    } else if (isOl(line)) {
+      const ol = document.createElement("ol");
+      while (i < lines.length && isOl(lines[i])) {
+        const li = document.createElement("li");
+        notesAppendInline(li, lines[i].replace(/^\s*\d+[.)]\s+/, ""));
+        ol.appendChild(li);
+        i++;
+      }
+      frag.appendChild(ol);
+    } else if (isHead(line)) {
+      const h = document.createElement("div");
+      h.style.fontWeight = "800";
+      h.style.color = "#e2e8f0";
+      h.style.marginBottom = "3px";
+      h.textContent = line.replace(/^#{1,3}\s+/, "");
+      frag.appendChild(h);
+      i++;
+    } else {
+      const p = document.createElement("div");
+      notesAppendInline(p, line);
+      frag.appendChild(p);
+      i++;
+    }
+  }
+  return frag;
+}
+
+function notesSelRange(field) {
+  let s = field.dataset.selStart;
+  let e = field.dataset.selEnd;
+  if (s === undefined || e === undefined || s === "" ) {
+    s = field.selectionStart || 0;
+    e = field.selectionEnd || 0;
+  }
+  s = parseInt(s, 10) || 0;
+  e = parseInt(e, 10) || 0;
+  if (s > e) { const t = s; s = e; e = t; }
+  return [s, e];
+}
+
+function notesTrackSelection() {
+  const field = document.getElementById("f-notes");
+  if (!field) return;
+  field.dataset.selStart = String(field.selectionStart || 0);
+  field.dataset.selEnd = String(field.selectionEnd || 0);
+}
+
+function notesUnwrapSize(selected, marker) {
+  if (!selected.startsWith(marker) || !selected.endsWith(marker)) return 0;
+  const isTriple = selected.startsWith("***") && selected.endsWith("***");
+  if (marker === "**") return 2;
+  if (selected.startsWith("**") || selected.endsWith("**")) {
+    return isTriple ? 1 : 0;
+  }
+  return 1;
+}
+
+function notesToggleInline(field, marker) {
+  if (!field) return;
+  const [start, end] = notesSelRange(field);
+  const val = field.value;
+  const selected = val.slice(start, end);
+  const mlen = marker.length;
+  if (!selected) {
+    const ins = marker + marker;
+    field.value = val.slice(0, start) + ins + val.slice(end);
+    field.focus();
+    field.setSelectionRange(start + mlen, start + mlen);
+    return;
+  }
+  const strip = notesUnwrapSize(selected, marker);
+  const content = strip ? selected.slice(strip, selected.length - strip) : marker + selected + marker;
+  field.value = val.slice(0, start) + content + val.slice(end);
+  field.focus();
+  field.setSelectionRange(start + strip, start + content.length);
+}
+
+function notesInsertLink(field) {
+  if (!field) return;
+  const [start, end] = notesSelRange(field);
+  const val = field.value;
+  const selected = val.slice(start, end);
+  const linkRe = /^\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)$/;
+  if (selected && linkRe.test(selected)) {
+    const inner = selected.replace(linkRe, "$1");
+    field.value = val.slice(0, start) + inner + val.slice(end);
+    field.focus();
+    field.setSelectionRange(start, start + inner.length);
+    return;
+  }
+  if (!selected) {
+    const ph = "[tiêu đề link](https://)";
+    field.value = val.slice(0, start) + ph + val.slice(end);
+    field.focus();
+    field.setSelectionRange(start + 1, start + 1 + "tiêu đề link".length);
+    return;
+  }
+  const wrapped = "[" + selected + "](https://)";
+  field.value = val.slice(0, start) + wrapped + val.slice(end);
+  field.focus();
+  const urlStart = start + selected.length + 3;
+  const urlEnd = urlStart + "https://".length;
+  field.setSelectionRange(urlStart, urlEnd);
+}
+
+function notesToggleLinePrefix(field, prefix) {
+  if (!field) return;
+  const start = field.selectionStart || 0;
+  const end = field.selectionEnd || 0;
+  const val = field.value;
+  const lineStart = val.lastIndexOf("\n", start - 1) + 1;
+  const nextNl = val.indexOf("\n", end);
+  const lineEnd = nextNl === -1 ? val.length : nextNl;
+  const selBlock = val.slice(lineStart, lineEnd);
+  if (selBlock.split("\n").some(function (l) { return l.indexOf(prefix) === 0; })) {
+    field.value = val.slice(0, lineStart) + selBlock.split("\n").map(function (l) {
+      return l.indexOf(prefix) === 0 ? l.slice(prefix.length) : l;
+    }).join("\n") + val.slice(lineEnd);
+    field.setSelectionRange(Math.max(lineStart, start - prefix.length), lineEnd);
+  } else {
+    field.value = val.slice(0, lineStart) + prefix + selBlock.replace(/\n/g, "\n" + prefix) + val.slice(lineEnd);
+    field.setSelectionRange(lineStart + prefix.length, lineEnd + prefix.length);
+  }
+  field.focus();
+}
+
+function notesAutoResize() {
+  const field = document.getElementById("f-notes");
+  if (!field) return;
+  field.style.height = "auto";
+  field.style.height = Math.min(Math.max(field.scrollHeight, 44), 220) + "px";
+}
+
+function notesUpdateCount() {
+  const field = document.getElementById("f-notes");
+  const counter = document.getElementById("notes-count");
+  if (field && counter) {
+    const len = field.value.length;
+    counter.textContent = len > 0
+      ? (window.i18n ? window.i18n.t("notes_count", null, { count: len }) : len + " ký tự")
+      : "";
+  }
+}
+
+function notesUpdatePreview() {
+  const field = document.getElementById("f-notes");
+  const preview = document.getElementById("notes-preview");
+  const btn = document.querySelector('.notes-tool-btn[data-md="preview"]');
+  if (!field || !preview || !btn) return;
+  const on = preview.style.display !== "none";
+  if (on && preview.classList.contains("notes-preview")) {
+    preview.textContent = "";
+    const words = field.value.trim();
+    if (!words) {
+      const empty = document.createElement("div");
+      empty.className = "cal-empty";
+      empty.textContent = window.i18n ? window.i18n.t("notes_preview_empty") : "Ghi chú trống";
+      preview.appendChild(empty);
+    } else {
+      preview.appendChild(buildNoteMarkdownNode(words));
+    }
+  }
+}
+
+function notesInitToolbar() {
+  const toolbar = document.getElementById("notes-toolbar");
+  const field = document.getElementById("f-notes");
+  if (!toolbar || !field) return;
+  if (toolbar.dataset.bound) return;
+  toolbar.dataset.bound = "1";
+
+  ["select", "keyup", "mouseup", "click", "focus"].forEach(function (evt) {
+    field.addEventListener(evt, notesTrackSelection);
+  });
+
+  toolbar.querySelectorAll(".notes-tool-btn").forEach(function (btn) {
+    btn.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      const md = btn.getAttribute("data-md");
+      if (md === "bold") {
+        notesToggleInline(field, "**");
+      } else if (md === "italic") {
+        notesToggleInline(field, "*");
+      } else if (md === "link") {
+        notesInsertLink(field);
+      } else if (md === "list") {
+        notesToggleLinePrefix(field, "- ");
+      } else if (md === "preview") {
+        const preview = document.getElementById("notes-preview");
+        const on = preview.style.display !== "none";
+        preview.style.display = on ? "none" : "block";
+        btn.classList.toggle("active", !on);
+        btn.setAttribute("aria-pressed", on ? "false" : "true");
+        const span = btn.querySelector("span");
+        if (span) {
+          span.textContent = window.i18n ? window.i18n.t(!on ? "notes_preview_hide" : "notes_preview_btn") : (!on ? "Ẩn" : "Xem");
+        }
+        notesUpdatePreview();
+      }
+      updateNotesClearButton();
+      notesUpdateCount();
+      notesAutoResize();
+      syncMetaFromInputs();
+    });
+  });
+
+  field.addEventListener("keydown", function (e) {
+    const mod = e.ctrlKey || e.metaKey;
+    if (mod && (e.key === "b" || e.key === "B")) {
+      e.preventDefault();
+      notesToggleInline(field, "**");
+      updateNotesClearButton();
+      syncMetaFromInputs();
+    } else if (mod && (e.key === "i" || e.key === "I")) {
+      e.preventDefault();
+      notesToggleInline(field, "*");
+      updateNotesClearButton();
+      syncMetaFromInputs();
+    }
+  });
+
+  field.addEventListener("input", function () {
+    notesAutoResize();
+    notesUpdateCount();
+    notesUpdatePreview();
+  });
+  notesAutoResize();
+  notesUpdateCount();
 }
 
 function makeInitials(first) {
@@ -3568,7 +3863,11 @@ function createResearchNoteNode(note, lang) {
   label.style.marginBottom = "3px";
   label.textContent = noteLabel + ":";
   wrap.appendChild(label);
-  wrap.appendChild(document.createTextNode('"' + clean + '"'));
+  const content = buildNoteMarkdownNode(clean);
+  const holder = document.createElement("span");
+  holder.style.fontStyle = "italic";
+  holder.appendChild(content);
+  wrap.appendChild(holder);
   return wrap;
 }
 
@@ -3576,6 +3875,7 @@ function updateNotesClearButton() {
   const btn = document.getElementById("btn-clear-notes");
   const input = document.getElementById("f-notes");
   if (btn && input) btn.style.display = input.value ? "block" : "none";
+  notesUpdateCount();
 }
 
 function renderRedactedList(list) {
@@ -5098,12 +5398,16 @@ onReady(() => {
     notesClearBtn.addEventListener("click", () => {
       notesInputEl.value = "";
       updateNotesClearButton();
+      notesAutoResize();
+      notesUpdatePreview();
       currentMeta.notes = "";
       updateCitationDisplay();
       saveDraft();
       notesInputEl.focus();
     });
     updateNotesClearButton();
+    notesInputEl.addEventListener("click", () => { notesAutoResize(); });
+    notesInitToolbar();
   }
 
   // Copy citation with instant visual button feedback & Rich Text support (Italics for Word/Docs)
@@ -7196,7 +7500,11 @@ let calViewYear = 0;
 let calViewMonth = 0;
 let calSelectedKey = "";
 let calFeedsLoaded = false;
+let calViewMode = "month"; // "month" | "week" | "list"
+let calViewFocusKey = "";  // anchor date key for week/list navigation
+let calHiddenFeedIds = []; // feed ids hidden from calendar
 const CAL_PALETTE = ["#38bdf8", "#818cf8", "#34d399", "#fbbf24", "#f472b6", "#a78bfa", "#22d3ee", "#fb923c"];
+const CAL_PICKER_PALETTE = ["#ef4444", "#fb923c", "#facc15", "#a3e635", "#22c55e", "#14b8a6", "#06b6d4", "#3b82f6", "#6366f1", "#8b5cf6", "#d946ef", "#ec4899"];
 const CAL_MONTHS = {
   vi: ["Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6", "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"],
   en: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
@@ -7233,19 +7541,21 @@ function calLoad() {
     const data = res && res.sf_cal ? res.sf_cal : {};
     calFeeds = Array.isArray(data.feeds) ? data.feeds : [];
     calData = data.events && typeof data.events === "object" ? data.events : {};
+    calHiddenFeedIds = Array.isArray(data.hidden) ? data.hidden : [];
     if (!calViewYear) {
       const now = new Date();
       calViewYear = now.getFullYear();
       calViewMonth = now.getMonth();
     }
     if (!calSelectedKey) calSelectedKey = calTodayKey();
+    if (!calViewFocusKey) calViewFocusKey = calSelectedKey;
     calRenderCalendar();
     calRenderFeedList();
   });
 }
 
 function calPersist() {
-  storSet({ sf_cal: { feeds: calFeeds, events: calData } });
+  storSet({ sf_cal: { feeds: calFeeds, events: calData, hidden: calHiddenFeedIds } });
 }
 
 function calUnfoldIcs(text) {
@@ -7327,14 +7637,14 @@ function calParseIcs(text) {
   return events.map(calNormalizeEvent).filter(function (e) { return e !== null; });
 }
 
-function calOccurrencesInMonth(ev, monthStartKey, monthEndKey) {
+function calOccurrencesInRange(ev, rangeStartKey, rangeEndKey) {
   const out = [];
   const s = calParseKey(ev.start.key);
   const startDate = new Date(s[0], s[1] - 1, s[2]);
-  const ms = calParseKey(monthStartKey);
-  const me = calParseKey(monthEndKey);
-  const monthStartMs = new Date(ms[0], ms[1] - 1, ms[2]).getTime();
-  const monthEndMs = new Date(me[0], me[1] - 1, me[2]).getTime();
+  const ms = calParseKey(rangeStartKey);
+  const me = calParseKey(rangeEndKey);
+  const rangeStartMs = new Date(ms[0], ms[1] - 1, ms[2]).getTime();
+  const rangeEndMs = new Date(me[0], me[1] - 1, me[2]).getTime();
 
   if (!ev.rrule) {
     const startMs = startDate.getTime();
@@ -7348,7 +7658,7 @@ function calOccurrencesInMonth(ev, monthStartKey, monthEndKey) {
     for (let t = startMs; t < endMs; t += 86400000) {
       const d = new Date(t);
       const k = calDateKey(d);
-      if (k < monthStartKey || k > monthEndKey) continue;
+      if (k < rangeStartKey || k > rangeEndKey) continue;
       out.push({ ev: ev, key: k, feedIndex: -1 });
     }
     return out;
@@ -7361,7 +7671,7 @@ function calOccurrencesInMonth(ev, monthStartKey, monthEndKey) {
   });
   const freq = (parts.FREQ || "").toUpperCase();
   const interval = Math.max(1, parseInt(parts.INTERVAL, 10) || 1);
-  let untilMs = monthEndMs;
+  let untilMs = rangeEndMs;
   if (parts.UNTIL) {
     const um = /^(\d{4})(\d{2})(\d{2})/.exec(parts.UNTIL);
     if (um) {
@@ -7383,16 +7693,52 @@ function calOccurrencesInMonth(ev, monthStartKey, monthEndKey) {
   }
 
   if (freq === "DAILY") {
-    let cur = new Date(Math.max(startDate.getTime(), monthStartMs - 366 * 86400000));
+    let cur = new Date(Math.max(startDate.getTime(), rangeStartMs - 366 * 86400000));
     let count = 0;
     while (cur.getTime() <= untilMs) {
       const diff = Math.round((cur.getTime() - startDate.getTime()) / 86400000);
       if (diff >= 0 && (diff % interval) === 0) {
         count++;
         if (count > countMax) break;
-        if (cur.getTime() >= monthStartMs && cur.getTime() <= monthEndMs) out.push({ ev: ev, key: calDateKey(cur) });
+        if (cur.getTime() >= rangeStartMs && cur.getTime() <= rangeEndMs) out.push({ ev: ev, key: calDateKey(cur) });
       }
       cur.setDate(cur.getDate() + 1);
+    }
+  } else if (freq === "MONTHLY") {
+    const dom = startDate.getDate();
+    let curY = s[0];
+    let curM = s[1] - 1;
+    let count = 0;
+    let guard = 0;
+    while (guard++ < 2400) {
+      if (new Date(curY, curM, 1).getTime() > untilMs) break;
+      const diff = (curY - s[0]) * 12 + (curM - (s[1] - 1));
+      if (diff >= 0 && (diff % interval) === 0) {
+        count++;
+        if (count > countMax) break;
+        const lastDay = new Date(curY, curM + 1, 0).getDate();
+        const occDate = new Date(curY, curM, Math.min(dom, lastDay));
+        if (occDate.getTime() >= rangeStartMs && occDate.getTime() <= rangeEndMs) out.push({ ev: ev, key: calDateKey(occDate) });
+      }
+      curM = curM === 11 ? 0 : curM + 1;
+      if (curM === 0) curY++;
+    }
+  } else if (freq === "YEARLY") {
+    let curY = s[0];
+    const lastDay = new Date(curY, s[1], 0).getDate();
+    const dom = Math.min(s[2], lastDay);
+    let count = 0;
+    let guard = 0;
+    while (guard++ < 2400) {
+      if (new Date(curY, s[1] - 1, 1).getTime() > untilMs) break;
+      const diff = curY - s[0];
+      if (diff >= 0 && (diff % interval) === 0) {
+        count++;
+        if (count > countMax) break;
+        const occDate = new Date(curY, s[1] - 1, dom);
+        if (occDate.getTime() >= rangeStartMs && occDate.getTime() <= rangeEndMs) out.push({ ev: ev, key: calDateKey(occDate) });
+      }
+      curY++;
     }
   } else {
     const weekTarget = dows ? dows : new Set([startDate.getDay()]);
@@ -7402,10 +7748,10 @@ function calOccurrencesInMonth(ev, monthStartKey, monthEndKey) {
       const diff = Math.round((cur.getTime() - startDate.getTime()) / 86400000);
       const weekIdx = Math.floor(diff / 7);
       if (diff >= 0 && (weekIdx % interval) === 0 && weekTarget.has(cur.getDay())) {
-        if (cur.getTime() >= monthStartMs) {
+        if (cur.getTime() >= rangeStartMs) {
           count++;
           if (count > countMax) break;
-          if (cur.getTime() <= monthEndMs) out.push({ ev: ev, key: calDateKey(cur) });
+          if (cur.getTime() <= rangeEndMs) out.push({ ev: ev, key: calDateKey(cur) });
         }
       }
       cur.setDate(cur.getDate() + 1);
@@ -7414,18 +7760,16 @@ function calOccurrencesInMonth(ev, monthStartKey, monthEndKey) {
   return out;
 }
 
-function calBuildMonth() {
-  const first = new Date(calViewYear, calViewMonth, 1);
-  const days = new Date(calViewYear, calViewMonth + 1, 0).getDate();
-  const monthStartKey = calDateKey(first);
-  const monthEndKey = calDateKey(new Date(calViewYear, calViewMonth, days));
+function calBuildMap(startKey, endKey) {
   const dayMap = {};
   calFeeds.forEach(function (feed, feedIndex) {
+    if (calHiddenFeedIds.indexOf(feed.id) !== -1) return;
     const list = calData[feed.id];
     if (!Array.isArray(list)) return;
-    const color = calFeedColor(feedIndex);
+    const feedColor = feed.color || calFeedColor(feedIndex);
     list.forEach(function (ev) {
-      calOccurrencesInMonth(ev, monthStartKey, monthEndKey).forEach(function (occ) {
+      const color = ev.color || feedColor;
+      calOccurrencesInRange(ev, startKey, endKey).forEach(function (occ) {
         const idx = occ.feedIndex < 0 ? feedIndex : occ.feedIndex;
         if (!dayMap[occ.key]) dayMap[occ.key] = [];
         dayMap[occ.key].push({ ev: ev, feedIndex: idx, color: color });
@@ -7439,15 +7783,154 @@ function calBuildMonth() {
       return ta < tb ? -1 : (ta > tb ? 1 : 0);
     });
   }
+  return dayMap;
+}
+
+function calBuildMonth() {
+  const first = new Date(calViewYear, calViewMonth, 1);
+  const days = new Date(calViewYear, calViewMonth + 1, 0).getDate();
+  const monthStartKey = calDateKey(first);
+  const monthEndKey = calDateKey(new Date(calViewYear, calViewMonth, days));
+  const dayMap = calBuildMap(monthStartKey, monthEndKey);
   return { first: first, days: days, monthStartKey: monthStartKey, dayMap: dayMap };
 }
 
+// ---- View navigation helpers ----
+function calSyncFocusToView() {
+  const p = calParseKey(calViewFocusKey || calTodayKey());
+  calViewYear = p[0];
+  calViewMonth = p[1] - 1;
+}
+function calSetFocusToMonth() {
+  calViewFocusKey = calViewYear + "-" + calPad2(calViewMonth + 1) + "-01";
+}
+function calMondayOf(d) {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const dow = (x.getDay() + 6) % 7;
+  x.setDate(x.getDate() - dow);
+  return x;
+}
+function calShiftFocus(days) {
+  const p = calParseKey(calViewFocusKey || calTodayKey());
+  const d = new Date(p[0], p[1] - 1, p[2]);
+  d.setDate(d.getDate() + days);
+  calViewFocusKey = calDateKey(d);
+  calSyncFocusToView();
+}
+function calMonthLabelText() {
+  const lang = window.i18n ? window.i18n.getLanguage() : "vi";
+  const mArr = calMonthArr(lang);
+  return mArr[calViewMonth] + " " + calViewYear;
+}
+function calWeekLabelText() {
+  const p = calParseKey(calViewFocusKey || calTodayKey());
+  const start = calMondayOf(new Date(p[0], p[1] - 1, p[2]));
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  const lang = window.i18n ? window.i18n.getLanguage() : "vi";
+  const mArr = calMonthArr(lang);
+  const sDay = mArr[start.getMonth()] + " " + start.getDate();
+  const eDay = mArr[end.getMonth()] + " " + end.getDate() + ", " + end.getFullYear();
+  return (sDay === eDay) ? sDay : sDay + " – " + eDay;
+}
+function calSyncViewButtons() {
+  document.querySelectorAll(".cal-view-btn").forEach(function (btn) {
+    btn.classList.toggle("active", btn.getAttribute("data-mode") === calViewMode);
+  });
+}
+
+// ---- Event row builder (day panel + list view) ----
 function calEventTimeRange(ev) {
   if (ev.allDay) return "ALL DAY";
   const s = ev.start.time || "";
   const e = ev.end ? ev.end.time : "";
   if (s && e && e !== s) return s + " – " + e;
   return s || "";
+}
+
+function calEventTooltip(ev) {
+  const parts = [ev.summary];
+  if (ev.location) parts.push("Vị trí: " + ev.location);
+  if (ev.description) parts.push(ev.description);
+  if (ev.url) parts.push(ev.url);
+  return parts.join(" | ");
+}
+
+function calBuildEventRow(item, isAllDay) {
+  const row = document.createElement("div");
+  row.className = "cal-event-item" + (isAllDay ? " is-allday" : "");
+  row.style.borderLeftColor = item.color;
+
+  const time = document.createElement("div");
+  time.className = "cal-event-time";
+  time.textContent = isAllDay
+    ? (window.i18n ? window.i18n.t("cal_all_day") : "All day")
+    : calEventTimeRange(item.ev);
+  row.appendChild(time);
+
+  const body = document.createElement("div");
+  body.className = "cal-event-body";
+
+  const title = document.createElement("div");
+  title.className = "cal-event-title";
+  title.textContent = item.ev.summary;
+  body.appendChild(title);
+
+  const feed = calFeeds[item.feedIndex];
+  if (feed) {
+    const chip = document.createElement("span");
+    chip.className = "cal-event-feed";
+    chip.style.background = item.color + "33";
+    chip.style.color = item.color;
+    chip.textContent = feed.name;
+    chip.title = feed.url;
+    body.appendChild(chip);
+  }
+
+  if (item.ev.location) {
+    const loc = document.createElement("div");
+    loc.className = "cal-event-meta loc";
+    loc.textContent = item.ev.location;
+    body.appendChild(loc);
+  }
+  if (item.ev.description) {
+    const desc = document.createElement("div");
+    desc.className = "cal-event-meta";
+    desc.textContent = item.ev.description;
+    body.appendChild(desc);
+  }
+  if (item.ev.url) {
+    const link = document.createElement("a");
+    link.className = "cal-event-meta";
+    link.href = item.ev.url;
+    link.target = "_blank";
+    link.rel = "noreferrer";
+    link.textContent = item.ev.url;
+    body.appendChild(link);
+  }
+
+  row.appendChild(body);
+  return row;
+}
+
+function calAppendChips(container, items, max) {
+  const m = Math.min(items.length, max);
+  for (let j = 0; j < m; j++) {
+    const chip = document.createElement("div");
+    chip.className = "cal-chip" + (max > 4 ? " cw" : "");
+    chip.style.background = items[j].color + "33";
+    chip.style.borderLeftColor = items[j].color;
+    const t = items[j].ev.allDay ? "" : (items[j].ev.start.time || "");
+    chip.textContent = t && t !== "00:00" ? t + " " + items[j].ev.summary : items[j].ev.summary;
+    chip.title = calEventTooltip(items[j].ev);
+    container.appendChild(chip);
+  }
+  if (items.length > max) {
+    const more = document.createElement("div");
+    more.className = "cal-chip-more";
+    more.textContent = "+" + (items.length - max);
+    container.appendChild(more);
+  }
 }
 
 function calFormatDayHeading(key) {
@@ -7461,10 +7944,30 @@ function calFormatDayHeading(key) {
 
 function calRenderCalendar() {
   const grid = document.getElementById("cal-grid");
+  const list = document.getElementById("cal-list");
   const label = document.getElementById("cal-month-label");
-  if (!grid || !label) return;
+  if (!grid || !list || !label) return;
+  calSyncFocusToView();
+  if (calViewMode === "week") {
+    grid.style.display = "grid";
+    list.style.display = "none";
+    calRenderWeek(grid, label);
+  } else if (calViewMode === "list") {
+    grid.style.display = "none";
+    list.style.display = "block";
+    calRenderList(list, label);
+  } else {
+    grid.style.display = "grid";
+    list.style.display = "none";
+    calRenderMonth(grid, label);
+  }
+  calRenderDayPanel();
+  calSyncViewButtons();
+}
+
+function calRenderMonth(grid, label) {
   const lang = window.i18n ? window.i18n.getLanguage() : "vi";
-  label.textContent = calMonthArr(lang)[calViewMonth] + " " + calViewYear;
+  label.textContent = calMonthLabelText();
 
   grid.textContent = "";
   const wdArr = calDowArr(lang);
@@ -7507,22 +8010,7 @@ function calRenderCalendar() {
     num.textContent = "" + date.getDate();
     cell.appendChild(num);
 
-    const evs = built.dayMap[key] || [];
-    const max = 3;
-    for (let j = 0; j < Math.min(evs.length, max); j++) {
-      const chip = document.createElement("div");
-      chip.className = "cal-chip";
-      chip.style.background = evs[j].color + "33";
-      chip.style.borderLeftColor = evs[j].color;
-      chip.textContent = evs[j].ev.summary;
-      cell.appendChild(chip);
-    }
-    if (evs.length > max) {
-      const more = document.createElement("div");
-      more.className = "cal-chip-more";
-      more.textContent = "+" + (evs.length - max);
-      cell.appendChild(more);
-    }
+    calAppendChips(cell, built.dayMap[key] || [], 3);
 
     const k = key;
     cell.addEventListener("click", function () {
@@ -7531,18 +8019,121 @@ function calRenderCalendar() {
     });
     grid.appendChild(cell);
   }
+}
 
-  calRenderDayPanel();
+function calRenderWeek(grid, label) {
+  const lang = window.i18n ? window.i18n.getLanguage() : "vi";
+  label.textContent = calWeekLabelText();
+
+  grid.textContent = "";
+  const p = calParseKey(calViewFocusKey || calTodayKey());
+  const start = calMondayOf(new Date(p[0], p[1] - 1, p[2]));
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  const sKey = calDateKey(start);
+  const eKey = calDateKey(end);
+  const map = calBuildMap(sKey, eKey);
+  const today = calTodayKey();
+
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    const key = calDateKey(d);
+    const head = document.createElement("div");
+    head.className = "cal-week-head" + (key === today ? " is-today" : "");
+    const dnum = document.createElement("div");
+    dnum.className = "cal-week-head-day";
+    dnum.textContent = calDowArr(lang)[i];
+    const ddate = document.createElement("div");
+    ddate.className = "cal-week-head-date";
+    ddate.textContent = "" + d.getDate();
+    head.appendChild(dnum);
+    head.appendChild(ddate);
+    const hk = key;
+    head.addEventListener("click", function () {
+      calSelectedKey = hk;
+      calRenderCalendar();
+    });
+    grid.appendChild(head);
+  }
+
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    const key = calDateKey(d);
+    const cell = document.createElement("div");
+    cell.className = "cal-wcell";
+    if (key === today) cell.classList.add("is-today");
+    if (key === calSelectedKey) cell.classList.add("is-selected");
+    const dayEvs = map[key] || [];
+    if (!dayEvs.length) {
+      const spacer = document.createElement("div");
+      spacer.className = "cal-empty-week";
+      cell.appendChild(spacer);
+    }
+    calAppendChips(cell, dayEvs, 6);
+    const k = key;
+    cell.addEventListener("click", function () {
+      calSelectedKey = k;
+      calRenderCalendar();
+    });
+    grid.appendChild(cell);
+  }
+}
+
+function calRenderList(box, label) {
+  label.textContent = calMonthLabelText();
+  box.textContent = "";
+  const lang = window.i18n ? window.i18n.getLanguage() : "vi";
+  const mArr = calMonthArr(lang);
+  const wFull = calDowFullArr(lang);
+  const days = new Date(calViewYear, calViewMonth + 1, 0).getDate();
+  const sKey = calDateKey(new Date(calViewYear, calViewMonth, 1));
+  const eKey = calDateKey(new Date(calViewYear, calViewMonth, days));
+  const map = calBuildMap(sKey, eKey);
+  const today = calTodayKey();
+  let any = false;
+
+  for (let d = 1; d <= days; d++) {
+    const key = calViewYear + "-" + calPad2(calViewMonth + 1) + "-" + calPad2(d);
+    const dayEvs = map[key] || [];
+    if (!dayEvs.length) continue;
+    any = true;
+    const date = new Date(calViewYear, calViewMonth, d);
+    const section = document.createElement("div");
+    section.className = "cal-list-day";
+    const head = document.createElement("div");
+    head.className = "cal-list-day-head" + (key === today ? " is-today" : "");
+    head.textContent = wFull[date.getDay()] + ", " + mArr[date.getMonth()] + " " + d + ", " + calViewYear;
+    section.appendChild(head);
+    const inner = document.createElement("div");
+    inner.style.display = "flex";
+    inner.style.flexDirection = "column";
+    inner.style.gap = "6px";
+    const allDay = dayEvs.filter(function (it) { return it.ev.allDay; });
+    const timed = dayEvs.filter(function (it) { return !it.ev.allDay; });
+    allDay.forEach(function (it) { inner.appendChild(calBuildEventRow(it, true)); });
+    timed.forEach(function (it) { inner.appendChild(calBuildEventRow(it, false)); });
+    section.appendChild(inner);
+    box.appendChild(section);
+  }
+
+  if (!any) {
+    const empty = document.createElement("div");
+    empty.className = "cal-empty";
+    empty.textContent = window.i18n ? window.i18n.t("cal_empty_list") : "No events this month";
+    box.appendChild(empty);
+  }
 }
 
 function calRenderDayPanel() {
   const head = document.getElementById("cal-day-head");
   const box = document.getElementById("cal-day-events");
   if (!head || !box) return;
-  head.textContent = calFormatDayHeading(calSelectedKey);
+  const built = calBuildMap(calSelectedKey, calSelectedKey);
+  const evs = built[calSelectedKey] || [];
+  head.textContent = calFormatDayHeading(calSelectedKey) + (evs.length ? " (" + evs.length + ")" : "");
   box.textContent = "";
-  const built = calBuildMonth();
-  const evs = built.dayMap[calSelectedKey] || [];
   if (!evs.length) {
     const empty = document.createElement("div");
     empty.className = "cal-empty";
@@ -7550,46 +8141,20 @@ function calRenderDayPanel() {
     box.appendChild(empty);
     return;
   }
-  evs.forEach(function (it) {
-    const row = document.createElement("div");
-    row.className = "cal-event-item";
-    row.style.borderLeftColor = it.color;
-
-    const time = document.createElement("div");
-    time.className = "cal-event-time";
-    time.textContent = calEventTimeRange(it.ev);
-    row.appendChild(time);
-
-    const body = document.createElement("div");
-    body.className = "cal-event-body";
-
-    const title = document.createElement("div");
-    title.className = "cal-event-title";
-    title.textContent = it.ev.summary;
-    body.appendChild(title);
-
-    const metaParts = [];
-    if (it.ev.location) metaParts.push(it.ev.location);
-    if (it.ev.description) metaParts.push(it.ev.description);
-    if (metaParts.length) {
-      const meta = document.createElement("div");
-      meta.className = "cal-event-meta";
-      meta.textContent = metaParts.join(" • ");
-      body.appendChild(meta);
-    }
-    if (it.ev.url) {
-      const link = document.createElement("a");
-      link.className = "cal-event-meta";
-      link.href = it.ev.url;
-      link.target = "_blank";
-      link.rel = "noreferrer";
-      link.textContent = it.ev.url;
-      body.appendChild(link);
-    }
-
-    row.appendChild(body);
-    box.appendChild(row);
+  const allDay = evs.filter(function (it) { return it.ev.allDay; });
+  const timed = evs.filter(function (it) { return !it.ev.allDay; });
+  timed.sort(function (a, b) {
+    const ta = a.ev.start.time || "00:00";
+    const tb = b.ev.start.time || "00:00";
+    return ta < tb ? -1 : (ta > tb ? 1 : 0);
   });
+  allDay.forEach(function (it) { box.appendChild(calBuildEventRow(it, true)); });
+  if (allDay.length && timed.length) {
+    const sep = document.createElement("div");
+    sep.className = "cal-timeline-sep";
+    box.appendChild(sep);
+  }
+  timed.forEach(function (it) { box.appendChild(calBuildEventRow(it, false)); });
 }
 
 function calRenderFeedList() {
@@ -7604,18 +8169,21 @@ function calRenderFeedList() {
     return;
   }
   calFeeds.forEach(function (feed, idx) {
+    const isHidden = calHiddenFeedIds.indexOf(feed.id) !== -1;
     const row = document.createElement("div");
-    row.className = "cal-feed-row";
+    row.className = "cal-feed-row" + (isHidden ? " is-hidden" : "");
 
     const dot = document.createElement("span");
     dot.className = "cal-feed-dot";
-    dot.style.background = calFeedColor(idx);
+    const dotColor = feed.color || calFeedColor(idx);
+    dot.style.background = dotColor;
+    dot.title = dotColor;
     row.appendChild(dot);
 
     const nameEl = document.createElement("span");
     nameEl.className = "cal-feed-name";
-    nameEl.textContent = feed.name;
-    nameEl.title = feed.url;
+    nameEl.textContent = (isHidden ? "• " : "● ") + feed.name;
+    nameEl.title = feed.url ? feed.url : feed.name;
     row.appendChild(nameEl);
 
     const countEl = document.createElement("span");
@@ -7624,11 +8192,33 @@ function calRenderFeedList() {
     countEl.textContent = window.i18n ? window.i18n.t("cal_count_events", null, { count: evts }) : (evts + " events");
     row.appendChild(countEl);
 
+    const eye = document.createElement("button");
+    eye.className = "cal-feed-btn cal-eye" + (isHidden ? " is-off" : "");
+    eye.title = window.i18n ? window.i18n.t(isHidden ? "cal_btn_feed_show" : "cal_btn_feed_hide") : "Toggle";
+    if (isHidden) {
+      eye.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
+    } else {
+      eye.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+    }
+    eye.addEventListener("click", function () {
+      const pos = calHiddenFeedIds.indexOf(feed.id);
+      if (pos === -1) calHiddenFeedIds.push(feed.id);
+      else calHiddenFeedIds.splice(pos, 1);
+      calPersist();
+      calRenderFeedList();
+      calRenderCalendar();
+    });
+    row.appendChild(eye);
+
     const refresh = document.createElement("button");
     refresh.className = "cal-feed-btn";
     refresh.title = window.i18n ? window.i18n.t("cal_btn_feed_refresh") : "Refresh";
     refresh.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>';
     refresh.addEventListener("click", function () { calRefreshFeed(feed.id); });
+    if (!feed.url) {
+      refresh.style.visibility = "hidden";
+      refresh.title = "";
+    }
     row.appendChild(refresh);
 
     const del = document.createElement("button");
@@ -7650,7 +8240,7 @@ function calRenderFeedList() {
 
 function calRefreshFeed(id, silent) {
   const feed = calFeeds.find(function (f) { return f.id === id; });
-  if (!feed) return;
+  if (!feed || !feed.url) return;
   fetch(feed.url)
     .then(function (res) {
       if (!res.ok) throw new Error("HTTP " + res.status);
@@ -7667,6 +8257,176 @@ function calRefreshFeed(id, silent) {
       showToast(window.i18n ? window.i18n.t("cal_toast_error", null, { name: feed.name }) : "⚠️ Cannot load calendar");
       console.error("ICS fetch failed:", err);
     });
+}
+
+function calManualFeedEnsure() {
+  let feed = calFeeds.find(function (f) { return f.id === "cal_manual"; });
+  if (!feed) {
+    feed = {
+      id: "cal_manual",
+      url: "",
+      name: window.i18n ? window.i18n.t("cal_manual_feed_name") : "Lịch thủ công",
+      manual: true
+    };
+    calFeeds.push(feed);
+  }
+  if (!calData["cal_manual"]) calData["cal_manual"] = [];
+  return feed;
+}
+
+let calManualColor = "";
+function calSyncColorUI() {
+  const picker = document.getElementById("cal-manual-color-rgb");
+  const hexEl = document.getElementById("cal-manual-hex");
+  if (picker && calManualColor) picker.value = calManualColor;
+  if (hexEl && calManualColor) hexEl.textContent = calManualColor;
+  const box = document.getElementById("cal-manual-color");
+  if (box) {
+    box.querySelectorAll(".cal-color-swatch").forEach(function (x) {
+      x.classList.toggle("active", x.dataset.color === calManualColor);
+    });
+  }
+}
+function calBuildColorSwatches() {
+  const box = document.getElementById("cal-manual-color");
+  if (!box) return;
+  box.textContent = "";
+  CAL_PICKER_PALETTE.forEach(function (c) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "cal-color-swatch" + (c === calManualColor ? " active" : "");
+    btn.style.background = c;
+    btn.style.color = c;
+    btn.dataset.color = c;
+    btn.title = c;
+    btn.setAttribute("aria-label", c);
+    btn.addEventListener("click", function () {
+      calManualColor = c;
+      calSyncColorUI();
+    });
+    box.appendChild(btn);
+  });
+  if (!calManualColor && CAL_PICKER_PALETTE.length) {
+    calManualColor = CAL_PICKER_PALETTE[0];
+  }
+  calSyncColorUI();
+}
+
+function calAddManualEvent() {
+  const g = function (id) { return document.getElementById(id); };
+  const title = (g("cal-manual-title").value || "").trim();
+  const startDate = g("cal-manual-start-date").value;
+  if (!title || !startDate) {
+    showToast(window.i18n ? window.i18n.t("cal_toast_manual_invalid") : "⚠️ Vui lòng nhập tiêu đề và chọn ngày bắt đầu", "error");
+    if (!title) g("cal-manual-title").focus();
+    else g("cal-manual-start-date").focus();
+    return;
+  }
+  const allDay = g("cal-manual-allday").checked;
+  const startTime = allDay ? "" : g("cal-manual-start-time").value;
+  const endDate = g("cal-manual-end-date").value;
+  let endTime = allDay ? "" : g("cal-manual-end-time").value;
+  const freq = g("cal-manual-freq").value;
+  const endMode = g("cal-manual-end").value;
+  let rrule = "";
+  if (freq !== "none") {
+    const fmap = { daily: "DAILY", weekly: "WEEKLY", monthly: "MONTHLY", yearly: "YEARLY" };
+    let rr = "FREQ=" + (fmap[freq] || "DAILY") + ";INTERVAL=1";
+    if (freq === "weekly") {
+      const p = calParseKey(startDate);
+      const d = new Date(p[0], p[1] - 1, p[2]);
+      const names = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
+      rr += ";BYDAY=" + names[d.getDay()];
+    }
+    if (endMode === "until" && g("cal-manual-until").value) {
+      rr += ";UNTIL=" + g("cal-manual-until").value.replace(/-/g, "");
+    } else if (endMode === "count") {
+      const n = Math.max(1, parseInt(g("cal-manual-count").value, 10) || 1);
+      rr += ";COUNT=" + n;
+    }
+    rrule = rr;
+  }
+  const eve = {
+    uid: "m_" + Date.now() + "_" + Math.floor(Math.random() * 100000),
+    summary: title,
+    location: (g("cal-manual-loc").value || "").trim(),
+    description: "",
+    url: "",
+    start: { key: startDate, time: allDay ? null : (startTime || "00:00") },
+    end: null,
+    allDay: allDay,
+    color: calManualColor || CAL_PICKER_PALETTE[0],
+    rrule: rrule
+  };
+  if (endDate) {
+    eve.end = { key: endDate, time: allDay ? null : (endTime || startTime || "00:00") };
+  } else if (endTime) {
+    eve.end = { key: startDate, time: endTime };
+  }
+  calManualFeedEnsure();
+  calData["cal_manual"].push(eve);
+  calPersist();
+  g("cal-manual-title").value = "";
+  g("cal-manual-loc").value = "";
+  showToast(window.i18n ? window.i18n.t("cal_toast_manual_created") : "✓ Đã thêm sự kiện thủ công");
+  calRenderFeedList();
+  calRenderCalendar();
+  g("cal-manual-title").focus();
+}
+
+function calManualInit() {
+  const form = document.getElementById("cal-manual-form");
+  const toggle = document.getElementById("btn-cal-manual-toggle");
+  if (!form || !toggle) return;
+  const g = function (id) { return document.getElementById(id); };
+  calBuildColorSwatches();
+  toggle.addEventListener("click", function () {
+    const on = form.style.display !== "none";
+    form.style.display = on ? "none" : "block";
+    toggle.classList.toggle("active", !on);
+  });
+  const syncEndInputs = function () {
+    const mode = g("cal-manual-end").value;
+    const hasFreq = g("cal-manual-freq").value !== "none";
+    g("cal-manual-until").style.display = (hasFreq && mode === "until") ? "block" : "none";
+    g("cal-manual-count").style.display = (hasFreq && mode === "count") ? "block" : "none";
+    g("cal-manual-end").disabled = !hasFreq;
+  };
+  g("cal-manual-freq").addEventListener("change", syncEndInputs);
+  g("cal-manual-end").addEventListener("change", syncEndInputs);
+  const alldayEl = g("cal-manual-allday");
+  const syncAllDay = function () {
+    const disabled = alldayEl.checked;
+    g("cal-manual-start-time").disabled = disabled;
+    g("cal-manual-end-time").disabled = disabled;
+  };
+  alldayEl.addEventListener("change", syncAllDay);
+  syncEndInputs();
+
+  const rgb = g("cal-manual-color-rgb");
+  if (rgb) {
+    rgb.value = calManualColor || "#38bdf8";
+    rgb.addEventListener("input", function () {
+      calManualColor = rgb.value.toUpperCase();
+      calSyncColorUI();
+    });
+  }
+
+  const save = g("btn-cal-manual-save");
+  if (save) {
+    save.addEventListener("click", calAddManualEvent);
+    g("cal-manual-title").addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        calAddManualEvent();
+      }
+    });
+  }
+
+  const today = calTodayKey();
+  if (!g("cal-manual-start-date").value) g("cal-manual-start-date").value = today;
+  if (!g("cal-manual-until").value) g("cal-manual-until").value = today;
+  if (!calManualColor) calManualColor = CAL_PICKER_PALETTE[0];
 }
 
 function calInit() {
@@ -7698,23 +8458,44 @@ function calInit() {
     input.addEventListener("keydown", function (e) { if (e.key === "Enter") addFeed(); });
   }
 
+  document.querySelectorAll(".cal-view-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      calViewMode = btn.getAttribute("data-mode") || "month";
+      if (calViewMode !== "month") {
+        if (!calViewFocusKey) calViewFocusKey = calSelectedKey || calTodayKey();
+      }
+      calRenderCalendar();
+    });
+  });
+
   const prev = document.getElementById("btn-cal-prev");
   const next = document.getElementById("btn-cal-next");
   const today = document.getElementById("btn-cal-today");
-  if (prev) prev.addEventListener("click", function () {
-    calViewMonth = calViewMonth - 1;
-    if (calViewMonth < 0) { calViewMonth = 11; calViewYear = calViewYear - 1; }
+  const calStep = function (dir) {
+    if (calViewMode === "week") {
+      calShiftFocus(dir * 7);
+    } else {
+      calViewYear = calViewYear + dir;
+      if (calViewMonth + dir < 0) {
+        calViewMonth = 11;
+        calViewYear = calViewYear - 1;
+      } else if (calViewMonth + dir > 11) {
+        calViewMonth = 0;
+        calViewYear = calViewYear + 1;
+      } else {
+        calViewMonth = calViewMonth + dir;
+      }
+      calSetFocusToMonth();
+    }
     calRenderCalendar();
-  });
-  if (next) next.addEventListener("click", function () {
-    calViewMonth = calViewMonth + 1;
-    if (calViewMonth > 11) { calViewMonth = 0; calViewYear = calViewYear + 1; }
-    calRenderCalendar();
-  });
+  };
+  if (prev) prev.addEventListener("click", function () { calStep(-1); });
+  if (next) next.addEventListener("click", function () { calStep(1); });
   if (today) today.addEventListener("click", function () {
     const n = new Date();
     calViewYear = n.getFullYear();
     calViewMonth = n.getMonth();
+    calViewFocusKey = calTodayKey();
     calSelectedKey = calTodayKey();
     calRenderCalendar();
   });
@@ -7725,13 +8506,16 @@ function calInit() {
       showToast(window.i18n ? window.i18n.t("cal_toast_no_feeds") : "⚠️ No calendars added yet", "error");
       return;
     }
-    calFeeds.forEach(function (f) { calRefreshFeed(f.id, true); });
+    calFeeds.forEach(function (f) { if (f.url) calRefreshFeed(f.id, true); });
     showToast(window.i18n ? window.i18n.t("cal_toast_refreshing") : "🔄 Updating all calendars...", "success");
   });
 
   const now = new Date();
   if (!calViewYear) { calViewYear = now.getFullYear(); calViewMonth = now.getMonth(); }
   if (!calSelectedKey) calSelectedKey = calTodayKey();
+  if (!calViewFocusKey) calViewFocusKey = calSelectedKey;
+
+  calManualInit();
 
   if (!calFeedsLoaded) {
     calFeedsLoaded = true;
