@@ -10,16 +10,25 @@
 - **Privacy:** Trang chính sách công khai tại GitHub Pages (`docs/privacy.html`), link trên trang landing.
 - **Tính năng chính:** Citations (IEEE/APA/Harvard/MLA/BibTeX + đối soát nguồn), Redaction (blur/blackout/pixelate), Capture (screenshot/record/teleprompter), Cookie Manager, Autofill, To-do List, Bypass Paywall, 5 ngôn ngữ.
 
-## v2.4.2 — Củng cố bản phát hành (ngắn hạn)
+## v2.4.2 — Nâng cấp vì học tập & nghiên cứu (ưu tiên)
 
-**Mục tiêu:** Ổn định + phản ứng nhanh với phản hồi từ Store.
+**Mục tiêu:** Thêm tính năng mới, sửa lỗi và cải thiện tính năng cũ — phục vụ trực tiếp việc học tập và nghiên cứu học thuật. (Các việc hành chính cho Store như theo dõi duyệt, screenshots, reviewer… tạm để phía sau.)
 
-- [ ] Theo dõi phê duyệt AMO / Chrome; xử lý mọi yêu cầu từ reviewer (permission justifications, screenshots, video demo).
-- [ ] Tích hợp `npx addons-linter` vào GitHub Actions để bắt warning/error **trước khi** đóng gói (hiện chỉ có check nội bộ).
-- [ ] Rà soát quyền `cookies` / `browsingData` / `<all_urls>`: cập nhật giải trình (justification) kịp bản duyệt.
-- [ ] Sửa các lỗi nhỏ báo cáo từ cộng đồng / reviewer sau khi lên sóng.
-- [ ] Bổ sung ảnh demo (screenshot gallery) cho trang landing + listing store.
-- [ ] Tăng version manifest → `2.4.2` + đóng gói lại qua `package.ps1` (bắt buộc cho Chrome khi update).
+### Tính năng mới
+- [ ] **Search & autofill nguồn:** gõ tên bài báo / tác giả → gợi ý từ Crossref / OpenAlex → tự điền metadata, giảm nhập tay.
+- [ ] **Định dạng trích dẫn thêm:** Vancouver, Chicago 17, ACS/AMA (KH tự nhiên & y sinh).
+- [ ] **Luồng học tập hợp nhất:** nối trích dẫn ↔ ghi chú ↔ to-do thành một chu trình (mục đích → nguồn → tóm tắt → hoàn thành).
+- [ ] **Ghi chú trực tiếp trên PDF:** đánh dấu + trích dẫn từ tài liệu PDF đang đọc.
+- [ ] **Flashcards ôn tập:** sinh thẻ ghi nhớ (spaced repetition) từ thư viện trích dẫn.
+- [ ] **Hỗ trợ công thức (MathML):** nhận diện công thức toán khi trích dẫn tài liệu toán/CS.
+
+### Sửa lỗi & cải thiện tính năng cũ
+- [ ] **Metadata tiếng Việt:** trích xuất chính xác hơn cho trang báo/tài liệu tiếng Việt + tên tác giả kiểu "Nguyễn Văn A".
+- [ ] **Capture:** sửa vùng chọn khi trang có iframe / cuộn lồng; ảnh sau redact sắc nét hơn.
+- [ ] **Teleprompter:** chỉnh nhanh tốc độ + hiển thị lên ghi chú — phù hợp thuyết trình.
+- [ ] **Bảo mật:** thu hẹp `host_permissions` về các domain cần thiết (giảm cảnh báo của Store).
+- [ ] **Hiệu năng:** sidebar chạy mượt khi mở nhiều tab / trang nặng.
+- [ ] **Lỗi phát sinh khi dùng:** ghi nhận và thêm vào danh sách sau mỗi buổi sử dụng.
 
 ## v2.5 — Nâng cao công cụ nghiên cứu (trung hạn)
 
