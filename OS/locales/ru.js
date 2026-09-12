@@ -394,7 +394,7 @@ window.I18N_RU = {
    "nav_todo": "Задачи",
    "tip_citations_openalex": "Количество цитирований из OpenAlex и Semantic Scholar",
    "tip_export_ris": "Экспортировать всю библиотеку цитирований в файл RIS (для EndNote, Zotero, Mendeley)",
-   "btn_export_ris": "📥 Экспорт файла RIS (EndNote/Zotero)",
+   "btn_export_ris": "Экспортировать в .ris",
    "script_heading": "Сценарий выступления и телесуфлер",
    "tip_save_prompter": "Сохранить текст сценария",
    "script_save": "💾 Сохранить",

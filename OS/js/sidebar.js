@@ -5519,12 +5519,9 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
       for (const c of cookies) {
         const u = "http" + (c.secure ? "s" : "") + "://" + c.domain.replace(/^\./, "") + c.path;
         try {
-          await cookiesApi.remove({
-            url: u,
-            name: c.name,
-            storeId: c.storeId
-          });
-          removed++;
+          const removeArgs = { url: u, name: c.name, storeId: c.storeId };
+          if (c.partitionKey) removeArgs.partitionKey = c.partitionKey;
+          if (await cookiesApi.remove(removeArgs)) removed++;
         } catch (e) {}
       }
       const rawTextEl = document.getElementById("cookie-raw-text");
@@ -5541,42 +5538,116 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
     }
   });
 
-  // Bypass paywall: Clear all cookies + localStorage + sessionStorage and reload tab
+  // Bypass paywall: Clear site cookies + cache + localStorage, then reload fresh
   document.getElementById("btn-clear-site-data")?.addEventListener("click", async () => {
-    if (!currentTabUrl) return showToast("Chưa có URL hợp lệ!", "warning");
+    if (!currentTabUrl) return showToast("toast_cookie_no_url", "warning");
+    if (/^(about:|chrome:|moz-extension:|edge:|view-source:|devtools:)/i.test(currentTabUrl)) {
+      return showToast("toast_cookie_no_url", "warning");
+    }
+
+    let parsed;
     try {
-      const cookiesApi = (typeof browser !== "undefined" && browser.cookies) ? browser.cookies : (typeof chrome !== "undefined" ? chrome.cookies : null);
+      parsed = new URL(currentTabUrl);
+    } catch (e) {
+      return showToast("toast_cookie_no_url", "warning");
+    }
+    const hostname = parsed.hostname;
+    const origin = parsed.origin;
+
+    const isFirefox = typeof navigator !== "undefined" && /firefox/i.test(navigator.userAgent || "");
+    const cookiesApi = (typeof browser !== "undefined" && browser.cookies) ? browser.cookies : (typeof chrome !== "undefined" ? chrome.cookies : null);
+    const browsingData = (typeof browser !== "undefined" && browser.browsingData) ? browser.browsingData : (typeof chrome !== "undefined" ? chrome.browsingData : null);
+    const scriptingApi = (typeof chrome !== "undefined" && chrome.scripting) ? chrome.scripting : ((typeof browser !== "undefined" && browser.scripting) ? browser.scripting : null);
+    const tabsApi = (typeof browser !== "undefined" && browser.tabs) ? browser.tabs : (typeof chrome !== "undefined" ? chrome.tabs : null);
+
+    let anyWorked = false;
+
+    try {
+      // 1) Cookies via cookies API — handles Firefox Total Cookie Protection (partitioned cookies)
       if (cookiesApi) {
-        const cookies = await cookiesApi.getAll({ url: currentTabUrl });
-        if (cookies && cookies.length > 0) {
-          for (const c of cookies) {
-            const u = "http" + (c.secure ? "s" : "") + "://" + c.domain.replace(/^\./, "") + c.path;
-            await cookiesApi.remove({ url: u, name: c.name, storeId: c.storeId }).catch(() => {});
+        try {
+          const cookies = await cookiesApi.getAll({ url: currentTabUrl });
+          if (cookies && cookies.length > 0) {
+            let removed = 0;
+            for (const c of cookies) {
+              const u = "http" + (c.secure ? "s" : "") + "://" + c.domain.replace(/^\./, "") + c.path;
+              const args = { url: u, name: c.name };
+              if (c.storeId) args.storeId = c.storeId;
+              if (c.partitionKey) args.partitionKey = c.partitionKey;
+              try {
+                if (await cookiesApi.remove(args)) removed++;
+              } catch (err) {
+                console.warn("[BypassPaywall] cookie remove failed:", c.name, err);
+              }
+            }
+            console.log("[BypassPaywall] removed cookies:", removed, "/", cookies.length);
+            if (removed > 0) anyWorked = true;
           }
+        } catch (err) {
+          console.warn("[BypassPaywall] cookies.getAll failed:", err);
         }
       }
-      // Wipe localStorage, sessionStorage, cache in tab
-      const scriptingApi = (typeof chrome !== "undefined" && chrome.scripting) ? chrome.scripting : ((typeof browser !== "undefined" && browser.scripting) ? browser.scripting : null);
-      if (scriptingApi && currentTabObj?.id) {
-        await scriptingApi.executeScript({
-          target: { tabId: currentTabObj.id },
-          func: () => {
-            try { localStorage.clear(); } catch (e) {}
-            try { sessionStorage.clear(); } catch (e) {}
-            location.reload();
+
+      // 2) Cache + localStorage + indexedDB + serviceWorkers, scoped to this site.
+      //    NOTE: Firefox schema only accepts its own keys/options — using
+      //    `hostnames` + Firefox-supported keys, Chrome keys/`origins` otherwise.
+      if (browsingData) {
+        try {
+          const dataTypes = { cache: true, localStorage: true, indexedDB: true, serviceWorkers: true };
+          if (!isFirefox) {
+            dataTypes.cacheStorage = true;
+            dataTypes.fileSystems = true;
+            dataTypes.webSQL = true;
           }
-        }).catch(() => {});
-      } else {
-        const tabsApi = (typeof browser !== "undefined" && browser.tabs) ? browser.tabs : (typeof chrome !== "undefined" ? chrome.tabs : null);
-        if (tabsApi && currentTabObj?.id) tabsApi.reload(currentTabObj.id);
+          const removalOptions = isFirefox
+            ? { hostnames: [hostname] }
+            : { since: 0, origins: [origin] };
+          await browsingData.remove(removalOptions, dataTypes);
+          anyWorked = true;
+        } catch (err) {
+          console.warn("[BypassPaywall] browsingData.remove failed, using dedicated APIs:", err);
+          try { await browsingData.removeCache({}); anyWorked = true; } catch (e2) { console.warn("[BypassPaywall]", e2); }
+          try { await browsingData.removeLocalStorage({ hostnames: [hostname] }); anyWorked = true; } catch (e2) { console.warn("[BypassPaywall]", e2); }
+        }
       }
+
+      // 3) Wipe localStorage/sessionStorage in the live tab as a last resort
+      if (!anyWorked && scriptingApi && currentTabObj?.id) {
+        try {
+          await scriptingApi.executeScript({
+            target: { tabId: currentTabObj.id },
+            func: () => {
+              try { localStorage.clear(); } catch (e) {}
+              try { sessionStorage.clear(); } catch (e) {}
+            }
+          });
+          anyWorked = true;
+        } catch (err) {
+          console.warn("[BypassPaywall] executeScript failed:", err);
+        }
+      }
+
       const rawTextEl = document.getElementById("cookie-raw-text");
       if (rawTextEl) rawTextEl.value = "";
-      showToast("🧹 Đã xóa sạch dữ liệu & đang tải lại trang!", "success");
+
+      // 4) Reload WITHOUT cache so the site must build a brand-new session
+      if (tabsApi && currentTabObj?.id) {
+        try {
+          await tabsApi.reload(currentTabObj.id, { bypassCache: true });
+        } catch (e) {
+          try { tabsApi.reload(currentTabObj.id); } catch (e2) { console.warn("[BypassPaywall] reload failed:", e2); }
+        }
+      }
+
+      if (anyWorked) {
+        showToast("toast_site_data_cleared", "success");
+      } else {
+        showToast("toast_site_data_err", "error");
+      }
       setTimeout(updateCookieTabUI, 1000);
     } catch (e) {
-      console.error(e);
-      showToast("Lỗi khi xóa dữ liệu trang!", "error");
+      console.error("[BypassPaywall] error:", e);
+      showToast("toast_site_data_err", "error");
     }
   });
 
@@ -6651,6 +6722,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 
     visibleTodos.forEach(({ originalIndex, ...item }) => {
+      const card = document.createElement("div");
       const isEditing = (editingTodoIndex === originalIndex);
       const priorityClass = `priority-${item.priority || 'normal'}`;
       card.className = `todo-card ${priorityClass} ${item.done ? "is-done" : ""}`;

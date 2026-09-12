@@ -394,7 +394,7 @@ window.I18N_ZH = {
    "nav_todo": "待办事项",
    "tip_citations_openalex": "来自 OpenAlex 和 Semantic Scholar 的引用次数",
    "tip_export_ris": "导出全部引文库为 RIS 文件（支持 EndNote、Zotero、Mendeley）",
-   "btn_export_ris": "📥 导出 RIS 文件 (EndNote/Zotero)",
+   "btn_export_ris": "导出为 .ris 文件",
    "script_heading": "演讲文稿与提词器",
    "tip_save_prompter": "保存演讲文稿内容",
    "script_save": "💾 保存文稿",

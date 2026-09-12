@@ -10,7 +10,8 @@
     "storage",
     "clipboardWrite",
     "sidePanel",
-    "cookies"
+    "cookies",
+    "browsingData"
   ],
   "host_permissions": [
     "<all_urls>"
