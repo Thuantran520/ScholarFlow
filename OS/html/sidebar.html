@@ -99,6 +99,10 @@
         <span class="nav-icon" id="icon-tab-todo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></span>
         <span class="nav-label" data-i18n="nav_todo">Todo List</span>
       </button>
+      <button class="main-nav-btn" data-target="tab-cal" title="Lịch học tập từ link ICS" data-i18n-title="tip_tab_cal" style="flex: 0 0 calc(25% - 3px); min-width: calc(25% - 3px);">
+        <span class="nav-icon" id="icon-tab-cal"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></span>
+        <span class="nav-label" data-i18n="nav_cal">Lịch</span>
+      </button>
     </div>
     <button id="nav-scroll-right" class="nav-scroll-arrow" title="Cuộn phải" data-i18n-title="tip_scroll_right">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
@@ -985,7 +989,7 @@
       <div class="rule-card" style="border-color:rgba(245,158,11,0.35); background:rgba(245,158,11,0.06);">
         <div class="rule-card-title" style="color:#f59e0b;" data-i18n="trust_card4_title">⚖️ 4. Thông Tin Bản Quyền &amp; Kỹ Thuật</div>
         <div class="rule-card-body" data-i18n="trust_card4_body_html" data-i18n-html="true">
-          • <b>Phiên bản:</b> ScholarFlow v2.4.1_beta<br>
+          • <b>Phiên bản:</b> ScholarFlow v2.4.2_beta<br>
           • <b>Kiến trúc:</b> Manifest V3 (Chromium 114+ &amp; Firefox 109+ Native Gecko)<br>
           • <b>Bản quyền:</b> Bản quyền phần mềm thuộc về Minh Thuận<br>
           • <b>Chính sách bảo mật:</b> <a href="privacy.html" target="_blank" style="color:#38bdf8; text-decoration:underline;">Xem toàn văn Chính Sách Quyền Riêng Tư (Privacy Policy)</a>
@@ -1114,10 +1118,56 @@
     </div>
   </div>
 
+  <!-- ══════════════════════ TAB 7: CALENDAR (ICS) ══════════════════════ -->
+  <div id="tab-cal" class="tab-section">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+      <div class="feature-title" style="margin-bottom:0;" data-i18n="cal_title">Lịch học tập</div>
+      <div style="display:flex; gap:4px; align-items:center;">
+        <button id="btn-cal-refresh-all" class="cal-tool-btn" title="Cập nhật lại toàn bộ lịch đã nhập" data-i18n-title="tip_cal_refresh_all">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+          <span data-i18n="cal_btn_refresh_all">Cập nhật</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="feature-card" style="padding:10px 12px; margin-bottom:10px;">
+      <div style="font-size:11.5px; font-weight:700; color:var(--primary); margin-bottom:6px; display:flex; align-items:center; gap:5px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+        <span data-i18n="cal_add_header">Nhập link lịch (ICS / iCal)</span>
+      </div>
+      <div style="display:flex; gap:6px;">
+        <input type="url" id="cal-feed-input" class="form-control" placeholder="https://.../calendar.ics" data-i18n-placeholder="cal_add_placeholder" style="flex:1; font-size:11.5px; padding:6px 8px;">
+        <button id="btn-cal-add" class="btn btn-primary" style="padding:7px 12px; font-size:11.5px; font-weight:700; flex-shrink:0;" data-i18n="cal_btn_add">＋ Nhập</button>
+      </div>
+      <div id="cal-feed-list" style="display:flex; flex-direction:column; gap:6px; margin-top:9px;"></div>
+    </div>
+
+    <div class="feature-card" style="padding:10px 12px; margin-bottom:10px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+        <button id="btn-cal-prev" class="cal-nav-btn" data-i18n-aria="cal_btn_prev" aria-label="Tháng trước">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </button>
+        <div id="cal-month-label" style="font-size:14px; font-weight:800; color:#e2e8f0; letter-spacing:0.01em;">Tháng 9, 2026</div>
+        <button id="btn-cal-next" class="cal-nav-btn" data-i18n-aria="cal_btn_next" aria-label="Tháng sau">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+      </div>
+      <div style="display:flex; justify-content:center; margin-bottom:8px;">
+        <button id="btn-cal-today" class="cal-today-btn" data-i18n="cal_btn_today">Hôm nay</button>
+      </div>
+      <div id="cal-grid" class="cal-grid"></div>
+    </div>
+
+    <div class="feature-card" style="padding:10px 12px;">
+      <div id="cal-day-head" style="font-size:12px; font-weight:700; color:#38bdf8; margin-bottom:8px;">Chọn ngày để xem lịch học</div>
+      <div id="cal-day-events" style="display:flex; flex-direction:column; gap:8px;"></div>
+    </div>
+  </div>
+
   <div class="footer-trust-bar">
     <div class="trust-pill" title="Phiên bản hiện tại" data-i18n-title="tip_trust_version">
       <span class="trust-dot dot-green"></span>
-      <span id="app-version-display">v2.4.1_beta</span>
+      <span id="app-version-display">v2.4.2_beta</span>
     </div>
     <div class="trust-divider">•</div>
     <div class="trust-pill" title="Được phát triển bởi Minh Thuận" data-i18n-title="tip_trust_author">

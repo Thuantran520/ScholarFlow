@@ -20,10 +20,10 @@ os.makedirs(dist_dir, exist_ok=True)
 
 # Read version dynamically from manifest_firefox.json
 manifest_path = os.path.join(src_dir, 'manifest_firefox.json')
-version = "2.4.1"
+version = "2.4.2"
 try:
     with open(manifest_path, 'r', encoding='utf-8') as f:
-        version = json.load(f).get("version", "2.4.1")
+        version = json.load(f).get("version", "2.4.2")
 except Exception:
     pass
 

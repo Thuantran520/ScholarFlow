@@ -2,10 +2,10 @@ name: Build, Check & Package ScholarFlow
 
 on:
   push:
-    branches: [main, "2.4.1"]
+    branches: [main, "2.4.1", "2.4.2"]
     tags: ["v*"]
   pull_request:
-    branches: [main, "2.4.1"]
+    branches: [main, "2.4.1", "2.4.2"]
   workflow_dispatch:
 
 jobs:

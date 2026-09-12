@@ -33,7 +33,7 @@ if ([string]::IsNullOrWhiteSpace($Version)) {
         } catch {}
     }
     if ([string]::IsNullOrWhiteSpace($Version)) {
-        $Version = "2.4.1"
+        $Version = "2.4.2"
     }
 }
 
