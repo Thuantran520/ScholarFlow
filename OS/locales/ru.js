@@ -33,6 +33,7 @@ window.I18N_RU = {
    "tip_trust_version": "Текущая версия",
    "tip_trust_author": "Разработано Minh Thuận",
    "tip_clear_input": "Очистить контент",
+    "tip_clear_notes": "Очистить заметки",
    "tip_swap_tabs": "Мгновенное переключение между 2 веб-страницами (Горячая клавиша: Alt + Q)",
    "tip_pick_tab": "Выбрать другую открытую вкладку",
    "tip_tab_a": "Текущая страница (A)",

@@ -33,6 +33,7 @@ window.I18N_JA = {
    "tip_trust_version": "現在のバージョン",
    "tip_trust_author": "Minh Thuận によって開発されました",
    "tip_clear_input": "コンテンツをクリア",
+    "tip_clear_notes": "メモをクリア",
    "tip_swap_tabs": "2つのウェブページ間を瞬時に切り替え (ショートカット: Alt + Q)",
    "tip_pick_tab": "別の開いているタブを選択",
    "tip_tab_a": "現在のページ (A)",

@@ -1,5 +1,6 @@
 param(
-    [string]$Version = ""
+    [string]$Version = "",
+    [switch]$SkipChecks
 )
 
 $ErrorActionPreference = "Stop"
@@ -8,6 +9,19 @@ $rootDir = Split-Path -Parent $PSScriptRoot
 $distDir = Join-Path $rootDir "dist"
 if (-not (Test-Path $distDir)) {
     New-Item -ItemType Directory -Path $distDir | Out-Null
+}
+
+# ---------------------------------------------------------------------------
+# Pre-packaging store checks (manifest validity, JS syntax, security scan)
+# ---------------------------------------------------------------------------
+if (-not $SkipChecks) {
+    & (Join-Path $PSScriptRoot "check_store.ps1")
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "!! PRE-PACKAGING CHECKS FAILED => packaging aborted." -ForegroundColor Red
+        exit 1
+    }
+    Write-Host ""
+    Write-Host ">> Pre-packaging checks passed, continuing..." -ForegroundColor Green
 }
 
 if ([string]::IsNullOrWhiteSpace($Version)) {

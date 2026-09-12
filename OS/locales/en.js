@@ -42,6 +42,7 @@ window.I18N_EN = {
    "tip_trust_version": "Current version",
    "tip_trust_author": "Developed by Minh Thuận",
    "tip_clear_input": "Clear content",
+    "tip_clear_notes": "Clear notes",
    "tip_swap_tabs": "Instantly swap between 2 web pages (Shortcut: Alt + Q)",
    "tip_pick_tab": "Select another open tab",
    "tip_tab_a": "Current Page (A)",

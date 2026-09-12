@@ -33,6 +33,7 @@ window.I18N_ZH = {
    "tip_trust_version": "当前版本",
    "tip_trust_author": "由 Minh Thuận 开发",
    "tip_clear_input": "清除内容",
+    "tip_clear_notes": "清除笔记",
    "tip_swap_tabs": "在2个网页之间即时切换 (快捷键: Alt + Q)",
    "tip_pick_tab": "选择另一个打开的标签页",
    "tip_tab_a": "当前页面 (A)",

@@ -1945,6 +1945,8 @@ function syncInputs() {
   if (elTag) elTag.value = currentMeta.tag || "";
   if (elNotes) elNotes.value = currentMeta.notes || "";
 
+  updateNotesClearButton();
+
   updateSourceBadges(currentMeta.sourceType, currentMeta.container);
 
   // Contextual placeholders based on source type
@@ -3570,6 +3572,12 @@ function createResearchNoteNode(note, lang) {
   return wrap;
 }
 
+function updateNotesClearButton() {
+  const btn = document.getElementById("btn-clear-notes");
+  const input = document.getElementById("f-notes");
+  if (btn && input) btn.style.display = input.value ? "block" : "none";
+}
+
 function renderRedactedList(list) {
   currentRedactedList = list || [];
   const container = document.getElementById("redacted-items-list");
@@ -5078,6 +5086,23 @@ onReady(() => {
     }
   });
 
+  // Clear research notes with trash button
+  const notesClearBtn = document.getElementById("btn-clear-notes");
+  const notesInputEl = document.getElementById("f-notes");
+  if (notesClearBtn && notesInputEl) {
+    notesInputEl.addEventListener("input", updateNotesClearButton);
+    notesInputEl.addEventListener("keyup", updateNotesClearButton);
+    notesClearBtn.addEventListener("click", () => {
+      notesInputEl.value = "";
+      updateNotesClearButton();
+      currentMeta.notes = "";
+      updateCitationDisplay();
+      saveDraft();
+      notesInputEl.focus();
+    });
+    updateNotesClearButton();
+  }
+
   // Copy citation with instant visual button feedback & Rich Text support (Italics for Word/Docs)
   document.getElementById("btn-copy-cite")?.addEventListener("click", () => {
     const box = document.getElementById("citation-text");
@@ -6570,6 +6595,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       if (fNotes.value) fNotes.value += " | " + text;
       else fNotes.value = `"${text}"`;
       currentMeta.notes = fNotes.value;
+      updateNotesClearButton();
       updateCitationDisplay();
       saveDraft();
     }

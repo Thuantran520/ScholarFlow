@@ -225,7 +225,12 @@
         </div>
         <div class="col form-group" style="margin-bottom:0;">
           <label data-i18n="lbl_notes">Ghi chú nghiên cứu</label>
-          <input type="text" class="form-control" id="f-notes" placeholder="Vd: Tham khảo chương 2..." data-i18n-placeholder="placeholder_notes">
+          <div style="position:relative;">
+            <input type="text" class="form-control" id="f-notes" style="padding-right:26px;" placeholder="Vd: Tham khảo chương 2..." data-i18n-placeholder="placeholder_notes">
+            <button type="button" id="btn-clear-notes" title="Xóa ghi chú" data-i18n-title="tip_clear_notes" style="position:absolute; right:6px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:12px; display:none; padding:2px; line-height:0;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>

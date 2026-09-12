@@ -11,7 +11,8 @@
     "clipboardWrite",
     "sidePanel",
     "cookies",
-    "browsingData"
+    "browsingData",
+    "contextMenus"
   ],
   "host_permissions": [
     "<all_urls>"

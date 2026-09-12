@@ -42,6 +42,7 @@ window.I18N_VI = {
    "tip_trust_version": "Phiên bản hiện tại",
    "tip_trust_author": "Được phát triển bởi Minh Thuận",
    "tip_clear_input": "Xóa nội dung",
+    "tip_clear_notes": "Xóa ghi chú",
    "tip_swap_tabs": "Chuyển đổi qua lại tức thì giữa 2 trang web (Phím tắt: Alt + Q)",
    "tip_pick_tab": "Chọn trang khác trong danh sách tab đang mở",
    "tip_tab_a": "Trang hiện tại (A)",
