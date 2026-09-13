@@ -389,6 +389,24 @@ async function main() {
       "reset returns the stage to the top");
   }
 
+  // 4d. Capture stall guard: nested scroll / iframe pages must not loop forever
+  console.log("Regressing capture stall guard (nested scroll / iframe):");
+  {
+    const { window: w } = await loadPage("sidebar.html");
+    check(typeof w.captureStallDetector === "function",
+      "captureStallDetector available as a module global");
+    const sd = w.captureStallDetector(3);
+    check(sd.record("r10,20,120") === false,
+      "stall guard not triggered on 1st identical slice");
+    check(sd.record("r10,20,120") === false,
+      "stall guard not triggered on 2nd identical slice");
+    check(sd.record("r10,20,120") === true,
+      "stall guard triggers after 3 consecutive identical viewport keys");
+    sd.reset();
+    check(sd.record("a") === false && sd.record("b") === false && sd.record("a") === false,
+      "stall guard resets and does not misfire on progressing slices");
+  }
+
   console.log("\n" + (failures === 0 ? "ALL TESTS PASSED" : `${failures} CHECK(S) FAILED`));
   process.exit(failures === 0 ? 0 : 1);
 }

@@ -13,6 +13,27 @@ let screenshotSettings = {
   delay: 0
 };
 
+// Guards element capture from hanging when the target sits inside a nested
+// scroll container or an <iframe>: window scrolling then never moves the
+// element's rect, so plain slice loops would repeat identical crops forever.
+// Returns a monitor object; call record(<same viewport key>) every slice and
+// treat it as stalled when it reports true.
+function captureStallDetector(consecutiveLimit = 4) {
+  const hits = [];
+  return {
+    record(key) {
+      hits.push(key);
+      if (hits.length > consecutiveLimit) hits.shift();
+      if (hits.length < consecutiveLimit) return false;
+      for (let i = 1; i < hits.length; i++) {
+        if (hits[i] !== hits[0]) return false;
+      }
+      return true;
+    },
+    reset() { hits.length = 0; }
+  };
+}
+
 function loadScreenshotSettings() {
   storGet("super_screenshot_settings", (res) => {
     if (res && res.super_screenshot_settings) {
@@ -109,7 +130,7 @@ async function captureVisibleScreen() {
       canvas.height = img.height;
       const ctx = canvas.getContext("2d");
       ctx.drawImage(img, 0, 0);
-      const jpegUrl = canvas.toDataURL("image/jpeg", 0.9);
+      const jpegUrl = canvas.toDataURL("image/jpeg", 0.95);
       displayScreenshotResult(jpegUrl);
     } else {
       displayScreenshotResult(dataUrl);
@@ -318,7 +339,7 @@ async function captureFullPageSmart() {
     );
 
     const isJpeg = screenshotSettings.format === "jpeg";
-    const fullDataUrl = finalCanvas.toDataURL(isJpeg ? "image/jpeg" : "image/png", 0.92);
+    const fullDataUrl = finalCanvas.toDataURL(isJpeg ? "image/jpeg" : "image/png", 0.95);
     displayScreenshotResult(fullDataUrl);
     if (!screenshotSettings.autoCopy) {
       showToast("✔ Chụp toàn bộ trang hoàn tất, không bị chồng chữ!");
@@ -411,8 +432,13 @@ async function captureChosenElement(info) {
       const stepX = Math.max(60, clientW - 24);
       const stepY = Math.max(60, clientH - 24);
 
-      for (let curY = 0; curY < totalH; curY += stepY) {
-        for (let curX = 0; curX < totalW; curX += stepX) {
+      const stallGuard = captureStallDetector(4);
+      const maxElementSlices = 120;
+      let sliceCount = 0;
+      let stalled = false;
+
+      for (let curY = 0; curY < totalH && !stalled; curY += stepY) {
+        for (let curX = 0; curX < totalW && !stalled; curX += stepX) {
           const scrollRes = await new Promise(r => sendTabMessage({
             action: "SCROLL_CAPTURE_TARGET",
             scrollLeft: curX,
@@ -430,6 +456,12 @@ async function captureChosenElement(info) {
           const actualX = scrollRes?.actualScrollLeft ?? curX;
           const actualY = scrollRes?.actualScrollTop ?? curY;
 
+          sliceCount++;
+          if (stallGuard.record(`${Math.round(curRect.left)},${Math.round(curRect.top)},${actualX},${actualY}`)) {
+            stalled = true;
+            break;
+          }
+
           const sliceW = Math.min(clientW, totalW - actualX);
           const sliceH = Math.min(clientH, totalH - actualY);
 
@@ -444,9 +476,9 @@ async function captureChosenElement(info) {
 
           mctx.drawImage(sliceImg, srcX, srcY, srcW, srcH, destX, destY, srcW, srcH);
 
-          if (actualX + clientW >= totalW) break;
+          if (actualX + clientW >= totalW || sliceCount >= maxElementSlices) break;
         }
-        if (curY + clientH >= totalH) break;
+        if (curY + clientH >= totalH || sliceCount >= maxElementSlices) break;
       }
 
       await new Promise(r => sendTabMessage({
@@ -456,7 +488,7 @@ async function captureChosenElement(info) {
       }, r));
 
       const isJpeg = screenshotSettings.format === "jpeg";
-      const dataUrl = masterCanvas.toDataURL(isJpeg ? "image/jpeg" : "image/png", 0.92);
+      const dataUrl = masterCanvas.toDataURL(isJpeg ? "image/jpeg" : "image/png", 0.95);
       displayScreenshotResult(dataUrl);
       if (!screenshotSettings.autoCopy) {
         showToast("✔ Đã chụp hoàn chỉnh bảng có thanh cuộn!");
@@ -485,7 +517,12 @@ async function captureChosenElement(info) {
       const stepY = Math.round(vpH * 0.7);
       const baseDocTop = typeof viewRes?.docTop === "number" ? viewRes.docTop : (typeof info.docTop === "number" ? info.docTop : ((rect.top || 0) + (info.origScrollTop || 0)));
 
-      while (drawnH < totalH) {
+      const stallGuard = captureStallDetector(4);
+      const maxElementSlices = 120;
+      let stalled = false;
+      let sliceCount = 0;
+
+      while (drawnH < totalH && !stalled && sliceCount < maxElementSlices) {
         await scrollTabTo(baseDocTop + drawnH, 150);
         await new Promise(r => setTimeout(r, 70));
 
@@ -499,6 +536,12 @@ async function captureChosenElement(info) {
         const visibleTop = Math.max(0, curRect.top);
         const visibleBottom = Math.min(vpH, curRect.top + curRect.height);
         const visibleH = Math.max(0, visibleBottom - visibleTop);
+
+        sliceCount++;
+        if (stallGuard.record(`${Math.round(curRect.left)},${Math.round(curRect.top)},${Math.round(visibleH)}`)) {
+          stalled = true;
+          break;
+        }
 
         if (visibleH > 0) {
           const srcX = Math.max(0, Math.min(sliceImg.width - 1, Math.round(curRect.left * scaleX)));
@@ -520,7 +563,7 @@ async function captureChosenElement(info) {
       await new Promise(r => sendTabMessage({ action: "RESTORE_CAPTURE_TARGET" }, r));
 
       const isJpeg = screenshotSettings.format === "jpeg";
-      const dataUrl = masterCanvas.toDataURL(isJpeg ? "image/jpeg" : "image/png", 0.92);
+      const dataUrl = masterCanvas.toDataURL(isJpeg ? "image/jpeg" : "image/png", 0.95);
       displayScreenshotResult(dataUrl);
       if (!screenshotSettings.autoCopy) {
         showToast("✔ Đã chụp hoàn chỉnh bảng dài vượt trang!");
@@ -555,7 +598,7 @@ async function captureChosenElement(info) {
     await new Promise(r => sendTabMessage({ action: "RESTORE_CAPTURE_TARGET" }, r));
 
     const isJpeg = screenshotSettings.format === "jpeg";
-    const finalDataUrl = cropCanvas.toDataURL(isJpeg ? "image/jpeg" : "image/png", 0.92);
+    const finalDataUrl = cropCanvas.toDataURL(isJpeg ? "image/jpeg" : "image/png", 0.95);
     displayScreenshotResult(finalDataUrl);
     if (!screenshotSettings.autoCopy) {
       showToast("✔ Đã chụp thành công đối tượng!");
@@ -630,7 +673,7 @@ async function captureSnipRect(msg) {
       ctx.drawImage(baseImg, sx, sy, sw, sh, 0, 0, sw, sh);
 
     const isJpeg = screenshotSettings.format === "jpeg";
-    const finalDataUrl = canvas.toDataURL(isJpeg ? "image/jpeg" : "image/png", 0.92);
+    const finalDataUrl = canvas.toDataURL(isJpeg ? "image/jpeg" : "image/png", 0.95);
     displayScreenshotResult(finalDataUrl);
 
     if (!screenshotSettings.autoCopy) {
