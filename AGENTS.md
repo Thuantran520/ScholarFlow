@@ -110,8 +110,11 @@ These are enforced by `scripts/check_store.ps1` and `tests/security.test.js`:
 ```bash
 npm run check
 ```
-This runs: `node scripts/i18n/check_locales.js` **then** `node tests/run_all.js`
-(which runs every `tests/*.test.js` in its own child process).
+This runs, in order:
+1. `node scripts/check_syntax.js` — parses every `OS/js/**/*.js`.
+2. `node scripts/i18n/check_locales.js` — i18n integrity (key parity, namespaces, HTML refs).
+3. `npm run lint` — ESLint (duplicate keys/cases, unreachable code).
+4. `node tests/run_all.js` — every `tests/*.test.js` in its own child process.
 
 Suites: `autofill`, `citation`, `i18n_pages`, `manifest`, `security`, `split_smoke`.
 
@@ -157,9 +160,11 @@ Runs the pre-packaging checks, then writes `dist/ScholarFlow_v<ver>_Chrome.zip` 
 
 | Task | Command |
 |---|---|
-| Full gate (i18n + tests) | `npm run check` |
+| Full gate (syntax + i18n + lint + tests) | `npm run check` |
 | Tests only | `npm test` |
-| i18n check only | `node scripts/i18n/check_locales.js` |
+| i18n check only | `npm run check:i18n` |
+| JS syntax check only | `npm run check:syntax` |
+| Lint (ESLint) | `npm run lint` |
 | Regenerate content i18n | `node scripts/i18n/generate_content_i18n.js` |
 | Sync nav partial | `node scripts/sync_main_nav.js` |
 | Pre-packaging checks | `pwsh scripts/check_store.ps1` |
@@ -181,7 +186,7 @@ Runs the pre-packaging checks, then writes `dist/ScholarFlow_v<ver>_Chrome.zip` 
 
 ## 11. Legacy one-off scripts (do NOT use casually)
 
-`scripts/` contains many historical one-off scripts (`patch_*.py`, `fix_*.py`,
+`scripts/archive/` contains ~35 historical one-off scripts (`patch_*.py`, `fix_*.py`,
 `update_*.py`, `translate_*.py`, `audit_*.py`, …). These were written for specific
 migrations and are **not part of the standard workflow**. Do not run or modify them
 unless you know exactly what they do. The only scripts you should normally touch are:

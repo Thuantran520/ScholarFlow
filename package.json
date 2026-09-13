@@ -5,9 +5,14 @@
   "scripts": {
     "test": "node tests/run_all.js",
     "check:i18n": "node scripts/i18n/check_locales.js",
-    "check": "node scripts/i18n/check_locales.js && node tests/run_all.js"
+    "check:syntax": "node scripts/check_syntax.js",
+    "lint": "eslint OS/js scripts tests --ext .js",
+    "check": "node scripts/check_syntax.js && node scripts/i18n/check_locales.js && npm run lint && node tests/run_all.js"
   },
   "dependencies": {
     "jsdom": "^29.1.1"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.5"
   }
 }

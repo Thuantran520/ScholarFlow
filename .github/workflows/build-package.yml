@@ -55,7 +55,7 @@ jobs:
         run: npm audit --audit-level=high
 
       - name: Run test scripts (jsdom smoke tests + i18n integration)
-        run: npm test
+        run: npm run check
 
       - name: Normalize branch label (artifact + zip naming)
         id: branch
