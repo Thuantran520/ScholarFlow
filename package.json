@@ -3,7 +3,9 @@
   "version": "2.4.2",
   "private": true,
   "scripts": {
-    "test": "node tests/run_all.js"
+    "test": "node tests/run_all.js",
+    "check:i18n": "node scripts/i18n/check_locales.js",
+    "check": "node scripts/i18n/check_locales.js && node tests/run_all.js"
   },
   "dependencies": {
     "jsdom": "^29.1.1"
