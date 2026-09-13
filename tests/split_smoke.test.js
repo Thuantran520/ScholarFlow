@@ -41,7 +41,7 @@ const LOAD_ORDER_MODULES = [
   "tabs/video.js",
   "init.js",
   "tabs/calendar.js",
-  "tabs/flashcards.js"
+  "tabs/pomodoro.js"
 ];
 
 const KEY_GLOBALS = [
@@ -62,7 +62,8 @@ const KEY_GLOBALS = [
   "updateDualTabsUI", "populateDualTabDropdown",
   "loadScreenshotSettings", "captureVisibleScreen", "captureFullPageSmart",
   "loadVideoSettings", "startVideoRecording", "stopVideoRecording",
-  "renderAutofillList", "renderTodoList", "calRenderCalendar"
+  "renderAutofillList", "renderTodoList", "calRenderCalendar",
+  "pomodoroFormatTime", "pomodoroDailyStats"
 ];
 
 // Minimal chrome/browser stub (callback + promise styles, resolved promises).
@@ -408,48 +409,54 @@ async function main() {
       "stall guard resets and does not misfire on progressing slices");
   }
 
-  // 4e. Flashcards: SM-2 scheduler, due counting, review flow
-  console.log("Regressing flashcards (spaced repetition):");
+  // 4e. Research Pomodoro: timer helpers, presets, session logging, daily stats
+  console.log("Regressing research pomodoro (timer):");
   {
-    const dueNow = Date.now();
-    const future = dueNow + 10 * 86400000;
     const { window: w } = await loadPage("sidebar.html", {
-      sf_flashcards: [
-        { id: "c1", front: "Q1", back: "A1", due: dueNow - 1000, ease: 2.5, intervalDays: 0, reps: 0, lapses: 0 },
-        { id: "c2", front: "Q2", back: "A2", due: future, ease: 2.5, intervalDays: 7, reps: 3, lapses: 0 }
-      ]
+      sf_pomodoro: {
+        sessions: [
+          { ts: Date.now(), minutes: 25, mode: "focus" },
+          { ts: Date.now() - 2 * 86400000, minutes: 25, mode: "focus" }
+        ],
+        settings: { focus: 25, long: 50, short: 5 }
+      }
     });
-    check(typeof w.flashcardScheduler === "function",
-      "flashcardScheduler available as module global");
-    check(w.flashcardsDueCount([{ due: dueNow - 1 }, { due: dueNow + 99999 }], dueNow) === 1,
-      "flashcardsDueCount counts only cards at or past due");
-    const fresh = { due: dueNow, ease: 2.5, intervalDays: 0, reps: 0, lapses: 0 };
-    const good = w.flashcardScheduler(3, fresh, dueNow);
-    check(good.intervalDays === 1 && good.reps === 1 && good.due === dueNow + 86400000,
-      "grade Good on new card schedules 1 day out");
-    const easy = w.flashcardScheduler(4, good, dueNow);
-    check(easy.intervalDays === 3 && easy.ease > 2.5,
-      `grade Easy on new card -> 3 days and ease up (got interval ${easy.intervalDays}, ease ${easy.ease})`);
-    const again = w.flashcardScheduler(1, fresh, dueNow);
-    check(again.intervalDays === 0 && again.lapses === 1 && again.due > dueNow && again.due < dueNow + 60 * 60000,
-      "grade Again resets interval, bumps lapses, due in 10 minutes");
-    check(w.document.querySelectorAll("#fc-list > div").length === 2,
-      `flashcard list rendered from storage (got ${w.document.querySelectorAll("#fc-list > div").length})`);
-    const dueEl = w.document.getElementById("fc-due-count");
-    check(!!dueEl && dueEl.textContent.includes("1"),
-      `due count badge shows 1 (got "${dueEl ? dueEl.textContent : "none"}")`);
-    w.document.getElementById("btn-fc-review").click();
-    check(w.document.getElementById("fc-review").style.display === "block",
-      "review panel opens");
-    check(w.document.getElementById("fc-rfront").textContent === "Q1",
-      `review shows the due card (got "${w.document.getElementById('fc-rfront').textContent}")`);
-    w.document.getElementById("btn-fc-reveal").click();
-    check(w.document.getElementById("fc-rback").style.display === "block",
-      "reveal shows the answer side");
-    w.document.getElementById("fc-g-good").click();
+    check(typeof w.pomodoroFormatTime === "function" && w.pomodoroFormatTime(1500) === "25:00",
+      `pomodoroFormatTime formats seconds (got ${w.pomodoroFormatTime(1500)})`);
+    const stats = w.pomodoroDailyStats([
+      { ts: Date.now(), minutes: 25, mode: "focus" },
+      { ts: Date.now() - 2 * 86400000, minutes: 25, mode: "focus" }
+    ], Date.now());
+    check(stats.count === 1 && stats.minutes === 25,
+      `pomodoroDailyStats counts only today (got ${JSON.stringify(stats)})`);
+    check(w.document.getElementById("pm-time").textContent === "25:00",
+      `timer renders focus preset (got "${w.document.getElementById('pm-time').textContent}")`);
+    w.document.getElementById("pm-preset-long").click();
+    check(w.document.getElementById("pm-time").textContent === "50:00",
+      `long preset sets 50:00 (got "${w.document.getElementById('pm-time').textContent}")`);
+    w.document.getElementById("pm-preset-short").click();
+    check(w.document.getElementById("pm-time").textContent === "05:00",
+      `short preset sets 05:00 (got "${w.document.getElementById('pm-time').textContent}")`);
+    w.document.getElementById("pm-preset-focus").click();
+    w.document.getElementById("btn-pm-toggle").click();
+    check(w.pmIsRunning() === true,
+      "toggle starts the timer");
+    w.document.getElementById("btn-pm-toggle").click();
+    check(w.pmIsRunning() === false,
+      "toggle pauses the timer");
+    w.document.getElementById("btn-pm-reset").click();
+    check(w.document.getElementById("pm-time").textContent === "25:00",
+      "reset returns to full focus duration");
+    w.pmCompleteSession();
     await new Promise((r) => setTimeout(r, 40));
-    check(w.document.getElementById("fc-rfront").textContent.includes("ôn xong"),
-      "session completes after grading the only due card");
+    const snap = async () => w.chrome.storage.local.get(["sf_pomodoro", "sf_todos"]);
+    const after = await snap();
+    check(Array.isArray(after.sf_pomodoro.sessions) && after.sf_pomodoro.sessions.length === 3,
+      `focus completion logs a session (got ${after.sf_pomodoro.sessions.length})`);
+    check(Array.isArray(after.sf_todos) && after.sf_todos.length === 1 && after.sf_todos[0].text.includes("25"),
+      `focus completion creates a todo log entry (got ${JSON.stringify(after.sf_todos)})`);
+    check(w.document.getElementById("pm-time").textContent === "05:00",
+      "after a focus session the timer switches to short break");
   }
 
   // 4f. Unified learning flow: citation -> note -> linked todo (goal -> source -> summary -> done)
@@ -457,8 +464,7 @@ async function main() {
   {
     const { window: w } = await loadPage("sidebar.html", {
       sf_todos: [],
-      saved_bibliographies: [],
-      sf_flashcards: []
+      saved_bibliographies: []
     });
     const snap = async () => w.chrome.storage.local.get(["saved_bibliographies", "sf_todos"]);
     const goalSel = w.document.getElementById("f-goal");
@@ -528,7 +534,7 @@ async function main() {
   }
   console.log("Regressing math insert into notes (UI):");
   {
-    const { window: w } = await loadPage("sidebar.html", { sf_todos: [], saved_bibliographies: [], sf_flashcards: [] });
+    const { window: w } = await loadPage("sidebar.html", { sf_todos: [], saved_bibliographies: [] });
     check(w.eval(`typeof updateMathInsertButton`) === "function",
       "updateMathInsertButton exposed as global");
     check(w.document.getElementById("btn-insert-math").style.display === "none",

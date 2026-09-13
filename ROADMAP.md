@@ -19,7 +19,7 @@
 - [x] **Định dạng trích dẫn thêm:** Vancouver, Chicago 17, ACS/AMA (KH tự nhiên & y sinh).
 - [x] **Luồng học tập hợp nhất:** nối trích dẫn ↔ ghi chú ↔ to-do thành một chu trình (mục đích → nguồn → tóm tắt → hoàn thành).
 - [ ] **Ghi chú trực tiếp trên PDF:** đánh dấu + trích dẫn từ tài liệu PDF đang đọc.
-- [x] **Flashcards ôn tập:** sinh thẻ ghi nhớ (spaced repetition) từ thư viện trích dẫn.
+- [x] **Pomodoro nghiên cứu:** timer tập trung 25/50/5 phút với nhật ký phiên, thống kê theo ngày và tự ghi phiên hoàn thành vào to-do. *(Thay thế Flashcard — đã gỡ flashcards theo yêu cầu (09/2026).)*
 - [x] **Hỗ trợ công thức (MathML):** nhận diện công thức toán khi trích dẫn tài liệu toán/CS.
 
 ### Sửa lỗi & cải thiện tính năng cũ
