@@ -448,6 +448,12 @@ async function main() {
     const planBig = w.pomodoroPlan(240, 25, 4);
     check(planBig.longBreaks === 1 && planBig.blocks === 7,
       `plan(240,25,4) inserts a long break every 4 sessions (got ${JSON.stringify(planBig)})`);
+    const planTuned = w.pomodoroPlan(90, 25, 4, 10, 25);
+    check(planTuned.shortBreaks === 2 && planTuned.breakMinutes === 20 && planTuned.leftover === 20,
+      `plan(90,25,4,10,25) honours custom break lengths (got ${JSON.stringify(planTuned)})`);
+    const planNoTrail = w.pomodoroPlan(90, 25, 4, 5, 15, false);
+    check(planNoTrail.leftover === 5 && planNoTrail.shortBreaks === 2 && planNoTrail.breakMinutes === 10,
+      `plan(...,allowTrail=false) skips the trailing break (got ${JSON.stringify(planNoTrail)})`);
     check(w.document.getElementById("pm-time").textContent === "25:00",
       `timer renders focus preset (got "${w.document.getElementById('pm-time').textContent}")`);
     w.document.getElementById("pm-preset-long").click();
@@ -495,6 +501,27 @@ async function main() {
       "plan calculator shows a 3-round plan for 90 minutes");
     check(w.document.querySelectorAll("#pm-plan-timeline > span").length >= 5,
       `plan timeline renders focus + break chips (got ${w.document.querySelectorAll("#pm-plan-timeline > span").length})`);
+    const stepShortLen = [...w.document.querySelectorAll("[data-step-for='pm-plan-short-len']")];
+    check(stepShortLen.length === 2,
+      `short-break length exposes its own stepper (got ${stepShortLen.length})`);
+    stepShortLen.find(b => b.getAttribute("data-step-delta") === "1").click();
+    check(w.document.getElementById("pm-plan-short-len").value === "6",
+      `short-break stepper bumps by 1 (got "${w.document.getElementById('pm-plan-short-len').value}")`);
+    check(w.document.getElementById("pm-plan-long-every") !== null &&
+      w.document.getElementById("pm-plan-long-every").options.length === 4,
+      "plan calculator exposes a long-break frequency select");
+    check(w.document.getElementById("pm-plan-trail-sb") !== null &&
+      w.document.getElementById("pm-plan-trail-sb").checked === true,
+      "plan calculator exposes the trailing short-break toggle");
+    w.document.getElementById("pm-plan-short-len").value = "10";
+    w.document.getElementById("pm-plan-work").value = "90";
+    w.document.getElementById("pm-plan-focus").value = "25";
+    w.document.getElementById("pm-plan-trail-sb").checked = false;
+    w.document.getElementById("btn-pm-plan-calc").click();
+    check([...w.document.querySelectorAll("#pm-plan-timeline > span")].some(s => s.textContent === "Nghỉ 10'"),
+      `timeline chips reflect the tuned break length (got ${[...w.document.querySelectorAll('#pm-plan-timeline > span')].map(s => s.textContent).join(',')})`);
+    w.document.getElementById("pm-plan-short-len").value = "5";
+    w.document.getElementById("pm-plan-trail-sb").checked = true;
     w.pmCompleteSession();
     await new Promise((r) => setTimeout(r, 40));
     const snap = async () => w.chrome.storage.local.get(["sf_pomodoro", "sf_todos"]);
@@ -508,6 +535,21 @@ async function main() {
     const actDone = (await w.chrome.storage.local.get("sf_pomodoro_active")).sf_pomodoro_active;
     check(actDone && actDone.mode === "short" && actDone.running === false && actDone.leftSec === 300,
       `floating-window snapshot updated to short break (got ${JSON.stringify(actDone)})`);
+    check(w.document.getElementById("pm-music-scene") !== null &&
+      w.document.getElementById("pm-music-scene").options.length === 4,
+      "break-music scene selector offers multiple styles");
+    w.document.getElementById("btn-pm-music-open").click();
+    await new Promise((r) => setTimeout(r, 40));
+    const musicOn = (await w.chrome.storage.local.get("sf_pomodoro_music")).sf_pomodoro_music;
+    check(Array.isArray(musicOn) && musicOn.length === 1,
+      `break-music playback tracks the opened tab (got ${JSON.stringify(musicOn)})`);
+    w.pmCompleteSession();
+    await new Promise((r) => setTimeout(r, 40));
+    const musicOff = (await w.chrome.storage.local.get("sf_pomodoro_music")).sf_pomodoro_music;
+    check(Array.isArray(musicOff) && musicOff.length === 0,
+      `break-music auto-stops when the break ends (got ${JSON.stringify(musicOff)})`);
+    check(w.document.getElementById("pm-time").textContent === "25:00",
+      "after the break the timer returns to the focus round");
   }
 
   // 4e2. Pomodoro floating window mirror (pomo-window.html)
@@ -528,6 +570,8 @@ async function main() {
       `floating window ring uses the short-break color (got "${w.document.getElementById('pw-ring-fg').getAttribute('stroke')}")`);
     check(w.document.getElementById("pw-status").textContent.length > 0,
       "floating window shows a running/paused status line");
+    check(w.document.body.classList.contains("pw-running") === true,
+      "floating window applies the running pulse state");
     w.document.getElementById("pw-toggle").click();
     const ctl1 = (await w.chrome.storage.local.get("sf_pomodoro_ctl")).sf_pomodoro_ctl;
     check(ctl1 && ctl1.cmd === "pause",

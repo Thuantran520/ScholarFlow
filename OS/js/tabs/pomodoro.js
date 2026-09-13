@@ -14,6 +14,14 @@ const PM_RING_COLORS = { focus: "#f97316", short: "#10b981", long: "#8b5cf6" };
 const PM_PLAN_SHORT = 5;
 const PM_PLAN_LONG = 15;
 const PM_SESSION_GOAL = 8;
+const PM_MUSIC_KEY = "sf_pomodoro_music";
+const PM_MUSIC_URLS = {
+  lofi: "https://music.youtube.com/search?q=lofi+study+mix",
+  focus: "https://music.youtube.com/search?q=deep+focus+instrumental+work",
+  chill: "https://music.youtube.com/search?q=chill+relax+acoustic",
+  piano: "https://music.youtube.com/search?q=calm+piano+study"
+};
+let pmMusicTabs = [];
 let pmData = { sessions: [], settings: { focus: 25, long: 50, short: 5 } };
 let pmState = { mode: "focus", totalSec: 25 * 60, leftSec: 25 * 60, running: false, endAt: 0, intervalId: null };
 let pmPlan = null;
@@ -61,19 +69,22 @@ function pomodoroWeekStats(sessions, nowMs) {
   return arr;
 }
 
-function pomodoroPlan(total, focus, longEvery) {
+function pomodoroPlan(total, focus, longEvery, shortLen, longLen, allowTrail) {
   total = Math.max(1, Math.round(total || 0));
   focus = Math.max(1, Math.round(focus || 25));
   longEvery = Math.max(2, Math.round(longEvery || 4));
+  const short = Math.max(1, Math.min(30, Math.round(shortLen || PM_PLAN_SHORT)));
+  const long = Math.max(5, Math.min(45, Math.round(longLen || PM_PLAN_LONG)));
+  const trail = allowTrail !== false;
   function breaksFor(n) {
-    let sum = 0, long = 0;
+    let sum = 0, longCnt = 0;
     for (let p = 1; p <= n - 1; p++) {
-      if (p % longEvery === 0) { sum += PM_PLAN_LONG; long += 1; } else { sum += PM_PLAN_SHORT; }
+      if (p % longEvery === 0) { sum += long; longCnt += 1; } else { sum += short; }
     }
-    return { sum: sum, long: long };
+    return { sum: sum, long: longCnt };
   }
   if (total < focus) {
-    return { blocks: 1, focusMinutes: total, shortBreaks: 0, longBreaks: 0, breakMinutes: 0, totalMinutes: total, leftover: 0, focusLength: focus, longEvery: longEvery };
+    return { blocks: 1, focusMinutes: total, shortBreaks: 0, longBreaks: 0, breakMinutes: 0, totalMinutes: total, leftover: 0, focusLength: focus, longEvery: longEvery, shortLen: short, longLen: long };
   }
   let blocks = 1;
   while (true) {
@@ -86,10 +97,10 @@ function pomodoroPlan(total, focus, longEvery) {
   let longBreaks = br.long;
   let shortBreaks = (blocks - 1) - br.long;
   let spaceLeft = total - blocks * focus - breakMinutes;
-  if (spaceLeft >= PM_PLAN_SHORT) {
-    breakMinutes += PM_PLAN_SHORT;
+  if (trail && spaceLeft >= short) {
+    breakMinutes += short;
     shortBreaks += 1;
-    spaceLeft -= PM_PLAN_SHORT;
+    spaceLeft -= short;
   }
   return {
     blocks: blocks,
@@ -100,7 +111,9 @@ function pomodoroPlan(total, focus, longEvery) {
     totalMinutes: blocks * focus + breakMinutes,
     leftover: spaceLeft,
     focusLength: focus,
-    longEvery: longEvery
+    longEvery: longEvery,
+    shortLen: short,
+    longLen: long
   };
 }
 
@@ -257,6 +270,7 @@ function pmCompleteSession() {
     showToast("pm_done_focus", "success", [String(minutes)]);
   } else {
     pmRenderNote("☕ " + (getI18nText("pm_done_break") || "Nghỉ xong, quay lại nhé!"));
+    pmStopMusic(true);
   }
   pmSetMode(pomodoroNextMode(pmState.mode));
 }
@@ -306,13 +320,21 @@ function pmApplyFocusLen(min) {
 function pmRunPlanCalc() {
   const totalEl = document.getElementById("pm-plan-work");
   const focusEl = document.getElementById("pm-plan-focus");
+  const shortEl = document.getElementById("pm-plan-short-len");
+  const longEl = document.getElementById("pm-plan-long-len");
+  const everyEl = document.getElementById("pm-plan-long-every");
+  const trailEl = document.getElementById("pm-plan-trail-sb");
   const total = parseInt((totalEl ? totalEl.value : "90"), 10);
   const focus = parseInt((focusEl ? focusEl.value : "25"), 10);
+  const short = parseInt((shortEl ? shortEl.value : "5"), 10);
+  const long = parseInt((longEl ? longEl.value : "15"), 10);
+  const every = parseInt((everyEl ? everyEl.value : "4"), 10);
+  const allowTrail = trailEl ? trailEl.checked : true;
   if (!total || total < 1) {
     pmRenderNote((getI18nText("pm_need_work_time") || "Vui lòng nhập tổng thời gian hợp lệ."));
     return;
   }
-  pmPlan = pomodoroPlan(total, focus, 4);
+  pmPlan = pomodoroPlan(total, focus, every, short, long, allowTrail);
   const sumEl = document.getElementById("pm-plan-summary");
   if (sumEl) {
     sumEl.textContent = getI18nText("pm_plan_summary", [pmPlan.blocks, pmPlan.focusLength, pmPlan.shortBreaks, pmPlan.longBreaks, pmPlan.totalMinutes]);
@@ -335,9 +357,9 @@ function pmBuildTimeline(plan) {
     if (i < plan.blocks - 1) {
       const breakIdx = i + 1;
       if (breakIdx % plan.longEvery === 0) {
-        el.appendChild(pmMakeChip(getI18nText("pm_plan_badge_long"), "#8b5cf6"));
+        el.appendChild(pmMakeChip(getI18nText("pm_plan_badge_long", [String(plan.longLen)]), "#8b5cf6"));
       } else {
-        el.appendChild(pmMakeChip(getI18nText("pm_plan_badge_short"), "#10b981"));
+        el.appendChild(pmMakeChip(getI18nText("pm_plan_badge_short", [String(plan.shortLen)]), "#10b981"));
       }
     }
   }
@@ -433,15 +455,53 @@ function pmOpenWindow() {
   }
 }
 
+function pmMusicPersist() {
+  storSet({ [PM_MUSIC_KEY]: pmMusicTabs });
+}
+
+function pmMusicLoad() {
+  storGet(PM_MUSIC_KEY, (res) => {
+    pmMusicTabs = (res && Array.isArray(res[PM_MUSIC_KEY])) ? res[PM_MUSIC_KEY].slice() : [];
+  });
+}
+
 function pmOpenMusic() {
-  const musicUrl = "https://music.youtube.com/";
+  const scene = document.getElementById("pm-music-scene");
+  const musicUrl = PM_MUSIC_URLS[scene ? scene.value : "lofi"] || PM_MUSIC_URLS.lofi;
   const tabsApi = (typeof browser !== "undefined" && browser.tabs && browser.tabs.create)
     ? browser.tabs
     : (typeof chrome !== "undefined" && chrome.tabs ? chrome.tabs : null);
   if (tabsApi) {
-    tabsApi.create({ url: musicUrl });
+    tabsApi.create({ url: musicUrl })
+      .then((tab) => {
+        if (tab && typeof tab.id === "number") {
+          pmMusicTabs.push(tab.id);
+          pmMusicPersist();
+        }
+        showToast("pm_music_opened", "success");
+      })
+      .catch(() => {});
   } else if (typeof window !== "undefined" && window.open) {
     window.open(musicUrl, "_blank");
+  }
+}
+
+function pmStopMusic(quiet, tabs) {
+  const ids = (typeof tabs !== "undefined" && tabs !== null) ? tabs : pmMusicTabs;
+  const tabsApi = (typeof browser !== "undefined" && browser.tabs && browser.tabs.remove)
+    ? browser.tabs
+    : (typeof chrome !== "undefined" && chrome.tabs ? chrome.tabs : null);
+  if (tabsApi && Array.isArray(ids) && ids.length) {
+    const close = ids.slice();
+    try {
+      const done = tabsApi.remove(close);
+      if (done && typeof done.catch === "function") done.catch(() => {});
+    } catch (e) {}
+  }
+  if (typeof tabs === "undefined" || tabs === null) {
+    pmMusicTabs = [];
+    pmMusicPersist();
+    if (!quiet) showToast("pm_music_stopped", "warning");
   }
 }
 
@@ -472,8 +532,10 @@ function pmBind() {
   if (elReset) elReset.addEventListener("click", pmReset);
   const elPopout = document.getElementById("btn-pm-popout");
   if (elPopout) elPopout.addEventListener("click", pmOpenWindow);
-  const elMusic = document.getElementById("btn-pm-music");
-  if (elMusic) elMusic.addEventListener("click", pmOpenMusic);
+  const elMusicOpen = document.getElementById("btn-pm-music-open");
+  if (elMusicOpen) elMusicOpen.addEventListener("click", pmOpenMusic);
+  const elMusicStop = document.getElementById("btn-pm-music-stop");
+  if (elMusicStop) elMusicStop.addEventListener("click", () => pmStopMusic(false));
   const btnFocus = document.getElementById("pm-preset-focus");
   if (btnFocus) btnFocus.addEventListener("click", () => pmPreset("focus"));
   const btnLong = document.getElementById("pm-preset-long");
@@ -503,6 +565,7 @@ function pmLoad() {
     pmRenderSessionDots();
     pmRenderWeek();
     pmBind();
+    pmMusicLoad();
   });
 }
 

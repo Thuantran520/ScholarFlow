@@ -7,7 +7,7 @@
 // ---------------------------------------------------------------------------
 const PW_KEY = "sf_pomodoro_active";
 const PW_CTL_KEY = "sf_pomodoro_ctl";
-const PW_C = 2 * Math.PI * 66;
+const PW_C = 2 * Math.PI * 81;
 const PW_COLORS = { focus: "#f97316", short: "#10b981", long: "#8b5cf6" };
 const PW_MODE_I18N = { focus: "pm_mode_focus", short: "pm_mode_short", long: "pm_mode_long" };
 let pwSnap = {};
@@ -50,6 +50,9 @@ function pwRender() {
   const toggleEl = document.getElementById("pw-toggle");
   if (toggleEl) {
     toggleEl.textContent = s.running ? "⏸" : "▶";
+  }
+  if (document.body) {
+    document.body.classList.toggle("pw-running", !!s.running);
   }
 }
 
