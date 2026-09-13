@@ -40,7 +40,8 @@ const LOAD_ORDER_MODULES = [
   "tabs/capture.js",
   "tabs/video.js",
   "init.js",
-  "tabs/calendar.js"
+  "tabs/calendar.js",
+  "tabs/flashcards.js"
 ];
 
 const KEY_GLOBALS = [
@@ -405,6 +406,50 @@ async function main() {
     sd.reset();
     check(sd.record("a") === false && sd.record("b") === false && sd.record("a") === false,
       "stall guard resets and does not misfire on progressing slices");
+  }
+
+  // 4e. Flashcards: SM-2 scheduler, due counting, review flow
+  console.log("Regressing flashcards (spaced repetition):");
+  {
+    const dueNow = Date.now();
+    const future = dueNow + 10 * 86400000;
+    const { window: w } = await loadPage("sidebar.html", {
+      sf_flashcards: [
+        { id: "c1", front: "Q1", back: "A1", due: dueNow - 1000, ease: 2.5, intervalDays: 0, reps: 0, lapses: 0 },
+        { id: "c2", front: "Q2", back: "A2", due: future, ease: 2.5, intervalDays: 7, reps: 3, lapses: 0 }
+      ]
+    });
+    check(typeof w.flashcardScheduler === "function",
+      "flashcardScheduler available as module global");
+    check(w.flashcardsDueCount([{ due: dueNow - 1 }, { due: dueNow + 99999 }], dueNow) === 1,
+      "flashcardsDueCount counts only cards at or past due");
+    const fresh = { due: dueNow, ease: 2.5, intervalDays: 0, reps: 0, lapses: 0 };
+    const good = w.flashcardScheduler(3, fresh, dueNow);
+    check(good.intervalDays === 1 && good.reps === 1 && good.due === dueNow + 86400000,
+      "grade Good on new card schedules 1 day out");
+    const easy = w.flashcardScheduler(4, good, dueNow);
+    check(easy.intervalDays === 3 && easy.ease > 2.5,
+      `grade Easy on new card -> 3 days and ease up (got interval ${easy.intervalDays}, ease ${easy.ease})`);
+    const again = w.flashcardScheduler(1, fresh, dueNow);
+    check(again.intervalDays === 0 && again.lapses === 1 && again.due > dueNow && again.due < dueNow + 60 * 60000,
+      "grade Again resets interval, bumps lapses, due in 10 minutes");
+    check(w.document.querySelectorAll("#fc-list > div").length === 2,
+      `flashcard list rendered from storage (got ${w.document.querySelectorAll("#fc-list > div").length})`);
+    const dueEl = w.document.getElementById("fc-due-count");
+    check(!!dueEl && dueEl.textContent.includes("1"),
+      `due count badge shows 1 (got "${dueEl ? dueEl.textContent : "none"}")`);
+    w.document.getElementById("btn-fc-review").click();
+    check(w.document.getElementById("fc-review").style.display === "block",
+      "review panel opens");
+    check(w.document.getElementById("fc-rfront").textContent === "Q1",
+      `review shows the due card (got "${w.document.getElementById('fc-rfront').textContent}")`);
+    w.document.getElementById("btn-fc-reveal").click();
+    check(w.document.getElementById("fc-rback").style.display === "block",
+      "reveal shows the answer side");
+    w.document.getElementById("fc-g-good").click();
+    await new Promise((r) => setTimeout(r, 40));
+    check(w.document.getElementById("fc-rfront").textContent.includes("ôn xong"),
+      "session completes after grading the only due card");
   }
 
   console.log("\n" + (failures === 0 ? "ALL TESTS PASSED" : `${failures} CHECK(S) FAILED`));

@@ -456,6 +456,52 @@
         <span data-i18n="btn_manage_biblio">Quản lý danh mục đã lưu</span> (<span id="biblio-count">0</span>)
       </button>
     </div>
+
+    <!-- Flashcards (spaced repetition) -->
+    <div style="background:rgba(15,23,42,0.65); border:1px solid var(--card-border); border-radius:8px; padding:10px; margin-top:10px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <div style="font-size:11.5px; font-weight:700; color:#f59e0b;">🧠 <span data-i18n="fc_heading">Flashcards ôn tập</span></div>
+        <span id="fc-badge" style="background:rgba(245,158,11,0.15); color:#fbbf24; padding:1px 8px; border-radius:10px; font-size:10.5px; font-weight:700;">0</span>
+      </div>
+      <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
+        <button id="btn-fc-add" class="btn-text-small" data-i18n="fc_add_card" style="padding:3px 8px; font-size:10.5px; color:#fbbf24; background:rgba(245,158,11,0.1); border-radius:5px; cursor:pointer; border:1px solid rgba(245,158,11,0.25);">Thêm thẻ</button>
+        <button id="btn-fc-from-lib" class="btn-text-small" data-i18n="fc_from_lib" style="padding:3px 8px; font-size:10.5px; color:#38bdf8; background:rgba(56,189,248,0.1); border-radius:5px; cursor:pointer; border:1px solid rgba(56,189,248,0.25);">Sinh từ thư viện</button>
+        <button id="btn-fc-review" class="btn-text-small" data-i18n="fc_review" style="padding:3px 8px; font-size:10.5px; color:#10b981; background:rgba(16,185,129,0.1); border-radius:5px; cursor:pointer; border:1px solid rgba(16,185,129,0.25);">Ôn tập</button>
+        <span id="fc-due-count" style="align-self:center; color:#10b981; font-size:10.5px; font-weight:700;"></span>
+      </div>
+
+      <div id="fc-add-form" style="display:none; margin-bottom:8px;">
+        <label style="font-size:10.5px; color:var(--text-muted);" data-i18n="fc_front_label">Mặt trước (câu hỏi):</label>
+        <textarea id="fc-front" class="form-control" rows="2" style="font-size:11px; background:rgba(0,0,0,0.3); border-color:rgba(255,255,255,0.1);"></textarea>
+        <label style="font-size:10.5px; color:var(--text-muted);" data-i18n="fc_back_label">Mặt sau (đáp án / ghi nhớ):</label>
+        <textarea id="fc-back" class="form-control" rows="3" style="font-size:11px; background:rgba(0,0,0,0.3); border-color:rgba(255,255,255,0.1);"></textarea>
+        <div style="display:flex; gap:6px; margin-top:6px;">
+          <button id="btn-fc-save" class="btn-text-small" data-i18n="fc_save" style="padding:3px 12px; font-size:11px; color:#0f172a; background:#f59e0b; border-radius:5px; cursor:pointer; border:none; font-weight:700;">Lưu thẻ</button>
+          <button id="btn-fc-cancel" class="btn-text-small" data-i18n="fc_cancel" style="padding:3px 12px; font-size:11px; color:#94a3b8; background:rgba(148,163,184,0.15); border-radius:5px; cursor:pointer; border:none;">Huỷ</button>
+        </div>
+      </div>
+
+      <div id="fc-lib-row" style="display:none; margin-bottom:8px;">
+        <label style="font-size:10.5px; color:var(--text-muted);" data-i18n="fc_lib_select">Chọn nguồn từ thư viện để tạo thẻ (mỗi nguồn 1 thẻ):</label>
+        <select id="fc-lib-select" class="form-control" style="font-size:11px; background:rgba(0,0,0,0.3); border-color:rgba(255,255,255,0.1);"></select>
+        <button id="btn-fc-generate" class="btn-text-small" data-i18n="fc_lib_generate" style="padding:3px 12px; font-size:11px; color:#0f172a; background:#38bdf8; border-radius:5px; cursor:pointer; border:none; font-weight:700; margin-top:6px;">Tạo thẻ</button>
+      </div>
+
+      <div id="fc-list" style="max-height:180px; overflow-y:auto; display:flex; flex-direction:column; gap:5px;"></div>
+
+      <div id="fc-review" style="display:none; margin-top:8px; background:rgba(0,0,0,0.25); border:1px solid rgba(16,185,129,0.3); border-radius:8px; padding:10px;">
+        <div id="fc-rfront" style="font-size:13px; font-weight:700; color:#f8fafc; white-space:pre-wrap; margin-bottom:8px;"></div>
+        <button id="btn-fc-reveal" class="btn-text-small" data-i18n="fc_reveal" style="padding:4px 14px; font-size:11px; color:#0f172a; background:#10b981; border-radius:5px; cursor:pointer; border:none; font-weight:700;">Hiện đáp án</button>
+        <div id="fc-rback" style="display:none; font-size:12.5px; color:#cbd5e1; white-space:pre-wrap; border-top:1px dashed rgba(148,163,184,0.3); padding-top:8px; margin-top:8px; margin-bottom:8px;"></div>
+        <div id="fc-grade-row" style="display:none; gap:5px; flex-wrap:wrap;">
+          <button id="fc-g-again" class="btn-text-small" data-i18n="fc_grade_a" style="padding:4px 8px; font-size:11px; color:#f87171; background:rgba(248,113,113,0.12); border-radius:5px; cursor:pointer; border:1px solid rgba(248,113,113,0.35);">Lại nữa</button>
+          <button id="fc-g-hard" class="btn-text-small" data-i18n="fc_grade_h" style="padding:4px 8px; font-size:11px; color:#fbbf24; background:rgba(245,158,11,0.12); border-radius:5px; cursor:pointer; border:1px solid rgba(245,158,11,0.35);">Khó</button>
+          <button id="fc-g-good" class="btn-text-small" data-i18n="fc_grade_g" style="padding:4px 8px; font-size:11px; color:#4ade80; background:rgba(74,222,128,0.12); border-radius:5px; cursor:pointer; border:1px solid rgba(74,222,128,0.35);">Tốt</button>
+          <button id="fc-g-easy" class="btn-text-small" data-i18n="fc_grade_e" style="padding:4px 8px; font-size:11px; color:#38bdf8; background:rgba(56,189,248,0.12); border-radius:5px; cursor:pointer; border:1px solid rgba(56,189,248,0.35);">Dễ</button>
+          <button id="btn-fc-end" class="btn-text-small" data-i18n="fc_stop" style="padding:4px 8px; font-size:11px; color:#94a3b8; background:rgba(148,163,184,0.12); border-radius:5px; cursor:pointer; border:1px solid rgba(148,163,184,0.3);">Dừng</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ══════════════════════ TAB 2: ELEMENT REDACT & BLUR ══════════════════════ -->
@@ -1312,6 +1358,7 @@
   <script src="../js/tabs/video.js"></script>
   <script src="../js/init.js"></script>
   <script src="../js/tabs/calendar.js"></script>
+  <script src="../js/tabs/flashcards.js"></script>
   <script src="../js/debug.js"></script>
 </body>
 </html>
