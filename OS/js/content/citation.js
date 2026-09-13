@@ -1011,7 +1011,35 @@
   window.addEventListener("popstate", () => {
     setTimeout(handleSpaNavigation, 250);
   });
-  setInterval(handleSpaNavigation, 1000);
+
+  // Lightweight SPA navigation watch.
+  // Event-first (Navigation API / pushState / replaceState / hashchange) with a slow 2s
+  // fallback poll. The old unconditional 1000ms interval is gone; the poll only compares
+  // URL strings, but fires half as often to cut background overhead on every page.
+  function _scheduleSpaCheck() {
+    setTimeout(handleSpaNavigation, 2000);
+  }
+  try {
+    if (window.navigation && typeof window.navigation.addEventListener === "function") {
+      window.navigation.addEventListener("navigate", _scheduleSpaCheck);
+    }
+  } catch (e) {}
+  try {
+    const _nativePush = history.pushState;
+    const _nativeReplace = history.replaceState;
+    history.pushState = function (...args) {
+      const r = _nativePush.apply(this, args);
+      _scheduleSpaCheck();
+      return r;
+    };
+    history.replaceState = function (...args) {
+      const r = _nativeReplace.apply(this, args);
+      _scheduleSpaCheck();
+      return r;
+    };
+  } catch (e) {}
+  window.addEventListener("hashchange", _scheduleSpaCheck);
+  setInterval(handleSpaNavigation, 2000);
 
   // Listener for EXTRACT_PAGE_METADATA & PING
   const _cRuntime = (typeof browser !== "undefined" && browser.runtime) 

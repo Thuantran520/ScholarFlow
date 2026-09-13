@@ -543,6 +543,36 @@ async function main() {
       `click inserts fenced LaTeX into notes (got "${notesVal}")`);
   }
 
+  // 4h. Reduced SPA navigation watch weight (event-driven + 2s fallback, no 1s poll)
+  console.log("Regressing SPA navigation watch (reduced interval):");
+  {
+    const domS = new JSDOM('<!doctype html><html><body><h1>t</h1></body></html>', {
+      url: "https://example.com/start",
+      runScripts: "outside-only",
+      pretendToBeVisual: true
+    });
+    const wS = domS.window;
+    wS.chrome = makeChromeStub({ app_language: "vi" });
+    wS.browser = wS.chrome;
+    const origSetInterval = wS.setInterval;
+    let intervalRegistrations = 0;
+    wS.setInterval = function (...a) { intervalRegistrations++; return origSetInterval.apply(this, a); };
+    for (const f of ["OS/js/content/i18n.js", "OS/js/content/citation.js"]) {
+      wS.eval(fs.readFileSync(path.join(__dirname, "..", f), "utf8"));
+    }
+    const intervals = intervalRegistrations;
+    let spaErr = "";
+    try {
+      wS.history.pushState({}, "", "/step/2");
+      wS.window.dispatchEvent(new wS.HashChangeEvent("hashchange"));
+      wS.history.replaceState({}, "", "/step/3");
+    } catch (e) { spaErr = e.message; }
+    check(!spaErr, "pushState/replaceState/hashchange hooks work without throwing" + (spaErr ? ` -> ${spaErr}` : ""));
+    check(intervals === 1,
+      `content bundle registers exactly 1 slow poll interval (got ${intervals})`);
+    domS.window.close();
+  }
+
   console.log("\n" + (failures === 0 ? "ALL TESTS PASSED" : `${failures} CHECK(S) FAILED`));
   process.exit(failures === 0 ? 0 : 1);
 }
