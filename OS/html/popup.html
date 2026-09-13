@@ -634,6 +634,7 @@
             <select class="form-control" id="cap-pref-format" style="font-size:11px; padding:4px 6px;">
               <option value="png">PNG</option>
               <option value="jpeg">JPEG</option>
+              <option value="webp">WEBP</option>
             </select>
           </div>
           <div class="col form-group" style="margin-bottom:0;">
@@ -642,6 +643,14 @@
               <option value="0" data-i18n="opt_delay_0">Chụp ngay (0s)</option>
               <option value="2" data-i18n="opt_delay_2">Hẹn giờ 2 giây</option>
               <option value="5" data-i18n="opt_delay_5">Hẹn giờ 5 giây</option>
+            </select>
+          </div>
+          <div class="col form-group" style="margin-bottom:0;">
+            <label style="font-size:10.5px; font-weight:600; color:var(--text-muted);" data-i18n="lbl_cap_quality">Chất lượng ảnh:</label>
+            <select class="form-control" id="cap-pref-quality" style="font-size:11px; padding:4px 6px;">
+              <option value="85">85%</option>
+              <option value="95" selected>95%</option>
+              <option value="100">100%</option>
             </select>
           </div>
         </div>
@@ -743,6 +752,8 @@
           <div class="col form-group" style="margin-bottom:0;">
             <label style="font-size:10.5px; font-weight:600; color:var(--text-muted);" data-i18n="lbl_video_res">Độ phân giải:</label>
             <select class="form-control" id="video-pref-resolution" style="font-size:11px; padding:4px 6px;">
+              <option value="2160">4K (2160p)</option>
+              <option value="1440">2K (1440p)</option>
               <option value="1080">1080p (Full HD)</option>
               <option value="720">720p (HD)</option>
               <option value="original">Original</option>
@@ -751,8 +762,8 @@
           <div class="col form-group" style="margin-bottom:0;">
             <label style="font-size:10.5px; font-weight:600; color:var(--text-muted);" data-i18n="lbl_video_fps">Khung hình (FPS):</label>
             <select class="form-control" id="video-pref-fps" style="font-size:11px; padding:4px 6px;">
+              <option value="60" selected>60 FPS</option>
               <option value="30">30 FPS</option>
-              <option value="60">60 FPS</option>
             </select>
           </div>
           <div class="col form-group" style="margin-bottom:0;">

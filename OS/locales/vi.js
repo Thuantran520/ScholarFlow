@@ -281,6 +281,7 @@ window.I18N_VI = {
    "pref_cap_autocopy": "Tự động sao chép vào Clipboard",
    "pref_cap_autocopy_desc": "Chụp xong là tự động dán (Ctrl + V) được ngay, không cần bấm Sao chép.",
    "lbl_cap_format": "Định dạng ảnh:",
+   "lbl_cap_quality": "Chất lượng ảnh:",
    "lbl_cap_delay": "Hẹn giờ chụp:",
    "opt_delay_0": "Chụp ngay (0s)",
    "opt_delay_2": "Hẹn giờ 2 giây",

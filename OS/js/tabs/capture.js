@@ -10,6 +10,7 @@
 let screenshotSettings = {
   autoCopy: true,
   format: "png",
+  quality: 0.95,
   delay: 0
 };
 
@@ -41,9 +42,11 @@ function loadScreenshotSettings() {
     }
     const autoCopyCheck = document.getElementById("cap-pref-autocopy");
     const formatSelect = document.getElementById("cap-pref-format");
+    const qualitySelect = document.getElementById("cap-pref-quality");
     const delaySelect = document.getElementById("cap-pref-delay");
     if (autoCopyCheck) autoCopyCheck.checked = screenshotSettings.autoCopy !== false;
     if (formatSelect) formatSelect.value = screenshotSettings.format || "png";
+    if (qualitySelect) qualitySelect.value = String(Math.round((screenshotSettings.quality || 0.95) * 100));
     if (delaySelect) delaySelect.value = (screenshotSettings.delay || 0).toString();
   });
 }
@@ -51,10 +54,12 @@ function loadScreenshotSettings() {
 function saveScreenshotSettings() {
   const autoCopyCheck = document.getElementById("cap-pref-autocopy");
   const formatSelect = document.getElementById("cap-pref-format");
+  const qualitySelect = document.getElementById("cap-pref-quality");
   const delaySelect = document.getElementById("cap-pref-delay");
 
   screenshotSettings.autoCopy = autoCopyCheck ? autoCopyCheck.checked : true;
   screenshotSettings.format = formatSelect ? formatSelect.value : "png";
+  screenshotSettings.quality = (parseInt((qualitySelect ? qualitySelect.value : "95"), 10) || 95) / 100;
   screenshotSettings.delay = delaySelect ? parseInt(delaySelect.value, 10) || 0 : 0;
 
   storSet({ super_screenshot_settings: screenshotSettings }, () => {
@@ -68,6 +73,14 @@ function saveScreenshotSettings() {
       }, 1500);
     }
   });
+}
+
+function dataUrlFromCanvas(canvas) {
+  const format = screenshotSettings.format || "png";
+  const quality = typeof screenshotSettings.quality === "number" ? screenshotSettings.quality : 0.95;
+  if (format === "jpeg") return canvas.toDataURL("image/jpeg", quality);
+  if (format === "webp") return canvas.toDataURL("image/webp", quality);
+  return canvas.toDataURL("image/png");
 }
 
 function getVisibleTabDataUrl(windowId = null) {
@@ -123,15 +136,14 @@ async function captureVisibleScreen() {
   }
   const dataUrl = await getVisibleTabDataUrl();
   if (dataUrl) {
-    if (screenshotSettings.format === "jpeg") {
+    if (screenshotSettings.format !== "png") {
       const img = await loadImage(dataUrl);
       const canvas = document.createElement("canvas");
       canvas.width = img.width;
       canvas.height = img.height;
       const ctx = canvas.getContext("2d");
       ctx.drawImage(img, 0, 0);
-      const jpegUrl = canvas.toDataURL("image/jpeg", 0.95);
-      displayScreenshotResult(jpegUrl);
+      displayScreenshotResult(dataUrlFromCanvas(canvas));
     } else {
       displayScreenshotResult(dataUrl);
     }
@@ -338,8 +350,7 @@ async function captureFullPageSmart() {
       0, 0, currentCanvas.width, finalHeight
     );
 
-    const isJpeg = screenshotSettings.format === "jpeg";
-    const fullDataUrl = finalCanvas.toDataURL(isJpeg ? "image/jpeg" : "image/png", 0.95);
+    const fullDataUrl = dataUrlFromCanvas(finalCanvas);
     displayScreenshotResult(fullDataUrl);
     if (!screenshotSettings.autoCopy) {
       showToast("✔ Chụp toàn bộ trang hoàn tất, không bị chồng chữ!");
@@ -487,8 +498,7 @@ async function captureChosenElement(info) {
         origScrollTop: info.origScrollTop
       }, r));
 
-      const isJpeg = screenshotSettings.format === "jpeg";
-      const dataUrl = masterCanvas.toDataURL(isJpeg ? "image/jpeg" : "image/png", 0.95);
+      const dataUrl = dataUrlFromCanvas(masterCanvas);
       displayScreenshotResult(dataUrl);
       if (!screenshotSettings.autoCopy) {
         showToast("✔ Đã chụp hoàn chỉnh bảng có thanh cuộn!");
@@ -562,8 +572,7 @@ async function captureChosenElement(info) {
       await new Promise(r => sendTabMessage({ action: "RESTORE_FIXED_ELEMENTS" }, r));
       await new Promise(r => sendTabMessage({ action: "RESTORE_CAPTURE_TARGET" }, r));
 
-      const isJpeg = screenshotSettings.format === "jpeg";
-      const dataUrl = masterCanvas.toDataURL(isJpeg ? "image/jpeg" : "image/png", 0.95);
+      const dataUrl = dataUrlFromCanvas(masterCanvas);
       displayScreenshotResult(dataUrl);
       if (!screenshotSettings.autoCopy) {
         showToast("✔ Đã chụp hoàn chỉnh bảng dài vượt trang!");
@@ -597,8 +606,7 @@ async function captureChosenElement(info) {
 
     await new Promise(r => sendTabMessage({ action: "RESTORE_CAPTURE_TARGET" }, r));
 
-    const isJpeg = screenshotSettings.format === "jpeg";
-    const finalDataUrl = cropCanvas.toDataURL(isJpeg ? "image/jpeg" : "image/png", 0.95);
+    const finalDataUrl = dataUrlFromCanvas(cropCanvas);
     displayScreenshotResult(finalDataUrl);
     if (!screenshotSettings.autoCopy) {
       showToast("✔ Đã chụp thành công đối tượng!");
@@ -672,8 +680,7 @@ async function captureSnipRect(msg) {
 
       ctx.drawImage(baseImg, sx, sy, sw, sh, 0, 0, sw, sh);
 
-    const isJpeg = screenshotSettings.format === "jpeg";
-    const finalDataUrl = canvas.toDataURL(isJpeg ? "image/jpeg" : "image/png", 0.95);
+    const finalDataUrl = dataUrlFromCanvas(canvas);
     displayScreenshotResult(finalDataUrl);
 
     if (!screenshotSettings.autoCopy) {

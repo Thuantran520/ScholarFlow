@@ -268,6 +268,7 @@ window.I18N_ZH = {
    "pref_cap_autocopy": "截图后自动复制到剪贴板",
    "pref_cap_autocopy_desc": "截取完成后可立即粘贴 (Ctrl + V)，无需额外点击复制。",
    "lbl_cap_format": "图片格式：",
+   "lbl_cap_quality": "图片质量：",
    "lbl_cap_delay": "倒计时延时：",
    "opt_delay_0": "立即截取 (0秒)",
    "opt_delay_2": "延时 2 秒",

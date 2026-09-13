@@ -280,6 +280,7 @@ window.I18N_EN = {
    "pref_cap_autocopy": "Auto-copy to Clipboard",
    "pref_cap_autocopy_desc": "Ready to paste (Ctrl + V) instantly right after capture.",
    "lbl_cap_format": "Image Format:",
+   "lbl_cap_quality": "Image Quality:",
    "lbl_cap_delay": "Capture Delay:",
    "opt_delay_0": "Instant (0s)",
    "opt_delay_2": "Delay 2s",

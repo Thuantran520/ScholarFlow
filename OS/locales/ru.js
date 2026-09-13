@@ -265,6 +265,7 @@ window.I18N_RU = {
    "pref_cap_autocopy": "Автокопирование в буфер",
    "pref_cap_autocopy_desc": "Готово к вставке (Ctrl + V) сразу после захвата.",
    "lbl_cap_format": "Формат изображения:",
+   "lbl_cap_quality": "Качество изображения:",
    "lbl_cap_delay": "Задержка захвата:",
    "opt_delay_0": "Без задержки (0с)",
    "opt_delay_2": "Задержка 2с",

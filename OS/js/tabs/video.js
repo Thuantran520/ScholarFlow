@@ -20,7 +20,7 @@ let videoSettings = {
   audio: false,
   autoDownload: false,
   resolution: "1080",
-  fps: "30",
+  fps: "60",
   countdown: "3"
 };
 
@@ -126,6 +126,22 @@ function formatRecordDuration(seconds) {
   return `${m}:${s}`;
 }
 
+const VIDEO_RES_MAP = {
+  "720": [1280, 720],
+  "1080": [1920, 1080],
+  "1440": [2560, 1440],
+  "2160": [3840, 2160]
+};
+
+function videoBitrate() {
+  const res = videoSettings.resolution || "1080";
+  if (res === "2160") return 45000000;
+  if (res === "1440") return 28000000;
+  if (res === "720") return 12000000;
+  if (res === "original") return 20000000;
+  return 20000000;
+}
+
 async function startVideoRecording() {
   try {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
@@ -136,15 +152,18 @@ async function startVideoRecording() {
     // Build constraints based on user settings
     const videoConstraints = {};
     if (videoSettings.fps) {
-      const fpsNum = parseInt(videoSettings.fps, 10) || 30;
+      const fpsNum = parseInt(videoSettings.fps, 10) || 60;
       videoConstraints.frameRate = { ideal: fpsNum, max: fpsNum };
     }
-    if (videoSettings.resolution === "1080") {
+    if (videoSettings.resolution === "original") {
+      videoConstraints.width = { ideal: 3840 };
+      videoConstraints.height = { ideal: 2160 };
+    } else if (VIDEO_RES_MAP[videoSettings.resolution]) {
+      videoConstraints.width = { ideal: VIDEO_RES_MAP[videoSettings.resolution][0] };
+      videoConstraints.height = { ideal: VIDEO_RES_MAP[videoSettings.resolution][1] };
+    } else {
       videoConstraints.width = { ideal: 1920 };
       videoConstraints.height = { ideal: 1080 };
-    } else if (videoSettings.resolution === "720") {
-      videoConstraints.width = { ideal: 1280 };
-      videoConstraints.height = { ideal: 720 };
     }
 
     const displayMediaOptions = {
@@ -180,7 +199,11 @@ async function startVideoRecording() {
       }
     }
 
-    mediaRecorder = new MediaRecorder(stream, { mimeType });
+    mediaRecorder = new MediaRecorder(stream, {
+      mimeType,
+      videoBitsPerSecond: videoBitrate(),
+      audioBitsPerSecond: 256000
+    });
 
     mediaRecorder.ondataavailable = (event) => {
       if (event.data && event.data.size > 0) {

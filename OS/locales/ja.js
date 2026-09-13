@@ -261,6 +261,7 @@ window.I18N_JA = {
    "pref_cap_autocopy": "クリップボードへ自動コピー",
    "pref_cap_autocopy_desc": "キャプチャ後、手動でコピーしなくてもすぐに貼り付け (Ctrl + V) できます。",
    "lbl_cap_format": "画像形式:",
+   "lbl_cap_quality": "画質:",
    "lbl_cap_delay": "タイマー撮影:",
    "opt_delay_0": "即時撮影 (0秒)",
    "opt_delay_2": "2秒後",
