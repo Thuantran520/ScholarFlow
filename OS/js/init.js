@@ -1423,6 +1423,71 @@ document.getElementById("btn-quick-swap-tabs")?.addEventListener("click", swapDu
         }
       }
 
+      // 3b. Title-based Crossref enrichment: academic sites that block page scraping
+      //     (e.g. IEEE Xplore behind AWS WAF) expose no machine-readable DOI in the
+      //     DOM or URL, so the DOI-gated enrichment above never fires. Query the
+      //     bibliographic search instead and fill authors/year/venue/pages from the
+      //     best-matched record.
+      if (!currentMeta.doi && currentMeta.title &&
+          /(?:frontiersin\.org|nature\.com|sciencedirect\.com|springer\.com|wiley\.com|ieee\.org|acm\.org|biorxiv\.org|medrxiv\.org|plos\.org|cell\.com|pnas\.org|tandfonline\.com|sagepub\.com|oup\.com|karger\.com|jstor\.org)/i.test(currentTabUrl || "") &&
+          (!currentMeta.authors || !currentMeta.date || !currentMeta.container || currentMeta.sourceType === "academic")) {
+        try {
+          const q = currentMeta.title.replace(/[.,;:()\[\]"'“”‘’]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 220);
+          if (q.length >= 8) {
+            const crRes = await fetch(`https://api.crossref.org/works?query.bibliographic=${encodeURIComponent(q)}&rows=4`, {
+              headers: { "User-Agent": "ScholarFlow/2.4 (mailto:contact@scholarflow.org)" },
+              signal: AbortSignal.timeout(8000)
+            });
+            if (crRes.ok) {
+              const crData = await crRes.json();
+              const items = (crData.message && crData.message.items) || [];
+              const best = items.slice().sort((a, b) => ((b.score || 0) - (a.score || 0)))[0];
+              if (best && best.title && best.title[0]) {
+                const normStr = s => String(s || "").toLowerCase().replace(/[^a-z0-9\s]+/g, " ").replace(/\s+/g, " ").trim();
+                const qw = new Set(normStr(q).split(" ").filter(w => w.length > 2));
+                const tw = normStr(best.title[0]).split(" ").filter(w => w.length > 2);
+                const overlap = qw.size ? tw.filter(w => qw.has(w)).length / qw.size : 0;
+                if (overlap >= 0.55 || (qw.size && tw.some(w => qw.has(w) && w.length >= 5))) {
+                  currentMeta.doi = (best.DOI || "").trim() || currentMeta.doi;
+                  if (best.title[0]) currentMeta.title = best.title[0];
+                  if (best["container-title"] && best["container-title"][0]) currentMeta.container = best["container-title"][0];
+                  if (best.author && Array.isArray(best.author) && best.author.length > 0) {
+                    currentMeta.authors = best.author.map(a => {
+                      if (a.name) return normalizeAuthorDisplayName(a.name);
+                      if (a.family && a.given) {
+                        const lastLow = removeVietnameseDiacritics(a.family).toLowerCase();
+                        const isVn = VIETNAMESE_SURNAMES.has(a.family.toLowerCase()) || VIETNAMESE_SURNAMES.has(lastLow);
+                        return isVn ? `${a.family} ${a.given}`.trim() : `${a.given} ${a.family}`.trim();
+                      }
+                      return normalizeAuthorDisplayName(a.family || a.given || "");
+                    }).filter(Boolean).join(", ");
+                  }
+                  const dateObj = (best.issued && best.issued["date-parts"] && best.issued["date-parts"][0])
+                    || (best["published-print"] && best["published-print"]["date-parts"] && best["published-print"]["date-parts"][0])
+                    || (best["published-online"] && best["published-online"]["date-parts"] && best["published-online"]["date-parts"][0])
+                    || (best["published"] && best["published"]["date-parts"] && best["published"]["date-parts"][0])
+                    || (best.created && best.created["date-parts"] && best.created["date-parts"][0]);
+                  if (dateObj) {
+                    if (dateObj.length === 1) currentMeta.date = `${dateObj[0]}`;
+                    else if (dateObj.length === 2) currentMeta.date = `${dateObj[0]}-${String(dateObj[1]).padStart(2, "0")}`;
+                    else if (dateObj.length >= 3) currentMeta.date = `${dateObj[0]}-${String(dateObj[1]).padStart(2, "0")}-${String(dateObj[2]).padStart(2, "0")}`;
+                  }
+                  let pList = [];
+                  if (best.volume) pList.push(`vol. ${best.volume}`);
+                  if (best.issue) pList.push(`no. ${best.issue}`);
+                  if (best.page) pList.push(`pp. ${best.page}`);
+                  if (pList.length > 0) currentMeta.pages = pList.join(", ");
+                  currentMeta.sourceType = "academic";
+                  originalExtractedMeta = { ...currentMeta };
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("Title Crossref enrichment failed:", e);
+        }
+      }
+
       // OpenAlex API Integration: Metrics badge (cited_by_count) and metadata synchronization
       if (currentMeta.doi) {
         try {
