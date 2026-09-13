@@ -71,17 +71,26 @@
     }
     .pw-card {
       flex: 1 1 auto;
+      min-height: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 14px;
-      padding: 6px 16px 16px;
+      gap: clamp(6px, 1.6vh, 14px);
+      padding: 6px 12px 12px;
       position: relative;
       z-index: 1;
     }
-    .pw-ring-wrap { position: relative; width: 190px; height: 190px; }
-    #pw-ring { width: 190px; height: 190px; display: block; }
+    .pw-ring-wrap {
+      position: relative;
+      flex: 1 1 auto;
+      width: 100%;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #pw-ring { width: min(78%, 46vh, 260px); height: auto; display: block; }
     #pw-ring-fg {
       transition: stroke-dashoffset 0.5s linear, stroke 0.4s ease;
       filter: drop-shadow(0 0 8px rgba(249, 115, 22, 0.55));
@@ -97,7 +106,7 @@
       text-align: center;
     }
     #pw-time {
-      font-size: 48px;
+      font-size: clamp(18px, min(21vw, 12.4vh), 50px);
       font-weight: 800;
       font-variant-numeric: tabular-nums;
       letter-spacing: 0.03em;
@@ -105,7 +114,7 @@
       text-shadow: 0 2px 18px rgba(0, 0, 0, 0.55);
     }
     #pw-mode {
-      font-size: 12px;
+      font-size: clamp(10px, 2.4vh, 12px);
       font-weight: 800;
       padding: 3px 12px;
       border-radius: 999px;
@@ -185,13 +194,14 @@
       border-color: rgba(74, 222, 128, 0.35);
       background: rgba(74, 222, 128, 0.1);
     }
-    body.pw-mini .pw-brand { padding-top: 16px; }
+    body.pw-mini .pw-brand { display: none; }
     body.pw-mini .pw-ring-wrap,
     body.pw-mini .pw-controls,
     body.pw-mini #pw-status { display: none; }
-    body.pw-mini #pw-time { font-size: 72px; }
-    body.pw-mini #pw-mode { font-size: 13px; margin-top: 6px; }
-    body.pw-mini .pw-card { justify-content: center; gap: 10px; }
+    body.pw-mini .pw-card { justify-content: center; gap: 8px; padding: 4px 8px; }
+    body.pw-mini #pw-time { font-size: clamp(40px, 32vh, 62px); }
+    body.pw-mini #pw-mode { font-size: 11px; margin-top: 4px; padding: 2px 10px; }
+    body.pw-mini .pw-blob { opacity: 0.3; }
     @keyframes pwBreath {
       0%, 100% { filter: drop-shadow(0 0 7px rgba(249, 115, 22, 0.45)); }
       50% { filter: drop-shadow(0 0 16px rgba(249, 115, 22, 0.85)); }
