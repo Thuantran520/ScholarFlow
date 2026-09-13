@@ -124,6 +124,36 @@
       border: 1px solid rgba(255, 255, 255, 0.08);
     }
     .pw-controls { display: flex; gap: 12px; }
+    .pw-sizectl {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .pw-size-btn {
+      min-width: 30px;
+      height: 26px;
+      padding: 0 8px;
+      border: none;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+      color: #cbd5e1;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      transition: background 0.15s ease;
+    }
+    .pw-size-btn:hover { background: rgba(255, 255, 255, 0.18); color: #ffffff; }
+    .pw-size-btn:active { background: rgba(255, 255, 255, 0.26); }
+    .pw-size-btn.on {
+      color: #0f172a;
+      background: linear-gradient(135deg, #fb923c, #f97316);
+      border-color: #fb923c;
+      box-shadow: 0 3px 12px rgba(249, 115, 22, 0.4);
+    }
+    .pw-vsep { width: 1px; height: 18px; background: rgba(255, 255, 255, 0.14); }
+    #pw-mini-toggle { font-size: 13px; line-height: 1; }
     .pw-btn {
       min-width: 54px;
       padding: 10px 14px;
@@ -155,6 +185,13 @@
       border-color: rgba(74, 222, 128, 0.35);
       background: rgba(74, 222, 128, 0.1);
     }
+    body.pw-mini .pw-brand { padding-top: 16px; }
+    body.pw-mini .pw-ring-wrap,
+    body.pw-mini .pw-controls,
+    body.pw-mini #pw-status { display: none; }
+    body.pw-mini #pw-time { font-size: 72px; }
+    body.pw-mini #pw-mode { font-size: 13px; margin-top: 6px; }
+    body.pw-mini .pw-card { justify-content: center; gap: 10px; }
     @keyframes pwBreath {
       0%, 100% { filter: drop-shadow(0 0 7px rgba(249, 115, 22, 0.45)); }
       50% { filter: drop-shadow(0 0 16px rgba(249, 115, 22, 0.85)); }
@@ -182,6 +219,13 @@
     <div class="pw-controls">
       <button id="pw-toggle" class="pw-btn pw-primary" type="button">▶</button>
       <button id="pw-reset" class="pw-btn" type="button">↺</button>
+    </div>
+    <div class="pw-sizectl">
+      <button class="pw-size-btn" data-size="s" title="Small">S</button>
+      <button class="pw-size-btn" data-size="m" title="Medium">M</button>
+      <button class="pw-size-btn" data-size="l" title="Large">L</button>
+      <span class="pw-vsep"></span>
+      <button id="pw-mini-toggle" class="pw-size-btn" type="button" title="Thu nhỏ">▁</button>
     </div>
   </div>
   <script src="../locales/vi.js"></script>

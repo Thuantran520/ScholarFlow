@@ -8,9 +8,55 @@
 const PW_KEY = "sf_pomodoro_active";
 const PW_CTL_KEY = "sf_pomodoro_ctl";
 const PW_C = 2 * Math.PI * 81;
+const PW_SIZE_KEY = "sf_pomo_win";
+const PW_SIZES = { s: { w: 240, h: 340 }, m: { w: 320, h: 440 }, l: { w: 420, h: 560 } };
+const PW_MINI = { w: 240, h: 150 };
 const PW_COLORS = { focus: "#f97316", short: "#10b981", long: "#8b5cf6" };
 const PW_MODE_I18N = { focus: "pm_mode_focus", short: "pm_mode_short", long: "pm_mode_long" };
 let pwSnap = {};
+let pwNormalSize = { w: PW_SIZES.m.w, h: PW_SIZES.m.h };
+let pwMini = false;
+
+function pwWindowsApi() {
+  return (typeof chrome !== "undefined" && chrome.windows) ? chrome.windows
+    : (typeof browser !== "undefined" && browser.windows ? browser.windows : null);
+}
+
+function pwApplySize(w, h, remember) {
+  const size = { w: Math.round(w), h: Math.round(h) };
+  if (remember !== false) pwNormalSize = size;
+  const win = pwWindowsApi();
+  if (!win || !win.getCurrent || !win.update) return;
+  win.getCurrent()
+    .then((winInfo) => {
+      if (winInfo && winInfo.id != null) {
+        win.update(winInfo.id, { width: size.w, height: size.h }).catch(() => {});
+      }
+    })
+    .catch(() => {});
+}
+
+function pwPersistSize() {
+  storSet({ [PW_SIZE_KEY]: { w: pwNormalSize.w, h: pwNormalSize.h, mini: pwMini } });
+}
+
+function pwSetMini(yes) {
+  pwMini = !!yes;
+  if (document.body) document.body.classList.toggle("pw-mini", pwMini);
+  pwApplySize(pwMini ? PW_MINI.w : pwNormalSize.w, pwMini ? PW_MINI.h : pwNormalSize.h, !pwMini);
+  pwPersistSize();
+}
+
+function pwSetPreset(key, btnEl) {
+  const s = PW_SIZES[key] || PW_SIZES.m;
+  pwMini = false;
+  if (document.body) document.body.classList.remove("pw-mini");
+  pwApplySize(s.w, s.h, true);
+  pwPersistSize();
+  document.querySelectorAll("[data-size]").forEach((b) => {
+    b.classList.toggle("on", b === btnEl);
+  });
+}
 
 function pwFormatTime(sec) {
   const s = Math.max(0, Math.floor(sec || 0));
@@ -67,6 +113,33 @@ function pwSendCtl(cmd) {
   storSet({ [PW_CTL_KEY]: { cmd: cmd, stamp: Date.now() } });
 }
 
+function pwLoadSize() {
+  storGet(PW_SIZE_KEY, (res) => {
+    const saved = res && res[PW_SIZE_KEY];
+    if (saved) {
+      if (typeof saved.w === "number" && typeof saved.h === "number") {
+        pwNormalSize = { w: saved.w, h: saved.h };
+      }
+      const wantMini = !!saved.mini;
+      if (wantMini !== pwMini) {
+        pwMini = wantMini;
+        if (document.body) document.body.classList.toggle("pw-mini", pwMini);
+      }
+    }
+    pwApplySize(pwMini ? PW_MINI.w : pwNormalSize.w, pwMini ? PW_MINI.h : pwNormalSize.h, false);
+    pwRenderActiveSize();
+  });
+}
+
+function pwRenderActiveSize() {
+  const cur = pwMini ? null : pwNormalSize;
+  document.querySelectorAll("[data-size]").forEach((b) => {
+    const s = PW_SIZES[b.getAttribute("data-size")];
+    const on = !pwMini && cur && s && s.w === cur.w && s.h === cur.h;
+    b.classList.toggle("on", !!on);
+  });
+}
+
 function pwBind() {
   const toggleEl = document.getElementById("pw-toggle");
   if (toggleEl) {
@@ -77,6 +150,22 @@ function pwBind() {
   const resetEl = document.getElementById("pw-reset");
   if (resetEl) {
     resetEl.addEventListener("click", () => pwSendCtl("reset"));
+  }
+  document.querySelectorAll("[data-size]").forEach((btn) => {
+    btn.addEventListener("click", () => pwSetPreset(btn.getAttribute("data-size"), btn));
+  });
+  const miniEl = document.getElementById("pw-mini-toggle");
+  if (miniEl) {
+    miniEl.addEventListener("click", () => pwSetMini(!pwMini));
+  }
+  const win = pwWindowsApi();
+  if (win && win.onBoundsChanged && win.onBoundsChanged.addListener) {
+    win.onBoundsChanged.addListener((bounds) => {
+      if (!bounds || bounds.id == null) return;
+      pwNormalSize = { w: Math.round(bounds.width) || pwNormalSize.w, h: Math.round(bounds.height) || pwNormalSize.h };
+      pwRenderActiveSize();
+      if (!pwMini) pwPersistSize();
+    });
   }
   const store = (typeof chrome !== "undefined" && chrome.storage && chrome.storage.onChanged)
     ? chrome.storage
@@ -96,3 +185,4 @@ function pwBind() {
 
 pwBind();
 pwLoad();
+pwLoadSize();

@@ -266,7 +266,7 @@ function pmCompleteSession() {
     pmRenderSessionDots();
     pmRenderWeek();
     pmLogSessionTodo(minutes);
-    pmRenderNote("✅ " + (getI18nText("pm_done_focus") || "Đã xong 1 phiên tập trung!") + " " + minutes + "′");
+    pmRenderNote(getI18nText("pm_done_focus", [String(minutes)]));
     showToast("pm_done_focus", "success", [String(minutes)]);
   } else {
     pmRenderNote("☕ " + (getI18nText("pm_done_break") || "Nghỉ xong, quay lại nhé!"));
@@ -488,20 +488,25 @@ function pmOpenMusic() {
 
 function pmStopMusic(quiet, tabs) {
   const ids = (typeof tabs !== "undefined" && tabs !== null) ? tabs : pmMusicTabs;
+  const clearTracking = (typeof tabs === "undefined" || tabs === null);
   const tabsApi = (typeof browser !== "undefined" && browser.tabs && browser.tabs.remove)
     ? browser.tabs
     : (typeof chrome !== "undefined" && chrome.tabs ? chrome.tabs : null);
-  if (tabsApi && Array.isArray(ids) && ids.length) {
-    const close = ids.slice();
-    try {
-      const done = tabsApi.remove(close);
-      if (done && typeof done.catch === "function") done.catch(() => {});
-    } catch (e) {}
-  }
-  if (typeof tabs === "undefined" || tabs === null) {
+  if (clearTracking) {
     pmMusicTabs = [];
     pmMusicPersist();
-    if (!quiet) showToast("pm_music_stopped", "warning");
+  }
+  if (clearTracking && !quiet) showToast("pm_music_stopped", "warning");
+  if (tabsApi && Array.isArray(ids) && ids.length) {
+    const close = ids.slice();
+    const fire = () => {
+      try {
+        const done = tabsApi.remove(close);
+        if (done && typeof done.catch === "function") done.catch(() => {});
+      } catch (e) {}
+    };
+    if (typeof document !== "undefined") setTimeout(fire, 1200);
+    else fire();
   }
 }
 
