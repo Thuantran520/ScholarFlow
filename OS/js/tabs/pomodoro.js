@@ -486,27 +486,47 @@ function pmOpenMusic() {
   }
 }
 
-function pmStopMusic(quiet, tabs) {
-  const ids = (typeof tabs !== "undefined" && tabs !== null) ? tabs : pmMusicTabs;
-  const clearTracking = (typeof tabs === "undefined" || tabs === null);
+function pmCloseMusicTabs(ids) {
   const tabsApi = (typeof browser !== "undefined" && browser.tabs && browser.tabs.remove)
     ? browser.tabs
     : (typeof chrome !== "undefined" && chrome.tabs ? chrome.tabs : null);
+  if (!tabsApi || !Array.isArray(ids) || !ids.length) return;
+  const list = ids.slice();
+  const fireRemove = () => {
+    try {
+      const done = tabsApi.remove(list);
+      if (done && typeof done.catch === "function") done.catch(() => {});
+    } catch (e) {}
+  };
+  if (!tabsApi.update) {
+    setTimeout(fireRemove, 150);
+    return;
+  }
+  let pending = list.length;
+  const onDone = () => {
+    pending -= 1;
+    if (pending <= 0) setTimeout(fireRemove, 150);
+  };
+  list.forEach((id) => {
+    try {
+      const p = tabsApi.update(id, { url: "about:blank" });
+      if (p && typeof p.then === "function") p.then(onDone).catch(onDone);
+      else onDone();
+    } catch (e) { onDone(); }
+  });
+}
+
+function pmStopMusic(quiet, tabs) {
+  const ids = (typeof tabs !== "undefined" && tabs !== null) ? tabs : pmMusicTabs;
+  const clearTracking = (typeof tabs === "undefined" || tabs === null);
   if (clearTracking) {
     pmMusicTabs = [];
     pmMusicPersist();
   }
   if (clearTracking && !quiet) showToast("pm_music_stopped", "warning");
-  if (tabsApi && Array.isArray(ids) && ids.length) {
-    const close = ids.slice();
-    const fire = () => {
-      try {
-        const done = tabsApi.remove(close);
-        if (done && typeof done.catch === "function") done.catch(() => {});
-      } catch (e) {}
-    };
-    if (typeof document !== "undefined") setTimeout(fire, 1200);
-    else fire();
+  if (Array.isArray(ids) && ids.length) {
+    if (typeof document !== "undefined") setTimeout(() => pmCloseMusicTabs(ids), 1200);
+    else pmCloseMusicTabs(ids);
   }
 }
 
