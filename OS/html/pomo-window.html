@@ -13,9 +13,9 @@
       --pw-ink: #f8fafc;
       --pw-muted: #94a3b8;
     }
+    html, body { width: 100%; height: 100%; }
     body {
       margin: 0;
-      height: 100vh;
       overflow: hidden;
       color: var(--pw-ink);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
@@ -23,6 +23,7 @@
       display: flex;
       flex-direction: column;
       position: relative;
+      container-type: size;
     }
     .pw-blob {
       position: absolute;
@@ -31,53 +32,43 @@
       opacity: 0.55;
       pointer-events: none;
     }
-    .pw-blob-1 {
-      width: 170px; height: 170px;
-      top: -48px; left: -42px;
-      background: rgba(249, 115, 22, 0.5);
-    }
-    .pw-blob-2 {
-      width: 190px; height: 190px;
-      bottom: -64px; right: -56px;
-      background: rgba(139, 92, 246, 0.45);
-    }
-    .pw-blob-3 {
-      width: 90px; height: 90px;
-      right: 30px; top: 26px;
-      background: rgba(56, 189, 248, 0.4);
-    }
+    .pw-blob-1 { width: clamp(90px, 34vh, 170px); height: clamp(90px, 34vh, 170px); top: -48px; left: -42px; background: rgba(249, 115, 22, 0.5); }
+    .pw-blob-2 { width: clamp(100px, 40vh, 190px); height: clamp(100px, 40vh, 190px); bottom: -64px; right: -56px; background: rgba(139, 92, 246, 0.45); }
+    .pw-blob-3 { width: clamp(50px, 18vh, 90px); height: clamp(50px, 18vh, 90px); right: 30px; top: 26px; background: rgba(56, 189, 248, 0.4); }
     .pw-brand {
+      flex: 0 0 auto;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 6px;
-      padding: 12px 10px 4px;
-      font-size: 10px;
+      gap: clamp(4px, 1.2vw, 6px);
+      padding: clamp(4px, 1vh, 12px) 8px 0;
+      font-size: clamp(8px, 2vh, 10px);
       font-weight: 800;
-      letter-spacing: 0.14em;
+      letter-spacing: 0.12em;
       text-transform: uppercase;
+      white-space: nowrap;
+      overflow: hidden;
       color: #cbd5e1;
       z-index: 1;
     }
-    .pw-brand::before,
-    .pw-brand::after {
+    .pw-brand::before, .pw-brand::after {
       content: "";
       height: 1px;
-      width: 34px;
+      flex: 0 0 auto;
+      width: clamp(14px, 9vh, 34px);
       background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.6));
     }
-    .pw-brand::after {
-      background: linear-gradient(90deg, rgba(148, 163, 184, 0.6), transparent);
-    }
+    .pw-brand::after { background: linear-gradient(90deg, rgba(148, 163, 184, 0.6), transparent); }
     .pw-card {
       flex: 1 1 auto;
       min-height: 0;
+      min-width: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: clamp(6px, 1.6vh, 14px);
-      padding: 6px 12px 12px;
+      gap: clamp(2px, 1.2vh, 14px);
+      padding: clamp(2px, 1vh, 10px) clamp(4px, 1.5vw, 14px);
       position: relative;
       z-index: 1;
     }
@@ -90,7 +81,8 @@
       align-items: center;
       justify-content: center;
     }
-    #pw-ring { width: min(78%, 46vh, 260px); height: auto; display: block; }
+    /* sizes measured against the window box itself, so any drag-resize fits */
+    #pw-ring { width: min(68cqw, 46cqh, 280px); height: auto; display: block; }
     #pw-ring-fg {
       transition: stroke-dashoffset 0.5s linear, stroke 0.4s ease;
       filter: drop-shadow(0 0 8px rgba(249, 115, 22, 0.55));
@@ -102,73 +94,53 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 5px;
+      gap: clamp(2px, 0.8vh, 5px);
       text-align: center;
+      min-width: 0;
     }
     #pw-time {
-      font-size: clamp(18px, min(21vw, 12.4vh), 50px);
+      font-size: clamp(16px, min(17cqw, 22cqh), 56px);
       font-weight: 800;
       font-variant-numeric: tabular-nums;
       letter-spacing: 0.03em;
       line-height: 1;
+      white-space: nowrap;
       text-shadow: 0 2px 18px rgba(0, 0, 0, 0.55);
     }
     #pw-mode {
-      font-size: clamp(10px, 2.4vh, 12px);
+      font-size: clamp(8px, 2cqh, 12px);
       font-weight: 800;
-      padding: 3px 12px;
+      padding: clamp(1px, 0.5cqh, 3px) clamp(4px, 1.2cqw, 12px);
       border-radius: 999px;
       background: rgba(15, 23, 42, 0.55);
       border: 1px solid rgba(255, 255, 255, 0.12);
       box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      white-space: nowrap;
     }
     #pw-status {
-      font-size: 11px;
+      flex: 0 0 auto;
+      font-size: clamp(8px, 1.8cqh, 11px);
       font-weight: 700;
       letter-spacing: 0.06em;
       color: var(--pw-muted);
-      padding: 4px 14px;
+      padding: clamp(1px, 0.5cqh, 4px) clamp(6px, 1.5cqw, 14px);
       border-radius: 999px;
       background: rgba(15, 23, 42, 0.4);
       border: 1px solid rgba(255, 255, 255, 0.08);
+      white-space: nowrap;
     }
-    .pw-controls { display: flex; gap: 12px; }
-    .pw-sizectl {
+    .pw-controls {
+      flex: 0 0 auto;
       display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
+      gap: clamp(6px, 1.5vw, 12px);
     }
-    .pw-size-btn {
-      min-width: 30px;
-      height: 26px;
-      padding: 0 8px;
-      border: none;
-      border-radius: 8px;
-      font-size: 11px;
-      font-weight: 800;
-      cursor: pointer;
-      color: #cbd5e1;
-      background: rgba(255, 255, 255, 0.07);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      transition: background 0.15s ease;
-    }
-    .pw-size-btn:hover { background: rgba(255, 255, 255, 0.18); color: #ffffff; }
-    .pw-size-btn:active { background: rgba(255, 255, 255, 0.26); }
-    .pw-size-btn.on {
-      color: #0f172a;
-      background: linear-gradient(135deg, #fb923c, #f97316);
-      border-color: #fb923c;
-      box-shadow: 0 3px 12px rgba(249, 115, 22, 0.4);
-    }
-    .pw-vsep { width: 1px; height: 18px; background: rgba(255, 255, 255, 0.14); }
-    #pw-mini-toggle { font-size: 13px; line-height: 1; }
     .pw-btn {
-      min-width: 54px;
-      padding: 10px 14px;
+      flex: 0 0 auto;
+      min-width: clamp(44px, 12cqw, 62px);
+      padding: clamp(5px, 1.2cqh, 10px) clamp(9px, 2cqw, 14px);
       border: none;
       border-radius: 12px;
-      font-size: 15px;
+      font-size: clamp(12px, 3cqh, 15px);
       font-weight: 800;
       cursor: pointer;
       color: #cbd5e1;
@@ -185,7 +157,64 @@
       box-shadow: 0 6px 22px rgba(249, 115, 22, 0.28);
     }
     .pw-primary:hover { background: linear-gradient(135deg, rgba(249, 115, 22, 0.55), rgba(234, 88, 12, 0.35)); }
-    .pw-foot { text-align: center; font-size: 9.5px; color: #64748b; padding: 0 0 10px; z-index: 1; }
+    .pw-sizectl {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: clamp(2px, 0.8vw, 6px);
+    }
+    .pw-size-btn {
+      min-width: clamp(22px, 8cqw, 30px);
+      height: clamp(20px, 4.4cqh, 26px);
+      padding: 0 clamp(5px, 1.5cqw, 8px);
+      border: none;
+      border-radius: 8px;
+      font-size: clamp(9px, 2.2cqh, 11px);
+      font-weight: 800;
+      cursor: pointer;
+      color: #cbd5e1;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      transition: background 0.15s ease;
+    }
+    .pw-size-btn:hover { background: rgba(255, 255, 255, 0.18); color: #ffffff; }
+    .pw-size-btn:active { background: rgba(255, 255, 255, 0.26); }
+    .pw-size-btn.on {
+      color: #0f172a;
+      background: linear-gradient(135deg, #fb923c, #f97316);
+      border-color: #fb923c;
+      box-shadow: 0 3px 12px rgba(249, 115, 22, 0.4);
+    }
+    .pw-vsep { flex: 0 0 auto; width: 1px; height: 18px; background: rgba(255, 255, 255, 0.14); }
+    #pw-mini-toggle { font-size: clamp(11px, 2.6cqh, 13px); line-height: 1; }
+
+    /* --- Small-window tuning (measured against the window box) ---------- */
+    @container (max-height: 300px) {
+      #pw-status { display: none; }
+      .pw-brand { padding-top: 2px; }
+      .pw-card { gap: 4px; padding: 2px 6px; }
+      .pw-controls { gap: 8px; }
+    }
+    @container (max-height: 236px) {
+      .pw-brand { display: none; }
+      .pw-sizectl { margin-bottom: 2px; }
+    }
+    @container (max-height: 190px) {
+      .pw-sizectl { display: none; }
+    }
+    @container (max-width: 210px) {
+      .pw-brand { display: none; }
+    }
+    @container (max-width: 190px) {
+      .pw-size-btn { min-width: 20px; height: 19px; padding: 0 3px; }
+      .pw-controls { gap: 5px; }
+    }
+    @container (max-width: 170px) {
+      .pw-size-btn { min-width: 18px; padding: 0 2px; font-size: 8px; }
+      .pw-vsep { display: none; }
+    }
+
     body.pw-running #pw-ring-fg {
       animation: pwBreath 2.2s ease-in-out infinite;
     }
@@ -198,10 +227,11 @@
     body.pw-mini .pw-ring-wrap,
     body.pw-mini .pw-controls,
     body.pw-mini #pw-status { display: none; }
-    body.pw-mini .pw-card { justify-content: center; gap: 8px; padding: 4px 8px; }
-    body.pw-mini #pw-time { font-size: clamp(40px, 32vh, 62px); }
-    body.pw-mini #pw-mode { font-size: 11px; margin-top: 4px; padding: 2px 10px; }
+    body.pw-mini .pw-card { justify-content: center; gap: clamp(4px, 2cqh, 8px); padding: 4px 8px; }
+    body.pw-mini #pw-time { font-size: clamp(34px, min(34cqw, 40cqh), 62px); }
+    body.pw-mini #pw-mode { font-size: clamp(10px, 2.4cqh, 12px); }
     body.pw-mini .pw-blob { opacity: 0.3; }
+    body.pw-mini .pw-sizectl { display: flex; }
     @keyframes pwBreath {
       0%, 100% { filter: drop-shadow(0 0 7px rgba(249, 115, 22, 0.45)); }
       50% { filter: drop-shadow(0 0 16px rgba(249, 115, 22, 0.85)); }
