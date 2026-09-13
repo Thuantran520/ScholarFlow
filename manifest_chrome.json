@@ -42,7 +42,6 @@
       "48": "icon48.png",
       "128": "icon128.png"
     },
-    "default_popup": "OS/html/popup.html",
     "default_title": "ScholarFlow"
   },
   "side_panel": {

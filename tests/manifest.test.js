@@ -95,6 +95,10 @@ async function main() {
     "FF manifest uses sidebar_action.default_panel = OS/html/sidebar.html");
   check(!chrome.sidebar_action && !chrome.browser_specific_settings,
     "Chrome manifest has no sidebar_action / browser_specific_settings");
+  check(!chrome.action.default_popup,
+    "Chrome action has NO default_popup (toolbar click opens native side panel)");
+  check(ffRoot.action.default_popup === "OS/html/popup.html",
+    "FF manifest keeps popup as action.default_popup");
   check(Boolean(ffRoot.browser_specific_settings && ffRoot.browser_specific_settings.gecko &&
     /^[\w.-]+@[\w.-]+$/.test(ffRoot.browser_specific_settings.gecko.id || "")),
     "FF manifest ships a valid gecko extension id");
