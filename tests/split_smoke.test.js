@@ -348,6 +348,47 @@ async function main() {
     dom3.window.close();
   }
 
+  // 4c. Teleprompter: script rendering, speed/font persistence, play/pause
+  console.log("Regressing teleprompter (speed + notes):");
+  {
+    const scriptText = ["Chào mừng các bạn đến buổi thuyết trình.", "Phần hai: kết quả nghiên cứu chính.", "Kết luận và hướng phát triển."].join("\n\n");
+    const { window: w, errors: tpErrors } = await loadPage("prompter.html", {
+      super_video_settings: { script: scriptText, prompter_speed: 1.5, prompter_font: 26 }
+    });
+    const relevantErrors = tpErrors.filter(e => !/Not implemented:/.test(e));
+    check(relevantErrors.length === 0, "prompter.html loads without uncaught errors" + (relevantErrors.length ? ` -> ${relevantErrors.slice(0, 3).join(" | ")}` : ""));
+    check(w.document.querySelectorAll(".prompter-para").length === 3,
+      `script rendered into 3 paragraphs (got ${w.document.querySelectorAll(".prompter-para").length})`);
+    check(w.document.querySelectorAll(".prompter-note").length === 3,
+      `notes panel rendered 3 notes (got ${w.document.querySelectorAll(".prompter-note").length})`);
+    check(w.document.getElementById("prompter-speed").value === "1.5",
+      `speed preference restored to 1.5x (got ${w.document.getElementById("prompter-speed").value})`);
+    check(w.document.getElementById("prompter-font").value === "26",
+      `font preference restored to 26px (got ${w.document.getElementById("prompter-font").value})`);
+    check(w.document.querySelector('[data-i18n="prompter_speed"]').textContent === "Tốc độ",
+      `data-i18n prompter_speed translated (${w.document.querySelector('[data-i18n="prompter_speed"]').textContent})`);
+    check(w.document.getElementById("prompter-toggle").textContent === "Phát",
+      `toggle starts in play state (${w.document.getElementById("prompter-toggle").textContent})`);
+    w.document.getElementById("prompter-toggle").click();
+    check(w.document.getElementById("prompter-toggle").textContent === "Tạm dừng",
+      `toggle switches to pause state (${w.document.getElementById("prompter-toggle").textContent})`);
+    w.document.dispatchEvent(new w.KeyboardEvent("keydown", { key: " ", code: "Space", bubbles: true }));
+    check(w.document.getElementById("prompter-toggle").textContent === "Phát",
+      `spacebar toggles back to play state`);
+    const speedIn = w.document.getElementById("prompter-speed");
+    speedIn.value = "2";
+    speedIn.dispatchEvent(new w.Event("input", { bubbles: true }));
+    const stored = await w.chrome.storage.local.get("super_video_settings");
+    check(stored.super_video_settings && stored.super_video_settings.prompter_speed === 2,
+      `speed persisted to super_video_settings (got ${stored.super_video_settings && stored.super_video_settings.prompter_speed})`);
+    w.document.getElementById("prompter-notes-toggle").click();
+    check(w.document.getElementById("prompter-notes").classList.contains("open"),
+      "notes panel toggles open");
+    w.document.getElementById("prompter-reset").click();
+    check(w.document.getElementById("prompter-stage").scrollTop === 0,
+      "reset returns the stage to the top");
+  }
+
   console.log("\n" + (failures === 0 ? "ALL TESTS PASSED" : `${failures} CHECK(S) FAILED`));
   process.exit(failures === 0 ? 0 : 1);
 }
