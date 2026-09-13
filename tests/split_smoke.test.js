@@ -6,7 +6,7 @@
 // and asserts that:
 //   * no script throws while evaluating
 //   * key globals exposed by the modules are present and callable
-//   * popup.html exposes the same 7 tabs / nav buttons as sidebar.html
+//   * popup.html exposes the same 8 tabs / nav buttons as sidebar.html
 //
 // Run with: npm test
 // ---------------------------------------------------------------------------
@@ -63,7 +63,7 @@ const KEY_GLOBALS = [
   "loadScreenshotSettings", "captureVisibleScreen", "captureFullPageSmart",
   "loadVideoSettings", "startVideoRecording", "stopVideoRecording",
   "renderAutofillList", "renderTodoList", "calRenderCalendar",
-  "pomodoroFormatTime", "pomodoroDailyStats"
+  "pomodoroFormatTime", "pomodoroDailyStats", "pomodoroPlan", "pomodoroWeekStats"
 ];
 
 // Minimal chrome/browser stub (callback + promise styles, resolved promises).
@@ -211,10 +211,10 @@ async function main() {
     const navCount = w.document.querySelectorAll(".main-nav-btn").length;
     const tabCount = w.document.querySelectorAll(".tab-section").length;
     const ids = [...w.document.querySelectorAll(".main-nav-btn")].map(b => b.dataset.target);
-    check(navCount === 7, `7 nav buttons (found ${navCount})`);
-    check(tabCount === 7, `7 tab sections (found ${tabCount})`);
-    check(["tab-cite", "tab-redact", "tab-capture", "tab-cookie", "tab-autofill", "tab-todo", "tab-cal"].every(t => ids.includes(t)),
-      `all 7 targets present in nav: ${ids.join(",")}`);
+    check(navCount === 8, `8 nav buttons (found ${navCount})`);
+    check(tabCount === 8, `8 tab sections (found ${tabCount})`);
+    check(["tab-cite", "tab-redact", "tab-capture", "tab-cookie", "tab-autofill", "tab-todo", "tab-pomo", "tab-cal"].every(t => ids.includes(t)),
+      `all 8 targets present in nav: ${ids.join(",")}`);
   }
 
   // 2. Unified i18n: upgraded t() supports positional {0} and function fallback
@@ -409,18 +409,21 @@ async function main() {
       "stall guard resets and does not misfire on progressing slices");
   }
 
-  // 4e. Research Pomodoro: timer helpers, presets, session logging, daily stats
-  console.log("Regressing research pomodoro (timer):");
+  // 4e. Research Pomodoro: timer, smart break planner, daily & weekly stats
+  console.log("Regressing research pomodoro (timer + planner):");
   {
     const { window: w } = await loadPage("sidebar.html", {
       sf_pomodoro: {
         sessions: [
           { ts: Date.now(), minutes: 25, mode: "focus" },
-          { ts: Date.now() - 2 * 86400000, minutes: 25, mode: "focus" }
+          { ts: Date.now() - 2 * 86400000, minutes: 25, mode: "focus" },
+          { ts: Date.now() - 6 * 86400000, minutes: 50, mode: "focus" }
         ],
         settings: { focus: 25, long: 50, short: 5 }
       }
     });
+    check(w.document.getElementById("pm-ring-fg") !== null,
+      "pomodoro tab exposes the SVG progress ring");
     check(typeof w.pomodoroFormatTime === "function" && w.pomodoroFormatTime(1500) === "25:00",
       `pomodoroFormatTime formats seconds (got ${w.pomodoroFormatTime(1500)})`);
     const stats = w.pomodoroDailyStats([
@@ -429,6 +432,22 @@ async function main() {
     ], Date.now());
     check(stats.count === 1 && stats.minutes === 25,
       `pomodoroDailyStats counts only today (got ${JSON.stringify(stats)})`);
+    const week = w.pomodoroWeekStats([
+      { ts: Date.now(), minutes: 25, mode: "focus" },
+      { ts: Date.now() - 2 * 86400000, minutes: 25, mode: "focus" },
+      { ts: Date.now() - 6 * 86400000, minutes: 50, mode: "focus" }
+    ], Date.now());
+    check(week.length === 7 && week[6].minutes === 25 && week[0].minutes === 50,
+      `pomodoroWeekStats buckets last 7 days (got ${week.map(d => d.minutes).join(",")})`);
+    const plan90 = w.pomodoroPlan(90, 25, 4);
+    check(plan90.blocks === 3 && plan90.shortBreaks === 3 && plan90.longBreaks === 0 && plan90.breakMinutes === 15,
+      `plan(90,25,4) == 3 focus + 3 short breaks (got ${JSON.stringify(plan90)})`);
+    const plan120 = w.pomodoroPlan(120, 25, 4);
+    check(plan120.blocks === 4 && plan120.focusMinutes === 100 && plan120.shortBreaks === 4,
+      `plan(120,25,4) == 4 focus + trailing short break (got ${JSON.stringify(plan120)})`);
+    const planBig = w.pomodoroPlan(240, 25, 4);
+    check(planBig.longBreaks === 1 && planBig.blocks === 7,
+      `plan(240,25,4) inserts a long break every 4 sessions (got ${JSON.stringify(planBig)})`);
     check(w.document.getElementById("pm-time").textContent === "25:00",
       `timer renders focus preset (got "${w.document.getElementById('pm-time').textContent}")`);
     w.document.getElementById("pm-preset-long").click();
@@ -438,6 +457,10 @@ async function main() {
     check(w.document.getElementById("pm-time").textContent === "05:00",
       `short preset sets 05:00 (got "${w.document.getElementById('pm-time').textContent}")`);
     w.document.getElementById("pm-preset-focus").click();
+    check(w.document.querySelectorAll("#pm-session-dots > span").length === 8,
+      `session goal dots rendered (got ${w.document.querySelectorAll("#pm-session-dots > span").length})`);
+    check([...w.document.querySelectorAll("#pm-session-dots > span")].some(s => s.style.background === "rgb(16, 185, 129)" || s.style.background === "#10b981"),
+      "today's completed session fills at least one dot");
     w.document.getElementById("btn-pm-toggle").click();
     check(w.pmIsRunning() === true,
       "toggle starts the timer");
@@ -447,11 +470,20 @@ async function main() {
     w.document.getElementById("btn-pm-reset").click();
     check(w.document.getElementById("pm-time").textContent === "25:00",
       "reset returns to full focus duration");
+    w.document.getElementById("pm-plan-work").value = "90";
+    w.document.getElementById("pm-plan-focus").value = "25";
+    w.document.getElementById("btn-pm-plan-calc").click();
+    check(w.document.getElementById("pm-plan-result").style.display === "block",
+      "plan calculator reveals the result card");
+    check(w.document.getElementById("pm-plan-summary").textContent.includes("3"),
+      "plan calculator shows a 3-round plan for 90 minutes");
+    check(w.document.querySelectorAll("#pm-plan-timeline > span").length >= 5,
+      `plan timeline renders focus + break chips (got ${w.document.querySelectorAll("#pm-plan-timeline > span").length})`);
     w.pmCompleteSession();
     await new Promise((r) => setTimeout(r, 40));
     const snap = async () => w.chrome.storage.local.get(["sf_pomodoro", "sf_todos"]);
     const after = await snap();
-    check(Array.isArray(after.sf_pomodoro.sessions) && after.sf_pomodoro.sessions.length === 3,
+    check(Array.isArray(after.sf_pomodoro.sessions) && after.sf_pomodoro.sessions.length === 4,
       `focus completion logs a session (got ${after.sf_pomodoro.sessions.length})`);
     check(Array.isArray(after.sf_todos) && after.sf_todos.length === 1 && after.sf_todos[0].text.includes("25"),
       `focus completion creates a todo log entry (got ${JSON.stringify(after.sf_todos)})`);
