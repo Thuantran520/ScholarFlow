@@ -16,18 +16,18 @@
 
 ### Tính năng mới
 - [x] **Search & autofill nguồn:** gõ tên bài báo / tác giả → gợi ý từ Crossref / OpenAlex → tự điền metadata, giảm nhập tay. *(Đã làm: `OS/js/citation/autofill.js` — dropdown gợi ý realtime ở ô Tiêu đề, bấm/Enter tự điền metadata, Ctrl+phím mũi tên để chọn.)*
-- [ ] **Định dạng trích dẫn thêm:** Vancouver, Chicago 17, ACS/AMA (KH tự nhiên & y sinh).
-- [ ] **Luồng học tập hợp nhất:** nối trích dẫn ↔ ghi chú ↔ to-do thành một chu trình (mục đích → nguồn → tóm tắt → hoàn thành).
+- [x] **Định dạng trích dẫn thêm:** Vancouver, Chicago 17, ACS/AMA (KH tự nhiên & y sinh).
+- [x] **Luồng học tập hợp nhất:** nối trích dẫn ↔ ghi chú ↔ to-do thành một chu trình (mục đích → nguồn → tóm tắt → hoàn thành).
 - [ ] **Ghi chú trực tiếp trên PDF:** đánh dấu + trích dẫn từ tài liệu PDF đang đọc.
-- [ ] **Flashcards ôn tập:** sinh thẻ ghi nhớ (spaced repetition) từ thư viện trích dẫn.
-- [ ] **Hỗ trợ công thức (MathML):** nhận diện công thức toán khi trích dẫn tài liệu toán/CS.
+- [x] **Flashcards ôn tập:** sinh thẻ ghi nhớ (spaced repetition) từ thư viện trích dẫn.
+- [x] **Hỗ trợ công thức (MathML):** nhận diện công thức toán khi trích dẫn tài liệu toán/CS.
 
 ### Sửa lỗi & cải thiện tính năng cũ
-- [ ] **Metadata tiếng Việt:** trích xuất chính xác hơn cho trang báo/tài liệu tiếng Việt + tên tác giả kiểu "Nguyễn Văn A".
-- [ ] **Capture:** sửa vùng chọn khi trang có iframe / cuộn lồng; ảnh sau redact sắc nét hơn.
-- [ ] **Teleprompter:** chỉnh nhanh tốc độ + hiển thị lên ghi chú — phù hợp thuyết trình.
-- [ ] **Bảo mật:** thu hẹp `host_permissions` về các domain cần thiết (giảm cảnh báo của Store).
-- [ ] **Hiệu năng:** sidebar chạy mượt khi mở nhiều tab / trang nặng.
+- [x] **Metadata tiếng Việt:** trích xuất chính xác hơn cho trang báo/tài liệu tiếng Việt + tên tác giả kiểu "Nguyễn Văn A".
+- [x] **Capture:** sửa vùng chọn khi trang có iframe / cuộn lồng; ảnh sau redact sắc nét hơn.
+- [x] **Teleprompter:** chỉnh nhanh tốc độ + hiển thị lên ghi chú — phù hợp thuyết trình.
+- [~] **Bảo mật:** thu hẹp `host_permissions` về các domain cần thiết. *Đã đánh giá 09/2026 — GIỮ `<all_urls>`: Capture/redact phải chạy trên mọi trang, nhưng đã có phần giải trình đầy đủ cho Store tại `HUONG_DAN_DANG_STORE.md` (mục permissions).*
+- [~] **Hiệu năng:** sidebar chạy mượt khi mở nhiều tab / trang nặng. *Đã giảm payload: poll điều hướng SPA trong content script chuyển từ setInterval 1s → event-driven + fallback 2s (`OS/js/content/citation.js`).*
 - [ ] **Lỗi phát sinh khi dùng:** ghi nhận và thêm vào danh sách sau mỗi buổi sử dụng.
 
 ## v2.5 — Nâng cao công cụ nghiên cứu (trung hạn)
