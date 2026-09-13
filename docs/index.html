@@ -192,36 +192,39 @@
         <a href="#features">Features</a>
         <a href="#workflow">Workflow</a>
         <a href="#releases">Releases</a>
+        <a href="./privacy.html">Privacy</a>
         <a href="https://github.com/Thuantran520/ScholarFlow" target="_blank" rel="noreferrer">GitHub</a>
       </nav>
     </header>
 
     <section class="hero">
       <div>
-        <div class="eyebrow">Browser Extension</div>
+        <div class="eyebrow">Browser Extension · v2.4.2</div>
         <h1>Academic research helper for citation, screenshots, and privacy protection.</h1>
         <p>
-          ScholarFlow helps researchers capture metadata, generate citations in major formats,
-          redact sensitive parts of a page, and save academic references without leaving the browser.
+          ScholarFlow helps researchers capture metadata, generate citations in 10 major formats,
+          redact sensitive parts of a page, manage login sessions, and save academic references —
+          all without leaving the browser, and all processed 100% locally.
         </p>
         <div class="cta-row">
           <a class="btn primary" href="https://github.com/Thuantran520/ScholarFlow" target="_blank" rel="noreferrer">View on GitHub</a>
           <a class="btn secondary" href="https://addons.mozilla.org/" target="_blank" rel="noreferrer">Firefox Add-ons</a>
         </div>
         <div class="mini-stats">
-          <div><strong>5</strong> Citation styles</div>
-          <div><strong>3</strong> Browsers supported</div>
+          <div><strong>10</strong> Citation styles</div>
+          <div><strong>5</strong> Languages</div>
           <div><strong>100%</strong> local processing</div>
         </div>
       </div>
       <div class="card">
         <h3>Key capabilities</h3>
         <ul>
-          <li>IEEE / APA / Harvard / MLA / BibTeX</li>
-          <li>Webpage and PDF metadata extraction</li>
-          <li>Smart full-page and element capture</li>
-          <li>Redaction/blur for private content</li>
-          <li>Source verification and bibliography management</li>
+          <li>IEEE / APA / Harvard / MLA / BibTeX + 5 more</li>
+          <li>EndNote XML &amp; CSL-JSON export</li>
+          <li>Smart full-page &amp; element capture</li>
+          <li>Redaction with persistence, region masks &amp; PIN</li>
+          <li>Auto-detect sensitive data (email, phone, ID)</li>
+          <li>Cookie manager with profiles &amp; Netscape export</li>
         </ul>
       </div>
     </section>
@@ -231,15 +234,27 @@
       <div class="feature-grid">
         <div class="feature">
           <h3>Academic citation</h3>
-          <p>Generate references in standard formats and keep your research workflow close to the source page.</p>
+          <p>Generate references in IEEE, APA 7, Harvard, MLA 9, BibTeX, Vancouver, Chicago 17, ACS, AMA — plus in-text guidance — and export to .bib, .ris, .txt, EndNote .xml, or CSL-JSON.</p>
         </div>
         <div class="feature">
           <h3>Privacy protection</h3>
-          <p>Blur, blackout, or hide sensitive content before capturing or sharing a webpage.</p>
+          <p>Blur, blackout, pixelate, or hide sensitive content. Masks persist per site, support precise drag regions, and are protected by an optional PIN lock.</p>
         </div>
         <div class="feature">
           <h3>Smart capture</h3>
-          <p>Capture full pages, tall tables, or selected elements with a cleaner output for documentation.</p>
+          <p>Capture full pages, tall tables, or selected elements — with redaction masks automatically applied to exported screenshots.</p>
+        </div>
+        <div class="feature">
+          <h3>Sensitive-data auto-detect</h3>
+          <p>Scan and mask emails, phone numbers, ID numbers, and card numbers in one click, or mask every occurrence of a keyword.</p>
+        </div>
+        <div class="feature">
+          <h3>Cookie manager</h3>
+          <p>View, edit, and delete individual cookies; export as JSON, raw string, or Netscape cookies.txt; and switch between saved profiles per site.</p>
+        </div>
+        <div class="feature">
+          <h3>Research productivity</h3>
+          <p>A Pomodoro focus timer, source verification, linked learning goals, notes, and a bibliography library keep your workflow organized.</p>
         </div>
       </div>
     </section>
@@ -250,26 +265,29 @@
         <div class="step">
           <div class="step-num">1</div>
           <h3>Open a webpage</h3>
-          <p>ScholarFlow reads the active page metadata and helps you build a clean academic profile.</p>
+          <p>ScholarFlow reads the active page metadata and auto-detects the source type to help you build a clean academic profile.</p>
         </div>
         <div class="step">
           <div class="step-num">2</div>
           <h3>Capture or redact</h3>
-          <p>Select content to hide, capture a region, or take a full-page screenshot.</p>
+          <p>Select content to hide, mask sensitive data, capture a region, or take a full-page screenshot.</p>
         </div>
         <div class="step">
           <div class="step-num">3</div>
           <h3>Export and reuse</h3>
-          <p>Copy citations, save bibliography entries, and package the extension for release.</p>
+          <p>Copy citations, save bibliography entries, and export references in the format your tools need.</p>
         </div>
       </div>
     </section>
 
     <section id="releases" class="section">
-      <h2>Release workflow</h2>
+      <h2>Release workflow &amp; privacy</h2>
       <div class="card">
         <p>
           The project supports packaging for Chrome/Edge and Firefox variants. The repo includes manifest files and packaging scripts so the extension can be generated for browser store submission.
+        </p>
+        <p>
+          ScholarFlow is <strong>100% local</strong> — no servers, no tracking, no data collection. Read the full <a href="./privacy.html">Privacy Policy</a> to see exactly what each permission is used for.
         </p>
       </div>
     </section>
