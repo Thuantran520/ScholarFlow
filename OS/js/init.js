@@ -1002,12 +1002,21 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
   document.getElementById("btn-cap-element")?.addEventListener("click", async () => {
     const tab = await ensureActiveTab();
     if (!tab || !tab.id) return showToast("❌ Không tìm thấy tab hoạt động!");
-    await ensureContentScriptInjected(tab.id);
+    if (tab.url && /^(about:|chrome:|edge:|moz-extension:|chrome-extension:)/.test(tab.url)) {
+      return showToast("❌ Không thể chụp trên trang trình duyệt (chrome://...). Hãy mở một trang web thường rồi thử lại.");
+    }
+    const injected = await ensureContentScriptInjected(tab.id);
+    if (!injected) {
+      return showToast("❌ Chưa kích hoạt được chế độ chọn khung trên trang này. Hãy tải lại trang web rồi thử lại.");
+    }
+    const startRes = await sendTabMessage({ action: "START_ELEMENT_CAPTURE" });
+    if (!startRes || startRes.success !== true) {
+      return showToast("❌ Chưa khởi động được chế độ chọn khung trên trang này. Hãy thử mở trang web khác.");
+    }
     isElementCapturePicking = true;
     const banner = document.getElementById("element-cap-active-banner");
     if (banner) banner.style.display = "block";
     showToast("🎯 Hãy rê chuột và click vào bảng hoặc thẻ cần chụp!");
-    sendTabMessage({ action: "START_ELEMENT_CAPTURE" });
   });
 
   document.getElementById("btn-cancel-cap-element")?.addEventListener("click", () => {

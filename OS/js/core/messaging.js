@@ -36,33 +36,37 @@ async function safeSendTabMessage(tabId, message) {
   return null;
 }
 
-// Lazy on-demand injection fallback for already open tabs
+// Lazy on-demand injection fallback for already open tabs.
+// VERIFIED: returns true only if a PING actually gets a pong back after all
+// attempts (previously it always returned true, silently masking failures).
 async function ensureContentScriptInjected(tabId) {
   if (!tabId) return false;
 
-  // 1. Quick PING with timeout
-  const ping = await Promise.race([
+  const pingNow = () => Promise.race([
     safeSendTabMessage(tabId, { action: "PING" }),
-    new Promise(r => setTimeout(() => r(null), 400))
+    new Promise(r => setTimeout(() => r(null), 350))
   ]);
-  if (ping && ping.pong) {
+
+  // 1. Already injected?
+  const first = await pingNow();
+  if (first && first.pong) {
     return true;
   }
 
-  // 2. Inject content CSS and modular scripts as fallback
-  try {
-    const scriptingApi = (typeof chrome !== "undefined" && chrome.scripting) 
-      ? chrome.scripting 
-      : ((typeof browser !== "undefined" && browser.scripting) ? browser.scripting : null);
+  const contentFiles = [
+    "OS/js/content/i18n.js",
+    "OS/js/content/inspect.js",
+    "OS/js/content/snip.js",
+    "OS/js/content/scroll.js",
+    "OS/js/content/citation.js",
+    "OS/js/content/main.js"
+  ];
 
-    const contentFiles = [
-      "OS/js/content/i18n.js",
-      "OS/js/content/inspect.js",
-      "OS/js/content/snip.js",
-      "OS/js/content/scroll.js",
-      "OS/js/content/citation.js",
-      "OS/js/content/main.js"
-    ];
+  // 2. Inject content CSS and modular scripts as fallback (Chrome MV3 / Firefox MV3)
+  try {
+    const scriptingApi = (typeof chrome !== "undefined" && chrome.scripting)
+      ? chrome.scripting
+      : ((typeof browser !== "undefined" && browser.scripting) ? browser.scripting : null);
 
     if (scriptingApi && scriptingApi.executeScript) {
       await scriptingApi.insertCSS({
@@ -75,8 +79,14 @@ async function ensureContentScriptInjected(tabId) {
         files: contentFiles
       }).catch(() => {});
 
-      await new Promise(r => setTimeout(r, 60));
-      return true;
+      // Verify the injection actually landed before declaring success.
+      await new Promise(r => setTimeout(r, 80));
+      for (let i = 0; i < 3; i++) {
+        const p = await pingNow();
+        if (p && p.pong) return true;
+        await new Promise(r => setTimeout(r, 120));
+      }
+      return false;
     }
 
     const tabsApi = (typeof browser !== "undefined" && browser.tabs) ? browser.tabs : (typeof chrome !== "undefined" ? chrome.tabs : null);
@@ -85,7 +95,12 @@ async function ensureContentScriptInjected(tabId) {
         await tabsApi.executeScript(tabId, { file: f }).catch(() => {});
       }
       await new Promise(r => setTimeout(r, 60));
-      return true;
+      for (let i = 0; i < 3; i++) {
+        const p = await pingNow();
+        if (p && p.pong) return true;
+        await new Promise(r => setTimeout(r, 120));
+      }
+      return false;
     }
   } catch (injectErr) {
     console.warn("Script injection fallback error:", injectErr);
