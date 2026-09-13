@@ -157,37 +157,6 @@
       box-shadow: 0 6px 22px rgba(249, 115, 22, 0.28);
     }
     .pw-primary:hover { background: linear-gradient(135deg, rgba(249, 115, 22, 0.55), rgba(234, 88, 12, 0.35)); }
-    .pw-sizectl {
-      flex: 0 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: clamp(2px, 0.8vw, 6px);
-    }
-    .pw-size-btn {
-      min-width: clamp(22px, 8cqw, 30px);
-      height: clamp(20px, 4.4cqh, 26px);
-      padding: 0 clamp(5px, 1.5cqw, 8px);
-      border: none;
-      border-radius: 8px;
-      font-size: clamp(9px, 2.2cqh, 11px);
-      font-weight: 800;
-      cursor: pointer;
-      color: #cbd5e1;
-      background: rgba(255, 255, 255, 0.07);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      transition: background 0.15s ease;
-    }
-    .pw-size-btn:hover { background: rgba(255, 255, 255, 0.18); color: #ffffff; }
-    .pw-size-btn:active { background: rgba(255, 255, 255, 0.26); }
-    .pw-size-btn.on {
-      color: #0f172a;
-      background: linear-gradient(135deg, #fb923c, #f97316);
-      border-color: #fb923c;
-      box-shadow: 0 3px 12px rgba(249, 115, 22, 0.4);
-    }
-    .pw-vsep { flex: 0 0 auto; width: 1px; height: 18px; background: rgba(255, 255, 255, 0.14); }
-    #pw-mini-toggle { font-size: clamp(11px, 2.6cqh, 13px); line-height: 1; }
 
     /* --- Small-window tuning (measured against the window box) ---------- */
     @container (max-height: 300px) {
@@ -198,21 +167,9 @@
     }
     @container (max-height: 236px) {
       .pw-brand { display: none; }
-      .pw-sizectl { margin-bottom: 2px; }
-    }
-    @container (max-height: 190px) {
-      .pw-sizectl { display: none; }
-    }
-    @container (max-width: 210px) {
-      .pw-brand { display: none; }
     }
     @container (max-width: 190px) {
-      .pw-size-btn { min-width: 20px; height: 19px; padding: 0 3px; }
       .pw-controls { gap: 5px; }
-    }
-    @container (max-width: 170px) {
-      .pw-size-btn { min-width: 18px; padding: 0 2px; font-size: 8px; }
-      .pw-vsep { display: none; }
     }
 
     body.pw-running #pw-ring-fg {
@@ -223,15 +180,6 @@
       border-color: rgba(74, 222, 128, 0.35);
       background: rgba(74, 222, 128, 0.1);
     }
-    body.pw-mini .pw-brand { display: none; }
-    body.pw-mini .pw-ring-wrap,
-    body.pw-mini .pw-controls,
-    body.pw-mini #pw-status { display: none; }
-    body.pw-mini .pw-card { justify-content: center; gap: clamp(4px, 2cqh, 8px); padding: 4px 8px; }
-    body.pw-mini #pw-time { font-size: clamp(34px, min(34cqw, 40cqh), 62px); }
-    body.pw-mini #pw-mode { font-size: clamp(10px, 2.4cqh, 12px); }
-    body.pw-mini .pw-blob { opacity: 0.3; }
-    body.pw-mini .pw-sizectl { display: flex; }
     @keyframes pwBreath {
       0%, 100% { filter: drop-shadow(0 0 7px rgba(249, 115, 22, 0.45)); }
       50% { filter: drop-shadow(0 0 16px rgba(249, 115, 22, 0.85)); }
@@ -259,13 +207,6 @@
     <div class="pw-controls">
       <button id="pw-toggle" class="pw-btn pw-primary" type="button">▶</button>
       <button id="pw-reset" class="pw-btn" type="button">↺</button>
-    </div>
-    <div class="pw-sizectl">
-      <button class="pw-size-btn" data-size="s" title="Small">S</button>
-      <button class="pw-size-btn" data-size="m" title="Medium">M</button>
-      <button class="pw-size-btn" data-size="l" title="Large">L</button>
-      <span class="pw-vsep"></span>
-      <button id="pw-mini-toggle" class="pw-size-btn" type="button" title="Thu nhỏ">▁</button>
     </div>
   </div>
   <script src="../locales/vi.js"></script>

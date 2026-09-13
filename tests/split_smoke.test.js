@@ -580,23 +580,11 @@ async function main() {
     const ctl2 = (await w.chrome.storage.local.get("sf_pomodoro_ctl")).sf_pomodoro_ctl;
     check(ctl2 && ctl2.cmd === "reset",
       `floating window reset writes a control intent (got ${JSON.stringify(ctl2)})`);
-    const sizeBtns = w.document.querySelectorAll("[data-size]");
-    check(sizeBtns.length === 3,
-      `floating window exposes S/M/L size presets (got ${sizeBtns.length})`);
-    sizeBtns[2].click();
-    const sizeL = (await w.chrome.storage.local.get("sf_pomo_win")).sf_pomo_win;
-    check(sizeL && sizeL.w === 470 && sizeL.h === 620 && sizeL.mini === false,
-      `large preset persists the window size (got ${JSON.stringify(sizeL)})`);
-    w.document.getElementById("pw-mini-toggle").click();
-    const miniOn = (await w.chrome.storage.local.get("sf_pomo_win")).sf_pomo_win;
-    check(miniOn && miniOn.mini === true &&
-      w.document.body.classList.contains("pw-mini") === true,
-      `mini mode collapses the window and remembers it (got ${JSON.stringify(miniOn)})`);
-    w.document.getElementById("pw-mini-toggle").click();
-    const miniOff = (await w.chrome.storage.local.get("sf_pomo_win")).sf_pomo_win;
-    check(miniOff && miniOff.mini === false &&
-      w.document.body.classList.contains("pw-mini") === false,
-      "exiting mini mode restores the normal window");
+    check((await w.chrome.storage.local.get("sf_pomo_win")).sf_pomo_win === undefined,
+      "floating window no longer writes a size/mini preset");
+    check(w.document.querySelectorAll("[data-size]").length === 0 &&
+      w.document.getElementById("pw-mini-toggle") === null,
+      "floating window exposes no size/mini controls");
   }
 
   // 4f. Unified learning flow: citation -> note -> linked todo (goal -> source -> summary -> done)
