@@ -86,6 +86,9 @@ onReady(() => {
     }
   });
 
+  // Live source search & autofill (OpenAlex / Crossref)
+  if (typeof initTitleAutocomplete === "function") initTitleAutocomplete();
+
   // Clear research notes with trash button
   const notesClearBtn = document.getElementById("btn-clear-notes");
   const notesInputEl = document.getElementById("f-notes");

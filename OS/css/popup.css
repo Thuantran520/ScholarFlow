@@ -2537,4 +2537,75 @@
   letter-spacing: 0.03em;
 }
 
+/* Title autofill suggestion dropdown (OpenAlex / Crossref) */
+.sf-autofill-dd {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  margin-top: 2px;
+  background: rgba(15, 23, 42, 0.98);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 8px;
+  box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.75), 0 0 12px rgba(56, 189, 248, 0.12);
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 4px;
+  font-size: 11px;
+  text-align: left;
+  animation: dropdownAnim 0.12s ease-out;
+}
+.sf-autofill-item {
+  position: relative;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+.sf-autofill-item.active,
+.sf-autofill-item:hover {
+  background: rgba(56, 189, 248, 0.16);
+}
+.sf-autofill-item-title {
+  color: var(--text);
+  font-weight: 600;
+  line-height: 1.35;
+  padding-right: 62px;
+  word-break: break-word;
+}
+.sf-autofill-item-meta {
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.4;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 62px;
+}
+.sf-autofill-item-src {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: var(--primary);
+  background: rgba(56, 189, 248, 0.1);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+.sf-autofill-empty,
+.sf-autofill-loading,
+.sf-autofill-error {
+  padding: 8px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
 

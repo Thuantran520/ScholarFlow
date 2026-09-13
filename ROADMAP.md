@@ -15,7 +15,7 @@
 **Mục tiêu:** Thêm tính năng mới, sửa lỗi và cải thiện tính năng cũ — phục vụ trực tiếp việc học tập và nghiên cứu học thuật. (Các việc hành chính cho Store như theo dõi duyệt, screenshots, reviewer… tạm để phía sau.)
 
 ### Tính năng mới
-- [ ] **Search & autofill nguồn:** gõ tên bài báo / tác giả → gợi ý từ Crossref / OpenAlex → tự điền metadata, giảm nhập tay.
+- [x] **Search & autofill nguồn:** gõ tên bài báo / tác giả → gợi ý từ Crossref / OpenAlex → tự điền metadata, giảm nhập tay. *(Đã làm: `OS/js/citation/autofill.js` — dropdown gợi ý realtime ở ô Tiêu đề, bấm/Enter tự điền metadata, Ctrl+phím mũi tên để chọn.)*
 - [ ] **Định dạng trích dẫn thêm:** Vancouver, Chicago 17, ACS/AMA (KH tự nhiên & y sinh).
 - [ ] **Luồng học tập hợp nhất:** nối trích dẫn ↔ ghi chú ↔ to-do thành một chu trình (mục đích → nguồn → tóm tắt → hoàn thành).
 - [ ] **Ghi chú trực tiếp trên PDF:** đánh dấu + trích dẫn từ tài liệu PDF đang đọc.
