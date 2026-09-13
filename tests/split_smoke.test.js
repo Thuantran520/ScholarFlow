@@ -470,6 +470,22 @@ async function main() {
     w.document.getElementById("btn-pm-reset").click();
     check(w.document.getElementById("pm-time").textContent === "25:00",
       "reset returns to full focus duration");
+    const stepFocus = [...w.document.querySelectorAll("[data-step-for='pm-focus-custom']")];
+    check(stepFocus.length === 2,
+      `focus stepper exposes two arrow buttons (got ${stepFocus.length})`);
+    stepFocus.find(b => b.getAttribute("data-step-delta") === "5").click();
+    check(w.document.getElementById("pm-focus-custom").value === "30",
+      `focus stepper + bumps the value (got "${w.document.getElementById('pm-focus-custom').value}")`);
+    stepFocus.find(b => b.getAttribute("data-step-delta") === "-5").click();
+    check(w.document.getElementById("pm-focus-custom").value === "25",
+      `focus stepper − bumps the value (got "${w.document.getElementById('pm-focus-custom').value}")`);
+    const stepWork = [...w.document.querySelectorAll("[data-step-for='pm-plan-work']")];
+    stepWork.find(b => b.getAttribute("data-step-delta") === "5").click();
+    check(w.document.getElementById("pm-plan-work").value === "95",
+      `plan stepper + bumps the work minutes (got "${w.document.getElementById('pm-plan-work').value}")`);
+    const actPaused = (await w.chrome.storage.local.get("sf_pomodoro_active")).sf_pomodoro_active;
+    check(actPaused && actPaused.running === false && actPaused.mode === "focus",
+      `timer snapshot published after reset/pause (got ${JSON.stringify(actPaused)})`);
     w.document.getElementById("pm-plan-work").value = "90";
     w.document.getElementById("pm-plan-focus").value = "25";
     w.document.getElementById("btn-pm-plan-calc").click();
@@ -489,6 +505,37 @@ async function main() {
       `focus completion creates a todo log entry (got ${JSON.stringify(after.sf_todos)})`);
     check(w.document.getElementById("pm-time").textContent === "05:00",
       "after a focus session the timer switches to short break");
+    const actDone = (await w.chrome.storage.local.get("sf_pomodoro_active")).sf_pomodoro_active;
+    check(actDone && actDone.mode === "short" && actDone.running === false && actDone.leftSec === 300,
+      `floating-window snapshot updated to short break (got ${JSON.stringify(actDone)})`);
+  }
+
+  // 4e2. Pomodoro floating window mirror (pomo-window.html)
+  console.log("Regressing pomodoro floating window (pomo-window.html):");
+  {
+    const endAt = Date.now() + 255000;
+    const { window: w } = await loadPage("pomo-window.html", {
+      sf_pomodoro_active: {
+        sender: "tab", mode: "short", totalSec: 300, leftSec: 300,
+        endAt: endAt, running: true, stamp: Date.now()
+      }
+    });
+    check(w.document.getElementById("pw-time").textContent === "04:15",
+      `floating window mirrors live remaining time (got "${w.document.getElementById('pw-time').textContent}")`);
+    check(w.document.getElementById("pw-mode").textContent.length > 0,
+      "floating window renders a mode label");
+    check(w.document.getElementById("pw-ring-fg").getAttribute("stroke") === "#10b981",
+      `floating window ring uses the short-break color (got "${w.document.getElementById('pw-ring-fg').getAttribute('stroke')}")`);
+    check(w.document.getElementById("pw-status").textContent.length > 0,
+      "floating window shows a running/paused status line");
+    w.document.getElementById("pw-toggle").click();
+    const ctl1 = (await w.chrome.storage.local.get("sf_pomodoro_ctl")).sf_pomodoro_ctl;
+    check(ctl1 && ctl1.cmd === "pause",
+      `floating window pause writes a control intent (got ${JSON.stringify(ctl1)})`);
+    w.document.getElementById("pw-reset").click();
+    const ctl2 = (await w.chrome.storage.local.get("sf_pomodoro_ctl")).sf_pomodoro_ctl;
+    check(ctl2 && ctl2.cmd === "reset",
+      `floating window reset writes a control intent (got ${JSON.stringify(ctl2)})`);
   }
 
   // 4f. Unified learning flow: citation -> note -> linked todo (goal -> source -> summary -> done)

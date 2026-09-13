@@ -2608,4 +2608,83 @@
   text-align: center;
 }
 
+/* ===== Pomodoro: custom number steppers & selects (no native arrows) ===== */
+.pm-stepper {
+  display: inline-flex;
+  align-items: stretch;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.pm-stepper input {
+  width: 52px;
+  background: transparent;
+  border: none;
+  color: #f8fafc;
+  text-align: center;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 4px 0;
+  outline: none;
+  font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.pm-stepper input::-webkit-outer-spin-button,
+.pm-stepper input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.pm-stepper button {
+  width: 26px;
+  border: none;
+  background: rgba(255, 255, 255, 0.06);
+  color: #cbd5e1;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+.pm-stepper button:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+}
+.pm-stepper button:active {
+  background: rgba(255, 255, 255, 0.24);
+}
+.pm-select {
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 22px !important;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2394a3b8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 7px center;
+}
+.pm-select option {
+  background-color: #0f172a;
+  color: #f8fafc;
+}
+.pm-popout-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.pm-popout-row button {
+  padding: 4px 12px;
+  font-size: 11px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #93c5fd;
+  background: rgba(147, 197, 253, 0.1);
+  border: 1px solid rgba(147, 197, 253, 0.3);
+}
+.pm-popout-row button:hover {
+  background: rgba(147, 197, 253, 0.22);
+}
+
 

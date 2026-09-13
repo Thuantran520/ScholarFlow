@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>ScholarFlow — Pomodoro</title>
+  <link rel="stylesheet" href="../css/fonts.css">
+  <link rel="stylesheet" href="../css/popup.css">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      background: #0f172a;
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      background-image: radial-gradient(circle at 50% 35%, rgba(249, 115, 22, 0.12) 0%, rgba(15, 23, 42, 0) 70%);
+    }
+    .pw-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      width: 100%;
+    }
+    .pw-ring-wrap { position: relative; width: 170px; height: 170px; }
+    #pw-ring { width: 170px; height: 170px; display: block; }
+    .pw-center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      text-align: center;
+    }
+    #pw-time {
+      font-size: 42px;
+      font-weight: 800;
+      color: #f8fafc;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.03em;
+      line-height: 1;
+    }
+    #pw-mode { font-size: 12px; font-weight: 700; }
+    #pw-status { font-size: 11px; color: #94a3b8; }
+    .pw-controls { display: flex; gap: 10px; }
+    .pw-btn {
+      min-width: 46px;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.1);
+      color: #cbd5e1;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .pw-btn:hover { background: rgba(255, 255, 255, 0.2); color: #ffffff; }
+    .pw-primary { background: rgba(249, 115, 22, 0.25); border: 1px solid rgba(249, 115, 22, 0.5); color: #fdba74; }
+    .pw-primary:hover { background: rgba(249, 115, 22, 0.4); }
+  </style>
+</head>
+<body>
+  <div class="pw-card">
+    <div class="pw-ring-wrap">
+      <svg id="pw-ring" viewBox="0 0 150 150">
+        <circle cx="75" cy="75" r="66" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="10"/>
+        <circle id="pw-ring-fg" cx="75" cy="75" r="66" fill="none" stroke="#f97316" stroke-width="10"
+                stroke-linecap="round" stroke-dasharray="414.69" stroke-dashoffset="0" transform="rotate(-90 75 75)"/>
+      </svg>
+      <div class="pw-center">
+        <div id="pw-time">25:00</div>
+        <div id="pw-mode"></div>
+      </div>
+    </div>
+    <div id="pw-status"></div>
+    <div class="pw-controls">
+      <button id="pw-toggle" class="pw-btn pw-primary" type="button">▶</button>
+      <button id="pw-reset" class="pw-btn" type="button">↺</button>
+    </div>
+  </div>
+  <script src="../locales/vi.js"></script>
+  <script src="../locales/en.js"></script>
+  <script src="../locales/zh.js"></script>
+  <script src="../locales/ru.js"></script>
+  <script src="../locales/ja.js"></script>
+  <script src="../js/i18n.js"></script>
+  <script src="../js/core/browser.js"></script>
+  <script src="../js/core/constants.js"></script>
+  <script src="../js/tabs/pomo-window.js"></script>
+</body>
+</html>

@@ -6,6 +6,8 @@
 // Research Pomodoro: ring timer + break planner + daily/weekly stats + todo log
 // ----------------------------------------------------------------------------
 const PM_KEY = "sf_pomodoro";
+const PM_ACTIVE_KEY = "sf_pomodoro_active";
+const PM_CTL_KEY = "sf_pomodoro_ctl";
 const PM_MODE_I18N_MAP = { focus: "pm_mode_focus", short: "pm_mode_short", long: "pm_mode_long" };
 const PM_RING_C = 2 * Math.PI * 49;
 const PM_RING_COLORS = { focus: "#f97316", short: "#10b981", long: "#8b5cf6" };
@@ -117,6 +119,7 @@ function pmSetMode(mode) {
   pmRenderTime();
   pmRenderModeLabel();
   pmRenderToggle();
+  pmPublishActive();
 }
 
 function pmStopTimer() {
@@ -125,6 +128,20 @@ function pmStopTimer() {
     pmState.intervalId = null;
   }
   pmState.running = false;
+}
+
+function pmPublishActive() {
+  storSet({
+    [PM_ACTIVE_KEY]: {
+      sender: "tab",
+      mode: pmState.mode,
+      totalSec: pmState.totalSec,
+      leftSec: pmState.leftSec,
+      endAt: pmState.running ? pmState.endAt : 0,
+      running: pmState.running,
+      stamp: Date.now()
+    }
+  });
 }
 
 function pmRenderTime() {
@@ -260,6 +277,7 @@ function pmStartPause() {
     pmState.intervalId = setInterval(pmTick, 1000);
   }
   pmRenderToggle();
+  pmPublishActive();
 }
 
 function pmReset() {
@@ -268,6 +286,7 @@ function pmReset() {
   pmState.leftSec = pmState.totalSec;
   pmRenderTime();
   pmRenderToggle();
+  pmPublishActive();
 }
 
 function pmPreset(mode) {
@@ -380,11 +399,81 @@ function pmRenderWeek() {
   });
 }
 
+function pmBindSteppers() {
+  document.querySelectorAll("[data-step-for]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const inp = document.getElementById(btn.getAttribute("data-step-for"));
+      if (!inp) return;
+      const delta = parseInt(btn.getAttribute("data-step-delta"), 10) || 0;
+      const min = parseInt(inp.min, 10);
+      const max = parseInt(inp.max, 10);
+      let val = parseInt(inp.value, 10);
+      if (!val || isNaN(val)) val = parseInt(inp.defaultValue, 10) || 0;
+      const lo = isNaN(min) ? 1 : min;
+      const hi = isNaN(max) ? 24 * 60 : max;
+      inp.value = String(Math.max(lo, Math.min(hi, val + delta)));
+    });
+  });
+}
+
+function pmOpenWindow() {
+  const getUrl = (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.getURL)
+    ? chrome.runtime.getURL
+    : (typeof browser !== "undefined" && browser.runtime && browser.runtime.getURL
+      ? browser.runtime.getURL
+      : null);
+  const url = getUrl ? getUrl("OS/html/pomo-window.html") : "OS/html/pomo-window.html";
+  const wApi = (typeof browser !== "undefined" && browser.windows && browser.windows.create)
+    ? browser.windows
+    : (typeof chrome !== "undefined" && chrome.windows ? chrome.windows : null);
+  if (wApi && wApi.create) {
+    wApi.create({ url: url, type: "popup", width: 300, height: 400 });
+  } else if (typeof window !== "undefined" && window.open) {
+    window.open(url, "_blank", "width=320,height=420");
+  }
+}
+
+function pmOpenMusic() {
+  const musicUrl = "https://music.youtube.com/";
+  const tabsApi = (typeof browser !== "undefined" && browser.tabs && browser.tabs.create)
+    ? browser.tabs
+    : (typeof chrome !== "undefined" && chrome.tabs ? chrome.tabs : null);
+  if (tabsApi) {
+    tabsApi.create({ url: musicUrl });
+  } else if (typeof window !== "undefined" && window.open) {
+    window.open(musicUrl, "_blank");
+  }
+}
+
+function pmApplyCtl(ctl) {
+  if (!ctl || !ctl.cmd) return;
+  if (ctl.cmd === "start" && !pmState.running) pmStartPause();
+  else if (ctl.cmd === "pause" && pmState.running) pmStartPause();
+  else if (ctl.cmd === "reset") pmReset();
+}
+
+function pmBindStorageCtl() {
+  const store = (typeof chrome !== "undefined" && chrome.storage && chrome.storage.onChanged)
+    ? chrome.storage
+    : null;
+  if (store && store.onChanged && store.onChanged.addListener) {
+    store.onChanged.addListener((changes, area) => {
+      if (area !== "local") return;
+      const ch = changes && changes[PM_CTL_KEY];
+      if (ch && ch.newValue) pmApplyCtl(ch.newValue);
+    });
+  }
+}
+
 function pmBind() {
   const elToggle = document.getElementById("btn-pm-toggle");
   if (elToggle) elToggle.addEventListener("click", pmStartPause);
   const elReset = document.getElementById("btn-pm-reset");
   if (elReset) elReset.addEventListener("click", pmReset);
+  const elPopout = document.getElementById("btn-pm-popout");
+  if (elPopout) elPopout.addEventListener("click", pmOpenWindow);
+  const elMusic = document.getElementById("btn-pm-music");
+  if (elMusic) elMusic.addEventListener("click", pmOpenMusic);
   const btnFocus = document.getElementById("pm-preset-focus");
   if (btnFocus) btnFocus.addEventListener("click", () => pmPreset("focus"));
   const btnLong = document.getElementById("pm-preset-long");
@@ -400,6 +489,8 @@ function pmBind() {
   if (btnCalc) btnCalc.addEventListener("click", pmRunPlanCalc);
   const btnPlanApply = document.getElementById("btn-pm-plan-apply");
   if (btnPlanApply) btnPlanApply.addEventListener("click", pmPlanApply);
+  pmBindSteppers();
+  pmBindStorageCtl();
 }
 
 function pmLoad() {

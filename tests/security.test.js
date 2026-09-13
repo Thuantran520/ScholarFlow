@@ -27,6 +27,7 @@ const ALLOWED_HOSTS = new Set([
   "export.arxiv.org",
   "arxiv.org",
   "www.youtube.com",
+  "music.youtube.com",
   "img.youtube.com",
   "api.openalex.org",
   "api.crossref.org",
