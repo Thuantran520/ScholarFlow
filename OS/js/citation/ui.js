@@ -27,6 +27,10 @@ function updateCitationDisplay() {
       harvard: "Định dạng: Harvard (Kinh tế & Quản trị)",
       bibtex: "Định dạng: BibTeX (LaTeX / Overleaf)",
       mla: "Định dạng: MLA 9th (Ngôn ngữ & Nhân văn)",
+      vancouver: "Định dạng: Vancouver (Y & Dược học)",
+      chicago: "Định dạng: Chicago 17 (Lịch sử & Khoa học XH)",
+      acs: "Định dạng: ACS (Hóa học & KHTN)",
+      ama: "Định dạng: AMA 11th (Y khoa & Sinh học)",
       intext: "Định dạng: Trích dẫn trong bài"
     },
     en: {
@@ -35,6 +39,10 @@ function updateCitationDisplay() {
       harvard: "Format: Harvard (Economics & Business)",
       bibtex: "Format: BibTeX (LaTeX / Overleaf)",
       mla: "Format: MLA 9th (Humanities & Arts)",
+      vancouver: "Format: Vancouver (Medicine & Health)",
+      chicago: "Format: Chicago 17 (History & Social Sciences)",
+      acs: "Format: ACS (Chemistry & Natural Sciences)",
+      ama: "Format: AMA 11th (Medicine & Biology)",
       intext: "Format: In-Text Citation"
     },
     zh: {
@@ -43,6 +51,10 @@ function updateCitationDisplay() {
       harvard: "格式：Harvard (经管学术)",
       bibtex: "格式：BibTeX (LaTeX / Overleaf)",
       mla: "格式：MLA 第9版 (人文社科)",
+      vancouver: "格式：Vancouver (医学与卫生)",
+      chicago: "格式：Chicago 第17版 (史学与社科)",
+      acs: "格式：ACS (化学与自然科学)",
+      ama: "格式：AMA 第11版 (医学与生物)",
       intext: "格式：正文内引用"
     },
     ru: {
@@ -51,6 +63,10 @@ function updateCitationDisplay() {
       harvard: "Формат: Harvard (Экономика и бизнес)",
       bibtex: "Формат: BibTeX (LaTeX / Overleaf)",
       mla: "Формат: MLA 9-е изд. (Гуманитарные науки)",
+      vancouver: "Формат: Vancouver (Медицина и здоровье)",
+      chicago: "Формат: Chicago 17 (История и соц. науки)",
+      acs: "Формат: ACS (Химия и естественные науки)",
+      ama: "Формат: AMA 11-е изд. (Медицина и биология)",
       intext: "Формат: Внутритекстовая ссылка"
     },
     ja: {
@@ -59,6 +75,10 @@ function updateCitationDisplay() {
       harvard: "形式: Harvard (経済・ビジネス)",
       bibtex: "形式: BibTeX (LaTeX / Overleaf)",
       mla: "形式: MLA 第9版 (人文学・文学)",
+      vancouver: "形式: Vancouver (医学・保健)",
+      chicago: "形式: Chicago 第17版 (歴史・社会科学)",
+      acs: "形式: ACS (化学・自然科学)",
+      ama: "形式: AMA 第11版 (医学・生物学)",
       intext: "形式: 本文内引用"
     }
   };
@@ -68,7 +88,7 @@ function updateCitationDisplay() {
   }
 
   let formattedCite = getFormattedCitationByStyle(currentMeta, currentCitationTab, 1);
-  if (currentCitationTab !== "ieee" && currentCitationTab !== "apa" && currentCitationTab !== "harvard" && currentCitationTab !== "mla" && currentCitationTab !== "intext" && currentCitationTab !== "bibtex") {
+  if (!isKnownCitationStyle(currentCitationTab)) {
     formattedCite = buildIeeeCitation(currentMeta);
   }
   

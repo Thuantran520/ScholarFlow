@@ -101,6 +101,11 @@ function saveCurrentToBiblio() {
   });
 }
 
+const KNOWN_CITATION_STYLES = ["ieee", "apa", "harvard", "bibtex", "mla", "vancouver", "chicago", "acs", "ama", "intext"];
+function isKnownCitationStyle(style) {
+  return KNOWN_CITATION_STYLES.includes(style);
+}
+
 function getFormattedCitationByStyle(meta, style, index) {
   switch (style) {
     case "ieee":
@@ -113,6 +118,14 @@ function getFormattedCitationByStyle(meta, style, index) {
       return buildBibtexCitation(meta);
     case "mla":
       return buildMlaCitation(meta);
+    case "vancouver":
+      return buildVancouverCitation(meta);
+    case "chicago":
+      return buildChicagoCitation(meta);
+    case "acs":
+      return buildAcsCitation(meta);
+    case "ama":
+      return buildAmaCitation(meta);
     case "intext":
       return buildIntextCitation(meta);
     default:

@@ -240,6 +240,76 @@ function formatBibtexAuthors(raw) {
   }).join(" and ");
 }
 
+function nameLastInitials(author, separator) {
+  if (!author) return "";
+  if (author.isOrg) return author.last;
+  let last = author.last;
+  let initials = (author.initials || "").replace(/\./g, "").replace(/\s+/g, "");
+  if (citationSettings.removeDiacritics) {
+    last = removeVietnameseDiacritics(last);
+    initials = removeVietnameseDiacritics(initials);
+  }
+  return initials ? `${last}${separator || " "}${initials}` : last;
+}
+
+function formatVancouverAuthors(raw) {
+  const authors = parseAuthorsList(raw);
+  if (authors.length === 0) return "";
+  if (authors.length === 1) return nameLastInitials(authors[0]);
+  if (authors.length <= 6) return authors.map(a => nameLastInitials(a)).join(", ");
+  return `${authors.slice(0, 6).map(a => nameLastInitials(a)).join(", ")}, et al.`;
+}
+
+function formatAmaAuthors(raw) {
+  const authors = parseAuthorsList(raw);
+  if (authors.length === 0) return "";
+  if (authors.length === 1) return nameLastInitials(authors[0]);
+  if (authors.length <= 6) return authors.map(a => nameLastInitials(a)).join(", ");
+  return `${authors.slice(0, 6).map(a => nameLastInitials(a)).join(", ")}, et al.`;
+}
+
+function nameLastInitialsAcs(author) {
+  if (!author) return "";
+  if (author.isOrg) return author.last;
+  let last = author.last;
+  let initials = author.initials || "";
+  if (citationSettings.removeDiacritics) {
+    last = removeVietnameseDiacritics(last);
+    initials = removeVietnameseDiacritics(initials);
+  }
+  return initials ? `${last}, ${initials}` : last;
+}
+
+function formatAcsAuthors(raw) {
+  const authors = parseAuthorsList(raw);
+  if (authors.length === 0) return "";
+  if (authors.length === 1) return nameLastInitialsAcs(authors[0]);
+  if (authors.length <= 10) return authors.map(a => nameLastInitialsAcs(a)).join("; ");
+  return `${authors.slice(0, 10).map(a => nameLastInitialsAcs(a)).join("; ")}, et al.`;
+}
+
+function nameChicago(author) {
+  if (!author) return "";
+  if (author.isOrg) return author.last;
+  let first = author.first || author.initials;
+  let last = author.last;
+  if (citationSettings.removeDiacritics) {
+    first = removeVietnameseDiacritics(first);
+    last = removeVietnameseDiacritics(last);
+  }
+  first = (first || "").replace(/\.\s*|\s*$/g, "").trim();
+  return first ? `${last}, ${first}` : last;
+}
+
+function formatChicagoAuthors(raw) {
+  const authors = parseAuthorsList(raw);
+  if (authors.length === 0) return "";
+  if (authors.length === 1) return nameChicago(authors[0]);
+  if (authors.length >= 11) return `${nameChicago(authors[0])} et al.`;
+  const list = authors.map(a => nameChicago(a));
+  return `${list.slice(0, -1).join(", ")}, and ${list[list.length - 1]}`;
+}
+
 function parseComprehensiveDate(raw) {
   if (!raw) return "";
   let s = raw.toString().trim();

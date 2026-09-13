@@ -441,6 +441,177 @@ function buildBibtexCitation(meta) {
   return lines.join("\n");
 }
 
+function buildVancouverCitation(meta) {
+  const a = formatVancouverAuthors(meta.authors);
+  const y = extractYear(meta.date) || "n.d.";
+  const cleanTitle = (meta.title || "Untitled").trim().replace(/[,\.]+$/, "");
+  const doiClean = meta.doi ? meta.doi.trim().replace(/^https?:\/\/doi\.org\//, "") : "";
+  const pagesV = meta.pages ? meta.pages.trim().replace(/[,\.]+$/, "").replace(/[–—]/, "-") : "";
+
+  switch (meta.sourceType) {
+    case "academic": {
+      let out = `${a}. ${cleanTitle}. `;
+      if (meta.container) out += `*${meta.container.trim()}*. `;
+      out += `${y}`;
+      if (pagesV) out += `;${pagesV}`;
+      out += `.`;
+      if (doiClean) out += ` doi: ${doiClean}.`;
+      else if (meta.url && !meta.url.startsWith("file://")) {
+        out += ` Available from: ${meta.url}.`;
+        if (citationSettings.accessedDate) out += ` [Accessed ${meta.accessed || getTodayIeee()}].`;
+      }
+      return out;
+    }
+    case "conference": {
+      let out = `${a}. ${cleanTitle}. In: *${meta.container || "Conference Proceedings"}*. `;
+      out += `${y}`;
+      if (pagesV) out += `;${pagesV}`;
+      out += `.`;
+      if (doiClean) out += ` doi: ${doiClean}.`;
+      else if (meta.url && !meta.url.startsWith("file://")) out += ` Available from: ${meta.url}.`;
+      return out;
+    }
+    case "book":
+      return `${a}. *${cleanTitle}*.${meta.container ? ` ${meta.container.trim()};` : ""} ${y}.`;
+    case "pdf": {
+      let out = `${a}. ${cleanTitle}.`;
+      if (meta.pages) out += ` (${meta.pages.trim().replace(/[,\.]+$/, "")})`;
+      if (meta.container) out += ` ${meta.container.trim()};`;
+      out += ` ${y}.`;
+      if (doiClean) out += ` doi: ${doiClean}.`;
+      else if (meta.url && !meta.url.startsWith("file://")) out += ` Available from: ${meta.url}.`;
+      return out;
+    }
+    case "software":
+      return `${a}. *${cleanTitle}* [Computer software].${meta.container ? ` ${meta.container.trim()};` : ""} ${y}.${meta.url && !meta.url.startsWith("file://") ? ` Available from: ${meta.url}.` : ""}`;
+    case "video":
+      return `${a}. ${cleanTitle} [Video].${meta.container ? ` ${meta.container.trim()};` : ""} ${y}.${meta.url ? ` Available from: ${meta.url}.` : ""}`;
+    default: {
+      let out = `${a}. ${cleanTitle}. `;
+      if (meta.container && meta.container.trim() !== cleanTitle) out += `${meta.container.trim()}. `;
+      out += `${y}.`;
+      if (meta.url && !meta.url.startsWith("file://")) {
+        out += ` Available from: ${meta.url}.`;
+        if (citationSettings.accessedDate) out += ` [Accessed ${meta.accessed || getTodayIeee()}].`;
+      }
+      return out;
+    }
+  }
+}
+
+function buildChicagoCitation(meta) {
+  const a = formatChicagoAuthors(meta.authors);
+  const cleanTitle = (meta.title || "Untitled").trim().replace(/[,\.]+$/, "");
+  const y = extractYear(meta.date);
+  const dateChicago = meta.date ? formatCitationDate(meta.date, "chicago") : (y || "n.d.");
+  const doiClean = meta.doi ? meta.doi.trim().replace(/^https?:\/\/doi\.org\//, "") : "";
+  const urlChicago = meta.url && !meta.url.startsWith("file://") ? meta.url : "";
+
+  switch (meta.sourceType) {
+    case "academic": {
+      let out = `${a ? a + ". " : ""}"${cleanTitle}." `;
+      if (meta.container) out += `*${meta.container.trim()}*`;
+      out += `${y ? ` (${y})` : ""}`;
+      if (meta.pages) out += `: ${meta.pages.trim().replace(/[,\.]+$/, "")}`;
+      out += `.`;
+      if (doiClean) out += ` https://doi.org/${doiClean}.`;
+      else if (urlChicago) out += ` ${urlChicago}.`;
+      return out;
+    }
+    case "conference": {
+      let out = `${a ? a + ". " : ""}"${cleanTitle}." `;
+      if (meta.container) out += `*${meta.container || "Conference Proceedings"}*, `;
+      if (meta.pages) out += `${meta.pages.trim().replace(/[,\.]+$/, "")}, `;
+      out += `${y || "n.d."}.`;
+      return out;
+    }
+    case "book":
+      return `${a ? a + ". " : ""}*${cleanTitle}*. ${meta.container ? meta.container.trim() + ", " : ""}${y || "n.d."}.`;
+    case "pdf": {
+      let out = `${a ? a + ". " : ""}*${cleanTitle}*. `;
+      if (meta.pages) out += `${meta.pages.trim().replace(/[,\.]+$/, "")}. `;
+      if (meta.container) out += `${meta.container.trim()}. `;
+      out += `${y || "n.d."}. `;
+      if (doiClean) out += `https://doi.org/${doiClean}.`;
+      else if (urlChicago) out += `${urlChicago}.`;
+      return out.trim();
+    }
+    case "software":
+      return `${a ? a + ". " : ""}*${cleanTitle}*. ${meta.pages ? meta.pages.trim() + ". " : ""}${meta.container ? meta.container.trim() + ", " : ""}${y || "n.d."}.${meta.url ? ` ${meta.url}.` : ""}`.trim();
+    case "video":
+      return `${a ? a + ". " : ""}"${cleanTitle}." ${meta.container || "YouTube"}, ${dateChicago}, ${meta.url || ""}.`; 
+    default: {
+      let out = `${a ? a + ". " : ""}"${cleanTitle}." `;
+      if (meta.container && meta.container.trim() !== cleanTitle) out += `${meta.container.trim()}. `;
+      out += `${y ? y + ". " : ""}`;
+      if (citationSettings.accessedDate) out += `Accessed ${meta.accessed || dateChicago}. `;
+      if (urlChicago) out += `${urlChicago}.`;
+      return out.trim();
+    }
+  }
+}
+
+function buildAcsCitation(meta) {
+  const a = formatAcsAuthors(meta.authors);
+  const aDot = a ? (a.endsWith(".") ? a : a + ".") : "";
+  const y = extractYear(meta.date) || "n.d.";
+  const cleanTitle = (meta.title || "Untitled").trim().replace(/[,\.]+$/, "");
+  const doiClean = meta.doi ? meta.doi.trim().replace(/^https?:\/\/doi\.org\//, "") : "";
+  const urlAcs = meta.url && !meta.url.startsWith("file://") ? meta.url : "";
+
+  switch (meta.sourceType) {
+    case "academic": {
+      let out = `${aDot} ${cleanTitle}. `;
+      if (meta.container) out += `*${meta.container.trim()}*`;
+      out += ` ${y}`;
+      if (meta.pages) out += `, ${meta.pages.trim().replace(/[,\.]+$/, "")}`;
+      out += `.`;
+      if (doiClean) out += ` https://doi.org/${doiClean}.`;
+      else if (urlAcs) out += ` ${urlAcs}.`;
+      return out;
+    }
+    case "book":
+      return `${aDot} ${cleanTitle}. ${meta.container ? meta.container.trim() + ", " : ""}${y}.`;
+    default: {
+      let out = `${aDot} ${cleanTitle}. `;
+      if (meta.container && meta.container.trim() !== cleanTitle) out += `${meta.container.trim()}. `;
+      out += `${y}.`;
+      if (urlAcs) out += ` ${urlAcs}.`;
+      return out;
+    }
+  }
+}
+
+function buildAmaCitation(meta) {
+  const a = formatAmaAuthors(meta.authors);
+  const y = extractYear(meta.date) || "n.d.";
+  const cleanTitle = (meta.title || "Untitled").trim().replace(/[,\.]+$/, "");
+  const doiClean = meta.doi ? meta.doi.trim().replace(/^https?:\/\/doi\.org\//, "") : "";
+  const urlAma = meta.url && !meta.url.startsWith("file://") ? meta.url : "";
+
+  switch (meta.sourceType) {
+    case "academic": {
+      let out = `${a}. ${cleanTitle}. `;
+      if (meta.container) out += `*${meta.container.trim()}*. `;
+      out += `${y}`;
+      if (meta.pages) out += `;${meta.pages.trim().replace(/[,\.]+$/, "")}`;
+      out += `.`;
+      if (doiClean) out += ` doi:${doiClean}`;
+      else if (urlAma) out += ` ${urlAma}`;
+      return out;
+    }
+    case "book":
+      return `${a}. ${cleanTitle}. ${meta.container ? meta.container.trim() + " " : ""}${y}.`;
+    default: {
+      let out = `${a}. ${cleanTitle}. `;
+      if (meta.container && meta.container.trim() !== cleanTitle) out += `${meta.container.trim()}. `;
+      out += `${y}.`;
+      if (urlAma) out += ` ${urlAma}.`;
+      return out;
+    }
+  }
+}
+
 function buildIntextCitation(meta) {
   const authors = parseAuthorsList(meta.authors);
   const y = extractYear(meta.date);

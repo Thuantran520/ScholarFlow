@@ -116,7 +116,7 @@ onReady(() => {
     const btn = document.getElementById("btn-copy-cite");
 
     let formattedCite = getFormattedCitationByStyle(currentMeta, currentCitationTab, 1);
-    if (currentCitationTab !== "ieee" && currentCitationTab !== "apa" && currentCitationTab !== "harvard" && currentCitationTab !== "mla" && currentCitationTab !== "intext" && currentCitationTab !== "bibtex") {
+    if (!isKnownCitationStyle(currentCitationTab)) {
       formattedCite = buildIeeeCitation(currentMeta);
     }
     const lang = window.i18n ? window.i18n.getLanguage() : "vi";
@@ -778,9 +778,9 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
   });
 
   // Modal Style Selector Tabs
-  ["ieee", "apa", "harvard", "bibtex", "mla"].forEach(tabKey => {
+  ["ieee", "apa", "harvard", "bibtex", "mla", "vancouver", "chicago", "acs", "ama"].forEach(tabKey => {
     document.getElementById(`modal-tab-${tabKey}`)?.addEventListener("click", () => {
-      ["ieee", "apa", "harvard", "bibtex", "mla"].forEach(k => {
+      ["ieee", "apa", "harvard", "bibtex", "mla", "vancouver", "chicago", "acs", "ama"].forEach(k => {
         document.getElementById(`modal-tab-${k}`)?.classList.toggle("active", k === tabKey);
       });
       currentModalTab = tabKey;

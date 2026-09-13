@@ -140,6 +140,22 @@ async function main() {
   check(intext.includes("(Vaswani & Shazeer, 2017)") && intext.includes("Vaswani and Shazeer [1]"),
     `buildIntextCitation en in-text/narrative (got ${intext.slice(0, 90)}...)`);
 
+  const vancouver = build("buildVancouverCitation");
+  const expectedVancouver = 'Vaswani A, Shazeer N. Attention Is All You Need. *Advances in Neural Information Processing Systems*. 2017;6000-6010. doi: 10.48550/arXiv.1706.03762.';
+  check(vancouver === expectedVancouver, `buildVancouverCitation exact golden\n     got: ${vancouver}`);
+
+  const chicago = build("buildChicagoCitation");
+  const expectedChicago = 'Vaswani, Ashish, and Shazeer, Noam. "Attention Is All You Need." *Advances in Neural Information Processing Systems* (2017): 6000–6010. https://doi.org/10.48550/arXiv.1706.03762.';
+  check(chicago === expectedChicago, `buildChicagoCitation exact golden\n     got: ${chicago}`);
+
+  const acs = build("buildAcsCitation");
+  const expectedAcs = 'Vaswani, A.; Shazeer, N. Attention Is All You Need. *Advances in Neural Information Processing Systems* 2017, 6000–6010. https://doi.org/10.48550/arXiv.1706.03762.';
+  check(acs === expectedAcs, `buildAcsCitation exact golden\n     got: ${acs}`);
+
+  const ama = build("buildAmaCitation");
+  const expectedAma = 'Vaswani A, Shazeer N. Attention Is All You Need. *Advances in Neural Information Processing Systems*. 2017;6000–6010. doi:10.48550/arXiv.1706.03762';
+  check(ama === expectedAma, `buildAmaCitation exact golden\n     got: ${ama}`);
+
   const ris = code2("buildRisCitation");
   check(ris.includes("TY  - JOUR") && ris.includes("AU  - Ashish Vaswani and Noam Shazeer") &&
     ris.includes("JO  - Advances in Neural Information Processing Systems") &&
