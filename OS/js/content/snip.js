@@ -19,14 +19,14 @@ var snipHoveredTarget = null;
 var snipTargetAtDown = null;
 var snipLockedTarget = null;
 
-var tContent = function(key, ...args) {
+var tContentShim = function(key, ...args) {
   if (typeof window !== "undefined" && typeof window.tContent === "function") {
     return window.tContent(key, ...args);
   }
   return "";
 };
 
-var notifySidebar = function(msg) {
+var notifySidebarShim = function(msg) {
   if (typeof window !== "undefined" && typeof window.notifySidebar === "function") {
     return window.notifySidebar(msg);
   }
@@ -66,23 +66,23 @@ function onBoxEstablished() {
 
     const s1 = document.createElement("span");
     if (targetTag) {
-      s1.appendChild(document.createTextNode(tContent("snip_selected_tag")));
+      s1.appendChild(document.createTextNode(tContentShim("snip_selected_tag")));
       const b = document.createElement("b");
       b.textContent = `<${targetTag}>`;
       s1.appendChild(b);
       s1.appendChild(document.createTextNode("!"));
     } else if (targetTag === false) {
-      s1.textContent = tContent("snip_selected_box");
+      s1.textContent = tContentShim("snip_selected_box");
     } else {
       s1.appendChild(document.createTextNode("🎯 "));
       const b1 = document.createElement("b");
-      b1.textContent = tContent("snip_click_tag");
+      b1.textContent = tContentShim("snip_click_tag");
       s1.appendChild(b1);
-      s1.appendChild(document.createTextNode(tContent("snip_or")));
+      s1.appendChild(document.createTextNode(tContentShim("snip_or")));
       const b2 = document.createElement("b");
-      b2.textContent = tContent("snip_drag_mouse");
+      b2.textContent = tContentShim("snip_drag_mouse");
       s1.appendChild(b2);
-      s1.appendChild(document.createTextNode(tContent("snip_to_select")));
+      s1.appendChild(document.createTextNode(tContentShim("snip_to_select")));
     }
     snipGuidePillEl.appendChild(s1);
 
@@ -92,7 +92,7 @@ function onBoxEstablished() {
     snipGuidePillEl.appendChild(div1);
 
     const s2 = document.createElement("span");
-    s2.textContent = tContent("snip_drag_corners");
+    s2.textContent = tContentShim("snip_drag_corners");
     snipGuidePillEl.appendChild(s2);
 
     const div2 = document.createElement("span");
@@ -103,12 +103,12 @@ function onBoxEstablished() {
     const s3 = document.createElement("span");
     s3.style.color = "#38bdf8";
     s3.style.fontWeight = "700";
-    s3.textContent = tContent("snip_enter_capture");
+    s3.textContent = tContentShim("snip_enter_capture");
     snipGuidePillEl.appendChild(s3);
 
     const s4 = document.createElement("span");
     s4.style.color = "#f87171";
-    s4.textContent = tContent("snip_esc_cancel");
+    s4.textContent = tContentShim("snip_esc_cancel");
     snipGuidePillEl.appendChild(s4);
   }
 
@@ -165,7 +165,7 @@ function onBoxEstablished() {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         setTimeout(() => {
-            notifySidebar({
+            notifySidebarShim({
               type: "SNIP_RECT_CHOSEN",
               rect: chosenRect,
               borderRadius: capturedBorderRadius,
@@ -180,7 +180,7 @@ function onBoxEstablished() {
 
   function cancelSnipCapture() {
     stopElementCaptureMode();
-    notifySidebar({ type: "ELEMENT_CAPTURE_CANCELLED" });
+    notifySidebarShim({ type: "ELEMENT_CAPTURE_CANCELLED" });
   }
 
   function onSnipMouseMove(e) {
@@ -314,7 +314,7 @@ function onBoxEstablished() {
         if (snipTagBadgeEl) {
           const tag = resolved.tagName.toLowerCase();
           const id = resolved.id ? `#${resolved.id}` : "";
-          snipTagBadgeEl.textContent = `<${tag}${id}> (${Math.round(hWidth)}×${Math.round(hHeight)}px) • ${tContent("snip_click_to_pick")}`;
+          snipTagBadgeEl.textContent = `<${tag}${id}> (${Math.round(hWidth)}×${Math.round(hHeight)}px) • ${tContentShim("snip_click_to_pick")}`;
           snipTagBadgeEl.style.display = "block";
           snipTagBadgeEl.style.left = `${Math.min(e.clientX + 14, window.innerWidth - 270)}px`;
           snipTagBadgeEl.style.top = `${Math.min(e.clientY + 18, window.innerHeight - 40)}px`;
@@ -501,7 +501,7 @@ function onBoxEstablished() {
 
     const btnConfirm = document.createElement("button");
     btnConfirm.className = "super-snip-btn super-snip-btn-confirm";
-    btnConfirm.replaceChildren(...new DOMParser().parseFromString(`${tContent("snip_btn_capture")} <kbd style="background:rgba(255,255,255,0.2);padding:1px 5px;border-radius:4px;font-size:10px;">Enter</kbd>`, "text/html").body.childNodes);
+    btnConfirm.replaceChildren(...new DOMParser().parseFromString(`${tContentShim("snip_btn_capture")} <kbd style="background:rgba(255,255,255,0.2);padding:1px 5px;border-radius:4px;font-size:10px;">Enter</kbd>`, "text/html").body.childNodes);
     btnConfirm.addEventListener("click", (e) => {
       e.stopPropagation();
       confirmSnipCapture();
@@ -510,7 +510,7 @@ function onBoxEstablished() {
 
     const btnCancel = document.createElement("button");
     btnCancel.className = "super-snip-btn super-snip-btn-cancel";
-    btnCancel.replaceChildren(...new DOMParser().parseFromString(`${tContent("snip_btn_cancel")} <kbd style="background:rgba(255,255,255,0.2);padding:1px 5px;border-radius:4px;font-size:10px;">Esc</kbd>`, "text/html").body.childNodes);
+    btnCancel.replaceChildren(...new DOMParser().parseFromString(`${tContentShim("snip_btn_cancel")} <kbd style="background:rgba(255,255,255,0.2);padding:1px 5px;border-radius:4px;font-size:10px;">Esc</kbd>`, "text/html").body.childNodes);
     btnCancel.addEventListener("click", (e) => {
       e.stopPropagation();
       cancelSnipCapture();

@@ -1011,7 +1011,9 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
     }
     const startRes = await sendTabMessage({ action: "START_ELEMENT_CAPTURE" });
     if (!startRes || startRes.success !== true) {
-      return showToast("❌ Chưa khởi động được chế độ chọn khung trên trang này. Hãy thử mở trang web khác.");
+      const why = (startRes && startRes.error) ? startRes.error : "không có phản hồi từ trang";
+      console.warn("[ScholarFlow] START_ELEMENT_CAPTURE failed:", startRes || null);
+      return showToast(`❌ Chưa khởi động được chế độ chọn khung (${why}). Hãy tải lại trang web rồi thử lại.`);
     }
     isElementCapturePicking = true;
     const banner = document.getElementById("element-cap-active-banner");

@@ -250,6 +250,55 @@ async function main() {
       `privacy all ${allElements.length} data-i18n elements translated (empty: ${untranslated.length})`);
   }
 
+  // 4. Content-script regressions (Chromium isolated-world self-shadowing)
+  console.log("\nRegressing content scripts (Chromium isolated-world self-shadowing):");
+  {
+    const dom2 = new JSDOM('<!doctype html><html><body><h1>t</h1></body></html>', {
+      url: "https://example.com/",
+      runScripts: "outside-only",
+      pretendToBeVisual: true
+    });
+    const w = dom2.window;
+    w.chrome = makeChromeStub({ app_language: "vi" });
+    w.browser = w.chrome;
+    const contentFiles = [
+      "OS/js/content/i18n.js", "OS/js/content/inspect.js", "OS/js/content/snip.js",
+      "OS/js/content/scroll.js", "OS/js/content/citation.js", "OS/js/content/main.js"
+    ];
+    let injectErr = "";
+    for (const f of contentFiles) {
+      const p = path.join(__dirname, "..", f);
+      try { w.eval(fs.readFileSync(p, "utf8")); }
+      catch (e) { injectErr += `${f}: ${e.message} `; }
+    }
+    check(!injectErr, "all 6 content scripts evaluated without error" + (injectErr ? ` -> ${injectErr}` : ""));
+
+    // Bug: a 'var tContent' shim in snip.js/inspect.js leaks onto window.tContent in the
+    // Chromium isolated world, so tContent calls itself -> RangeError "Maximum call stack
+    // size exceeded" exactly when starting element capture.
+    const sample = w.tContent("snip_btn_capture");
+    check(typeof sample === "string" && sample.length > 0,
+      `window.tContent is the real i18n fn (got: ${JSON.stringify(sample)})`);
+
+    try {
+      w.startElementCaptureMode();
+      const toolbar = !!w.document.querySelector("#super-snip-toolbar");
+      const guide = !!w.document.querySelector("#super-snip-guide-pill");
+      check(toolbar && guide, "startElementCaptureMode does not overflow the stack; overlay built");
+    } catch (e) {
+      failures++;
+      console.error(`  FAIL  startElementCaptureMode threw: ${e.message}`);
+    }
+    try {
+      w.stopElementCaptureMode();
+      check(!w.document.querySelector("#super-snip-toolbar"), "stopElementCaptureMode tears down overlay");
+    } catch (e) {
+      failures++;
+      console.error(`  FAIL  stopElementCaptureMode threw: ${e.message}`);
+    }
+    dom2.window.close();
+  }
+
   console.log("\n" + (failures === 0 ? "ALL TESTS PASSED" : `${failures} CHECK(S) FAILED`));
   process.exit(failures === 0 ? 0 : 1);
 }

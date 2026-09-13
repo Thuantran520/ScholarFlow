@@ -7,13 +7,13 @@ var hoveredElement = null;
 var redactedElementsList = window._sf_redactedElementsList || [];
 window._sf_redactedElementsList = redactedElementsList;
 
-var notifySidebar = function(msg) {
+var notifySidebarShim = function(msg) {
   if (typeof window !== "undefined" && typeof window.notifySidebar === "function") {
     return window.notifySidebar(msg);
   }
 };
 
-var tContent = function(key, ...args) {
+var tContentShim = function(key, ...args) {
   if (typeof window !== "undefined" && typeof window.tContent === "function") {
     return window.tContent(key, ...args);
   }
@@ -31,7 +31,7 @@ var tContent = function(key, ...args) {
     } else {
       document.documentElement.classList.remove("super-redactions-paused");
     }
-    notifySidebar({ type: "REDACTION_PAUSE_CHANGED", isPaused: isRedactionsPaused });
+    notifySidebarShim({ type: "REDACTION_PAUSE_CHANGED", isPaused: isRedactionsPaused });
     return isRedactionsPaused;
   }
 
@@ -93,14 +93,14 @@ var tContent = function(key, ...args) {
     if (!el) return "";
     if (el.tagName === "IMG") {
       const alt = el.getAttribute("alt") || "";
-      if (alt) return `${tContent("img_prefix")}: "${alt.slice(0, 24)}${alt.length > 24 ? '...' : ''}"`;
+      if (alt) return `${tContentShim("img_prefix")}: "${alt.slice(0, 24)}${alt.length > 24 ? '...' : ''}"`;
       const src = el.getAttribute("src") || "";
-      if (src) return `${tContent("img_prefix")}: ${src.split('/').pop().split('?')[0].slice(0, 18)}`;
-      return tContent("img_generic");
+      if (src) return `${tContentShim("img_prefix")}: ${src.split('/').pop().split('?')[0].slice(0, 18)}`;
+      return tContentShim("img_generic");
     }
     if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
       const val = el.value || el.placeholder || "";
-      if (val) return `${tContent("input_prefix")}: "${val.slice(0, 22)}${val.length > 22 ? '...' : ''}"`;
+      if (val) return `${tContentShim("input_prefix")}: "${val.slice(0, 22)}${val.length > 22 ? '...' : ''}"`;
       return `<${el.tagName.toLowerCase()}>`;
     }
     const text = (el.innerText || el.textContent || "").trim().replace(/\s+/g, " ");
@@ -225,29 +225,29 @@ var tContent = function(key, ...args) {
       const strong = document.createElement("strong");
       strong.textContent = `<${tag}${id}>`;
       badge.appendChild(strong);
-      badge.appendChild(document.createTextNode(tContent("badge_secured")));
+      badge.appendChild(document.createTextNode(tContentShim("badge_secured")));
       const b = document.createElement("b");
-      b.textContent = tContent("badge_remove_hint");
+      b.textContent = tContentShim("badge_remove_hint");
       badge.appendChild(b);
     } else {
       badge.classList.remove("is-remove-badge", "is-capture-badge", "is-locked-badge");
       let styleLabel = "";
       if (currentRedactStyle === "blur") {
-        styleLabel = tContent("style_blur", currentBlurPx);
+        styleLabel = tContentShim("style_blur", currentBlurPx);
       } else if (currentRedactStyle === "blackout") {
-        styleLabel = tContent("style_blackout");
+        styleLabel = tContentShim("style_blackout");
       } else if (currentRedactStyle === "pixelate") {
-        styleLabel = tContent("style_pixelate");
+        styleLabel = tContentShim("style_pixelate");
       } else if (currentRedactStyle === "hide") {
-        styleLabel = tContent("style_hide");
+        styleLabel = tContentShim("style_hide");
       } else {
-        styleLabel = tContent("style_blur", currentBlurPx);
+        styleLabel = tContentShim("style_blur", currentBlurPx);
       }
 
       const strong = document.createElement("strong");
       strong.textContent = `<${tag}${id}>`;
       badge.appendChild(strong);
-      badge.appendChild(document.createTextNode(tContent("badge_click_to")));
+      badge.appendChild(document.createTextNode(tContentShim("badge_click_to")));
       const b = document.createElement("b");
       b.textContent = styleLabel;
       badge.appendChild(b);
@@ -374,7 +374,7 @@ var tContent = function(key, ...args) {
     if (alreadyRedacted) {
       // As requested: Do not un-redact or re-redact via click on the page.
       // Already-redacted elements are locked. Un-redaction is handled via the sidebar list.
-      showInPageToast(tContent("toast_already_redacted"));
+      showInPageToast(tContentShim("toast_already_redacted"));
       return;
     }
 
@@ -427,7 +427,7 @@ var tContent = function(key, ...args) {
     flashRedactedElement(el);
 
     // Notify sidebar of updated list & count
-    notifySidebar({
+    notifySidebarShim({
       type: "REDACTION_UPDATED",
       count: redactedElementsList.length,
       list: getRedactedItemsForSidebar()
@@ -478,7 +478,7 @@ var tContent = function(key, ...args) {
       flashRemovedElement(el);
     }
     redactedElementsList.splice(idx, 1);
-    notifySidebar({
+    notifySidebarShim({
       type: "REDACTION_UPDATED",
       count: redactedElementsList.length,
       list: getRedactedItemsForSidebar()
@@ -519,7 +519,7 @@ var tContent = function(key, ...args) {
     redactedElementsList.length = 0;
     toggleRedactionsPause(false);
     clearHoverState();
-    notifySidebar({
+    notifySidebarShim({
       type: "REDACTION_UPDATED",
       count: 0,
       list: []
@@ -613,7 +613,7 @@ var tContent = function(key, ...args) {
       e.preventDefault();
       e.stopPropagation();
       stopInspectMode();
-      notifySidebar({ type: "INSPECT_MODE_CHANGED", active: false });
+      notifySidebarShim({ type: "INSPECT_MODE_CHANGED", active: false });
     }
   }
 
@@ -621,7 +621,7 @@ var tContent = function(key, ...args) {
   window.addEventListener("keydown", (e) => {
     if (e.altKey && (e.key === "q" || e.key === "Q")) {
       e.preventDefault();
-      notifySidebar({ type: "SWAP_DUAL_TABS_REQUEST" });
+      notifySidebarShim({ type: "SWAP_DUAL_TABS_REQUEST" });
     }
   }, true);
 
@@ -633,7 +633,7 @@ var tContent = function(key, ...args) {
 
     const title = document.createElement("div");
     title.className = "hud-title";
-    title.textContent = tContent("snip_video_prep_title");
+    title.textContent = tContentShim("snip_video_prep_title");
 
     const num = document.createElement("div");
     num.className = "hud-number";
@@ -642,7 +642,7 @@ var tContent = function(key, ...args) {
 
     const sub = document.createElement("div");
     sub.className = "hud-sub";
-    sub.textContent = tContent("snip_video_prep_sub");
+    sub.textContent = tContentShim("snip_video_prep_sub");
 
     hud.appendChild(title);
     hud.appendChild(num);
