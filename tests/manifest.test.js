@@ -78,7 +78,7 @@ async function main() {
 
   console.log("Version parity:");
   check([ffRoot, ffShip, chrome].every((m) => m.version === pkg.version),
-    `all manifests carry package version 2.4.2 (pkg=${pkg.version})`);
+    `all manifests carry package version ${pkg.version} (pkg=${pkg.version})`);
   check([ffRoot, ffShip, chrome].every((m) => m.manifest_version === 3), "all manifests are MV3");
   check([ffRoot, ffShip, chrome].every((m) => m.name === ffRoot.name && m.description === ffRoot.description),
     "name/description identical across flavors");

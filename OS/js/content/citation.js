@@ -432,6 +432,29 @@
       }
     }
 
+    // 3b. Smart source-type detection via known academic / conference / repo hosts
+    const ACADEMIC_HOSTS = [
+      "arxiv.org", "pubmed.ncbi.nlm.nih.gov", "ncbi.nlm.nih.gov", "sciencedirect.com",
+      "link.springer.com", "springer.com", "nature.com", "dl.acm.org", "acm.org",
+      "ieeexplore.ieee.org", "ieee.org", "mdpi.com", "frontiersin.org", "journals.plos.org",
+      "plos.org", "onlinelibrary.wiley.com", "wiley.com", "tandfonline.com", "journals.sagepub.com",
+      "sagepub.com", "aps.org", "aip.org", "cell.com", "science.org", "pnas.org",
+      "semanticscholar.org", "researchgate.net", "scholar.google", "academia.edu",
+      "openalex.org", "doaj.org", "ssrn.com", "biorxiv.org", "medrxiv.org", "openaire.eu"
+    ];
+    const CONF_HOSTS = ["proceedings", "conference", "workshop", "symposium", "aclweb.org", "nips.cc", "icml.cc", "openreview.net", "easychair.org", "actapress.com"];
+    const SOFTWARE_HOSTS = ["github.com", "gitlab.com", "bitbucket.org", "pypi.org", "npmjs.com", "cran.r-project.org", "gitee.com"];
+    const lowerHost = hostname.toLowerCase();
+    if (sourceType === "webpage") {
+      if (CONF_HOSTS.some(h => lowerHost.includes(h))) {
+        sourceType = "conference";
+      } else if (SOFTWARE_HOSTS.some(h => lowerHost.includes(h))) {
+        sourceType = "software";
+      } else if (ACADEMIC_HOSTS.some(h => lowerHost.includes(h))) {
+        sourceType = "academic";
+      }
+    }
+
     if (hostname.includes("youtube.com") || hostname.includes("youtu.be")) {
       sourceType = "video";
       container = "YouTube";

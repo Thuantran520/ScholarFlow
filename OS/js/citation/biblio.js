@@ -228,6 +228,23 @@ function renderBiblioModalList() {
     return t.includes(query) || a.includes(query) || c.includes(query) || tg.includes(query) || n.includes(query) || y.includes(query);
   });
 
+  // Sort: savedAt (default) / year / title / tag
+  const sortKey = currentModalSort || "savedAt";
+  filtered.sort((x, y) => {
+    if (sortKey === "year") {
+      const yx = parseInt(extractYear(x.meta?.date) || "0", 10);
+      const yy = parseInt(extractYear(y.meta?.date) || "0", 10);
+      return yy - yx;
+    }
+    if (sortKey === "title") {
+      return String(x.meta?.title || "").localeCompare(String(y.meta?.title || ""));
+    }
+    if (sortKey === "tag") {
+      return String(x.tag || "").localeCompare(String(y.tag || ""));
+    }
+    return (y.savedAt || 0) - (x.savedAt || 0);
+  });
+
   if (filtered.length === 0) {
     const empty = document.createElement("div");
     empty.className = "empty-list-box";
@@ -411,6 +428,8 @@ function buildRisCitation(meta) {
     case "academic": ris += "JOUR\n"; break;
     case "conference": ris += "CONF\n"; break;
     case "book": ris += "BOOK\n"; break;
+    case "book-chapter": ris += "CHAP\n"; break;
+    case "thesis": ris += "THES\n"; break;
     default: ris += "WEB\n"; break;
   }
   if (meta.title) ris += "TI  - " + meta.title.trim() + "\n";
@@ -419,7 +438,11 @@ function buildRisCitation(meta) {
       if (a.trim()) ris += "AU  - " + a.trim() + "\n";
     });
   }
-  if (meta.container) ris += "JO  - " + meta.container.trim() + "\n";
+  if (meta.container) {
+    if (meta.sourceType === "book-chapter") ris += "BT  - " + meta.container.trim() + "\n";
+    else ris += "JO  - " + meta.container.trim() + "\n";
+  }
+  if (meta.publisher) ris += "PB  - " + meta.publisher.trim() + "\n";
   if (meta.date) {
     const parts = meta.date.split('-');
     ris += "PY  - " + parts[0] + "\n";
@@ -483,6 +506,40 @@ function exportTxtAll() {
   a.click();
   URL.revokeObjectURL(u);
   showToast("toast_biblio_exported_txt");
+}
+
+function exportEndnoteXmlAll() {
+  if (savedBibliographies.length === 0) {
+    return showToast("err_001", "warning");
+  }
+  const records = savedBibliographies.map(item => buildEndnoteXmlCitation(item.meta)).join("\n");
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<xml>\n<records>\n${records}\n</records>\n</xml>\n`;
+  const blob = new Blob([xml], { type: "application/xml;charset=utf-8" });
+  const u = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = u;
+  a.download = `references_${Date.now()}.xml`;
+  a.click();
+  URL.revokeObjectURL(u);
+  showToast("toast_biblio_exported_xml");
+}
+
+function exportCslJsonAll() {
+  if (savedBibliographies.length === 0) {
+    return showToast("err_001", "warning");
+  }
+  const items = savedBibliographies.map(item => {
+    try { return JSON.parse(buildCslJsonCitation(item.meta)); }
+    catch (e) { return null; }
+  }).filter(Boolean);
+  const blob = new Blob([JSON.stringify(items, null, 2)], { type: "application/json;charset=utf-8" });
+  const u = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = u;
+  a.download = `references_${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(u);
+  showToast("toast_biblio_exported_json");
 }
 
 function clearAllBiblio() {

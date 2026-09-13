@@ -14,6 +14,7 @@ let currentMeta = {
   title: "",
   date: "",
   container: "",
+  publisher: "",
   pages: "",
   doi: "",
   url: "",
@@ -22,7 +23,7 @@ let currentMeta = {
 
 let currentCitationTab = "ieee";
 let isInspectMode = false;
-let isRedactionsPaused = false;
+var isRedactionsPaused = false;
 let currentRedactedList = [];
 let currentRedactStyle = "blur";
 let currentBlurPx = 12;

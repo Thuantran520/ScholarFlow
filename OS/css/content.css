@@ -275,6 +275,44 @@ html.super-redactions-paused .super-redact-hide {
   opacity: 1 !important;
 }
 
+/* 8a. Precise region masks (drag-created overlays at document coordinates) */
+.super-redact-region {
+  position: absolute !important;
+  box-sizing: border-box !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  pointer-events: none !important;
+}
+
+html.super-redactions-paused [data-super-redact-region="1"] {
+  display: none !important;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+html.super-inspecting-active .super-redact-region {
+  outline: 1px dashed rgba(244, 63, 94, 0.8) !important;
+  outline-offset: 1px !important;
+}
+
+html.super-inspecting-active [data-super-redact-region="1"].super-element-highlight-pulse {
+  outline: 3px solid #38bdf8 !important;
+  outline-offset: 2px !important;
+}
+
+#super-region-preview {
+  position: absolute !important;
+  z-index: 2147483646 !important;
+  border: 1px dashed #fb923c !important;
+  background: rgba(249, 115, 22, 0.12) !important;
+  pointer-events: none !important;
+  box-sizing: border-box !important;
+  display: none;
+}
+
 /* ==========================================================================
    9. Interactive Snipper & Element Capture Tool (with Fine-tuning Handles)
    ========================================================================== */

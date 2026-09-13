@@ -544,7 +544,264 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
     } catch (e) {
       console.warn("updateCookieTabUI error:", e);
     }
+    renderCookieList();
+    renderCookieProfileList();
   }
+
+  // ── Cookie detail list (view / copy / edit / delete individual cookies) ──
+  function getCookiesApi() {
+    return (typeof browser !== "undefined" && browser.cookies) ? browser.cookies
+      : ((typeof chrome !== "undefined" && chrome.cookies) ? chrome.cookies : null);
+  }
+
+  function cookieHostname() {
+    try { return new URL(currentTabUrl).hostname; } catch (e) { return ""; }
+  }
+
+  function makeCookieBtn(label, title) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = label;
+    b.title = title;
+    b.style.cssText = "background:none;border:1px solid rgba(148,163,184,0.35);color:#cbd5e1;border-radius:4px;padding:0 5px;font-size:10px;cursor:pointer;line-height:16px;";
+    return b;
+  }
+
+  function buildCookieRow(c) {
+    const row = document.createElement("div");
+    row.style.cssText = "border:1px solid rgba(56,189,248,0.2);border-radius:6px;padding:6px 8px;background:rgba(15,23,42,0.5);font-size:10.5px;";
+
+    const top = document.createElement("div");
+    top.style.cssText = "display:flex;justify-content:space-between;align-items:center;gap:6px;";
+    const name = document.createElement("span");
+    name.style.cssText = "font-weight:700;color:#38bdf8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;";
+    name.textContent = c.name;
+    name.title = c.name;
+
+    const actions = document.createElement("div");
+    actions.style.cssText = "display:flex;gap:4px;flex-shrink:0;";
+    const btnCopy = makeCookieBtn("⧉", "Copy giá trị");
+    btnCopy.addEventListener("click", () => {
+      navigator.clipboard.writeText(c.value || "").then(() => showToast("✓ Đã copy giá trị cookie!"));
+    });
+    const btnEdit = makeCookieBtn("✎", "Sửa giá trị");
+    btnEdit.addEventListener("click", () => {
+      const newVal = prompt('Sửa giá trị cookie "' + c.name + '":', c.value || "");
+      if (newVal === null) return;
+      const api = getCookiesApi();
+      if (!api) return;
+      const url = "http" + (c.secure ? "s" : "") + "://" + c.domain.replace(/^\./, "") + (c.path || "/");
+      const setArgs = { url, name: c.name, value: newVal, path: c.path || "/", secure: !!c.secure, httpOnly: !!c.httpOnly, storeId: c.storeId };
+      if (c.sameSite) setArgs.sameSite = c.sameSite;
+      if (c.expirationDate) setArgs.expirationDate = c.expirationDate;
+      if (c.domain && !c.hostOnly) setArgs.domain = c.domain;
+      api.set(setArgs).then(() => {
+        showToast("✓ Đã cập nhật cookie!");
+        renderCookieList();
+      }).catch(() => showToast("✕ Không thể cập nhật."));
+    });
+    const btnDel = makeCookieBtn("✕", "Xóa cookie");
+    btnDel.addEventListener("click", async () => {
+      const api = getCookiesApi();
+      if (!api) return;
+      const url = "http" + (c.secure ? "s" : "") + "://" + c.domain.replace(/^\./, "") + (c.path || "/");
+      try {
+        const removeArgs = { url, name: c.name, storeId: c.storeId };
+        if (c.partitionKey) removeArgs.partitionKey = c.partitionKey;
+        await api.remove(removeArgs);
+        showToast("✓ Đã xóa cookie!");
+        renderCookieList();
+      } catch (e) { showToast("✕ Không thể xóa."); }
+    });
+    actions.appendChild(btnCopy);
+    actions.appendChild(btnEdit);
+    actions.appendChild(btnDel);
+
+    top.appendChild(name);
+    top.appendChild(actions);
+    row.appendChild(top);
+
+    const value = document.createElement("div");
+    value.style.cssText = "color:#cbd5e1;word-break:break-all;margin-top:2px;";
+    value.textContent = c.value || "";
+    value.title = c.value || "";
+    row.appendChild(value);
+
+    const meta = document.createElement("div");
+    meta.style.cssText = "color:#64748b;margin-top:3px;";
+    const badges = [];
+    if (c.expirationDate) badges.push("⏱ " + new Date(c.expirationDate * 1000).toLocaleString());
+    else badges.push("⏱ Phiên (session)");
+    if (c.httpOnly) badges.push("🔒 httpOnly");
+    if (c.secure) badges.push("🔐 secure");
+    if (c.sameSite && c.sameSite !== "no_restriction") badges.push("🧩 " + c.sameSite);
+    meta.textContent = badges.join(" · ");
+    row.appendChild(meta);
+
+    return row;
+  }
+
+  async function renderCookieList() {
+    const container = document.getElementById("cookie-list");
+    if (!container) return;
+    container.textContent = "";
+    const api = getCookiesApi();
+    if (!api || !currentTabUrl || /^(about:|chrome:|moz-extension:|edge:)/.test(currentTabUrl)) {
+      const msg = document.createElement("div");
+      msg.style.cssText = "font-size:11px;color:#94a3b8;";
+      msg.textContent = "Không hỗ trợ trang này.";
+      container.appendChild(msg);
+      return;
+    }
+    let cookies = [];
+    try { cookies = await api.getAll({ url: currentTabUrl }); } catch (e) {}
+    if (!cookies || cookies.length === 0) {
+      const empty = document.createElement("div");
+      empty.style.cssText = "font-size:11px;color:#94a3b8;";
+      empty.textContent = "Chưa có cookie nào.";
+      container.appendChild(empty);
+      return;
+    }
+    for (const c of cookies) container.appendChild(buildCookieRow(c));
+  }
+
+  // ── Netscape cookies.txt export ──
+  function buildNetscapeCookies(cookies) {
+    const lines = ["# Netscape HTTP Cookie File", "# Generated by ScholarFlow"];
+    for (const c of cookies) {
+      const domain = (c.domain || "").startsWith(".") ? c.domain : "." + c.domain;
+      const includeSub = "TRUE";
+      const path = c.path || "/";
+      const secure = c.secure ? "TRUE" : "FALSE";
+      const expiry = c.expirationDate ? Math.round(c.expirationDate) : 0;
+      const httpOnlyPrefix = c.httpOnly ? "#HttpOnly_" : "";
+      lines.push(`${httpOnlyPrefix}${domain}\t${includeSub}\t${path}\t${secure}\t${expiry}\t${c.name}\t${c.value}`);
+    }
+    return lines.join("\n");
+  }
+
+  document.getElementById("btn-export-netscape")?.addEventListener("click", async () => {
+    if (!currentTabUrl) return showToast("toast_cookie_no_url", "warning");
+    try {
+      const api = getCookiesApi();
+      if (!api) return showToast("toast_cookie_no_api", "error");
+      const cookies = await api.getAll({ url: currentTabUrl });
+      if (!cookies || cookies.length === 0) return showToast("toast_cookie_none", "warning");
+      const txt = buildNetscapeCookies(cookies);
+      const blob = new Blob([txt], { type: "text/plain;charset=utf-8" });
+      const u = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = u;
+      a.download = `cookies_${cookieHostname() || "site"}.txt`;
+      a.click();
+      URL.revokeObjectURL(u);
+      showToast("✓ Đã xuất cookies.txt (Netscape)!");
+    } catch (e) {
+      console.error(e);
+      showToast("toast_cookie_export_error", "error");
+    }
+  });
+
+  document.getElementById("btn-refresh-cookie-list")?.addEventListener("click", () => {
+    renderCookieList();
+    renderCookieProfileList();
+  });
+
+  // ── Cookie profiles per domain ──
+  function getCookieProfiles() {
+    return new Promise((resolve) => {
+      storGet("sf_cookie_profiles", (res) => {
+        resolve((res && Array.isArray(res.sf_cookie_profiles)) ? res.sf_cookie_profiles : []);
+      });
+    });
+  }
+
+  async function renderCookieProfileList() {
+    const container = document.getElementById("cookie-profile-list");
+    if (!container) return;
+    container.textContent = "";
+    const host = cookieHostname();
+    const profiles = await getCookieProfiles();
+    const mine = profiles.filter(p => p.hostname === host);
+    if (mine.length === 0) {
+      const hint = document.createElement("span");
+      hint.style.cssText = "font-size:10.5px;color:#94a3b8;";
+      hint.textContent = "Chưa có hồ sơ nào cho domain này.";
+      container.appendChild(hint);
+      return;
+    }
+    for (const p of mine) {
+      const chip = document.createElement("div");
+      chip.style.cssText = "display:flex;align-items:center;gap:4px;border:1px solid rgba(56,189,248,0.3);border-radius:14px;padding:3px 8px;background:rgba(15,23,42,0.6);font-size:11px;color:#cbd5e1;";
+      const label = document.createElement("button");
+      label.type = "button";
+      label.style.cssText = "background:none;border:none;color:#38bdf8;cursor:pointer;font-size:11px;padding:0;";
+      label.textContent = p.name;
+      label.title = "Nạp hồ sơ này";
+      label.addEventListener("click", () => loadCookieProfile(p));
+      const del = makeCookieBtn("✕", "Xóa hồ sơ");
+      del.addEventListener("click", async () => {
+        const all = await getCookieProfiles();
+        const next = all.filter(x => !(x.hostname === p.hostname && x.name === p.name));
+        storSet({ sf_cookie_profiles: next }, () => {
+          renderCookieProfileList();
+          showToast("🗑️ Đã xóa hồ sơ!");
+        });
+      });
+      chip.appendChild(label);
+      chip.appendChild(del);
+      container.appendChild(chip);
+    }
+  }
+
+  async function loadCookieProfile(p) {
+    const api = getCookiesApi();
+    if (!api || !currentTabUrl) return showToast("toast_cookie_no_url", "error");
+    let success = 0;
+    for (const c of (p.cookies || [])) {
+      try {
+        const url = "http" + (c.secure ? "s" : "") + "://" + (c.domain || cookieHostname()).replace(/^\./, "") + (c.path || "/");
+        const setArgs = { url, name: c.name, value: c.value, path: c.path || "/", secure: !!c.secure, httpOnly: !!c.httpOnly, storeId: c.storeId };
+        if (c.sameSite) setArgs.sameSite = c.sameSite;
+        if (c.expirationDate) setArgs.expirationDate = c.expirationDate;
+        if (c.domain && !c.hostOnly) setArgs.domain = c.domain;
+        await api.set(setArgs);
+        success++;
+      } catch (e) {}
+    }
+    showToast(`✓ Đã nạp ${success} cookie từ hồ sơ "${p.name}"!`);
+    renderCookieList();
+    const tabsApi = (typeof browser !== "undefined" && browser.tabs) ? browser.tabs : (typeof chrome !== "undefined" ? chrome.tabs : null);
+    if (tabsApi && currentTabObj?.id) tabsApi.reload(currentTabObj.id);
+  }
+
+  document.getElementById("btn-save-cookie-profile")?.addEventListener("click", async () => {
+    const nameInput = document.getElementById("cookie-profile-name");
+    const name = ((nameInput && nameInput.value) || "").trim();
+    if (!name) return showToast("⚠️ Nhập tên hồ sơ!");
+    const host = cookieHostname();
+    if (!host) return showToast("toast_cookie_no_url", "warning");
+    const api = getCookiesApi();
+    if (!api) return showToast("toast_cookie_no_api", "error");
+    const cookies = await api.getAll({ url: currentTabUrl });
+    if (!cookies || cookies.length === 0) return showToast("toast_cookie_none", "warning");
+    const profiles = await getCookieProfiles();
+    const existing = profiles.findIndex(x => x.hostname === host && x.name === name);
+    const profile = { name, hostname: host, cookies, savedAt: Date.now() };
+    if (existing !== -1) profiles[existing] = profile; else profiles.unshift(profile);
+    storSet({ sf_cookie_profiles: profiles }, () => {
+      if (nameInput) nameInput.value = "";
+      renderCookieProfileList();
+      showToast(`💾 Đã lưu hồ sơ "${name}" (${cookies.length} cookie)!`);
+    });
+  });
+
+  // Expose cookie helpers for tests / advanced use
+  window.buildNetscapeCookies = buildNetscapeCookies;
+  window.renderCookieList = renderCookieList;
+  window.renderCookieProfileList = renderCookieProfileList;
+  window.loadCookieProfile = loadCookieProfile;
+  window.getCookieProfiles = getCookieProfiles;
 
   // Copy raw cookie string (name=value; name2=value2...)
   document.getElementById("btn-copy-raw-cookie")?.addEventListener("click", async () => {
@@ -796,6 +1053,12 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
     renderBiblioModalList();
   });
 
+  // Sort selector inside modal
+  document.getElementById("biblio-sort-select")?.addEventListener("change", (e) => {
+    currentModalSort = e.target.value || "savedAt";
+    renderBiblioModalList();
+  });
+
   // Modal Style Selector Tabs
   ["ieee", "apa", "harvard", "bibtex", "mla", "vancouver", "chicago", "acs", "ama"].forEach(tabKey => {
     document.getElementById(`modal-tab-${tabKey}`)?.addEventListener("click", () => {
@@ -812,6 +1075,8 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
   document.getElementById("btn-export-bib-all")?.addEventListener("click", exportBibAll);
   document.getElementById("btn-export-ris-all")?.addEventListener("click", exportRisAll);
   document.getElementById("btn-export-txt-all")?.addEventListener("click", exportTxtAll);
+  document.getElementById("btn-export-xml-all")?.addEventListener("click", exportEndnoteXmlAll);
+  document.getElementById("btn-export-json-all")?.addEventListener("click", exportCslJsonAll);
   document.getElementById("btn-clear-all-biblio")?.addEventListener("click", clearAllBiblio);
 
   // Citation Customization Settings Auto-Save
@@ -914,16 +1179,25 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
     });
   });
 
-  document.getElementById("btn-disable-redactions")?.addEventListener("click", () => {
-    if (isRedactionsPaused) {
-      showToast("👁️ Đang ở chế độ xem trang gốc rồi!");
-      return;
-    }
+  function sfDoRevealRedactions() {
     isRedactionsPaused = true;
     updateRedactionVisibilityUI();
     sendTabMessage({ action: "TOGGLE_REDACTIONS_PAUSE", paused: true }, () => {
       showToast("👁️ Đã tắt che (Đang xem trang gốc)");
     });
+  }
+
+  document.getElementById("btn-disable-redactions")?.addEventListener("click", async () => {
+    if (isRedactionsPaused) {
+      showToast("👁️ Đang ở chế độ xem trang gốc rồi!");
+      return;
+    }
+    const pinRecord = await sfGetPinRecord();
+    if (pinRecord && pinRecord.enabled && pinRecord.hash) {
+      const ok = await sfPromptPin();
+      if (!ok) return;
+    }
+    sfDoRevealRedactions();
   });
 
   document.querySelectorAll('input[name="redact-style"]').forEach(r => {
@@ -985,6 +1259,197 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
       });
     }
   });
+
+  // ── Group B: auto-detect sensitive data + keyword masking ─────────────────
+  function sfSyncRedactionList(list, fallbackCount) {
+    const rc = document.getElementById("redact-count");
+    if (rc) rc.textContent = (Array.isArray(list) ? list.length : fallbackCount) || 0;
+    if (Array.isArray(list)) renderRedactedList(list);
+  }
+
+  document.getElementById("btn-detect-sensitive")?.addEventListener("click", () => {
+    sendTabMessage({
+      action: "AUTO_DETECT_SENSITIVE",
+      style: currentRedactStyle,
+      blurPx: currentBlurPx
+    }, (res) => {
+      if (res && res.list) sfSyncRedactionList(res.list);
+      showToast(res && res.count > 0
+        ? `🔍 Đã che ${res.count} phần tử nhạy cảm!`
+        : "✓ Không phát hiện dữ liệu nhạy cảm.");
+    });
+  });
+
+  document.getElementById("btn-mask-keyword")?.addEventListener("click", () => {
+    const kwInput = document.getElementById("redact-keyword-input");
+    const kw = ((kwInput && kwInput.value) || "").trim();
+    if (!kw) {
+      showToast("⚠️ Nhập từ khóa cần che!");
+      return;
+    }
+    sendTabMessage({
+      action: "MASK_BY_KEYWORD",
+      keyword: kw,
+      style: currentRedactStyle,
+      blurPx: currentBlurPx
+    }, (res) => {
+      if (res && res.list) sfSyncRedactionList(res.list);
+      showToast(res && res.count > 0
+        ? `✓ Đã che ${res.count} phần tử chứa "${kw}"!`
+        : `⚠️ Không tìm thấy "${kw}" trên trang.`);
+      if (kwInput) kwInput.value = "";
+    });
+  });
+
+  // ── PIN lock for "Xem bản gốc" (reveal original) ──────────────────────────
+  function sfPinHashSync(str, salt) {
+    let h = 0x811c9dc5;
+    const s = String(salt || "") + ":" + String(str || "");
+    for (let round = 0; round < 1000; round++) {
+      for (let i = 0; i < s.length; i++) {
+        h ^= s.charCodeAt(i);
+        h = Math.imul(h, 0x01000193);
+      }
+    }
+    return (h >>> 0).toString(16).padStart(8, "0");
+  }
+
+  function sfPinHash(str, salt) {
+    str = String(str || "");
+    salt = String(salt || "");
+    const subtle = (typeof crypto !== "undefined" && crypto && crypto.subtle) ? crypto.subtle : null;
+    if (subtle && typeof subtle.digest === "function") {
+      try {
+        const data = new TextEncoder().encode(salt + ":" + str);
+        return subtle.digest("SHA-256", data)
+          .then((buf) => Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join(""))
+          .catch(() => sfPinHashSync(str, salt));
+      } catch (e) {
+        return Promise.resolve(sfPinHashSync(str, salt));
+      }
+    }
+    return Promise.resolve(sfPinHashSync(str, salt));
+  }
+
+  function sfRandomSalt() {
+    const bytes = new Uint8Array(16);
+    if (typeof crypto !== "undefined" && crypto && typeof crypto.getRandomValues === "function") {
+      try { crypto.getRandomValues(bytes); } catch (e) {
+        for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+      }
+    } else {
+      for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+    }
+    return Array.from(bytes).map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  function sfGetPinRecord() {
+    return new Promise((resolve) => {
+      storGet("sf_redact_pin", (res) => {
+        resolve((res && res.sf_redact_pin) || null);
+      });
+    });
+  }
+
+  function sfPinMatches(input, rec) {
+    if (!rec || !rec.hash || !rec.enabled) return Promise.resolve(false);
+    return sfPinHash(input, rec.salt || "").then(h => h === rec.hash);
+  }
+
+  function sfUpdatePinStateUI() {
+    sfGetPinRecord().then((rec) => {
+      const st = document.getElementById("redact-pin-state");
+      if (!st) return;
+      const locked = !!(rec && rec.enabled && rec.hash);
+      st.textContent = locked ? "🔒 Đã bật khoá PIN." : "Chưa đặt mã PIN.";
+      st.style.color = locked ? "#fbbf24" : "#cbd5e1";
+    });
+  }
+
+  document.getElementById("btn-set-redact-pin")?.addEventListener("click", async () => {
+    const input = document.getElementById("redact-pin-input");
+    const val = ((input && input.value) || "").trim();
+    if (!/^\d{4,6}$/.test(val)) {
+      showToast("⚠️ Mã PIN phải gồm 4-6 ký số!");
+      return;
+    }
+    const salt = sfRandomSalt();
+    const hash = await sfPinHash(val, salt);
+    storSet({ sf_redact_pin: { enabled: true, salt, hash } }, () => {
+      if (input) input.value = "";
+      sfUpdatePinStateUI();
+      showToast("🔒 Đã bật khoá PIN cho nút Xem bản gốc!");
+    });
+  });
+
+  document.getElementById("btn-clear-redact-pin")?.addEventListener("click", () => {
+    storRemove("sf_redact_pin", () => {
+      sfUpdatePinStateUI();
+      showToast("🔓 Đã xoá mã PIN.");
+    });
+  });
+
+  function sfPromptPin() {
+    return new Promise((resolve) => {
+      const modal = document.getElementById("redact-pin-modal");
+      const input = document.getElementById("redact-pin-modal-input");
+      const confirmBtn = document.getElementById("btn-redact-pin-confirm");
+      const cancelBtn = document.getElementById("btn-redact-pin-cancel");
+      if (!modal || !input || !confirmBtn || !cancelBtn) {
+        resolve(true);
+        return;
+      }
+      input.value = "";
+      modal.style.display = "flex";
+      setTimeout(() => {
+        try {
+          input.focus({ preventScroll: true });
+        } catch (e) {
+          try { input.focus(); } catch (e2) {}
+        }
+      }, 30);
+
+      const finish = (ok) => {
+        modal.style.display = "none";
+        input.value = "";
+        confirmBtn.removeEventListener("click", onOk);
+        cancelBtn.removeEventListener("click", onCancel);
+        window.removeEventListener("keydown", onKey);
+        resolve(ok);
+      };
+      const onOk = () => {
+        sfGetPinRecord().then(async (rec) => {
+          if (await sfPinMatches(input.value, rec)) {
+            finish(true);
+          } else {
+            showToast("✕ Sai mã PIN!");
+            input.value = "";
+            try { input.focus({ preventScroll: true }); } catch (e) {}
+          }
+        });
+      };
+      const onCancel = () => finish(false);
+      const onKey = (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          onOk();
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          onCancel();
+        }
+      };
+      confirmBtn.addEventListener("click", onOk);
+      cancelBtn.addEventListener("click", onCancel);
+      window.addEventListener("keydown", onKey);
+    });
+  }
+
+  window.sfPinHash = sfPinHash;
+  window.sfPinHashSync = sfPinHashSync;
+  window.sfPinMatches = sfPinMatches;
+  window.sfGetPinRecord = sfGetPinRecord;
+  window.sfRandomSalt = sfRandomSalt;
+  sfUpdatePinStateUI();
 
   // ESC key to cancel inspect mode or element capture when focused in sidebar
   window.addEventListener("keydown", (e) => {
@@ -1375,7 +1840,7 @@ document.getElementById("btn-quick-swap-tabs")?.addEventListener("click", swapDu
           try {
             const cleanDoi = currentMeta.doi.trim().replace(/^https?:\/\/doi\.org\//, "");
             const crRes = await fetch(`https://api.crossref.org/works/${encodeURIComponent(cleanDoi)}`, {
-              headers: { "User-Agent": "ScholarFlow/2.4 (mailto:contact@scholarflow.org)" }
+              signal: AbortSignal.timeout(8000)
             });
             if (crRes.ok) {
               const crData = await crRes.json();
@@ -1435,7 +1900,6 @@ document.getElementById("btn-quick-swap-tabs")?.addEventListener("click", swapDu
           const q = currentMeta.title.replace(/[.,;:()\[\]"'“”‘’]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 220);
           if (q.length >= 8) {
             const crRes = await fetch(`https://api.crossref.org/works?query.bibliographic=${encodeURIComponent(q)}&rows=4`, {
-              headers: { "User-Agent": "ScholarFlow/2.4 (mailto:contact@scholarflow.org)" },
               signal: AbortSignal.timeout(8000)
             });
             if (crRes.ok) {

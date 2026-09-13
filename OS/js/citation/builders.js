@@ -19,6 +19,25 @@ function generateBibtexKey(authors, date, title) {
   return `${a}${y}${w}`;
 }
 
+// Parse a free-form "pages" field (e.g. "vol. 45, no. 9, pp. 123-130") into
+// structured { vol, no, pp } parts used by the IEEE journal format.
+function parsePagesParts(pages) {
+  const s = String(pages || "").trim();
+  const out = { vol: "", no: "", pp: "" };
+  if (!s) return out;
+  const vMatch = s.match(/(?:vol\.?|tập)\s*[:\s]?\s*(\d+)/i);
+  if (vMatch) out.vol = vMatch[1];
+  const nMatch = s.match(/(?:no\.?|issue|iss\.?|số)\s*[:\s]?\s*(\d+)/i);
+  if (nMatch) out.no = nMatch[1];
+  const pMatch = s.match(/pp?\.?\s*[:\s]?\s*(\d+(?:\s*[-–—]\s*\d+)?)/i);
+  if (pMatch) {
+    out.pp = pMatch[1].replace(/\s+/g, "");
+  } else if (/^\d+\s*[-–—]\s*\d+$/.test(s)) {
+    out.pp = s.replace(/\s+/g, "");
+  }
+  return out;
+}
+
 function buildIeeeCitation(meta) {
   const a = formatIeeeAuthors(meta.authors);
   let cleanTitle = (meta.title || "Untitled").trim()
@@ -34,14 +53,13 @@ function buildIeeeCitation(meta) {
   }
 
   switch (meta.sourceType) {
-    case "academic":
+    case "academic": {
       let resAcad = `${prefix}"${cleanTitle}," `;
       if (meta.container) resAcad += `*${meta.container.trim()}*, `;
-      if (meta.pages) {
-        let p = meta.pages.trim().replace(/[,\.]+$/, "");
-        if (/^\d+(?:[-–]\d+)?$/.test(p)) p = `pp. ${p}`;
-        resAcad += `${p}, `;
-      }
+      const parts = parsePagesParts(meta.pages);
+      if (parts.vol) resAcad += `vol. ${parts.vol}, `;
+      if (parts.no) resAcad += `no. ${parts.no}, `;
+      if (parts.pp) resAcad += `pp. ${parts.pp}, `;
       resAcad += `${dateIeeeMonthYear}`;
       if (meta.doi) {
         resAcad += `, doi: ${meta.doi.trim().replace(/^https?:\/\/doi\.org\//, "")}.`;
@@ -52,10 +70,15 @@ function buildIeeeCitation(meta) {
         resAcad += `.`;
       }
       return resAcad;
+    }
 
-    case "conference":
-      let resConf = `${prefix}"${cleanTitle}," in *${meta.container ? meta.container.trim() : "Proc. Conference"}*, ${dateIeeeMonthYear}`;
-      if (meta.pages) {
+    case "conference": {
+      let resConf = `${prefix}"${cleanTitle}," in *${meta.container ? meta.container.trim() : "Proc. Conference"}*`;
+      if (meta.publisher) resConf += `, ${meta.publisher.trim()}`;
+      resConf += `, ${extractYear(meta.date) || dateIeeeMonthYear}`;
+      const cparts = parsePagesParts(meta.pages);
+      if (cparts.pp) resConf += `, pp. ${cparts.pp}`;
+      else if (meta.pages) {
         let p = meta.pages.trim().replace(/[,\.]+$/, "");
         if (/^\d+(?:[-–]\d+)?$/.test(p)) p = `pp. ${p}`;
         resConf += `, ${p}`;
@@ -69,12 +92,34 @@ function buildIeeeCitation(meta) {
         resConf += `.`;
       }
       return resConf;
+    }
+
+    case "thesis": {
+      let resTh = `${prefix}"${cleanTitle}," `;
+      if (meta.pages && /(?:ph\.?d|m\.?s|b\.?s|dissertation|thesis|luận|đồ án)/i.test(meta.pages)) {
+        resTh += `${meta.pages.trim()}, `;
+      } else {
+        resTh += "Ph.D. dissertation, ";
+      }
+      if (meta.container) resTh += `${meta.container.trim()}, `;
+      if (meta.publisher) resTh += `${meta.publisher.trim()}, `;
+      resTh += `${extractYear(meta.date) || "n.d."}`;
+      if (meta.doi) {
+        resTh += `, doi: ${meta.doi.trim().replace(/^https?:\/\/doi\.org\//, "")}.`;
+      } else if (meta.url && !meta.url.startsWith("file://")) {
+        resTh += `. [Online]. Available: ${meta.url}.`;
+      } else {
+        resTh += `.`;
+      }
+      return resTh;
+    }
 
     case "book":
       let resBook = `${prefix}*${cleanTitle}*`;
-      if (meta.pages && meta.pages.toLowerCase().includes("ed")) resBook += `, ${meta.pages.trim()}`;
-      if (meta.container) resBook += `. ${meta.container.trim()}`;
-      resBook += `, ${dateIeee}`;
+      if (meta.pages && /\d/.test(meta.pages) && /(?:ed\.?|edition|lần|ấn bản)/i.test(meta.pages)) resBook += `, ${meta.pages.trim()}`;
+      if (meta.publisher) resBook += `. ${meta.publisher.trim()}`;
+      else if (meta.container) resBook += `. ${meta.container.trim()}`;
+      resBook += `, ${extractYear(meta.date) || "n.d."}`;
       if (meta.doi) {
         resBook += `, doi: ${meta.doi.trim().replace(/^https?:\/\/doi\.org\//, "")}.`;
       } else {
@@ -82,19 +127,37 @@ function buildIeeeCitation(meta) {
       }
       return resBook;
 
+    case "book-chapter":
+      let resChap = `${prefix}"${cleanTitle}," in *${meta.container ? meta.container.trim() : "Book"}*`;
+      if (meta.publisher) resChap += `, ${meta.publisher.trim()}`;
+      resChap += `, ${extractYear(meta.date) || "n.d."}`;
+      if (meta.pages) {
+        let cp = meta.pages.trim().replace(/[,\.]+$/, "");
+        if (/^\d+(?:[-–]\d+)?$/.test(cp)) cp = `pp. ${cp}`;
+        resChap += `, ${cp}`;
+      }
+      if (meta.doi) {
+        resChap += `, doi: ${meta.doi.trim().replace(/^https?:\/\/doi\.org\//, "")}.`;
+      } else {
+        resChap += `.`;
+      }
+      return resChap;
+
     case "pdf":
       let repLabel = "Tech. Rep.";
       if (meta.pages) {
         const pTrim = meta.pages.trim();
-        if (/^(?:rep|tr|no|báo cáo|report)\b/i.test(pTrim)) {
-          repLabel = pTrim;
+        if (/^(?:tech\.?\s*rep|rep(?:ort)?\.?|tr\b|no\.?|báo cáo|report)\b/i.test(pTrim)) {
+          repLabel = /^tr[-.]?\d/i.test(pTrim) ? `Tech. Rep. ${pTrim}` : pTrim;
         } else if (/^\d+[-\d]*$/.test(pTrim) || /^pp\./i.test(pTrim)) {
           repLabel = `Tech. Rep., ${pTrim.startsWith("pp.") ? pTrim : "pp. " + pTrim}`;
         } else {
           repLabel = `Rep. ${pTrim}`;
         }
       }
-      let resRep = `${prefix}"${cleanTitle}," ${meta.container ? meta.container.trim() + ", " : ""}${repLabel}, ${dateIeee}`;
+      let resRep = `${prefix}"${cleanTitle}," ${meta.container ? meta.container.trim() + ", " : ""}`;
+      if (meta.publisher) resRep += `${meta.publisher.trim()}, `;
+      resRep += `${repLabel}, ${extractYear(meta.date) || "n.d."}`;
       if (meta.doi) {
         resRep += `, doi: ${meta.doi.trim().replace(/^https?:\/\/doi\.org\//, "")}.`;
       } else if (meta.url && !meta.url.startsWith("file://")) {
@@ -107,11 +170,16 @@ function buildIeeeCitation(meta) {
       }
       return resRep;
 
-    case "software":
-      let ver = meta.pages ? `version ${meta.pages.trim()}, ` : "";
-      let resSoft = `${prefix}*${cleanTitle}*, ${ver}${meta.container ? meta.container.trim() + ", " : ""}${dateIeee}. [Online]. Available: ${meta.url}`;
+    case "software": {
+      let softVer = "";
+      if (meta.pages) {
+        const v = meta.pages.trim().replace(/^v(?:ersion)?\.?\s*/i, "");
+        softVer = v ? ` (Version ${v})` : "";
+      }
+      let resSoft = `${prefix}*${cleanTitle}*${softVer}. ${extractYear(meta.date) || "n.d."}. [Software]. Available: ${meta.url}`;
       if (citationSettings.accessedDate) resSoft += ` [Accessed: ${meta.accessed || getTodayIeee()}].`;
       return resSoft;
+    }
 
     case "video":
       const vDateIeee = meta.date ? formatCitationDate(meta.date, "ieee") : y;
@@ -162,6 +230,27 @@ function buildApaCitation(meta) {
     case "book":
       out += `*${cleanTitle}*`;
       if (meta.pages && meta.pages.toLowerCase().includes("ed")) out += ` (${meta.pages.trim()})`;
+      out += `. `;
+      if (meta.publisher) out += `${meta.publisher.trim()}. `;
+      else if (meta.container) out += `${meta.container.trim()}. `;
+      if (meta.doi) out += `https://doi.org/${meta.doi.trim().replace(/^https?:\/\/doi\.org\//, "")}`;
+      else if (meta.url) out += meta.url;
+      break;
+
+    case "book-chapter":
+      out += `${cleanTitle}. In `;
+      if (meta.container) out += `*${meta.container.trim()}*`;
+      if (meta.pages) out += ` (pp. ${meta.pages.trim().replace(/^pp\.\s*/i, "")})`;
+      out += `. `;
+      if (meta.publisher) out += `${meta.publisher.trim()}. `;
+      if (meta.doi) out += `https://doi.org/${meta.doi.trim().replace(/^https?:\/\/doi\.org\//, "")}`;
+      else if (meta.url) out += meta.url;
+      break;
+
+    case "thesis":
+      out += `*${cleanTitle}*`;
+      if (meta.pages) out += ` (${meta.pages.trim()})`;
+      else out += ` [Doctoral dissertation]`;
       out += `. `;
       if (meta.container) out += `${meta.container.trim()}. `;
       if (meta.doi) out += `https://doi.org/${meta.doi.trim().replace(/^https?:\/\/doi\.org\//, "")}`;
@@ -237,7 +326,26 @@ function buildHarvardCitation(meta) {
 
     case "book":
       out += `*${cleanTitle}*. `;
-      if (meta.container) out += `${meta.container.trim()}.`;
+      if (meta.publisher) out += `${meta.publisher.trim()}.`;
+      else if (meta.container) out += `${meta.container.trim()}.`;
+      break;
+
+    case "book-chapter":
+      out += `'${cleanTitle}', in *${meta.container || "Book"}*`;
+      if (meta.publisher) out += `, ${meta.publisher.trim()}`;
+      if (meta.pages) out += `, pp. ${meta.pages.trim().replace(/^pp\.\s*/i, "")}`;
+      out += `.`;
+      if (meta.doi) out += ` Available at: https://doi.org/${meta.doi.trim().replace(/^https?:\/\/doi\.org\//, "")}.`;
+      break;
+
+    case "thesis":
+      out += `*${cleanTitle}*`;
+      if (meta.pages) out += ` (${meta.pages.trim()})`;
+      else out += ` [Doctoral thesis]`;
+      out += `. `;
+      if (meta.container) out += `${meta.container.trim()}. `;
+      if (meta.doi) out += `Available at: https://doi.org/${meta.doi.trim().replace(/^https?:\/\/doi\.org\//, "")}.`;
+      else if (meta.url && !meta.url.startsWith("file://")) out += `Available at: ${meta.url}.`;
       break;
 
     case "pdf":
@@ -300,6 +408,22 @@ function buildMlaCitation(meta) {
 
     case "book":
       out += `*${cleanTitle}*. `;
+      if (meta.publisher) out += `${meta.publisher.trim()}, `;
+      else if (meta.container) out += `${meta.container.trim()}, `;
+      out += `${y}.`;
+      break;
+
+    case "book-chapter":
+      out += `"${cleanTitle}." `;
+      if (meta.container) out += `*${meta.container.trim()}*, `;
+      if (meta.publisher) out += `${meta.publisher.trim()}, `;
+      if (meta.pages) out += `pp. ${meta.pages.trim().replace(/^pp\.\s*/i, "")}, `;
+      out += `${y}.`;
+      break;
+
+    case "thesis":
+      out += `*${cleanTitle}*. `;
+      if (meta.pages) out += `${meta.pages.trim()}, `;
       if (meta.container) out += `${meta.container.trim()}, `;
       out += `${y}.`;
       break;
@@ -349,6 +473,8 @@ function buildBibtexCitation(meta) {
     case "academic": type = "article"; break;
     case "conference": type = "inproceedings"; break;
     case "book": type = "book"; break;
+    case "book-chapter": type = "incollection"; break;
+    case "thesis": type = "phdthesis"; break;
     case "pdf": type = "techreport"; break;
     case "software": type = "software"; break;
     default: type = "misc"; break;
@@ -400,7 +526,15 @@ function buildBibtexCitation(meta) {
        if (pp) lines.push(`  pages = {${pp}},`);
     }
   } else if (type === "book") {
-    if (meta.container) lines.push(`  publisher = {${meta.container}},`);
+    if (meta.publisher) lines.push(`  publisher = {${meta.publisher}},`);
+    else if (meta.container) lines.push(`  publisher = {${meta.container}},`);
+  } else if (type === "incollection") {
+    if (meta.container) lines.push(`  booktitle = {${meta.container}},`);
+    if (meta.publisher) lines.push(`  publisher = {${meta.publisher}},`);
+    if (meta.pages) lines.push(`  pages = {${meta.pages.trim().replace(/[^0-9\-–]/g, "")}},`);
+  } else if (type === "phdthesis") {
+    if (meta.container) lines.push(`  school = {${meta.container}},`);
+    if (meta.publisher) lines.push(`  address = {${meta.publisher}},`);
   } else if (type === "techreport") {
     if (meta.container) lines.push(`  institution = {${meta.container}},`);
     if (meta.pages) lines.push(`  number = {${meta.pages}},`);
@@ -472,7 +606,27 @@ function buildVancouverCitation(meta) {
       return out;
     }
     case "book":
-      return `${a}. *${cleanTitle}*.${meta.container ? ` ${meta.container.trim()};` : ""} ${y}.`;
+      return `${a}. *${cleanTitle}*.${meta.publisher ? ` ${meta.publisher.trim()};` : (meta.container ? ` ${meta.container.trim()};` : "")} ${y}.`;
+    case "book-chapter": {
+      let out = `${a}. ${cleanTitle}. In: *${meta.container || "Book"}*.`;
+      if (meta.publisher) out += ` ${meta.publisher.trim()};`;
+      out += ` ${y}`;
+      if (pagesV) out += `;${pagesV}`;
+      out += `.`;
+      if (doiClean) out += ` doi: ${doiClean}.`;
+      else if (meta.url && !meta.url.startsWith("file://")) out += ` Available from: ${meta.url}.`;
+      return out;
+    }
+    case "thesis": {
+      let out = `${a}. ${cleanTitle}`;
+      if (meta.pages) out += ` (${meta.pages.trim().replace(/[,\.]+$/, "")})`;
+      out += `.`;
+      if (meta.container) out += ` ${meta.container.trim()};`;
+      out += ` ${y}.`;
+      if (doiClean) out += ` doi: ${doiClean}.`;
+      else if (meta.url && !meta.url.startsWith("file://")) out += ` Available from: ${meta.url}.`;
+      return out;
+    }
     case "pdf": {
       let out = `${a}. ${cleanTitle}.`;
       if (meta.pages) out += ` (${meta.pages.trim().replace(/[,\.]+$/, "")})`;
@@ -526,7 +680,24 @@ function buildChicagoCitation(meta) {
       return out;
     }
     case "book":
-      return `${a ? a + ". " : ""}*${cleanTitle}*. ${meta.container ? meta.container.trim() + ", " : ""}${y || "n.d."}.`;
+      return `${a ? a + ". " : ""}*${cleanTitle}*. ${meta.publisher ? meta.publisher.trim() + ", " : (meta.container ? meta.container.trim() + ", " : "")}${y || "n.d."}.`;
+    case "book-chapter": {
+      let out = `${a ? a + ". " : ""}"${cleanTitle}." In *${meta.container || "Book"}*`;
+      if (meta.publisher) out += `, ${meta.publisher.trim()}`;
+      if (meta.pages) out += `, ${meta.pages.trim().replace(/[,\.]+$/, "")}`;
+      out += `, ${y || "n.d."}.`;
+      if (doiClean) out += ` https://doi.org/${doiClean}.`;
+      else if (urlChicago) out += ` ${urlChicago}.`;
+      return out;
+    }
+    case "thesis": {
+      let out = `${a ? a + ". " : ""}*${cleanTitle}*. `;
+      if (meta.pages) out += `${meta.pages.trim().replace(/[,\.]+$/, "")}. `;
+      if (meta.container) out += `${meta.container.trim()}. `;
+      out += `${y || "n.d."}.`;
+      if (urlChicago) out += ` ${urlChicago}.`;
+      return out.trim();
+    }
     case "pdf": {
       let out = `${a ? a + ". " : ""}*${cleanTitle}*. `;
       if (meta.pages) out += `${meta.pages.trim().replace(/[,\.]+$/, "")}. `;
@@ -571,7 +742,11 @@ function buildAcsCitation(meta) {
       return out;
     }
     case "book":
-      return `${aDot} ${cleanTitle}. ${meta.container ? meta.container.trim() + ", " : ""}${y}.`;
+      return `${aDot} ${cleanTitle}. ${meta.publisher ? meta.publisher.trim() + ", " : (meta.container ? meta.container.trim() + ", " : "")}${y}.`;
+    case "book-chapter":
+      return `${aDot} ${cleanTitle}. In ${meta.container ? meta.container.trim() + ", " : ""}${meta.publisher ? meta.publisher.trim() + ", " : ""}${y}${meta.pages ? `, pp. ${meta.pages.trim().replace(/^pp\.\s*/i, "")}` : ""}.`;
+    case "thesis":
+      return `${aDot} ${cleanTitle}. ${meta.pages ? meta.pages.trim() + ". " : ""}${meta.container ? meta.container.trim() + ", " : ""}${y}.`;
     default: {
       let out = `${aDot} ${cleanTitle}. `;
       if (meta.container && meta.container.trim() !== cleanTitle) out += `${meta.container.trim()}. `;
@@ -601,7 +776,11 @@ function buildAmaCitation(meta) {
       return out;
     }
     case "book":
-      return `${a}. ${cleanTitle}. ${meta.container ? meta.container.trim() + " " : ""}${y}.`;
+      return `${a}. ${cleanTitle}. ${meta.publisher ? meta.publisher.trim() + " " : (meta.container ? meta.container.trim() + " " : "")}${y}.`;
+    case "book-chapter":
+      return `${a}. ${cleanTitle}. In ${meta.container ? meta.container.trim() + ". " : ""}${meta.publisher ? meta.publisher.trim() + " " : ""}${y}${meta.pages ? `;${meta.pages.trim().replace(/[,\.]+$/, "")}` : ""}.`;
+    case "thesis":
+      return `${a}. ${cleanTitle}. ${meta.pages ? meta.pages.trim() + ". " : ""}${meta.container ? meta.container.trim() + " " : ""}${y}.`;
     default: {
       let out = `${a}. ${cleanTitle}. `;
       if (meta.container && meta.container.trim() !== cleanTitle) out += `${meta.container.trim()}. `;
@@ -726,5 +905,98 @@ Quy tắc nhiều tác giả:
 • 1 tác giả: (${a1}, ${y})
 • 2 tác giả: (${a1} & ${authors[1]?.last || "Trần"}, ${y})
 • ≥ 3 tác giả: (${a1} et al., ${y}) dùng ngay từ lần trích đầu tiên.`;
+}
+
+// ── CSL-JSON (Citation Style Language) — dùng cho Zotero/Mendeley/citeproc ──
+const CSL_TYPE_MAP = {
+  academic: "article-journal",
+  conference: "paper-conference",
+  book: "book",
+  "book-chapter": "chapter",
+  thesis: "thesis",
+  pdf: "report",
+  software: "software",
+  video: "motion_picture",
+  webpage: "webpage"
+};
+
+function buildCslJsonCitation(meta) {
+  const csl = {
+    id: meta.id || ("item-" + Date.now() + "-" + Math.random().toString(36).substr(2, 4)),
+    type: CSL_TYPE_MAP[meta.sourceType] || "webpage",
+    title: (meta.title || "Untitled").trim()
+  };
+  if (meta.container) csl["container-title"] = meta.container.trim();
+  if (meta.publisher) csl.publisher = meta.publisher.trim();
+  if (meta.authors) {
+    const authors = parseAuthorsList(meta.authors);
+    if (authors.length) {
+      csl.author = authors.map(a => {
+        if (a.isOrg) return { literal: a.last };
+        const o = {};
+        if (a.last) o.family = a.last;
+        if (a.first) o.given = a.first;
+        return o;
+      });
+    }
+  }
+  const y = extractYear(meta.date);
+  if (y) csl.issued = { "date-parts": [[parseInt(y, 10)]] };
+  if (meta.pages) csl.page = meta.pages.trim().replace(/[,\.]+$/, "");
+  if (meta.doi) csl.DOI = meta.doi.trim().replace(/^https?:\/\/doi\.org\//, "");
+  if (meta.url && !meta.url.startsWith("file://")) csl.URL = meta.url;
+  if (meta.tag) csl.keyword = meta.tag.trim();
+  if (meta.notes) csl.note = meta.notes.trim();
+  return JSON.stringify(csl, null, 2);
+}
+
+// ── EndNote XML (.xml) — dùng cho EndNote/Reference Manager ──
+const ENDNOTE_REF_TYPE_MAP = {
+  academic: { name: "Journal Article", num: 17 },
+  conference: { name: "Conference Paper", num: 47 },
+  book: { name: "Book", num: 6 },
+  "book-chapter": { name: "Book Section", num: 5 },
+  thesis: { name: "Thesis", num: 32 },
+  pdf: { name: "Report", num: 27 },
+  software: { name: "Computer Program", num: 20 },
+  video: { name: "Web Page", num: 12 },
+  webpage: { name: "Web Page", num: 12 }
+};
+
+function buildEndnoteXmlCitation(meta) {
+  const rt = ENDNOTE_REF_TYPE_MAP[meta.sourceType] || { name: "Web Page", num: 12 };
+  const esc = s => String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  let xml = "  <record>\n";
+  xml += `    <ref-type name="${rt.name}">${rt.num}</ref-type>\n`;
+  if (meta.authors) {
+    const authors = parseAuthorsList(meta.authors);
+    if (authors.length) {
+      xml += "    <contributors><authors>\n";
+      authors.forEach(a => {
+        const name = a.isOrg ? a.last : (a.last ? `${a.last}, ${a.first || a.initials || ""}`.trim() : (a.first || a.raw || ""));
+        if (name) xml += `      <author>${esc(name)}</author>\n`;
+      });
+      xml += "    </authors></contributors>\n";
+    }
+  }
+  xml += "    <titles>\n";
+  xml += `      <title>${esc(meta.title || "Untitled")}</title>\n`;
+  if (meta.container) xml += `      <secondary-title>${esc(meta.container)}</secondary-title>\n`;
+  xml += "    </titles>\n";
+  const y = extractYear(meta.date);
+  if (y) xml += `    <dates><year>${y}</year></dates>\n`;
+  if (meta.publisher) xml += `    <publisher>${esc(meta.publisher)}</publisher>\n`;
+  if (meta.pages) xml += `    <pages>${esc(meta.pages.trim())}</pages>\n`;
+  if (meta.doi) xml += `    <electronic-resource-num>${esc(meta.doi.trim())}</electronic-resource-num>\n`;
+  if (meta.url && !meta.url.startsWith("file://")) xml += `    <urls><related-urls><url>${esc(meta.url)}</url></related-urls></urls>\n`;
+  if (meta.tag) {
+    xml += "    <keywords>\n";
+    meta.tag.split(",").forEach(t => { if (t.trim()) xml += `      <keyword>${esc(t.trim())}</keyword>\n`; });
+    xml += "    </keywords>\n";
+  }
+  if (meta.notes) xml += `    <notes>${esc(meta.notes.replace(/\n/g, " ").trim())}</notes>\n`;
+  xml += "  </record>";
+  return xml;
 }
 

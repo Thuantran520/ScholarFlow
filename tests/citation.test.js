@@ -162,6 +162,95 @@ async function main() {
     ris.includes("PY  - 2017") && ris.includes("SP  - 6000–6010") && ris.includes("ER"),
     `buildRisCitation key parts (got ${ris.split("\n").slice(0, 3).join(" | ")}...)`);
 
+  // --- New export builders: EndNote XML + CSL-JSON --------------------------
+  console.log("EndNote XML & CSL-JSON builders:");
+  const csl = code2("buildCslJsonCitation");
+  let cslObj = null;
+  try { cslObj = JSON.parse(csl); } catch (e) {}
+  check(!!cslObj && cslObj.type === "article-journal" && cslObj.title === "Attention Is All You Need",
+    `buildCslJsonCitation valid CSL-JSON (type=${cslObj && cslObj.type})`);
+  check(!!cslObj && Array.isArray(cslObj.author) && cslObj.author.length === 2 &&
+    cslObj.author[0].family === "Vaswani" && cslObj.author[0].given === "Ashish",
+    "CSL-JSON author split into family/given");
+  check(!!cslObj && cslObj.issued["date-parts"][0][0] === 2017 &&
+    cslObj["container-title"] === "Advances in Neural Information Processing Systems" &&
+    cslObj.DOI === "10.48550/arXiv.1706.03762",
+    "CSL-JSON carries year/container/DOI");
+
+  const xml = code2("buildEndnoteXmlCitation");
+  check(xml.includes('<ref-type name="Journal Article">17</ref-type>') &&
+    xml.includes("<title>Attention Is All You Need</title>") &&
+    xml.includes("<secondary-title>Advances in Neural Information Processing Systems</secondary-title>") &&
+    xml.includes("<author>Vaswani, Ashish</author>") && xml.includes("<year>2017</year>"),
+    "buildEndnoteXmlCitation emits ref-type/title/journal/author/year");
+  check(xml.includes("<electronic-resource-num>10.48550/arXiv.1706.03762</electronic-resource-num>"),
+    "EndNote XML carries DOI");
+
+  // --- Book chapter (IEEE) -------------------------------------------------
+  console.log("IEEE book-chapter (chapter in edited volume):");
+  const bookChapMeta = {
+    sourceType: "book-chapter",
+    authors: "J. Bernstein",
+    title: "A Bouquet of Dyson",
+    container: "Well, Doc, You're In",
+    publisher: "Cambridge, MA: MIT Press",
+    date: "Oct. 2022",
+    pages: "pp. 257-270",
+    doi: "10.7551/mitpress/13952.003.0011",
+    url: ""
+  };
+  const ieeeChap = w.eval(`(function(){ return getFormattedCitationByStyle(${JSON.stringify(bookChapMeta)}, "ieee", 1); })()`);
+  const expectedChap = '[1] J. Bernstein, "A Bouquet of Dyson," in *Well, Doc, You\'re In*, Cambridge, MA: MIT Press, 2022, pp. 257-270, doi: 10.7551/mitpress/13952.003.0011.';
+  check(ieeeChap === expectedChap, `IEEE book-chapter exact golden\n     got: ${ieeeChap}`);
+  check(ieeeChap.includes('" in *') && !ieeeChap.includes("Oct."),
+    "chapter title in quotes + 'in' before italic book title + year-only");
+
+  // --- IEEE full format guide (journal vol/no/pp + thesis + report) ---------
+  console.log("IEEE format guide (journal / thesis / report):");
+  const journalMeta = {
+    sourceType: "academic",
+    authors: "A. Smith and B. Jones",
+    title: "Analysis of signals",
+    container: "IEEE Trans. Signal Process.",
+    date: "Sep. 2023",
+    pages: "vol. 45, no. 9, pp. 123-130",
+    doi: "",
+    url: ""
+  };
+  const journalCite = w.eval(`(function(){ return getFormattedCitationByStyle(${JSON.stringify(journalMeta)}, "ieee", 2); })()`);
+  check(journalCite === '[2] A. Smith and B. Jones, "Analysis of signals," *IEEE Trans. Signal Process.*, vol. 45, no. 9, pp. 123-130, Sep. 2023.',
+    `IEEE journal vol/no/pp exact golden\n     got: ${journalCite}`);
+
+  const thesisMeta = {
+    sourceType: "thesis",
+    authors: "J. O. Williams",
+    title: "Narrow-band analyzer",
+    container: "Dept. Elect. Eng., Harvard Univ.",
+    publisher: "Cambridge, MA",
+    pages: "Ph.D. dissertation",
+    date: "1993",
+    doi: "",
+    url: ""
+  };
+  const thesisCite = w.eval(`(function(){ return buildIeeeCitation(${JSON.stringify(thesisMeta)}); })()`);
+  check(thesisCite === 'J. O. Williams, "Narrow-band analyzer," Ph.D. dissertation, Dept. Elect. Eng., Harvard Univ., Cambridge, MA, 1993.',
+    `IEEE thesis exact golden\n     got: ${thesisCite}`);
+
+  const reportMeta = {
+    sourceType: "pdf",
+    authors: "E. E. Reber",
+    title: "Oxygen absorption",
+    container: "Aerospace Corp.",
+    publisher: "Los Angeles, CA",
+    pages: "Tech. Rep. TR-0200",
+    date: "1988",
+    doi: "",
+    url: ""
+  };
+  const reportCite = w.eval(`(function(){ return buildIeeeCitation(${JSON.stringify(reportMeta)}); })()`);
+  check(reportCite === 'E. E. Reber, "Oxygen absorption," Aerospace Corp., Los Angeles, CA, Tech. Rep. TR-0200, 1988.',
+    `IEEE technical report exact golden\n     got: ${reportCite}`);
+
   // --- Style overrides via citationSettings ---------------------------------
   console.log("Style overrides (citationSettings):");
   check(code(`(window.__cs({ authorStyle: "uppercase-all", removeDiacritics: false }), formatIeeeAuthors("Nguyễn Văn A"))`) === "V. A. NGUYEN",

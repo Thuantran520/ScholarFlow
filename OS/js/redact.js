@@ -172,7 +172,7 @@ function renderRedactedList(list) {
 
     const tagPill = document.createElement("span");
     tagPill.className = "redacted-tag-pill";
-    tagPill.textContent = `<${item.tagName}>`;
+    tagPill.textContent = item.kind === "region" ? "📍 Vùng" : `<${item.tagName}>`;
 
     const stylePill = document.createElement("span");
     stylePill.className = "redacted-style-pill";

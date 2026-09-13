@@ -141,6 +141,8 @@ function getSourceBadgeLabel(sourceType, container) {
       video: "Video",
       youtube: "YouTube",
       book: "Sách / Luận văn",
+      "book-chapter": "Chương sách",
+      thesis: "Luận văn",
       news: "Báo chí"
     },
     en: {
@@ -153,6 +155,8 @@ function getSourceBadgeLabel(sourceType, container) {
       video: "Video",
       youtube: "YouTube",
       book: "Book / Thesis",
+      "book-chapter": "Book Chapter",
+      thesis: "Thesis",
       news: "News"
     },
     zh: {
@@ -165,6 +169,8 @@ function getSourceBadgeLabel(sourceType, container) {
       video: "在线视频",
       youtube: "YouTube",
       book: "图书/论文",
+      "book-chapter": "书籍章节",
+      thesis: "学位论文",
       news: "新闻报道"
     },
     ru: {
@@ -177,6 +183,8 @@ function getSourceBadgeLabel(sourceType, container) {
       video: "Онлайн-видео",
       youtube: "YouTube",
       book: "Книга / Дис.",
+      "book-chapter": "Глава книги",
+      thesis: "Диссертация",
       news: "Новости"
     },
     ja: {
@@ -189,6 +197,8 @@ function getSourceBadgeLabel(sourceType, container) {
       video: "オンライン動画",
       youtube: "YouTube",
       book: "書籍・論文",
+      "book-chapter": "本の章",
+      thesis: "学位論文",
       news: "ニュース"
     }
   };
@@ -201,7 +211,9 @@ function getSourceBadgeLabel(sourceType, container) {
   else if (key.includes("soft") || key.includes("git")) key = "software";
   else if (key.includes("youtu")) key = "youtube";
   else if (key.includes("vid")) key = "video";
-  else if (key.includes("book") || key.includes("thesis")) key = "book";
+  else if (key.includes("book-chapter") || key.includes("chapter")) key = "book-chapter";
+  else if (key.includes("thesis") || key.includes("dissertation") || key.includes("luận") || key.includes("đồ án")) key = "thesis";
+  else if (key.includes("book")) key = "book";
   else if (key.includes("news")) key = "news";
   return lDict[key] || lDict.webpage || "Web";
 }
@@ -250,12 +262,14 @@ function syncInputs() {
   const elUrl = document.getElementById("f-url");
   const elTag = document.getElementById("f-tag");
   const elNotes = document.getElementById("f-notes");
+  const elPublisher = document.getElementById("f-publisher");
 
   if (elSourceType) elSourceType.value = currentMeta.sourceType || "webpage";
   if (elAuthors) elAuthors.value = currentMeta.authors || "";
   if (elTitle) elTitle.value = currentMeta.title || "";
   if (elDate) elDate.value = currentMeta.date || "";
   if (elContainer) elContainer.value = currentMeta.container || "";
+  if (elPublisher) elPublisher.value = currentMeta.publisher || "";
   if (elDoi) elDoi.value = currentMeta.doi || "";
   if (elPages) elPages.value = currentMeta.pages || "";
   if (elUrl) elUrl.value = currentMeta.url || "";
@@ -293,6 +307,7 @@ function syncMetaFromInputs() {
     const rawDate = document.getElementById("f-date")?.value || "";
     currentMeta.date = (typeof parseComprehensiveDate === "function" ? parseComprehensiveDate(rawDate) : null) || rawDate;
     currentMeta.container = document.getElementById("f-container")?.value || "";
+    currentMeta.publisher = document.getElementById("f-publisher")?.value || "";
     currentMeta.doi = document.getElementById("f-doi")?.value || "";
     currentMeta.pages = document.getElementById("f-pages")?.value || "";
     currentMeta.url = document.getElementById("f-url")?.value || "";

@@ -48,7 +48,12 @@
           document.documentElement.style.setProperty("--super-blur-val", `${currentBlurPx}px`);
 
           redactedElementsList.forEach(item => {
-            if (item.element && item.element.classList.contains("super-redact-blur")) {
+            if (!item.element) return;
+            if (item.kind === "region") {
+              item.style = currentRedactStyle;
+              item.blurPx = currentBlurPx;
+              applyRegionStyle(item.element, currentRedactStyle, currentBlurPx);
+            } else if (item.element.classList.contains("super-redact-blur")) {
               item.element.style.setProperty("--super-blur-val", `${currentBlurPx}px`);
             }
           });
@@ -57,9 +62,15 @@
             const lastItem = redactedElementsList[redactedElementsList.length - 1];
             lastItem.style = currentRedactStyle;
             lastItem.blurPx = currentBlurPx;
-            updateElementStyle(lastItem.element, currentRedactStyle, currentBlurPx);
+            if (lastItem.kind === "region") {
+              applyRegionStyle(lastItem.element, currentRedactStyle, currentBlurPx);
+            } else {
+              updateElementStyle(lastItem.element, currentRedactStyle, currentBlurPx);
+            }
             flashRedactedElement(lastItem.element);
           }
+
+          redactPersist();
 
           sendResponse({
             success: true,
@@ -76,9 +87,14 @@
             if (item.element) {
               item.style = currentRedactStyle;
               item.blurPx = currentBlurPx;
-              updateElementStyle(item.element, currentRedactStyle, currentBlurPx);
+              if (item.kind === "region") {
+                applyRegionStyle(item.element, currentRedactStyle, currentBlurPx);
+              } else {
+                updateElementStyle(item.element, currentRedactStyle, currentBlurPx);
+              }
             }
           });
+          redactPersist();
           sendResponse({
             success: true,
             count: redactedElementsList.length,
@@ -333,6 +349,41 @@
         case "HIDE_PAGE_COUNTDOWN":
           hidePageCountdown();
           sendResponse({ success: true });
+          break;
+
+        case "GET_REDACT_MASKS":
+          sendResponse({
+            success: true,
+            masks: (typeof getRedactedMasksForCapture === "function") ? getRedactedMasksForCapture() : [],
+            scrollX: window.scrollX || 0,
+            scrollY: window.scrollY || 0,
+            viewportWidth: window.innerWidth || 0,
+            viewportHeight: window.innerHeight || 0
+          });
+          break;
+
+        case "AUTO_DETECT_SENSITIVE":
+          {
+            const n = (typeof detectSensitiveElements === "function")
+              ? detectSensitiveElements(msg.style, msg.blurPx) : 0;
+            sendResponse({
+              success: true,
+              count: n,
+              list: getRedactedItemsForSidebar()
+            });
+          }
+          break;
+
+        case "MASK_BY_KEYWORD":
+          {
+            const n = (typeof maskByKeyword === "function")
+              ? maskByKeyword(msg.keyword, msg.style, msg.blurPx) : 0;
+            sendResponse({
+              success: true,
+              count: n,
+              list: getRedactedItemsForSidebar()
+            });
+          }
           break;
 
         case "PING":

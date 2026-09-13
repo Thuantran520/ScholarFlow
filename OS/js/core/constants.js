@@ -6,7 +6,7 @@
 // ---------------------------------------------------------------------------
 const getI18nText = (key, params = null) => (window.i18n ? window.i18n.t(key, null, params) : key);
 
-const MONTHS_IEEE = ["", "Jan.", "Feb.", "Mar.", "Apr.", "May", "June", "July", "Aug.", "Sept.", "Oct.", "Nov.", "Dec."];
+const MONTHS_IEEE = ["", "Jan.", "Feb.", "Mar.", "Apr.", "May", "June", "July", "Aug.", "Sep.", "Oct.", "Nov.", "Dec."];
 const MONTHS_FULL = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 function getTodayIeee() {

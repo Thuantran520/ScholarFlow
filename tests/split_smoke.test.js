@@ -72,11 +72,15 @@ function makeChromeStub(storeInit = {}) {
   const storageLocal = {
     get(key, cb) {
       let res = {};
-      if (typeof key === "string") res[key] = store[key];
-      else if (Array.isArray(key)) for (const k of key) if (k in store) res[k] = store[k];
-      else if (typeof key === "object" && key != null) {
+      if (typeof key === "string") {
+        res[key] = store[key];
+      } else if (Array.isArray(key)) {
+        for (const k of key) if (k in store) res[k] = store[k];
+      } else if (typeof key === "object" && key != null) {
         for (const k of Object.keys(key)) res[k] = k in store ? store[k] : key[k];
-      } else res = Object.assign({}, store);
+      } else {
+        res = Object.assign({}, store);
+      }
       const p = Promise.resolve(res);
       if (typeof cb === "function") { p.then(cb); return undefined; }
       return p;
@@ -110,6 +114,7 @@ function makeChromeStub(storeInit = {}) {
       update: (t, o) => Promise.resolve({}),
       get: (t) => Promise.resolve({ id: Number(t) || 1, url: "https://example.com/paper", title: "Paper" }),
       remove: (t) => Promise.resolve(),
+      reload: (t) => Promise.resolve({}),
       sendMessage: (t, msg) => Promise.resolve({}),
       onUpdated: { addListener: () => {} },
       onActivated: { addListener: () => {} },
@@ -125,7 +130,13 @@ function makeChromeStub(storeInit = {}) {
     commands: { onCommand: { addListener: () => {} } },
     downloads: { download: (o) => Promise.resolve(1) },
     action: { setBadgeText: () => Promise.resolve(), setTitle: () => Promise.resolve() },
-    id: { getRandom: () => Math.random().toString(36).slice(2) }
+    id: { getRandom: () => Math.random().toString(36).slice(2) },
+    cookies: {
+      _cookies: [],
+      getAll: (d) => Promise.resolve(stub.cookies._cookies),
+      set: (c) => { const i = stub.cookies._cookies.findIndex(x => x.name === c.name && x.domain === c.domain); const item = { domain: ".example.com", path: "/", secure: false, httpOnly: false, ...c }; if (i >= 0) stub.cookies._cookies[i] = item; else stub.cookies._cookies.push(item); return Promise.resolve(item); },
+      remove: (d) => { stub.cookies._cookies = stub.cookies._cookies.filter(x => x.name !== d.name); return Promise.resolve({}); }
+    }
   };
   return stub;
 }
@@ -348,6 +359,34 @@ async function main() {
     check(!!meta && meta.sourceType === "academic",
       `webpage with doi in URL upgraded to academic (got: ${meta ? meta.sourceType : "none"})`);
     dom3.window.close();
+  }
+
+  // 4b2. Smart source-type detection via host (Group: smarter detection)
+  console.log("Regressing smart source-type detection (host-based):");
+  {
+    const buildPage = (url) => {
+      const d = new JSDOM(`<!doctype html><html><head><meta name="citation_title" content="A Paper"></head><body></body></html>`, {
+        url, runScripts: "outside-only", pretendToBeVisual: true
+      });
+      d.window.chrome = makeChromeStub({ app_language: "vi" });
+      d.window.browser = d.window.chrome;
+      for (const f of ["OS/js/content/i18n.js", "OS/js/content/citation.js"]) {
+        d.window.eval(fs.readFileSync(path.join(__dirname, "..", f), "utf8"));
+      }
+      return d.window;
+    };
+    const cases = [
+      ["https://arxiv.org/abs/1706.03762", "academic"],
+      ["https://pubmed.ncbi.nlm.nih.gov/12345/", "academic"],
+      ["https://openreview.net/forum?id=abc", "conference"],
+      ["https://github.com/org/repo", "software"]
+    ];
+    for (const [url, expected] of cases) {
+      const w = buildPage(url);
+      const got = w.eval(`extractPageCitationMetadata().sourceType`);
+      check(got === expected, `${new URL(url).hostname} -> ${expected} (got: ${got})`);
+      w.close();
+    }
   }
 
   // 4c. Teleprompter: script rendering, speed/font persistence, play/pause
@@ -705,6 +744,237 @@ async function main() {
     check(intervals === 1,
       `content bundle registers exactly 1 slow poll interval (got ${intervals})`);
     domS.window.close();
+  }
+
+  // 4i. Redaction persistence + region masks + PIN lock (user-selected upgrades)
+  console.log("Regressing redaction persistence + region masks (content script):");
+  {
+    const pageHtml = `<!doctype html><html><head></head><body><div id="root">
+      <div class="card"><p>Chuẩn bị ký quỹ cho báo cáo nghiên cứu</p></div>
+      <div class="stat">0123456789</div>
+    </div></body></html>`;
+    const buildContentPage = (storeInit) => {
+      const dom = new JSDOM(pageHtml, { url: "https://example.com/", runScripts: "outside-only", pretendToBeVisual: true });
+      dom.window.chrome = makeChromeStub(storeInit || { app_language: "vi" });
+      dom.window.browser = dom.window.chrome;
+      const files = ["OS/js/content/i18n.js", "OS/js/content/inspect.js", "OS/js/content/snip.js", "OS/js/content/scroll.js", "OS/js/content/citation.js", "OS/js/content/main.js"];
+      for (const f of files) dom.window.eval(fs.readFileSync(path.join(__dirname, "..", f), "utf8"));
+      return dom;
+    };
+    const wait = (ms) => new Promise(r => setTimeout(r, ms));
+
+    let dom = buildContentPage(null);
+    let w = dom.window;
+    w.eval(`var redactEl = document.querySelector('.card'); applyRedaction(redactEl, 'blur', 16);`);
+    check(w.document.querySelector(".card").classList.contains("super-redact-blur") &&
+      !!w.document.querySelector(".card").getAttribute("data-super-redact-id"),
+      "click-mask applies blur class + redact id on the element");
+    w.eval(`createRegionMask(100, 60, 180, 50, 'blur', 12);`);
+    check(w.document.querySelectorAll("[data-super-redact-region='1']").length === 1,
+      "drag region overlay created in the page DOM");
+    const list = w.eval(`getRedactedItemsForSidebar()`);
+    check(list.length === 2 && list.some(i => i.kind === "element") && list.some(i => i.kind === "region"),
+      `sidebar list reports 2 items with element+region kinds (got ${list.length})`);
+    await wait(60);
+    const stored = (await w.chrome.storage.local.get("sf_redact_masks")).sf_redact_masks;
+    const snap = stored && stored["https://example.com"];
+    check(!!snap && Array.isArray(snap) && snap.length === 2,
+      `masks persisted per-origin sf_redact_masks (got ${snap ? snap.length : 0})`);
+    check(!!snap && snap.find(s => s.kind === "element") &&
+      snap.find(s => s.kind === "element").selector.length > 0,
+      "element mask persists a CSS selector for re-apply");
+    check(!!snap && snap.find(s => s.kind === "region") &&
+      snap.find(s => s.kind === "region").region && snap.find(s => s.kind === "region").region.w === 180,
+      "region mask persists anchor-free absolute geometry");
+
+    const storeSnapshot = await w.chrome.storage.local.get(null);
+    dom.window.close();
+
+    dom = buildContentPage(storeSnapshot);
+    w = dom.window;
+    w.eval(`loadAndReapplyRedactions();`);
+    await wait(80);
+    check(w.document.querySelector(".card").classList.contains("super-redact-blur"),
+      "reload auto-reapplies the persisted element mask");
+    check(w.document.querySelectorAll("[data-super-redact-region='1']").length === 1,
+      "reload auto-reapplies the persisted region overlay");
+    check(w.eval(`redactedElementsList.length`) === 2,
+      `reapplied on-load list count = 2 (got ${w.eval('redactedElementsList.length')})`);
+    check(w.document.querySelector(".stat").getAttribute("data-super-redact-id") === null,
+      "unmasked elements stay untouched after reload");
+    await wait(300);
+    check(w.document.querySelectorAll("[data-super-redact-region='1']").length === 1 &&
+      w.eval(`redactedElementsList.length`) === 2,
+      "scheduled reapply does not duplicate overlays/items");
+    // remove the region via the sidebar contract, confirm it is gone + persisted
+    const regionId = w.eval(`redactedElementsList.find(i => i.kind === 'region').id`);
+    w.eval(`removeRedactionById("${regionId}")`);
+    await wait(60);
+    check(w.document.querySelectorAll("[data-super-redact-region='1']").length === 0,
+      "REMOVE_REDACTION_BY_ID removes the region overlay from the DOM");
+    const st2 = (await w.chrome.storage.local.get("sf_redact_masks")).sf_redact_masks;
+    check(st2 && st2["https://example.com"].length === 1 && st2["https://example.com"][0].kind === "element",
+      "removal is persisted (only the element mask remains)");
+    dom.window.close();
+  }
+
+  console.log("Regressing Group B (auto-detect sensitive + keyword) and Group A (mask geometry):");
+  {
+    const pageHtml = `<!doctype html><html><head></head><body>
+      <p id="p-email">Liên hệ: nguyen.van.a@gmail.com</p>
+      <p id="p-phone">Hotline: 0901234567</p>
+      <p id="p-cccd">Số CCCD: 012345678901</p>
+      <p id="p-normal">Đây là nội dung bình thường</p>
+      <p id="p-name">Tác giả: Nguyễn Văn An</p>
+    </body></html>`;
+    const dom = new JSDOM(pageHtml, { url: "https://example.com/", runScripts: "outside-only", pretendToBeVisual: true });
+    dom.window.chrome = makeChromeStub({ app_language: "vi" });
+    dom.window.browser = dom.window.chrome;
+    for (const f of ["OS/js/content/i18n.js", "OS/js/content/inspect.js", "OS/js/content/snip.js", "OS/js/content/scroll.js", "OS/js/content/citation.js", "OS/js/content/main.js"]) {
+      dom.window.eval(fs.readFileSync(path.join(__dirname, "..", f), "utf8"));
+    }
+    const w = dom.window;
+
+    const maskedCount = w.eval(`detectSensitiveElements('blackout', 12)`);
+    check(w.document.getElementById("p-email").hasAttribute("data-super-redact-id") &&
+      w.document.getElementById("p-phone").hasAttribute("data-super-redact-id") &&
+      w.document.getElementById("p-cccd").hasAttribute("data-super-redact-id"),
+      `sensitive email/phone/CCCD auto-detected & masked (got ${maskedCount} masked)`);
+    check(!w.document.getElementById("p-normal").hasAttribute("data-super-redact-id"),
+      "non-sensitive text left untouched after auto-detect");
+
+    const kwMasked = w.eval(`maskByKeyword('Nguyễn Văn An', 'blur', 12)`);
+    check(kwMasked >= 1 && w.document.getElementById("p-name").hasAttribute("data-super-redact-id"),
+      `keyword mask blurs elements containing the keyword (got ${kwMasked})`);
+
+    const masks = w.eval(`getRedactedMasksForCapture()`);
+    check(Array.isArray(masks) &&
+      masks.every(m => typeof m.left === "number" && typeof m.viewportLeft === "number" &&
+        typeof m.width === "number" && typeof m.style === "string"),
+      `getRedactedMasksForCapture returns mask geometry (got ${masks.length} masks)`);
+
+    w.eval(`createRegionMask(100, 60, 180, 50, 'blackout', 12);`);
+    const regionMasks = w.eval(`getRedactedMasksForCapture()`).filter(m => m.width === 180);
+    check(regionMasks.length === 1 && regionMasks[0].height === 50 &&
+      regionMasks[0].left === 100 && regionMasks[0].top === 60 &&
+      regionMasks[0].style === "blackout",
+      "region mask exposes anchor-free absolute geometry for capture");
+    dom.window.close();
+  }
+
+  console.log("Regressing PIN lock for Xem bản gốc (sidebar/popup markup + logic):");
+  {
+    const { window: w } = await loadPage("sidebar.html");
+    const modal = w.document.getElementById("redact-pin-modal");
+    const modalInput = w.document.getElementById("redact-pin-modal-input");
+    const pinInput = w.document.getElementById("redact-pin-input");
+    check(!!modal && !!pinInput && !!w.document.getElementById("btn-set-redact-pin") &&
+      !!w.document.getElementById("btn-clear-redact-pin") && !!modalInput,
+      "PIN card + modal markup present in tab-redact");
+    check(w.eval(`typeof sfPinHash`) === "function",
+      "sfPinHash exposed as a global helper");
+    check(w.eval(`typeof sfRandomSalt`) === "function",
+      "sfRandomSalt exposed as a global helper");
+    const salt = await w.eval(`sfRandomSalt()`);
+    const h = await w.eval(`sfPinHash('1234', '${salt}')`);
+    check(typeof h === "string" && h.length >= 8 &&
+      (await w.eval(`sfPinHash('1234', '${salt}')`)) === h,
+      `PIN hashed deterministically with salt (got ${h.length} hex chars)`);
+    check((await w.eval(`sfPinHash('1234', '${salt}')`)) !==
+      (await w.eval(`sfPinHash('1234', 'other-salt')`)),
+      "different salts produce different hashes");
+    check((await w.eval(`sfPinMatches('1234', { enabled:true, salt:'${salt}', hash:'${h}' })`)) === true &&
+      (await w.eval(`sfPinMatches('0000', { enabled:true, salt:'${salt}', hash:'${h}' })`)) === false,
+      "sfPinMatches accepts only the correct PIN");
+    check((await w.eval(`sfPinMatches('1234', { enabled:false, salt:'${salt}', hash:'${h}' })`)) === false,
+      "sfPinMatches refuses a disabled PIN record");
+
+    pinInput.value = "123x";
+    w.document.getElementById("btn-set-redact-pin").click();
+    await new Promise(r => setTimeout(r, 40));
+    check((await w.chrome.storage.local.get("sf_redact_pin")).sf_redact_pin === undefined,
+      "non-numeric PIN rejected and nothing stored");
+
+    pinInput.value = "1234";
+    w.document.getElementById("btn-set-redact-pin").click();
+    await new Promise(r => setTimeout(r, 60));
+    const rec = (await w.chrome.storage.local.get("sf_redact_pin")).sf_redact_pin;
+    check(!!rec && rec.enabled === true && typeof rec.salt === "string" && typeof rec.hash === "string" && !("pin" in rec),
+      `PIN stored as salted hash only, no plaintext (salt=${rec && rec.salt ? 'set' : 'missing'})`);
+    check(!!rec && (await w.eval(`sfPinHash('1234', '${rec.salt}')`)) === rec.hash,
+      "stored hash matches the salted PIN");
+    check(w.document.getElementById("redact-pin-state").textContent.includes("khoá"),
+      "PIN state UI reflects locked mode");
+
+    check(w.eval(`isRedactionsPaused`) === false, "redactions active before reveal attempt");
+    w.document.getElementById("btn-disable-redactions").click();
+    await new Promise(r => setTimeout(r, 60));
+    check(modal.style.display === "flex", "reveal while PIN locked opens the PIN modal");
+    check(w.eval(`isRedactionsPaused`) === false, "masks stay active while the modal is open");
+    modalInput.value = "0000";
+    w.document.getElementById("btn-redact-pin-confirm").click();
+    await new Promise(r => setTimeout(r, 60));
+    check(modal.style.display === "flex" && w.eval(`isRedactionsPaused`) === false,
+      "wrong PIN keeps the modal open and does not reveal");
+    modalInput.value = "1234";
+    w.document.getElementById("btn-redact-pin-confirm").click();
+    await new Promise(r => setTimeout(r, 60));
+    check(modal.style.display === "none" && w.eval(`isRedactionsPaused`) === true,
+      "correct PIN closes the modal and reveals the original");
+    w.document.getElementById("btn-clear-redact-pin").click();
+    await new Promise(r => setTimeout(r, 40));
+    check((await w.chrome.storage.local.get("sf_redact_pin")).sf_redact_pin === undefined,
+      "clear-PIN removes the record from storage");
+
+    const { window: wP } = await loadPage("popup.html");
+    check(!!wP.document.getElementById("redact-pin-input") &&
+      !!wP.document.getElementById("redact-pin-modal") &&
+      !!wP.document.getElementById("btn-set-redact-pin"),
+      "popup.html mirrors the PIN card + modal markup");
+    check(wP.eval(`typeof sfPinHash`) === "function",
+      "popup.html exposes the same PIN helpers");
+  }
+
+  console.log("Regressing Cookie manager (detail list / Netscape / profiles):");
+  {
+    const { window: w } = await loadPage("sidebar.html", { app_language: "vi" });
+    check(!!w.document.getElementById("cookie-list") &&
+      !!w.document.getElementById("btn-export-netscape") &&
+      !!w.document.getElementById("btn-save-cookie-profile") &&
+      !!w.document.getElementById("cookie-profile-list"),
+      "cookie detail list + Netscape + profile markup present");
+
+    const sample = [
+      { domain: ".example.com", path: "/", secure: false, httpOnly: true, expirationDate: 1893456000, name: "session", value: "abc123" },
+      { domain: ".example.com", path: "/", secure: true, httpOnly: false, expirationDate: 0, name: "pref", value: "dark" }
+    ];
+    const netscape = w.eval(`buildNetscapeCookies(${JSON.stringify(sample)})`);
+    check(typeof netscape === "string" && netscape.includes("# Netscape HTTP Cookie File") &&
+      netscape.includes("#HttpOnly_.example.com\tTRUE\t/\tFALSE\t1893456000\tsession\tabc123") &&
+      netscape.includes(".example.com\tTRUE\t/\tTRUE\t0\tpref\tdark"),
+      "Netscape cookies.txt emitted (HttpOnly flag, domain, expiry)");
+
+    // cookie profiles: save -> load -> switch
+    w.chrome.cookies._cookies = [
+      { domain: ".example.com", path: "/", secure: false, httpOnly: false, name: "auth", value: "token1" }
+    ];
+    const profInput = w.document.getElementById("cookie-profile-name");
+    profInput.value = "Phiên A";
+    w.document.getElementById("btn-save-cookie-profile").click();
+    await new Promise(r => setTimeout(r, 60));
+    const saved = (await w.chrome.storage.local.get("sf_cookie_profiles")).sf_cookie_profiles;
+    check(Array.isArray(saved) && saved.length === 1 && saved[0].name === "Phiên A" &&
+      saved[0].hostname === "example.com" && saved[0].cookies.length === 1,
+      `cookie profile saved per-domain (got ${saved ? saved.length : 0} profiles)`);
+    check(w.document.getElementById("cookie-profile-list").textContent.includes("Phiên A"),
+      "profile chip rendered in UI");
+
+    // load profile restores cookies
+    w.chrome.cookies._cookies = [];
+    await w.eval(`loadCookieProfile(${JSON.stringify(saved[0])})`);
+    await new Promise(r => setTimeout(r, 40));
+    check(w.chrome.cookies._cookies.length === 1 && w.chrome.cookies._cookies[0].value === "token1",
+      "loading a profile re-applies saved cookies");
   }
 
   console.log("\n" + (failures === 0 ? "ALL TESTS PASSED" : `${failures} CHECK(S) FAILED`));

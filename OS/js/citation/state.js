@@ -15,5 +15,6 @@ let citationSettings = {
 };
 let currentModalTab = "ieee";
 let currentModalFilter = "";
+let currentModalSort = "savedAt";
 let isElementCapturePicking = false;
 

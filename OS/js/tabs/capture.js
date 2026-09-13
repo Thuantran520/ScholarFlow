@@ -83,6 +83,91 @@ function dataUrlFromCanvas(canvas) {
   return canvas.toDataURL("image/png");
 }
 
+// ── Group A: re-apply redaction masks deterministically on the exported canvas ──
+function fetchRedactMasks() {
+  return new Promise((resolve) => {
+    try {
+      sendTabMessage({ action: "GET_REDACT_MASKS" }, (res) => {
+        resolve((res && Array.isArray(res.masks)) ? res : { masks: [], viewportWidth: 0, viewportHeight: 0 });
+      });
+    } catch (e) {
+      resolve({ masks: [], viewportWidth: 0, viewportHeight: 0 });
+    }
+  });
+}
+
+function blurCanvasRegion(ctx, x, y, w, h, px) {
+  try {
+    const canvas = ctx.canvas;
+    const pad = Math.max(4, Math.round((px || 12) * 2));
+    const sx = Math.max(0, x - pad);
+    const sy = Math.max(0, y - pad);
+    const sw = Math.min(canvas.width - sx, w + pad * 2);
+    const sh = Math.min(canvas.height - sy, h + pad * 2);
+    if (sw < 2 || sh < 2) return;
+    const src = document.createElement("canvas");
+    src.width = Math.max(1, sw);
+    src.height = Math.max(1, sh);
+    const sctx = src.getContext("2d");
+    sctx.drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    ctx.clip();
+    ctx.filter = `blur(${Math.max(2, px || 12)}px)`;
+    ctx.drawImage(src, 0, 0, sw, sh, sx, sy, sw, sh);
+    ctx.restore();
+  } catch (e) {}
+}
+
+function pixelateCanvasRegion(ctx, x, y, w, h, block) {
+  try {
+    const canvas = ctx.canvas;
+    const bs = Math.max(4, Math.round((block || 12) / 2));
+    const sw = Math.max(1, Math.round(w / bs));
+    const sh = Math.max(1, Math.round(h / bs));
+    const small = document.createElement("canvas");
+    small.width = sw;
+    small.height = sh;
+    const sctx = small.getContext("2d");
+    sctx.imageSmoothingEnabled = true;
+    sctx.drawImage(canvas, x, y, w, h, 0, 0, sw, sh);
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(small, 0, 0, sw, sh, x, y, w, h);
+    ctx.restore();
+  } catch (e) {}
+}
+
+function applyRedactionToCanvas(ctx, masks, opts) {
+  if (!ctx || !masks || !masks.length) return;
+  const scaleX = opts.scaleX || 1;
+  const scaleY = opts.scaleY || 1;
+  const offsetX = opts.offsetX || 0;
+  const offsetY = opts.offsetY || 0;
+  const useViewport = !!opts.viewport;
+  for (const m of masks) {
+    const px = (useViewport ? m.viewportLeft : m.left);
+    const py = (useViewport ? m.viewportTop : m.top);
+    const x = Math.round(px * scaleX) + offsetX;
+    const y = Math.round(py * scaleY) + offsetY;
+    const w = Math.round(m.width * scaleX);
+    const h = Math.round(m.height * scaleY);
+    if (w < 2 || h < 2) continue;
+    const style = m.style || "blur";
+    if (style === "blackout") {
+      ctx.save();
+      ctx.fillStyle = "#000000";
+      ctx.fillRect(x, y, w, h);
+      ctx.restore();
+    } else if (style === "pixelate") {
+      pixelateCanvasRegion(ctx, x, y, w, h, m.blurPx);
+    } else {
+      blurCanvasRegion(ctx, x, y, w, h, m.blurPx);
+    }
+  }
+}
+
 function getVisibleTabDataUrl(windowId = null) {
   return new Promise((resolve) => {
     const tabsApi = (typeof browser !== "undefined" && browser.tabs) ? browser.tabs : ((typeof chrome !== "undefined" && chrome.tabs) ? chrome.tabs : null);
@@ -136,17 +221,24 @@ async function captureVisibleScreen() {
   }
   const dataUrl = await getVisibleTabDataUrl();
   if (dataUrl) {
-    if (screenshotSettings.format !== "png") {
-      const img = await loadImage(dataUrl);
-      const canvas = document.createElement("canvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, 0, 0);
-      displayScreenshotResult(dataUrlFromCanvas(canvas));
-    } else {
-      displayScreenshotResult(dataUrl);
-    }
+    const img = await loadImage(dataUrl);
+    const canvas = document.createElement("canvas");
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0);
+
+    // Group A: overlay active redaction masks so the export stays protected
+    try {
+      const res = await fetchRedactMasks();
+      if (res.masks.length && res.viewportWidth > 0) {
+        const scaleX = img.width / res.viewportWidth;
+        const scaleY = img.height / res.viewportHeight;
+        applyRedactionToCanvas(ctx, res.masks, { scaleX, scaleY, viewport: true });
+      }
+    } catch (e) {}
+
+    displayScreenshotResult(dataUrlFromCanvas(canvas));
     if (!screenshotSettings.autoCopy) {
       showToast("✓ Đã chụp ảnh màn hình!");
     }
@@ -349,6 +441,14 @@ async function captureFullPageSmart() {
       0, 0, currentCanvas.width, finalHeight,
       0, 0, currentCanvas.width, finalHeight
     );
+
+    // Group A: overlay redaction masks (document coordinates)
+    try {
+      const res = await fetchRedactMasks();
+      if (res.masks.length) {
+        applyRedactionToCanvas(fctx, res.masks, { scaleX, scaleY });
+      }
+    } catch (e) {}
 
     const fullDataUrl = dataUrlFromCanvas(finalCanvas);
     displayScreenshotResult(fullDataUrl);
@@ -679,6 +779,20 @@ async function captureSnipRect(msg) {
       }
 
       ctx.drawImage(baseImg, sx, sy, sw, sh, 0, 0, sw, sh);
+
+      // Group A: overlay redaction masks intersecting the snip (viewport coords)
+      try {
+        const res = await fetchRedactMasks();
+        if (res.masks.length) {
+          applyRedactionToCanvas(ctx, res.masks, {
+            scaleX,
+            scaleY,
+            offsetX: -Math.round(msg.rect.left * scaleX),
+            offsetY: -Math.round(msg.rect.top * scaleY),
+            viewport: true
+          });
+        }
+      } catch (e) {}
 
     const finalDataUrl = dataUrlFromCanvas(canvas);
     displayScreenshotResult(finalDataUrl);
