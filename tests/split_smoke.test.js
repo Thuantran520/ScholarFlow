@@ -585,7 +585,7 @@ async function main() {
       `floating window exposes S/M/L size presets (got ${sizeBtns.length})`);
     sizeBtns[2].click();
     const sizeL = (await w.chrome.storage.local.get("sf_pomo_win")).sf_pomo_win;
-    check(sizeL && sizeL.w === 420 && sizeL.h === 560 && sizeL.mini === false,
+    check(sizeL && sizeL.w === 470 && sizeL.h === 620 && sizeL.mini === false,
       `large preset persists the window size (got ${JSON.stringify(sizeL)})`);
     w.document.getElementById("pw-mini-toggle").click();
     const miniOn = (await w.chrome.storage.local.get("sf_pomo_win")).sf_pomo_win;

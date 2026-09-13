@@ -445,13 +445,13 @@ function pmOpenWindow() {
       ? browser.runtime.getURL
       : null);
   const url = getUrl ? getUrl("OS/html/pomo-window.html") : "OS/html/pomo-window.html";
-  const wApi = (typeof browser !== "undefined" && browser.windows && browser.windows.create)
+const wApi = (typeof browser !== "undefined" && browser.windows && browser.windows.create)
     ? browser.windows
     : (typeof chrome !== "undefined" && chrome.windows ? chrome.windows : null);
-  if (wApi && wApi.create) {
-    wApi.create({ url: url, type: "popup", width: 300, height: 400 });
+  if (wApi) {
+    wApi.create({ url: url, type: "popup", width: 360, height: 480 });
   } else if (typeof window !== "undefined" && window.open) {
-    window.open(url, "_blank", "width=320,height=420");
+    window.open(url, "_blank", "width=360,height=480");
   }
 }
 
