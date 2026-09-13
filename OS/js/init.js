@@ -1598,6 +1598,7 @@ document.getElementById("btn-quick-swap-tabs")?.addEventListener("click", swapDu
   try { updateRedactionVisibilityUI(); } catch (e) { console.warn(e); }
   try { initCustomSelects(); } catch (e) { console.warn(e); }
   try { loadCitationSettings(); } catch (e) { console.warn(e); }
+  try { populateGoalSelect(); } catch (e) { console.warn(e); }
   try { initSourceVerifier(); } catch (e) { console.warn(e); }
   try { loadSavedBibliographies(); } catch (e) { console.warn(e); }
   try { loadScreenshotSettings(); } catch (e) { console.warn(e); }
@@ -1805,6 +1806,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     const editText = (window.i18n ? window.i18n.t("todo_btn_edit") : null) || "Sửa";
     const delText = (window.i18n ? window.i18n.t("btn_delete") : null) || "Xóa";
+    const sourceText = (window.i18n ? window.i18n.t("todo_btn_open_source") : null) || "🔗 Nguồn";
     const saveText = (window.i18n ? window.i18n.t("todo_btn_save") : null) || "Lưu";
     const cancelText = (window.i18n ? window.i18n.t("todo_btn_cancel") : null) || "Hủy";
     const urgentText = (window.i18n ? window.i18n.t("todo_priority_urgent") : null) || "🔴 Gấp";
@@ -1973,6 +1975,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
         const cardActions = document.createElement("div");
         cardActions.className = "todo-actions";
+        if (item.libId) {
+          const sourceBtn = document.createElement("button");
+          sourceBtn.type = "button";
+          sourceBtn.className = "todo-action-btn btn-link-source";
+          sourceBtn.setAttribute("data-index", originalIndex);
+          sourceBtn.setAttribute("data-libid", item.libId);
+          sourceBtn.title = sourceText;
+          const sourceIcon = document.createElement("span");
+          sourceIcon.textContent = "🔗";
+          sourceIcon.style.fontSize = "12px";
+          sourceBtn.appendChild(sourceIcon);
+          sourceBtn.appendChild(document.createTextNode("\u00A0" + sourceText));
+          sourceBtn.style.fontSize = "10px";
+          cardActions.appendChild(sourceBtn);
+        }
         const editActionBtn = document.createElement("button");
         editActionBtn.type = "button";
         editActionBtn.className = "todo-action-btn btn-edit";
@@ -2022,6 +2039,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           storSet({ "sf_todos": savedTodos });
           renderTodoList();
         }
+      });
+    });
+
+    list.querySelectorAll('.btn-link-source').forEach(btn => {
+      btn.addEventListener("click", () => {
+        const libId = btn.getAttribute("data-libid");
+        if (libId && typeof openSourceFromLibId === "function") openSourceFromLibId(libId);
       });
     });
 
@@ -2130,6 +2154,13 @@ renderTodoList();
       });
     }
   }
+
+  window.addEventListener("sf:todos-changed", () => {
+    storGet("sf_todos", (res) => {
+      if (res && Array.isArray(res.sf_todos)) savedTodos = res.sf_todos;
+      renderTodoList();
+    });
+  });
 
   // Copy All Tasks
   const btnCopyAll = document.getElementById("btn-todo-copy-all");

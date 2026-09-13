@@ -766,5 +766,14 @@ window.I18N_JA = {
    "fc_lib_generate": "カードを作成",
    "fc_delete": "カードを削除",
    "fc_need_front": "カードの表面（問題）を入力してください。",
+   "goal_label": "学習の目的：",
+   "goal_hint": "目的を選んで保存 → 関連付けられた Todo が自動作成され、目的 → ソース → 要約 → 完了 のサイクルが繋がります。",
+   "goal_none": "— 目的を選択 —",
+   "goal_research": "🔬 深い研究",
+   "goal_thesis": "📖 論文 / プロジェクト",
+   "goal_paper": "🗞️ 論文への引用",
+   "goal_review": "📚 文献レビュー",
+   "todo_btn_open_source": "🔗 ソース",
+   "todo_toast_linked": "Todo をこのソースにリンクしました！",
    /* i18n: privacy_* block end */
 };

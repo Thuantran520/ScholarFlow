@@ -766,5 +766,14 @@ window.I18N_VI = {
    "fc_lib_generate": "Tạo thẻ",
    "fc_delete": "Xoá thẻ",
    "fc_need_front": "Vui lòng nhập mặt trước (câu hỏi) của thẻ.",
+   "goal_label": "Mục đích học tập:",
+   "goal_hint": "Chọn mục đích rồi bấm lưu → tự tạo việc cần làm liên kết, hoàn thành đủ vòng: mục đích → nguồn → tóm tắt → hoàn thành.",
+   "goal_none": "— Chọn mục đích —",
+   "goal_research": "🔬 Nghiên cứu chuyên sâu",
+   "goal_thesis": "📖 Luận văn / Đồ án",
+   "goal_paper": "🗞️ Trích dẫn bài báo",
+   "goal_review": "📚 Tổng hợp kiến thức",
+   "todo_btn_open_source": "🔗 Nguồn",
+   "todo_toast_linked": "Việc cần làm đã liên kết với nguồn!",
    /* i18n: privacy_* block end */
 };

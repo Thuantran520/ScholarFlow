@@ -452,6 +452,52 @@ async function main() {
       "session completes after grading the only due card");
   }
 
+  // 4f. Unified learning flow: citation -> note -> linked todo (goal -> source -> summary -> done)
+  console.log("Regressing unified learning flow (citation -> note -> todo):");
+  {
+    const { window: w } = await loadPage("sidebar.html", {
+      sf_todos: [],
+      saved_bibliographies: [],
+      sf_flashcards: []
+    });
+    const snap = async () => w.chrome.storage.local.get(["saved_bibliographies", "sf_todos"]);
+    const goalSel = w.document.getElementById("f-goal");
+    check(goalSel && goalSel.options.length === 5,
+      `goal select populated from i18n (got ${goalSel ? goalSel.options.length : 0} options)`);
+    const titleIn = w.document.getElementById("f-title");
+    const urlIn = w.document.getElementById("f-url");
+    titleIn.value = "Test linked paper";
+    titleIn.dispatchEvent(new w.Event("input"));
+    urlIn.value = "https://example.com/linked-paper";
+    urlIn.dispatchEvent(new w.Event("input"));
+    goalSel.value = "research";
+    w.document.getElementById("f-notes").value = "Tóm tắt: deterministic ML.";
+    w.document.getElementById("btn-save-biblio").click();
+    await new Promise(r => setTimeout(r, 80));
+    const st1 = await snap();
+    check(st1.saved_bibliographies.length === 1 && st1.saved_bibliographies[0].goal === "research",
+      `biblio stores learning goal (got ${st1.saved_bibliographies.length} item, goal=${st1.saved_bibliographies[0]?.goal})`);
+    const todos = st1.sf_todos || [];
+    check(todos.length === 1 && todos[0].libId === st1.saved_bibliographies[0].id,
+      `linked to-do auto-created with libId (got ${todos.length} todo)`);
+    check(todos[0].text.includes("🎯") && todos[0].text.includes("Test linked paper"),
+      `todo text shows goal + title (got "${todos[0].text}")`);
+    check(w.document.querySelectorAll(".btn-link-source").length === 1,
+      "todo row renders a source link button");
+    w.document.querySelector(".btn-link-source").click();
+    check(w.document.getElementById("biblio-modal").style.display === "block",
+      "source button opens the bibliography modal");
+    check(!!w.document.getElementById("bib-" + todos[0].libId),
+      "bibliography card rendered with matching id");
+    check(!!w.document.getElementById("bib-" + todos[0].libId),
+      "bibliography card rendered with matching id");
+    w.document.getElementById("btn-save-biblio").click();
+    await new Promise(r => setTimeout(r, 60));
+    const st2 = await snap();
+    check((st2.sf_todos || []).length === 1,
+      "re-saving the same source does not duplicate the linked to-do");
+  }
+
   console.log("\n" + (failures === 0 ? "ALL TESTS PASSED" : `${failures} CHECK(S) FAILED`));
   process.exit(failures === 0 ? 0 : 1);
 }

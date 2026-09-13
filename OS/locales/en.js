@@ -766,5 +766,14 @@ window.I18N_EN = {
    "fc_lib_generate": "Make cards",
    "fc_delete": "Delete card",
    "fc_need_front": "Please enter the front (question) of the card.",
+   "goal_label": "Learning goal:",
+   "goal_hint": "Pick a goal then save → a linked to-do is auto-created, completing the loop: goal → source → summary → done.",
+   "goal_none": "— Choose a goal —",
+   "goal_research": "🔬 Deep research",
+   "goal_thesis": "📖 Thesis / Project",
+   "goal_paper": "🗞️ Cite in a paper",
+   "goal_review": "📚 Literature review",
+   "todo_btn_open_source": "🔗 Source",
+   "todo_toast_linked": "To-do linked to this source!",
    /* i18n: privacy_* block end */
 };

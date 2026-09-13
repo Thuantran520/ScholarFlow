@@ -766,5 +766,14 @@ window.I18N_ZH = {
    "fc_lib_generate": "生成卡片",
    "fc_delete": "删除卡片",
    "fc_need_front": "请填写卡片正面（问题）。",
+   "goal_label": "学习目标：",
+   "goal_hint": "选择目标后保存 → 自动创建关联待办，形成完整闭环：目标 → 来源 → 摘要 → 完成。",
+   "goal_none": "— 选择目标 —",
+   "goal_research": "🔬 深入研究",
+   "goal_thesis": "📖 论文 / 项目",
+   "goal_paper": "🗞️ 论文引用",
+   "goal_review": "📚 文献综述",
+   "todo_btn_open_source": "🔗 来源",
+   "todo_toast_linked": "待办已关联此来源！",
    /* i18n: privacy_* block end */
 };
