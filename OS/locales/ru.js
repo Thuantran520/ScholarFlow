@@ -775,5 +775,7 @@ window.I18N_RU = {
    "goal_review": "📚 Обзор литературы",
    "todo_btn_open_source": "🔗 Источник",
    "todo_toast_linked": "Задача связана с источником!",
+   "math_insert_tip": "Вставить найденные формулы (MathML/MathJax) в конспект",
+   "math_inserted": "Формул добавлено в конспект: {0}!",
    /* i18n: privacy_* block end */
 };

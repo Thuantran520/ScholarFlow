@@ -498,6 +498,51 @@ async function main() {
       "re-saving the same source does not duplicate the linked to-do");
   }
 
+  // 4g. MathML / MathJax formula recognition (content script) + insert into notes (UI)
+  console.log("Regressing MathML formula recognition (content script):");
+  {
+    const domM = new JSDOM(`<!doctype html><html><head><meta name="description" content="m"></head><body>
+      <h1>Análise Matemática paper</h1>
+      <math><semantics><mrow><mi>x</mi></mrow><annotation encoding="application/x-tex">x^2+1</annotation></semantics></math>
+      <mjx-container data-semantic-tex="\\int_0^1 x\\,dx"><span>x</span></mjx-container>
+    </body></html>`, {
+      url: "https://example.com/math",
+      runScripts: "outside-only",
+      pretendToBeVisual: true
+    });
+    const wM = domM.window;
+    wM.chrome = makeChromeStub({ app_language: "vi" });
+    wM.browser = wM.chrome;
+    for (const f of ["OS/js/content/i18n.js", "OS/js/content/citation.js"]) {
+      wM.eval(fs.readFileSync(path.join(__dirname, "..", f), "utf8"));
+    }
+    let metaM = null;
+    let mathErr = "";
+    try { metaM = wM.eval(`extractPageCitationMetadata()`); } catch (e) { mathErr = e.message; }
+    check(!mathErr, "extractPageCitationMetadata() on math page runs without throwing" + (mathErr ? ` -> ${mathErr}` : ""));
+    check(!!metaM && Array.isArray(metaM.math) && metaM.math.length >= 2,
+      `recognizes MathML + MathJax formulas (got ${metaM && metaM.math ? metaM.math.length : 0})`);
+    check(!!metaM && metaM.math && metaM.math.includes("x^2+1"),
+      `MathML TeX annotation captured (got ${JSON.stringify(metaM && metaM.math)})`);
+    domM.window.close();
+  }
+  console.log("Regressing math insert into notes (UI):");
+  {
+    const { window: w } = await loadPage("sidebar.html", { sf_todos: [], saved_bibliographies: [], sf_flashcards: [] });
+    check(w.eval(`typeof updateMathInsertButton`) === "function",
+      "updateMathInsertButton exposed as global");
+    check(w.document.getElementById("btn-insert-math").style.display === "none",
+      "math button hidden when no formulas on page");
+    w.sfSetMathFormulas(["x^2+1", "\\int_0^1 x", "a^2=b^2+c^2"]);
+    check(w.document.getElementById("btn-insert-math").style.display === "inline-flex"
+      && w.document.getElementById("btn-insert-math").textContent.includes("3"),
+      `math button visible with count (got "${w.document.getElementById('btn-insert-math').textContent}")`);
+    w.document.getElementById("btn-insert-math").click();
+    const notesVal = w.document.getElementById("f-notes").value;
+    check(notesVal.includes("$$") && notesVal.includes("x^2+1"),
+      `click inserts fenced LaTeX into notes (got "${notesVal}")`);
+  }
+
   console.log("\n" + (failures === 0 ? "ALL TESTS PASSED" : `${failures} CHECK(S) FAILED`));
   process.exit(failures === 0 ? 0 : 1);
 }

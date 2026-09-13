@@ -775,5 +775,7 @@ window.I18N_JA = {
    "goal_review": "📚 文献レビュー",
    "todo_btn_open_source": "🔗 ソース",
    "todo_toast_linked": "Todo をこのソースにリンクしました！",
+   "math_insert_tip": "検出した数式（MathML / MathJax）をメモに挿入",
+   "math_inserted": "{0} 個の数式をメモに挿入しました！",
    /* i18n: privacy_* block end */
 };

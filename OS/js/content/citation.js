@@ -944,9 +944,43 @@
       container,
       doi,
       pages,
-      url: cleanUrl
+      url: cleanUrl,
+      math: sfCollectMath()
     };
 
+  }
+
+  // Math/MathML/MathJax recognition: capture formulas from math/CS documents
+  function sfCollectMath() {
+    const formulas = [];
+    try {
+      if (!document || !document.querySelectorAll) return formulas;
+      const teXAnnotations = 'annotation[encoding="application/x-tex"], annotation[encoding="application/x-TeX"]';
+      const candidates = [
+        ...(document.querySelectorAll("math") || []),
+        ...(document.querySelectorAll("mjx-container") || [])
+      ];
+      for (const el of candidates) {
+        if (formulas.length >= 5) break;
+        let expr = "";
+        const ann = el.querySelector && el.querySelector(teXAnnotations);
+        if (ann && ann.textContent) {
+          expr = ann.textContent.trim();
+        } else if (el.tagName && String(el.tagName).toLowerCase() === "math") {
+          expr = el.textContent.replace(/\s+/g, " ").trim();
+        }
+        if (!expr && el.getAttribute) {
+          const attr = el.getAttribute("data-semantic-tex") || el.getAttribute("texdata");
+          if (attr) expr = attr.trim();
+        }
+        if (!expr) expr = (el.textContent || "").replace(/\s+/g, " ").trim();
+        expr = expr.replace(/\s+/g, " ").trim();
+        if (expr && expr.length > 1 && expr.length < 2000 && formulas.indexOf(expr) === -1) {
+          formulas.push(expr);
+        }
+      }
+    } catch (e) {}
+    return formulas;
   }
 
   // SPA Navigation listener (YouTube, Twitter, GitHub, etc.)

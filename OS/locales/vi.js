@@ -775,5 +775,7 @@ window.I18N_VI = {
    "goal_review": "📚 Tổng hợp kiến thức",
    "todo_btn_open_source": "🔗 Nguồn",
    "todo_toast_linked": "Việc cần làm đã liên kết với nguồn!",
+   "math_insert_tip": "Chèn công thức toán đã nhận diện (MathML/MathJax) vào ghi chú",
+   "math_inserted": "Đã chèn {0} công thức vào ghi chú!",
    /* i18n: privacy_* block end */
 };

@@ -110,6 +110,25 @@ onReady(() => {
     notesInitToolbar();
   }
 
+  // Insert captured formulas (MathML / MathJax) into the notes field as $$...$$
+  const btnInsertMath = document.getElementById("btn-insert-math");
+  if (btnInsertMath) {
+    btnInsertMath.addEventListener("click", () => {
+      const formulas = (currentMeta && Array.isArray(currentMeta.math)) ? currentMeta.math.filter(f => f) : [];
+      if (formulas.length === 0) return;
+      const notesEl = document.getElementById("f-notes");
+      if (!notesEl) return;
+      const chunk = formulas.slice(0, 3).map(f => "$$\n" + f + "\n$$").join("\n");
+      notesEl.value = (notesEl.value.replace(/\s+$/, "") ? notesEl.value.replace(/\s+$/, "") + "\n" : "") + chunk;
+      notesEl.dispatchEvent(new Event("input", { bubbles: true }));
+      syncMetaFromInputs();
+      if (typeof updateNotesClearButton === "function") updateNotesClearButton();
+      if (typeof notesUpdatePreview === "function") notesUpdatePreview();
+      if (typeof saveDraft === "function") saveDraft();
+      showToast("math_inserted", "success", [Math.min(formulas.length, 3)]);
+    });
+  }
+
   // Copy citation with instant visual button feedback & Rich Text support (Italics for Word/Docs)
   document.getElementById("btn-copy-cite")?.addEventListener("click", () => {
     const box = document.getElementById("citation-text");

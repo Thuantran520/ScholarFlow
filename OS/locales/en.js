@@ -775,5 +775,7 @@ window.I18N_EN = {
    "goal_review": "📚 Literature review",
    "todo_btn_open_source": "🔗 Source",
    "todo_toast_linked": "To-do linked to this source!",
+   "math_insert_tip": "Insert captured formulas (MathML/MathJax) into the notes",
+   "math_inserted": "{0} formulas inserted into the notes!",
    /* i18n: privacy_* block end */
 };

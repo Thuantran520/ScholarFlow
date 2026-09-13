@@ -775,5 +775,7 @@ window.I18N_ZH = {
    "goal_review": "📚 文献综述",
    "todo_btn_open_source": "🔗 来源",
    "todo_toast_linked": "待办已关联此来源！",
+   "math_insert_tip": "将识别出的公式（MathML / MathJax）插入笔记",
+   "math_inserted": "已将 {0} 个公式插入笔记！",
    /* i18n: privacy_* block end */
 };

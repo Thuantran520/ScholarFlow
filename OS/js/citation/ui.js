@@ -106,6 +106,26 @@ function updateCitationDisplay() {
     appendFormattedText(box, formattedCite);
     if (activeNotes) box.appendChild(createResearchNoteNode(activeNotes, lang));
   }
+
+  updateMathInsertButton();
+}
+
+function updateMathInsertButton() {
+  const btn = document.getElementById("btn-insert-math");
+  if (!btn) return;
+  const formulas = (currentMeta && Array.isArray(currentMeta.math)) ? currentMeta.math.filter(f => f) : [];
+  if (formulas.length === 0) {
+    btn.style.display = "none";
+    return;
+  }
+  btn.style.display = "inline-flex";
+  btn.textContent = "∑ " + formulas.length;
+}
+
+function sfSetMathFormulas(arr) {
+  currentMeta = currentMeta || {};
+  currentMeta.math = Array.isArray(arr) ? arr.filter(f => f) : [];
+  updateMathInsertButton();
 }
 
 function getSourceBadgeLabel(sourceType, container) {
