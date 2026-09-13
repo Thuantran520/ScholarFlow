@@ -17,8 +17,8 @@
     const cleanStr = (s) => (s || "")
           .replace(/[\r\n\t]+/g, " ") // Tiêu diệt triệt để ký tự xuống dòng và tab
           .replace(/\s+/g, " ") // Thu gọn khoảng trắng thừa
-          .replace(/^(by|written by|posted by|author|tác giả|theo|ảnh)\s*[:\-–]?\s*/i, "")
-          .replace(/\s*[-–|]\s*(the hacker news|techcrunch|the verge|reuters|bbc|vnexpress|dân trí|tuổi trẻ).*$/i, "")
+          .replace(/^(by|written by|posted by|author|tác giả|theo|ảnh|viết bởi|đăng bởi|thực hiện(?: bởi)?|biên tập(?: viên)?)\s*[:\-–]?\s*/i, "")
+          .replace(/\s*[-–|]\s*(the hacker news|techcrunch|the verge|reuters|bbc|vnexpress|dân trí|tuổi trẻ|thanh niên|vietnamnet|zing news|vtc news|người lao động|công an nhân dân|báo mới|pháp luật|soha|genk|gamek|cafebiz|cafef|ictnews|kênh 14|sài gòn giải phóng|vietnam\+).*$/i, "")
           .trim();
 
     const VIETNAMESE_SURNAMES = new Set([
@@ -271,7 +271,7 @@
     // 1. Ưu tiên quét thẻ h1 hiển thị trực tiếp trên giao diện để xuyên qua Paywall
     const visibleH1 = doc.querySelector("h1.title, h1.article-title, h1.post-title, main h1, article h1, h1");
     if (visibleH1) {
-      const h1Text = visibleH1.innerText.trim();
+      const h1Text = (visibleH1.innerText || visibleH1.textContent || "").trim();
       // Chặn nội dung rác nếu thẻ h1 bị thay bằng thông báo hệ thống
       if (h1Text.length > 5 && !/đăng nhập|login|sign in|subscribe|vui lòng/i.test(h1Text)) {
         title = h1Text;
@@ -651,10 +651,13 @@
             '[itemprop="author"]', 'a[rel="author"]',
             '.byline-author', '.c-byline__author', '.author-name',
             '.post-author', '.author', '.article-author',
-            '.detail-author', '.byline'
+            '.detail-author', '.byline',
+            '.author-info', '.author-byline', '.by-author',
+            '.name-author', '.post-author-name', '#author',
+            '.tac-gia', '.tacgia'
           ].join(', '));
           authorNodes.forEach(node => {
-            const val = normalizeAuthorDisplayName(cleanStr(node.getAttribute("content") || node.innerText || ""));
+            const val = normalizeAuthorDisplayName(cleanStr(node.getAttribute("content") || node.innerText || node.textContent || ""));
             if (val && !val.startsWith("http") && val.length < 50 && !authors.includes(val)) {
               authors.push(val);
             }
@@ -672,11 +675,39 @@
           }
         }
 
+// 5b. Vietnamese / journalistic byline text patterns:
+        //     "Tác giả: Nguyễn Văn A", "Theo Trần Thị B", "Viết bởi ...", "By Ashish Vaswani"
+        if (authors.length === 0) {
+          const bylineEls = doc.querySelectorAll([
+            '[class*="author" i]', '[class*="byline" i]',
+            '[class*="tac-gia" i]', '[class*="tacgia" i]',
+            '[rel="author"]', '[itemprop="author"]'
+          ].join(', '));
+          const VN_PREFIX_RX = /^((?:tác\s*giả|theo|viết\s*bởi|đăng\s*bởi|by|author|written\s*by)\s*[:\-–]?\s*)([A-ZÀ-Ỹ]\S*(?:\s+\S+)+?)$/i;
+          for (const el of bylineEls) {
+            let text = (el.innerText || el.textContent || "").replace(/[\r\n\t]+/g, " ").replace(/\s+/g, " ").trim();
+            if (!text) continue;
+            if (text.length > 40) {
+              const leaf = el.querySelector ? el.querySelector('[class*="name" i] a, a[rel="author"], [class*="name" i]') : null;
+              text = leaf ? (leaf.innerText || leaf.textContent || "").replace(/[\r\n\t]+/g, " ").replace(/\s+/g, " ").trim() : "";
+            }
+            if (!text || text.length > 60) continue;
+            const m = text.match(VN_PREFIX_RX);
+            if (!m) continue;
+            const name = m[2].trim();
+            const words = name.split(/\s+/).filter(Boolean).length;
+            if (words < 2 || words > 6 || name.length > 50) continue;
+            if (/[\[\]{}()]/i.test(name) || /\b(?:login|sign\s*in|subscribe|contact|home)\b/i.test(name)) continue;
+            const norm = normalizeAuthorDisplayName(name);
+            if (norm && !authors.includes(norm)) authors.push(norm);
+          }
+        }
+
         if (!title) {
           const ogTitle = doc.querySelector('meta[property="og:title"]');
           if (ogTitle) title = ogTitle.getAttribute("content") || "";
           else title = doc.title || "";
-          title = title.replace(/\s*[-–|]\s*(YouTube|GitHub|Wikipedia|Medium|IEEE Xplore|The Hacker News|The Verge|TechCrunch|VnExpress).*$/i, "").trim();
+          title = title.replace(/\s*[-–|]\s*(YouTube|GitHub|Wikipedia|Medium|IEEE Xplore|The Hacker News|The Verge|TechCrunch|VnExpress|Dân Trí|Zing News|VietnamNet|Tuổi Trẻ|Thanh Niên|Báo Mới|Người Lao Động|Công An Nhân Dân|VTC News|Soha|GenK|GameK|Pháp Luật|CafeBiz).*$/i, "").trim();
         }
 
         // Comprehensive Fallback Dates:
@@ -879,6 +910,7 @@
     if (title) {
       title = title.replace(/[\r\n\t]+/g, " ").replace(/\s+/g, " ")
         .replace(/^(?:Frontiers|Nature|Science|Springer|Elsevier|Wiley|PLOS|ACM|IEEE)\s*\|\s*/i, "")
+        .replace(/\s*[-–|]\s*(YouTube|VnExpress|Dân Trí|Zing News|VietnamNet|Tuổi Trẻ|Thanh Niên|Báo Mới|Người Lao Động|Công An Nhân Dân|VTC News|Soha|GenK|GameK|Pháp Luật|CafeBiz).*$/i, "")
         .trim();
     }
     

@@ -299,6 +299,55 @@ async function main() {
     dom2.window.close();
   }
 
+  // 4b. Vietnamese metadata extraction (byline patterns, dates, site names)
+  console.log("Regressing Vietnamese metadata extraction (content script):");
+  {
+    const dom3 = new JSDOM(`<!doctype html><html><head>
+      <meta name="date" content="2026-09-06">
+      <meta property="og:site_name" content="VnExpress">
+      <meta name="description" content="meta">
+    </head><body>
+      <article>
+        <h1 class="article-title">Bài báo khoa học mới - VnExpress</h1>
+        <p class="author-info">Tác giả: Nguyễn Văn A</p>
+        <div class="author">Trần Thị B</div>
+        <time class="publish-date">06.09.2026</time>
+      </article>
+    </body></html>`, {
+      url: "https://example.com/doi/10.1234/abcd",
+      runScripts: "outside-only",
+      pretendToBeVisual: true
+    });
+    const w = dom3.window;
+    w.chrome = makeChromeStub({ app_language: "vi" });
+    w.browser = w.chrome;
+    for (const f of ["OS/js/content/i18n.js", "OS/js/content/citation.js"]) {
+      w.eval(fs.readFileSync(path.join(__dirname, "..", f), "utf8"));
+    }
+    let meta = null;
+    let extractErr = "";
+    try {
+      meta = w.eval(`extractPageCitationMetadata()`);
+    } catch (e) { extractErr = e.message; }
+    check(!extractErr, "extractPageCitationMetadata() on VN article runs without throwing" + (extractErr ? ` -> ${extractErr}` : ""));
+    check(!!meta && typeof meta.authors === "string",
+      `returns a meta object with string authors (got: ${meta ? meta.authors : "none"})`);
+    check(!!meta && meta.authors.includes("Nguyễn Văn A"),
+      `VN byline 'Tác giả: Nguyễn Văn A' extracted (got: ${meta ? meta.authors : "none"})`);
+    check(!!meta && meta.authors.includes("Trần Thị B"),
+      `VN byline '.author' extracted (got: ${meta ? meta.authors : "none"})`);
+    check(!!meta && meta.title === "Bài báo khoa học mới" &&
+      (meta.title || "").includes("- VnExpress") === false,
+      `VN site suffix stripped from title (got: ${meta ? meta.title : "none"})`);
+    check(!!meta && meta.date === "2026-09-06",
+      `VN date '06.09.2026' -> 2026-09-06 (got: ${meta ? meta.date : "none"})`);
+    check(!!meta && meta.container === "VnExpress",
+      `container from og:site_name (got: ${meta ? meta.container : "none"})`);
+    check(!!meta && meta.sourceType === "academic",
+      `webpage with doi in URL upgraded to academic (got: ${meta ? meta.sourceType : "none"})`);
+    dom3.window.close();
+  }
+
   console.log("\n" + (failures === 0 ? "ALL TESTS PASSED" : `${failures} CHECK(S) FAILED`));
   process.exit(failures === 0 ? 0 : 1);
 }
