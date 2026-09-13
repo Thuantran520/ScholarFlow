@@ -6,7 +6,7 @@
 
 - **Store:** Đã nộp Firefox Add-ons (AMO) + Chrome Web Store; đang chờ phê duyệt.
 - **Chất lượng:** 0 errors / 0 warnings / 0 notices trên addons-linter.
-- **Đóng gói:** `scripts/check_store.ps1` (34 mục kiểm tra) tự chạy trong `scripts/package.ps1`; GitHub Actions build + upload zip tự động mỗi push, tạo Release khi tag `v*`.
+- **Đóng gói:** `scripts/check_store.ps1` (35 mục kiểm tra) tự chạy trong `scripts/package.ps1`; GitHub Actions build + upload zip tự động mỗi push, tạo Release khi tag `v*`.
 - **Privacy:** Trang chính sách công khai tại GitHub Pages (`docs/privacy.html`), link trên trang landing.
 - **Tính năng chính:** Citations (IEEE/APA/Harvard/MLA/BibTeX + đối soát nguồn), Redaction (blur/blackout/pixelate), Capture (screenshot/record/teleprompter), Cookie Manager, Autofill, To-do List, Bypass Paywall, 5 ngôn ngữ.
 
