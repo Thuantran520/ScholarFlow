@@ -846,8 +846,9 @@ async function aiSendCurrent(){
   try{ pageUrl=(typeof currentTabUrl!=="undefined"&&currentTabUrl)?String(currentTabUrl):((typeof currentMeta!=="undefined"&&currentMeta&&currentMeta.url)?String(currentMeta.url):""); }catch(e){}
   if(aiIsYouTubeUrl(pageUrl)){ try{ transcriptData=await aiGetYouTubeTranscript(); }catch(e){} }
   if(!transcriptData||!transcriptData.text){
-    const vidLink=aiExtractYouTubeId(raw);
-    if(vidLink){ try{ transcriptData=await aiFetchTranscriptForVideo(vidLink); }catch(e){} }
+    const staleLive=!transcriptData||(transcriptData.noCaptions&&!transcriptData.description&&!transcriptData.date);
+    const ytVid=aiExtractYouTubeId(raw)||((staleLive&&aiIsYouTubeUrl(pageUrl))?aiExtractYouTubeId(pageUrl):"");
+    if(ytVid){ try{ const alt=await aiFetchTranscriptForVideo(ytVid); if(alt&&(!transcriptData||alt.text||(alt.description&&!transcriptData.description))) transcriptData=alt; }catch(e){} }
   }
   let pageImages=[];
   const hasTranscript=transcriptData&&transcriptData.text;

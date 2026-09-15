@@ -90,14 +90,23 @@
     const host = (location.hostname || "").toLowerCase();
     return (host === "youtube.com" || host.endsWith(".youtube.com") || host === "youtu.be") && /\/watch|\/shorts\/|\/embed\/|youtu\.be\//.test(location.href);
   }
-  let _sfYtPRCache = { url: "", at: 0, obj: null };
+  function sfYtCurrentVideoId() {
+    try { const m = location.href.match(/(?:v=|youtu\.be\/|shorts\/|embed\/)([\w-]{8,12})/); return m ? m[1] : ""; } catch (e) { return ""; }
+  }
+  let _sfYtPRCache = { vid: "", at: 0, obj: null, missAt: 0 };
   function sfYtReadPlayerResponse() {
+    const curVid = sfYtCurrentVideoId();
+    if (!curVid) return null;
     const now = Date.now();
-    if (_sfYtPRCache.url === location.href && (now - _sfYtPRCache.at) < 90000) return _sfYtPRCache.obj;
+    if (_sfYtPRCache.vid === curVid) {
+      if (_sfYtPRCache.obj && (now - _sfYtPRCache.at) < 90000) return _sfYtPRCache.obj;
+      if (!_sfYtPRCache.obj && (now - _sfYtPRCache.missAt) < 10000) return null;
+    }
     let found = null;
     try {
       const scs = document.querySelectorAll("script:not([src])");
-      for (let k = 0; k < scs.length; k++) {
+      // newest-first: SPA navigation appends a fresh playerResponse script; the FIRST one is stale video data
+      for (let k = scs.length - 1; k >= 0; k--) {
         const c = scs[k].textContent || "";
         const idx = c.indexOf("ytInitialPlayerResponse");
         if (idx === -1) continue;
@@ -105,10 +114,13 @@
         if (b === -1 || b - idx > 200) continue;
         const j = sfYtExtractBalancedJson(c, b);
         if (!j) continue;
-        try { const o = JSON.parse(j); if (o) { found = o; break; } } catch (e) { }
+        let o = null; try { o = JSON.parse(j); } catch (e) { o = null; }
+        if (o && o.videoDetails && String(o.videoDetails.videoId || "") === curVid) { found = o; break; }
       }
     } catch (e) { found = null; }
-    if (found) _sfYtPRCache = { url: location.href, at: now, obj: found };
+    if (found) _sfYtPRCache = { vid: curVid, at: now, obj: found, missAt: _sfYtPRCache.missAt || 0 };
+    else if (_sfYtPRCache.vid === curVid) _sfYtPRCache.missAt = now;
+    else _sfYtPRCache = { vid: curVid, at: 0, obj: null, missAt: now };
     return found;
   }
   const _runtimeApi = (typeof browser !== "undefined" && browser.runtime) ? browser.runtime
@@ -610,16 +622,25 @@
           try {
             if (!sfYtIsVideoPage()) { sendResponse({ success: true, ok: false, reason: "not_youtube" }); break; }
             const gm = (sel, attr) => { try { const el = document.querySelector(sel); return el ? String(el.getAttribute(attr || "content") || "") : ""; } catch (e) { return ""; } };
-            const vidLoc = (location.href.match(/(?:v=|youtu\.be\/|shorts\/|embed\/)([\w-]{8,12})/) || [])[1] || "";
-            // Fast path: microdata only (no giant JSON parse)
-            const fTitle = gm('meta[itemprop="name"]') || gm('meta[property="og:title"]') || document.title || "";
-            const fAuthor = gm("[itemprop='author'] [itemprop='name']") || gm("[itemprop='author'] meta[itemprop='name']") || gm("[itemprop='author'] link[itemprop='name']") || gm('link[itemprop="name"]');
-            const fDate = gm('meta[itemprop="datePublished"]') || gm('meta[itemprop="uploadDate"]') || gm('meta[itemprop="startDate"]') || (function () { try { const t = document.querySelector('time[itemprop="datePublished"],time[itemprop="uploadDate"]'); return t ? String(t.getAttribute("datetime") || "") : ""; } catch (e) { return ""; } })();
+            const txt = (sel) => { try { const el = document.querySelector(sel); return el ? String(el.textContent || "").replace(/\s+/g, " ").trim().slice(0, 80) : ""; } catch (e) { return ""; } };
+            const curVid = sfYtCurrentVideoId();
+            const microHref = gm('[itemprop="url"]', "href") || gm('[itemprop="url"]', "content") || "";
+            const microVid = (microHref.match(/v=([\w-]{8,12})/) || [])[1] || "";
+            const microFresh = !!curVid && microVid === curVid;
+            const cleanTitle = (t0) => String(t0 || "").replace(/ - YouTube$/i, "");
+            const fTitle = (microFresh ? (gm('meta[itemprop="name"]') || "") : "") || gm('meta[property="og:title"]') || cleanTitle(document.title);
+            const fAuthor = (microFresh ? (gm("[itemprop='author'] [itemprop='name']") || gm("[itemprop='author'] meta[itemprop='name']") || gm("[itemprop='author'] link[itemprop='name']") || gm('link[itemprop="name"]')) : "")
+              || txt("ytd-video-owner-renderer #channel-name a") || txt("#owner #channel-name a") || txt("ytd-channel-name a") || txt("ytd-watch-metadata #owner a");
+            const fDate = microFresh ? (gm('meta[itemprop="datePublished"]') || gm('meta[itemprop="uploadDate"]') || gm('meta[itemprop="startDate"]')) : "";
             if (fAuthor && fDate) {
-              sendResponse({ success: true, ok: true, fast: true, title: fTitle, author: fAuthor, publishDate: fDate, publisher: "YouTube", platform: "YouTube", videoId: vidLoc, lengthSeconds: "" });
+              sendResponse({ success: true, ok: true, fast: true, title: fTitle, author: fAuthor, publishDate: fDate, publisher: "YouTube", platform: "YouTube", videoId: curVid, lengthSeconds: "" });
               break;
             }
             const obj = sfYtReadPlayerResponse();
+            if (!obj) {
+              sendResponse({ success: true, ok: !!(fTitle || fAuthor), domOnly: true, title: fTitle, author: fAuthor, publishDate: "", publisher: "YouTube", platform: "YouTube", videoId: curVid, lengthSeconds: "" });
+              break;
+            }
             const mf = obj && obj.microformat && obj.microformat.playerMicroformatRenderer;
             const title = (obj && obj.videoDetails && obj.videoDetails.title) || fTitle || "";
             const author = (obj && obj.videoDetails && obj.videoDetails.author) || fAuthor || "";
@@ -628,12 +649,13 @@
               success: true, ok: !!(title || author || publishDate),
               title: title, author: author, publishDate: publishDate,
               publisher: "YouTube", platform: "YouTube",
-              videoId: (obj && obj.videoDetails && obj.videoDetails.videoId) || vidLoc,
+              videoId: (obj && obj.videoDetails && obj.videoDetails.videoId) || curVid,
               lengthSeconds: (obj && obj.videoDetails && obj.videoDetails.lengthSeconds) || ""
             });
           } catch (e) { sendResponse({ success: true, ok: false }); }
           break;
         }
+
         case "YT_SEEK": {
           let seekOk = false;
           try {

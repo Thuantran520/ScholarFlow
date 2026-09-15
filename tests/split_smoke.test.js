@@ -1077,8 +1077,10 @@ async function main() {
       "content script: GET_YT_TRANSCRIPT reads ytInitialPlayerResponse -> safe caption URL");
     check(contentMain.includes('"YT_SEEK"') && contentMain.includes("currentTime"),
       "content script: YT_SEEK seeks the page video element");
-    check(contentMain.includes('"GET_YT_META"') && contentMain.includes("playerMicroformatRenderer"),
+    check(contentMain.includes("GET_YT_META") && contentMain.includes("playerMicroformatRenderer"),
       "content script: GET_YT_META returns title/author/publishDate for citation");
+    check(contentMain.includes("sfYtCurrentVideoId") && contentMain.includes("videoDetails.videoId || \x22\x22) === curVid") && contentMain.includes("microFresh"),
+      "content script: playerResponse verified against current videoId (SPA stale-data guard) + microdata freshness check");
     const aiSrc = fs.readFileSync(path.join(__dirname, "..", "OS", "js", "tabs", "ai.js"), "utf8");
     check(aiSrc.includes('addEventListener("paste"'), "AI module: clipboard image paste wired");
     check(aiSrc.includes("window.aiScrapeTranscriptViaHiddenTab") && aiSrc.includes("async function aiScrapeTranscriptViaHiddenTab"),
