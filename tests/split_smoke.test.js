@@ -969,12 +969,14 @@ async function main() {
       !!w.document.querySelector('#tab-ai [data-ai-quick="answer"]') &&
       !!w.document.querySelector('#tab-ai [data-ai-quick="tabs"]') &&
       !!w.document.querySelector('#tab-ai [data-ai-quick="papers"]') &&
-      !!w.document.getElementById("ai-prompt-answer") && !!w.document.getElementById("ai-prompt-tabs") && !!w.document.getElementById("ai-prompt-papers"),
+      !!w.document.getElementById("ai-prompt-answer") && !!w.document.getElementById("ai-prompt-tabs") && !!w.document.getElementById("ai-prompt-papers") &&
+      !!w.document.querySelector("#tab-ai .ai-top-actions #ai-btn-sessions") && !!w.document.querySelector("#tab-ai .ai-top-actions #ai-btn-open-settings"),
       `${htmlFile}: tab-ai markup + 9 quick chips (answer/tabs/papers) present`);
     check(!!w.document.getElementById("ai-settings-modal") && !!w.document.getElementById("ai-key-gemini") &&
       !!w.document.getElementById("ai-key-openai") && !!w.document.getElementById("ai-key-claude") &&
       !!w.document.getElementById("ai-btn-save-key") && !!w.document.getElementById("ai-btn-toggle-key") &&
-      !!w.document.getElementById("ai-opt-images") && !!w.document.getElementById("ai-opt-source") && !!w.document.getElementById("ai-opt-stream"),
+      !!w.document.getElementById("ai-opt-images") && !!w.document.getElementById("ai-opt-source") && !!w.document.getElementById("ai-opt-stream") &&
+      !!w.document.getElementById("ai-sessions-modal") && !!w.document.getElementById("ai-btn-sessions") && !!w.document.getElementById("ai-memory-hint"),
       `${htmlFile}: AI settings modal + key inputs + save/toggle + context checkboxes wired`);
     const emptyShown = await w.eval(`!!document.querySelector("#ai-chat-history .ai-empty")`);
     check(emptyShown, `${htmlFile}: initAI booted and rendered empty-state`);
@@ -1021,8 +1023,10 @@ async function main() {
         "sidebar: aiExtractYouTubeId parses youtu.be / watch / shorts ids");
       check(await w.eval(`aiYtBalancedJson('x = {"a":{"b":"}{"}} tail', 4) === '{"a":{"b":"}{"}}'`),
         "sidebar: aiYtBalancedJson respects strings/escapes");
-      check(await w.eval(`(function(){var d=document.createElement("div"); aiRenderFormattedText(d,"nguon: https://youtu.be/abc123 end"); var a=d.querySelector("a.ai-link"); return !!a && a.target==="_blank" && a.rel==="noopener noreferrer";})()`),
-        "sidebar: URLs in answers render as safe noopener links");
+      check(await w.eval(`(function(){var d=document.createElement("div"); aiRenderFormattedText(d,"nguon: [https://www.youtube.com/watch?v=2YoLd1RFitg](https://www.youtube.com/watch?v=2YoLd1RFitg) xong"); var a=d.querySelector("a.ai-link"); return !!a && a.textContent.length<40 && a.textContent.indexOf("youtube.com")!==-1 && a.title==="https://www.youtube.com/watch?v=2YoLd1RFitg" && a.target==="_blank" && a.rel==="noopener noreferrer";})()`),
+        "sidebar: URL-as-label anchors render shortened with full URL in title (safe noopener)");
+      check(await w.eval(`(function(){var d=document.createElement("div"); aiRenderFormattedText(d,"xem https://www.youtube.com/watch?v=abcdefgh1234 nha"); var a=d.querySelector("a.ai-link"); return !!a && a.textContent.length<40 && a.textContent.indexOf("abcdefgh123")!==-1;})()`),
+        "sidebar: bare URLs also shown compactly (domain/… shortened)");
       check(await w.eval(`(function(){var d=document.createElement("div"); aiRenderFormattedText(d,"Nguồn: [xem video](https://www.youtube.com/watch?v=2YoLd1RFitg) nhé"); var a=d.querySelector("a.ai-link"); return !!a && a.textContent==="xem video" && a.href==="https://www.youtube.com/watch?v=2YoLd1RFitg" && d.textContent.indexOf("](")===-1;})()`),
         "sidebar: markdown links [label](url) render as labeled anchors");
       check(await w.eval(`(function(){var d=document.createElement("div"); aiRenderFormattedText(d,"1. mot\\n2. hai\\n3) ba"); return d.textContent.indexOf("1.")!==-1 && d.textContent.indexOf("2.")!==-1;})()`),
@@ -1037,6 +1041,26 @@ async function main() {
         "sidebar: follow-up suggestion block renders clickable chips");
       check(await w.eval(`typeof aiSig === "function" && typeof aiRegenerate === "function"`),
         "sidebar: abort-signal helper + regenerate exported");
+      check(await w.eval(`(function(){var p=aiBuildPrompt("QQ","page A",""); return p.indexOf("[PHAM VI]") !== -1 && p.indexOf("TU NHIEP") !== -1;})()`),
+        "sidebar: answer-scope note injected into prompt (default auto)");
+      check(!!w.document.getElementById("ai-scope-select") && !!w.document.getElementById("ai-btn-web-search") && !!w.document.getElementById("ai-temp-val") && !!w.document.querySelector(".ai-temp-row .ai-range"),
+        "page: scope select + web-search button + restyled temperature row present");
+      check(await w.eval(`(function(){var s="Xin chao cac ban hom nay chung ta se lam mot buoi live that thu vi va keo dai noi dung nay se mang lai rat nhieu dieu moi la bat ngo cho toan the nguoi xem cua chung ta toi nay, nho like va share de ung ho kenh nhe cac ban oi, va dung quen de lai comment gop y cho chung minh nhe cam on moi nguoi da dong hanh";var j={events:[{tStartMs:0,segs:[{utf8:"[Music]"}]},{tStartMs:1000,segs:[{utf8:s}]},{tStartMs:9000,segs:[{utf8:"\\n"}]},{tStartMs:10000,segs:[{utf8:s}]}]};var t=aiYtCaptionEventsToLines(j);return t.split("\\n").length===1&&t.indexOf("[Music]")===-1&&t.length>200;})()`),
+        "sidebar: caption cleaner drops noise tokens and duplicate ASR lines");
+      check(await w.eval(`(function(){var p=aiBuildPrompt("QQ","","",null,{noCaptions:true,title:"Tieu de video",author:"Kenh X",date:"2026-09-01",views:"785000",description:"MO TA NGAY MAY GIO LIVE 19H"}); return p.indexOf("DATA_UNTRUSTED_4_BEGIN") !== -1 && p.indexOf("MO TA NGAY MAY GIO LIVE 19H") !== -1 && p.indexOf("Luot xem: 785000") !== -1 && p.indexOf("noi ro dang thieu") !== -1;})()`),
+        "sidebar: no-caption videos fall back to description+channel metadata block");
+      check(await w.eval(`typeof aiWebSearch === "function"`),
+        "sidebar: web-search helper exported");
+      check(!!w.document.getElementById("ai-opt-websearch"),
+        "page: auto web-search checkbox present");
+      check(await w.eval(`typeof aiSelectRelevantWindows === "function" && typeof aiMemKey === "function" && typeof aiSessionsSearch === "function"`),
+        "sidebar: memory + sessions + multi-window RAG helpers exported");
+      check(await w.eval(`aiMemKey("https://www.vietjack.com/g.jsp#x") === "vietjack.com/g.jsp"`),
+        "sidebar: aiMemKey normalizes url (www/# stripped)");
+      check(await w.eval(`(function(){var T=("padding ".repeat(300))+"ALPHAPASS "+("filler ".repeat(300))+"BETAPASS "+("tail ".repeat(300)); var r=aiSelectRelevantWindows(T,"alphapass betapass",4000); return r.indexOf("ALPHAPASS")!==-1 && r.indexOf("BETAPASS")!==-1;})()`),
+        "sidebar: RAG picks multiple relevant passages, not just first window");
+      check(await w.eval(`aiBuildPrompt("QQ","","","",null,null,"KYNIEMTEST").indexOf("KYNIEMTEST") !== -1`),
+        "sidebar: page-memory block injected into prompt when available");
     }
     w.close();
   }
@@ -1059,6 +1083,10 @@ async function main() {
     check(aiSrc.includes('addEventListener("paste"'), "AI module: clipboard image paste wired");
     check(aiSrc.includes("window.aiScrapeTranscriptViaHiddenTab") && aiSrc.includes("async function aiScrapeTranscriptViaHiddenTab"),
       "AI module: hidden-tab transcript scrape wired (CORS-proof fallback)");
+    check(contentMain.includes("SF_CAPTION_NOISE") && contentMain.includes("reason: transcript.length > 0 ? \x22\x22 : \x22no_captions\x22"),
+      "content script: ASR transcript noise-strip + dedupe + low-quality -> description fallback");
+    check(aiSrc.includes("[LUU Y ASR]"),
+      "AI module: ASR-quality caveat injected for auto captions");
     check(aiSrc.includes("async function aiYtHiddenTabMeta") && aiSrc.includes("window.aiYtHiddenTabMeta"),
       "AI module: hidden-tab hard-load YT meta scraper exported");
     const initSrc = fs.readFileSync(path.join(__dirname, "..", "OS", "js", "init.js"), "utf8");

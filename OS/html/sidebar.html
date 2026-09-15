@@ -503,7 +503,11 @@
           <span data-i18n="ai_heading">AI Trợ lý</span>
           <span id="ai-key-status" class="ai-status" style="display:none;" aria-hidden="true"></span>
         </div>
-        <button type="button" class="ai-gear-btn" id="ai-btn-open-settings" title="Cài đặt" data-i18n-title="ai_settings_tip">⚙</button>
+        <div class="ai-top-actions">
+          <button type="button" class="ai-gear-btn ai-web-btn" id="ai-btn-web-search" title="Tim noi dung nay tren web" data-i18n-title="ai_btn_web_search">🔎</button>
+          <button type="button" class="ai-gear-btn ai-history-btn" id="ai-btn-sessions" title="Lịch sử & Phiên chat" data-i18n-title="ai_btn_sessions"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></button>
+          <button type="button" class="ai-gear-btn" id="ai-btn-open-settings" title="Cài đặt" data-i18n-title="ai_settings_tip">⚙</button>
+        </div>
       </div>
       <div class="ai-model-bar">
         <div class="ai-provider-pills">
@@ -525,6 +529,7 @@
         </div>
         <button type="button" class="btn btn-secondary" id="ai-btn-copy-page" style="padding:4px 8px; font-size:10.5px;" title="Copy URL" data-i18n-title="ai_btn_copy_page">⎘</button>
       </div>
+      <div id="ai-memory-hint" class="ai-memory-hint" style="display:none;"></div>
       <div id="ai-chat-history" class="ai-chat-history ai-chat-box"></div>
       <div class="ai-quick-chips">
         <button type="button" class="ai-chip" data-ai-quick="summary" data-i18n="ai_quick_summary">Tóm tắt</button>
@@ -625,15 +630,41 @@
           <label class="ai-check"><input type="checkbox" id="ai-opt-images" checked> <span data-i18n="ai_opt_images">Ảnh trên trang</span></label>
           <label class="ai-check"><input type="checkbox" id="ai-opt-source"> <span data-i18n="ai_opt_source">Nguồn thô + script (nâng cao)</span></label>
           <label class="ai-check"><input type="checkbox" id="ai-opt-stream" checked> <span data-i18n="ai_opt_stream">Stream từng chữ (Gemini/ChatGPT)</span></label>
-          <div style="display:flex; gap:8px; margin-top:8px; align-items:center;">
-            <label class="ai-field-sub" style="flex:1;" data-i18n="ai_temp_label">Temperature: <span id="ai-temp-val">0.7</span></label>
-            <input type="range" id="ai-temp-range" min="0" max="1" step="0.1" value="0.7" style="flex:1;">
+          <div class="ai-field-sub" style="margin-top:8px;" data-i18n="ai_scope_label">Phạm vi trả lời</div>
+          <select id="ai-scope-select" class="form-control" style="font-size:11px;">
+            <option value="only" data-i18n="ai_scope_only">Chỉ nội dung trang đang đứng</option>
+            <option value="auto" selected data-i18n="ai_scope_auto">Trang + kiến thức AI + tự tìm web</option>
+            <option value="web" data-i18n="ai_scope_web">Như trên + gợi ý từ khóa để tôi tự tìm web</option>
+          </select>
+          <label class="ai-check" style="margin-top:8px;"><input type="checkbox" id="ai-opt-websearch" checked> <span data-i18n="ai_opt_websearch">Tự tìm web (DuckDuckGo/Wikipedia) khi trang thiếu thông tin</span></label>
+          <div class="ai-temp-row">
+            <div class="ai-temp-head"><span class="ai-field-label" data-i18n="ai_temp_label">Temperature</span><span class="ai-temp-badge" id="ai-temp-val">0.7</span></div>
+            <input type="range" class="ai-range" id="ai-temp-range" min="0" max="1" step="0.1" value="0.7">
+            <div class="ai-temp-scale"><span data-i18n="ai_temp_chet">Chặt chẽ</span><span data-i18n="ai_temp_canbai">Cân bằng</span><span data-i18n="ai_temp_sangtao">Sáng tạo</span></div>
           </div>
         </div>
       </div>
     </div>
   </div>
-<div id="tab-redact" class="tab-section">
+<!-- AI Sessions Modal -->
+  <div id="ai-sessions-modal" class="ai-modal" style="display:none;">
+    <div class="ai-modal-backdrop" id="ai-sessions-backdrop"></div>
+    <div class="ai-modal-box">
+      <div class="ai-modal-head">
+        <span style="font-weight:800; font-size:13px;" data-i18n="ai_sessions_title">Lịch sử & Phiên chat</span>
+        <button type="button" class="ai-modal-close" id="ai-btn-close-sessions">✕</button>
+      </div>
+      <div class="ai-modal-body">
+        <div style="display:flex; gap:6px; margin-bottom:8px;">
+          <input type="text" id="ai-session-search" class="form-control" style="flex:1; font-size:11px;" placeholder="Tìm trong phiên và bại viết..." data-i18n-placeholder="ai_sessions_search_ph">
+          <button type="button" class="btn btn-primary" id="ai-btn-new-session" style="font-size:11px; padding:4px 10px; white-space:nowrap;" data-i18n="ai_sessions_new">➕ Phiên mới</button>
+        </div>
+        <div id="ai-session-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-redact" class="tab-section">
     <div class="feature-card">
       <div class="feature-title" data-i18n="redact_heading">Che mờ &amp; Bảo mật thông tin trên trang</div>
       <div style="background:rgba(15,23,42,0.6); border:1px solid var(--card-border); border-radius:6px; padding:8px 10px; margin-bottom:10px; font-size:11.5px; line-height:1.5;">

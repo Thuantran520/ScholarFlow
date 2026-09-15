@@ -6,8 +6,8 @@ const AI_PROVIDERS = {
   claude: { label: "Claude", apiHost: "api.anthropic.com", apiUrl: "https://api.anthropic.com/v1/messages", models: ["claude-3-5-sonnet-20241022","claude-3-5-haiku-20241022","claude-3-opus-20240229"], defaultModel: "claude-3-5-sonnet-20241022", webUrl: "https://claude.ai/" },
   custom: { label: "Custom", models: [], defaultModel: "", webUrl: "" }
 };
-const AI_STORAGE_KEYS = { provider: "sf_ai_provider", keys: "sf_ai_keys", history: "sf_ai_history", settings: "sf_ai_settings", models: "sf_ai_models", prompts: "sf_ai_prompts" };
-const AI_DEFAULT_SETTINGS = { includePage: true, includeSelection: true, includeNotes: false, includeImages: true, includeSource: false, stream: true, maxChars: 5000, temperature: 0.7 };
+const AI_STORAGE_KEYS = { provider: "sf_ai_provider", keys: "sf_ai_keys", history: "sf_ai_history", settings: "sf_ai_settings", models: "sf_ai_models", prompts: "sf_ai_prompts", sessions: "sf_ai_sessions", mem: "sf_ai_mem" };
+const AI_DEFAULT_SETTINGS = { includePage: true, includeSelection: true, includeNotes: false, includeImages: true, includeSource: false, stream: true, webSearch: true, scope: "auto", maxChars: 5000, temperature: 0.7 };
 const AI_DEFAULT_PROMPTS = { summary: "Tóm tắt trang này thành 5 bullet + 1 đoạn 100 chữ bằng tiếng Việt.", qa: "Trả lời câu hỏi dựa trên nội dung trang đang đứng, trích dẫn nguồn nếu có.", explain: "Giải thích đoạn bôi đen bằng tiếng Việt đơn giản.", translate: "Dịch nội dung chính của trang sang tiếng Việt tự nhiên.", outline: "Tạo outline 3 cấp (I, 1, a) cho bài viết này.", cite: "Gợi ý 3 câu hỏi nghiên cứu + 5 từ khóa học thuật từ trang này.", answer: "Giải các câu trắc nghiệm trong nội dung trang: mỗi câu nêu đáp án đúng (A/B/C/D hoặc giá trị) kèm giải thích 1 dòng bằng tiếng Việt. Nếu dữ liệu đáp án nằm trong mã nguồn/script của trang, hãy dựa vào đó để khẳng định.", tabs: "Tóm tắt TỪNG tab đang mở (mỗi tab 2 gạch đầu dòng bằng tiếng Việt), sau đó lập bảng so sánh các tab theo: chủ đề, luận điểm chính, độ tin cậy nguồn.", papers: "Dựa vào danh sách tài liệu tìm được từ Crossref/OpenAlex ở phần ngữ cảnh: chọn và xếp hạng 5 công trình liên quan nhất tới chủ đề trang, mỗi cái nêu lý do 1 dòng và định dạng trích dẫn APA." };
 let aiProvider = "gemini";
 let aiKeys = {};
@@ -30,6 +30,56 @@ const AI_INJECTION_RE = /(\bignore\b[\s\S]{0,40}\b(previous|above|all)\b[\s\S]{0
 let aiSendTimes = [];
 let aiPromptFlagged = false;
 let aiQuickCtx = null;
+let aiForcedWeb = "";
+const aiWebCache = {};
+function aiWebSearchCached(query){
+  const k=String(query||"").toLowerCase().trim();
+  if(!k) return Promise.resolve("");
+  const hit=aiWebCache[k];
+  if(hit&&Date.now()-hit.t<3e5) return Promise.resolve(hit.v);
+  return aiWebSearch(query).then(v=>{ const keys=Object.keys(aiWebCache); if(keys.length>20){ keys.sort((a,b)=>aiWebCache[a].t-aiWebCache[b].t); delete aiWebCache[keys[0]]; } aiWebCache[k]={t:Date.now(),v:String(v||"")}; return String(v||""); });
+}
+let aiSessions = [];
+let aiMem = {};
+/* ── Sessions (multi-conversation + search) ── */
+function aiSessionId(){ return "s" + Date.now().toString(36) + Math.floor(Math.random()*1e4).toString(36); }
+function aiSessionsPersist(){ const clean=aiSessions.slice(0,15).map(s=>({id:s.id,name:String(s.name||"").slice(0,60),ts:Number(s.ts)||Date.now(),msgs:(s.msgs||[]).slice(-60)})); try{ storSet({[AI_STORAGE_KEYS.sessions]:clean}); }catch(e){} }
+function aiSessionsLoad(list){ if(!Array.isArray(list)) return []; return list.filter(s=>s&&s.id&&Array.isArray(s.msgs)).slice(0,15).map(s=>({id:String(s.id),name:String(s.name||"").slice(0,60),ts:Number(s.ts)||Date.now(),msgs:s.msgs.slice(-60).map(m=>({role:m.role==="user"?"user":"assistant",content:String(m.content||"").slice(0,16000),provider:AI_PROVIDERS[m.provider]?m.provider:"gemini",ts:Number(m.ts)||Date.now()}))})); }
+function aiSessionsSaveCurrent(){ if(!aiHistory.length) return; const cur=aiSessions.find(s=>s.id==="__current"); const snap={role:"",ts:Date.now(),msgs:aiHistory.map(m=>({role:m.role,content:m.content,provider:m.provider,ts:m.ts}))}; if(cur){ cur.msgs=snap.msgs; cur.ts=Date.now(); } else { aiSessions.unshift({id:"__current",name:"⟲",ts:Date.now(),msgs:snap.msgs}); } aiSessionsPersist(); }
+function aiSessionsNew(name){ aiSessionsSaveCurrent(); aiHistory=[]; aiSaveHistory(); aiRenderHistory(); if(name){ aiSessions.unshift({id:aiSessionId(),name:String(name).slice(0,60),ts:Date.now(),msgs:[]}); aiSessionsPersist(); } }
+function aiSessionsOpen(id){ const s=aiSessions.find(x=>x.id===id); if(!s) return; aiSessionsSaveCurrent(); const idx=aiSessions.findIndex(x=>x.id===id); if(idx!==-1) aiSessions.splice(idx,1); aiHistory=(s.msgs||[]).map(m=>({role:m.role,content:m.content,provider:m.provider,ts:m.ts})); aiSaveHistory(); aiRenderHistory(); }
+function aiSessionsDelete(id){ aiSessions=aiSessions.filter(s=>s.id!==id); aiSessionsPersist(); }
+function aiSessionsSearch(q){ const t=String(q||"").toLowerCase().trim(); if(!t) return aiSessions; return aiSessions.filter(s=>String(s.name).toLowerCase().includes(t)||s.msgs.some(m=>String(m.content||"").toLowerCase().includes(t))); }
+function aiRenderSessions(){ const list=document.getElementById("ai-session-list"); const se=document.getElementById("ai-session-search"); if(!list) return; const q=se?se.value:""; list.textContent=""; const items=aiSessionsSearch(q); if(!items.length){ const e=document.createElement("div"); e.className="ai-empty"; e.textContent=aiT("ai_sessions_empty",null,"Chưa có phiên nào được lưu."); list.appendChild(e); return; } items.forEach(s=>{ const row=document.createElement("div"); row.className="ai-session-row"; const info=document.createElement("div"); info.className="ai-session-info"; const nm=document.createElement("div"); nm.className="ai-session-name"; nm.textContent=s.id==="__current"?aiT("ai_sessions_current",null,"Phiên hiện tại"):s.name||"(khong ten)"; const meta=document.createElement("div"); meta.className="ai-session-meta"; try{ meta.textContent=new Date(s.ts).toLocaleString()+" · "+s.msgs.length+" tin"; }catch(e){ meta.textContent=s.msgs.length+" tin"; } info.appendChild(nm); info.appendChild(meta); const acts=document.createElement("div"); acts.className="ai-session-actions"; if(s.id!=="__current"){ const open=document.createElement("button"); open.type="button"; open.className="ai-session-btn"; open.textContent="↪"; open.title=aiT("ai_sessions_open",null,"Mở phiên"); open.addEventListener("click",()=>{ aiHideSessions(); aiSessionsOpen(s.id); }); acts.appendChild(open); } const del=document.createElement("button"); del.type="button"; del.className="ai-session-btn ai-session-del"; del.textContent="✕"; del.title=aiT("ai_sessions_delete",null,"Xoá phiên"); del.addEventListener("click",()=>{ aiSessionsDelete(s.id); aiRenderSessions(); if(typeof showToast==="function") showToast("ai_toast_session_deleted","success"); }); acts.appendChild(del); row.appendChild(info); row.appendChild(acts); list.appendChild(row); }); }
+function aiShowSessions(){ const m=document.getElementById("ai-sessions-modal"); if(m) m.style.display="flex"; aiRenderSessions(); }
+function aiHideSessions(){ const m=document.getElementById("ai-sessions-modal"); if(m) m.style.display="none"; }
+/* ── Per-page memory ── */
+function aiMemKey(url){ return String(url||"").replace(/^https?:\/\//,"").replace(/^www\./,"").split("#")[0].slice(0,140); }
+function aiMemPersist(){ try{ const keys=Object.keys(aiMem); while(keys.length>60){ delete aiMem[keys.shift()]; } storSet({[AI_STORAGE_KEYS.mem]:aiMem}); }catch(e){} }
+function aiMemRemember(url, question){ if(!url||url==="—"||/^(about|chrome|moz-extension|file):/i.test(url)) return; const k=aiMemKey(url); const e=aiMem[k]||{q:[],ts:0,hits:0}; const q=String(question).slice(0,180); const arr=(Array.isArray(e.q)?e.q:[]).filter(x=>x!==q); arr.unshift(q); aiMem[k]={q:arr.slice(0,3),ts:Date.now(),hits:(e.hits||0)+1}; aiMemPersist(); }
+function aiMemFor(url){ const k=aiMemKey(url); const e=aiMem[k]; if(!e||!Array.isArray(e.q)||!e.q.length) return ""; if(Date.now()-(e.ts||0)>30*864e5) return ""; return "[Kỷ niệm AI về trang này] Lan truoc day ban da hoi:\n- "+e.q.join("\n- ")+"\n(Can nhac lai neu cau hoi hom nay lien quan.)"; }
+function aiShowMemoryHint(url){ const el=document.getElementById("ai-memory-hint"); if(!el) return; const k=url?aiMemKey(url):""; const e=k?aiMem[k]:null; if(e&&Array.isArray(e.q)&&e.q.length&&Date.now()-(e.ts||0)<=30*864e5){ el.textContent="💭 "+aiT("ai_memory_found",null,"Đã có "+e.q.length+" câu hỏi trước về trang này")+" — “"+String(e.q[0]).slice(0,46)+"…”"; el.style.display=""; } else { el.style.display="none"; } }
+/* ── Multi-passage RAG ── */
+function aiSelectRelevantWindows(fullText, query, budget){
+  const T=String(fullText||"");
+  if(T.length<=budget) return T;
+  const words=(String(query||"").toLowerCase().match(/[\p{L}\p{N}]{2,}/gu)||[]).filter(w=>!AI_STOPWORDS.has(w));
+  const score=(chunk)=>{ const w=chunk.toLowerCase(); let sc=0; for(const x of words){ let i=-1; while((i=w.indexOf(x,i+1))!==-1) sc++; } return sc; };
+  const win=Math.max(900, Math.floor(budget/3));
+  const step=Math.max(300, Math.floor(win/2));
+  const cands=[];
+  for(let pos=0; pos+win<=T.length; pos+=step) cands.push(pos);
+  const last=T.length-win; if(last>=0 && cands[cands.length-1]!==last) cands.push(last);
+  const scored=cands.map(p=>({p:p,s:score(T.slice(p,p+win))})).filter(x=>x.s>0).sort((a,b)=>b.s-a.s);
+  const picked=[]; const used=[];
+  for(const it of scored){ if(picked.length>=3) break; if(used.some(u=>Math.abs(u-it.p)<win)) continue; picked.push(it.p); used.push(it.p); }
+  if(!picked.length) return aiSelectRelevantWindow(T, query, budget);
+  picked.sort((a,b)=>a-b);
+  const head=T.slice(0,400);
+  const body=picked.map((p,ix)=>(ix>0?"\n---\n":"")+"[Doan "+(ix+1)+"] "+T.slice(p,p+win).trim());
+  const joined = head + "\n…[middle omitted: not relevant to the question]…\n" + body.join("\n");
+  return joined.slice(0, budget);
+}
 let aiAbort = null; let aiUserStopped = false;
 function aiSig(parent, ms){ const ctrl=new AbortController(); const t=setTimeout(()=>{ try{ ctrl.abort(); }catch(e){} }, ms); if(parent){ if(parent.aborted){ try{ ctrl.abort(); }catch(e){} } else { try{ parent.addEventListener("abort", ()=>{ try{ ctrl.abort(); }catch(e){} }); }catch(e){} } } return ctrl.signal; }
 function aiShowTyping(){ const c=document.getElementById("ai-chat-history"); if(!c) return; aiHideTyping(); const row=document.createElement("div"); row.className="ai-msg ai-msg-assistant ai-typing-row"; const b=document.createElement("div"); b.className="ai-bubble ai-typing"; for(let i=0;i<3;i++){ const d=document.createElement("span"); d.className="ai-dot"; b.appendChild(d); } row.appendChild(b); c.appendChild(row); c.scrollTop=c.scrollHeight; }
@@ -162,11 +212,14 @@ function aiUpdateCurrentPageDisplay(){
   if(tEl.textContent!==t){ tEl.textContent=t; tEl.title=t; }
   if(uEl.textContent!==u){ uEl.textContent=u; uEl.title=u; }
   aiUpdateFavicon(u);
+  try{ aiShowMemoryHint(u); }catch(e){}
 }
 function aiLoadSettings(){
   return new Promise(res=>{
-    storGet([AI_STORAGE_KEYS.provider,AI_STORAGE_KEYS.keys,AI_STORAGE_KEYS.history,AI_STORAGE_KEYS.settings,AI_STORAGE_KEYS.models,AI_STORAGE_KEYS.prompts],r=>{
+    storGet([AI_STORAGE_KEYS.provider,AI_STORAGE_KEYS.keys,AI_STORAGE_KEYS.history,AI_STORAGE_KEYS.settings,AI_STORAGE_KEYS.models,AI_STORAGE_KEYS.prompts,AI_STORAGE_KEYS.sessions,AI_STORAGE_KEYS.mem],r=>{
       aiPrompts=aiDefaultPrompts();
+      try{ aiSessions=aiSessionsLoad(r[AI_STORAGE_KEYS.sessions]); }catch(e){ aiSessions=[]; }
+      try{ if(r[AI_STORAGE_KEYS.mem]&&typeof r[AI_STORAGE_KEYS.mem]==="object") aiMem=r[AI_STORAGE_KEYS.mem]; }catch(e){}
       if(r[AI_STORAGE_KEYS.provider]&&AI_PROVIDERS[r[AI_STORAGE_KEYS.provider]]) aiProvider=r[AI_STORAGE_KEYS.provider];
       if(r[AI_STORAGE_KEYS.keys]&&typeof r[AI_STORAGE_KEYS.keys]==="object") aiKeys=r[AI_STORAGE_KEYS.keys];
       if(Array.isArray(r[AI_STORAGE_KEYS.history])) aiHistory=aiSanitizeHistory(r[AI_STORAGE_KEYS.history]);
@@ -191,7 +244,7 @@ function aiGetPageContextText(query){
     if(typeof sendTabMessage!=="function"){ res(fb); return; }
     sendTabMessage({action:"GET_PAGE_TEXT", maxChars:aiSettings.maxChars, timeoutMs:9000},r=>{
       if(r&&typeof r.text==="string"&&r.text.trim()){
-        const win=aiSelectRelevantWindow(r.text, query||"", aiSettings.maxChars);
+        const win=aiSelectRelevantWindows(r.text, query||"", aiSettings.maxChars);
         const h=fb?fb+"\n\n":""; res(h+win);
       } else res(fb);
     });
@@ -267,17 +320,21 @@ function aiYtParseCaption(json, lang){
 function aiYtCaptionEventsToLines(json){
   let evs=[]; try{ evs=(json&&json.events)||[]; }catch(e){ evs=[]; }
   const fmt=(x)=>{ x=Math.max(0,Math.floor(x)||0); const h=Math.floor(x/3600),m=Math.floor((x%3600)/60),s=x%60,p=n=>String(n).padStart(2,"0"); return (h?h+":":"")+p(m)+":"+p(s); };
+  const NOISE=/^\s*[\[(]?\s*(music|ti\u1ebfng nh\u1ea1c|nh\u1ea1c n\u1ec1n|applause|v\u1ed1 tay|ti\u1ebfng v\u1ed1|laugh(?:ing|s)?|c\u01b0\u1eddi|sound(?:s)?|audio|\u00e2m thanh)\s*[\])?]?\s*$/i;
   const out=[]; let cur="", curMs=0, total=0;
+  const push=()=>{ let txt=cur.replace(/\s+/g," ").trim(); cur=""; txt=txt.replace(/\[\s*(music|ti\u1ebfng nh\u1ea1c|nh\u1ea1c n\u1ec1n|applause|v\u1ed1 tay|ti\u1ebfng v\u1ed1|laugh(?:ing|s)?|c\u01b0\u1eddi|sound(?:s)?|audio|\u00e2m thanh)\s*\]/gi," ").replace(/\s+/g," ").trim(); if(!txt||NOISE.test(txt)) return; const last=out.length?out[out.length-1]:""; const lastTxt=last.replace(/^\[[0-9:]+\]\s*/,""); if(lastTxt&&(lastTxt===txt||(txt.length>15&&txt.includes(lastTxt)))) return; const line="["+fmt(curMs)+"] "+txt; out.push(line); total+=line.length; };
   for(const ev of evs){
     const segs=ev.segs||[]; let t="";
     for(const sg of segs){ if(sg&&typeof sg.utf8==="string") t+=sg.utf8; }
     if(!t) continue;
-    if(/^\s*\n+\s*$/.test(t)){ if(cur.trim()){ const line="["+fmt(curMs)+"] "+cur.replace(/\s+/g," ").trim(); out.push(line); total+=line.length; cur=""; } if(total>23000) break; continue; }
+    if(/^\s*\n+\s*$/.test(t)){ if(cur.trim()) push(); if(total>23000) break; continue; }
     if(!cur.trim()) curMs=Math.round((ev.tStartMs||0)/1000);
     cur+=t;
   }
-  if(cur.trim()&&total<=23000) out.push("["+fmt(curMs)+"] "+cur.replace(/\s+/g," ").trim());
-  return out.join("\n").slice(0,24000);
+  if(cur.trim()) push();
+  const clean=out.join("\n").slice(0,24000);
+  if(clean.replace(/\[[\d:]+\]\s*/g,"").replace(/\s/g,"").length<200) return "";
+  return clean;
 }
 async function aiYtOembedMeta(videoId){
   try{
@@ -327,8 +384,8 @@ async function aiScrapeTranscriptViaHiddenTab(videoId){
       (function(){ try{ const p=tabsApi.sendMessage(tab.id,{action:"GET_YT_TRANSCRIPT", lang:(typeof currentAppLanguage!=="undefined"&&currentAppLanguage)||"vi"}); return (p&&typeof p.then==="function")?p:new Promise(r=>{ try{ tabsApi.sendMessage(tab.id,{action:"GET_YT_TRANSCRIPT", lang:(typeof currentAppLanguage!=="undefined"&&currentAppLanguage)||"vi"}, r); }catch(e){ r(null); } }); }catch(e){ return Promise.resolve(null); } })(),
       new Promise(r=>setTimeout(()=>r(null),12500))
     ]);
-    if(res&&res.ok&&res.transcript) return { title:String(res.title||""), author:String(res.author||""), lang:String(res.lang||""), kind:String(res.kind||""), text:String(res.transcript).slice(0,24000) };
-    if(res&&res.reason==="no_captions") return { noCaptions:true, title:String(res.title||""), author:String(res.author||"") };
+    if(res&&res.ok&&res.transcript) return { title:String(res.title||""), author:String(res.author||""), description:String(res.description||""), date:String(res.date||""), views:String(res.views||""), lang:String(res.lang||""), kind:String(res.kind||""), text:String(res.transcript).slice(0,24000) };
+    if(res&&res.reason==="no_captions") return { noCaptions:true, title:String(res.title||""), author:String(res.author||""), description:String(res.description||""), date:String(res.date||""), views:String(res.views||"") };
     return null;
   } finally {
     try{ const rp=tabsApi.remove(tab.id); if(rp&&typeof rp.then==="function") rp.then(()=>{},()=>{}); }catch(e){}
@@ -348,14 +405,18 @@ async function aiFetchTranscriptForVideo(vid, lang){
           let obj=null; if(j){ try{ obj=JSON.parse(j); }catch(e){ obj=null; } }
           if(obj){
             const meta=aiYtParseCaption(obj,(typeof currentAppLanguage!=="undefined"&&currentAppLanguage)||lang||"vi");
+            const vd=(obj&&obj.videoDetails)||{};
+            const mfX=obj&&obj.microformat&&obj.microformat.playerMicroformatRenderer;
+            const extra={ title:meta.title||String(vd.title||""), author:meta.author||String(vd.author||""), description:String(vd.shortDescription||"").slice(0,6000), date:String((mfX&&mfX.publishDate)||"").slice(0,10), views:String(vd.viewCount||"") };
             if(meta.url){
               const r2=await fetch(meta.url,{signal:AbortSignal.timeout(8000),credentials:"omit"});
               if(r2.ok){
                 let cj=null; try{ cj=JSON.parse(await r2.text()); }catch(e){ cj=null; }
                 const text=cj?aiYtCaptionEventsToLines(cj):"";
-                if(text) return { title:meta.title||"", author:meta.author||"", lang:meta.lang, kind:meta.kind, text:text };
+                if(text) return { lang:meta.lang, kind:meta.kind, text:text, title:extra.title, author:extra.author, description:extra.description, date:extra.date, views:extra.views };
               }
-            } else if(meta.noCaptions) return { noCaptions:true, title:meta.title||"", author:meta.author||"" };
+              return { noCaptions:true, title:extra.title, author:extra.author, description:extra.description, date:extra.date, views:extra.views };
+            } else if(meta.noCaptions) return { noCaptions:true, title:extra.title, author:extra.author, description:extra.description, date:extra.date, views:extra.views };
           }
         }
       }
@@ -369,6 +430,18 @@ async function aiFetchTranscriptForVideo(vid, lang){
   if(om&&(om.title||om.author)) return { noCaptions:true, title:om.title, author:om.author };
   return null;
 }
+const AI_EXPLICIT_WEB_RE = /(t\xecm web|tra c\u1EE9u|google|l\xean m\u1EA1ng|ai s\u00E1ng t\u00E1c|s\u00E1ng t\u00E1c b\u1EDFi|t\xEAn b\u00E0i h\u00E1t|b\u00E0i h\u00E1t n\u00E0y|ca s\u1EC9|ph\u1EA7m m\u1EBDi|ng\u00F4i nh\u00E0|t\u00EDch s\u1ED1|population|born in|who (wrote|sang|sings))/i;
+async function aiWebSearch(query){
+  const q=String(query||"").replace(/[\u0000-\u001F]/g," ").trim().slice(0,140);
+  if(q.length<3) return "";
+  const one=(u)=>fetch(u,{signal:AbortSignal.timeout(7000),credentials:"omit"}).then(r=>r.ok?r.json().catch(()=>null):null).catch(()=>null);
+  const jobs=[];
+  jobs.push(one("https://api.duckduckgo.com/?q="+encodeURIComponent(q)+"&format=json&no_html=1&skip_disambig=1").then(d=>{ if(!d||typeof d!=="object") return ""; const L=[]; if(d.Answer&&typeof d.Answer==="string")L.push("- [DDG] "+d.Answer.slice(0,300)); if(typeof d.Definition==="string")L.push("- [DDG] "+d.Definition.slice(0,300)); if(typeof d.AbstractText==="string")L.push("- [DDG] "+String(d.AbstractSource||"")+": "+d.AbstractText.slice(0,600)+(typeof d.AbstractURL==="string"?" ("+d.AbstractURL+")":"")); (Array.isArray(d.RelatedTopics)?d.RelatedTopics:[]).slice(0,4).forEach(t=>{ if(t&&typeof t.Text==="string")L.push("- [DDG] "+t.Text.slice(0,220)); }); return L.join("\n"); }));
+  const wiki=(lang)=>one("https://"+lang+".wikipedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrsearch="+encodeURIComponent(q)+"&gsrlimit=3&prop=extracts&exintro=1&explaintext=1&exchars=550").then(d=>{ const pages=d&&d.query&&d.query.pages; if(!pages||typeof pages!=="object")return ""; const L=[]; Object.values(pages).slice(0,3).forEach(p=>{ const ex=String((p&&p.extract)||"").replace(/\s+/g," ").slice(0,480); if(ex) L.push("- [Wikipedia "+lang+"] "+String((p&&p.title)||"").slice(0,80)+": "+ex); }); return L.join("\n"); });
+  jobs.push(wiki("vi")); jobs.push(wiki("en"));
+  const rs=await Promise.all(jobs);
+  return rs.filter(Boolean).join("\n").slice(0,3500);
+}
 function aiGetYouTubeTranscript(){
   return new Promise(res=>{
     if(typeof sendTabMessage!=="function"){ res(null); return; }
@@ -376,8 +449,8 @@ function aiGetYouTubeTranscript(){
     setTimeout(()=>fin(null),15000);
     try{
       sendTabMessage({action:"GET_YT_TRANSCRIPT", timeoutMs:14000, lang:(typeof currentAppLanguage!=="undefined"&&currentAppLanguage)||"vi"}, r=>{
-        if(r&&r.ok&&typeof r.transcript==="string"&&r.transcript.trim()){ fin({title:String(r.title||""),author:String(r.author||""),lang:String(r.lang||""),kind:String(r.kind||""),text:String(r.transcript).slice(0,24000)}); }
-        else if(r&&r.reason==="no_captions"){ fin({noCaptions:true,title:String(r.title||""),author:String(r.author||"")}); }
+        if(r&&r.ok&&typeof r.transcript==="string"&&r.transcript.trim()){ fin({title:String(r.title||""),author:String(r.author||""),description:String(r.description||""),date:String(r.date||""),views:String(r.views||""),lang:String(r.lang||""),kind:String(r.kind||""),text:String(r.transcript).slice(0,24000)}); }
+        else if(r&&r.reason==="no_captions"){ fin({noCaptions:true,title:String(r.title||""),author:String(r.author||""),description:String(r.description||""),date:String(r.date||""),views:String(r.views||"")}); }
         else fin(null);
       });
     }catch(e){ fin(null); }
@@ -460,12 +533,21 @@ function aiAppendTsPlain(frag, text){
   }
   if(last<text.length) frag.appendChild(document.createTextNode(text.slice(last)));
 }
+function aiShortUrl(u){
+  try{
+    const x=new URL(u); const host=x.hostname.replace(/^www\./,"");
+    const vid=x.searchParams.get("v")||"";
+    const seg=x.pathname.split("/").filter(Boolean).pop()||"";
+    let core=vid||seg||""; if(core.length>14) core=core.slice(0,14)+"\u2026";
+    return host+(core?"/"+core:"");
+  }catch(e){ return String(u).slice(0,32)+(String(u).length>32?"\u2026":""); }
+}
 function aiAppendTextWithTs(frag, text){
   const mdLinkRe=/\[([^\]\n]{1,200})\]\((https?:\/\/[^)\s]{1,500})\)/g;
   let last=0, m;
   while((m=mdLinkRe.exec(text))!==null){
     if(m.index>last) aiAppendUrlTs(frag, text.slice(last,m.index));
-    const a=document.createElement("a"); a.href=m[2]; a.textContent=m[1]; a.target="_blank"; a.rel="noopener noreferrer"; a.className="ai-link";
+    const a=document.createElement("a"); a.href=m[2]; a.textContent=/^https?:\/\//i.test(m[1])?aiShortUrl(m[2]):m[1]; a.title=m[2]; a.target="_blank"; a.rel="noopener noreferrer"; a.className="ai-link";
     frag.appendChild(a); last=m.index+m[0].length;
   }
   if(last<text.length) aiAppendUrlTs(frag, text.slice(last));
@@ -474,7 +556,7 @@ function aiAppendUrlTs(frag, text){
   const urlRe=/https?:\/\/[^\s<>"'()]+/g; let last=0, m;
   while((m=urlRe.exec(text))!==null){
     if(m.index>last) aiAppendTsPlain(frag, text.slice(last,m.index));
-    const a=document.createElement("a"); a.href=m[0]; a.textContent=m[0]; a.target="_blank"; a.rel="noopener noreferrer"; a.className="ai-link";
+    const a=document.createElement("a"); a.href=m[0]; a.textContent=aiShortUrl(m[0]); a.title=m[0]; a.target="_blank"; a.rel="noopener noreferrer"; a.className="ai-link";
     frag.appendChild(a); last=m.index+m[0].length;
   }
   if(last<text.length) aiAppendTsPlain(frag, text.slice(last));
@@ -602,9 +684,25 @@ function aiUpdateProviderUI(){
   const cu=document.getElementById("ai-custom-url");
   if(cu){ cu.value=(aiProvider==="custom")?(aiKeys["custom"]||""):""; cu.style.display=aiProvider==="custom"?"":"none"; const lab=document.querySelector('[data-i18n="ai_custom_label"]'); if(lab&&lab.parentElement) lab.parentElement.style.display=aiProvider==="custom"?"":"none"; }
 }
-function aiBuildPrompt(userText, pageText, selectionText, imageNote, transcript, pageLink){
+function aiBuildPrompt(userText, pageText, selectionText, imageNote, transcript, pageLink, memNote, webNote){
   const b=[]; aiPromptFlagged=false;
-  if(transcript&&transcript.text){ const s=aiSanitizeExternal(transcript.text,14000); if(s.flagged) aiPromptFlagged=true; b.push("[B\u1ea3n ghi video YouTube"+(transcript.title?" \u2014 "+String(transcript.title).slice(0,120):"")+(transcript.author?" | K\u00eanh/T\u00e1c gi\u1ea3: "+String(transcript.author).slice(0,80):"")+" | ng\u00f4n ng\u1eef "+(transcript.lang||"?")+(transcript.kind==="asr"?" (t\u1ef1 \u0111\u1ed9ng sinh)":"")+"]\n<<<DATA_UNTRUSTED_3_BEGIN>>>\n"+s.text+"\n<<<DATA_UNTRUSTED_3_END>>>"); }
+  if(transcript&&(transcript.text||transcript.title||transcript.description)){
+    const info=[];
+    if(transcript.title) info.push("Title: "+String(transcript.title).slice(0,160));
+    if(transcript.author) info.push("Kenh/Tac gia: "+String(transcript.author).slice(0,80));
+    if(transcript.date) info.push("Ngay dang: "+String(transcript.date).slice(0,10));
+    if(transcript.views) info.push("Luot xem: "+String(transcript.views).slice(0,12));
+    if(info.length) b.push("[THONG TIN VIDEO]\n"+info.join("\n"));
+    if(transcript.text){
+      const s=aiSanitizeExternal(transcript.text,14000); if(s.flagged) aiPromptFlagged=true;
+      b.push("[B\u1ea3n ghi video YouTube"+(transcript.lang?" | ng\u00f4n ng\u1eef "+transcript.lang:"")+(transcript.kind==="asr"?" (t\u1ef1 \u0111\u1ed9ng sinh)":"")+"]\n<<<DATA_UNTRUSTED_3_BEGIN>>>\n"+s.text+"\n<<<DATA_UNTRUSTED_3_END>>>");
+      if(transcript.kind==="asr") b.push("[LUU Y ASR] Bang ghi nay do YouTube TU DONG nhan dien tieng (ASR): co the chay ten rieng, thieu dau cau, lap cum tu. Hay tu chuan hoa loi hien nhien theo ngu canh truoc khi tra loi; giu nguyen ten khong chac chan; neu khong chac ve mot ten/su kien nao do, dien dat 'co ve/khong chac' mot cach tu nhien, khong dung nhan trong ngoac vuong.");
+    } else if(transcript.description){
+      const s=aiSanitizeExternal(transcript.description,5000); if(s.flagged) aiPromptFlagged=true;
+      b.push("[MO TA VIDEO]\n<<<DATA_UNTRUSTED_4_BEGIN>>>\n"+s.text+"\n<<<DATA_UNTRUSTED_4_END>>>\nLUU Y: video nay CHUA co transcript cong khai. Tra loi dua tren mo ta + thong tin o tren va kien thuc dang tin; neu thieu du lieu hay noi ro dang thieu bang loi dien tu nhien, khong chen nhan danh dau trong ngoac vuong.");
+    }
+  }
+  if(webNote&&String(webNote).trim()){ const sw=aiSanitizeExternal(webNote,3500); b.push("[KET QUA TIM KIEM WEB (DuckDuckGo/Wikipedia)]\n<<<DATA_UNTRUSTED_5_BEGIN>>>\n"+sw.text+"\n<<<DATA_UNTRUSTED_5_END>>>"); }
   if(aiSettings.includePage&&pageText){ const s=aiSanitizeExternal(pageText,Math.min(16000,aiSettings.maxChars+6000)); if(s.flagged) aiPromptFlagged=true; b.push("[Current page context]\n<<<DATA_UNTRUSTED_1_BEGIN>>>\n"+s.text+"\n<<<DATA_UNTRUSTED_1_END>>>"); }
   if(aiSettings.includeSelection&&selectionText){ const s=aiSanitizeExternal(selectionText,4000); if(s.flagged) aiPromptFlagged=true; b.push("[Highlighted selection]\n<<<DATA_UNTRUSTED_2_BEGIN>>>\n"+s.text+"\n<<<DATA_UNTRUSTED_2_END>>>"); }
   if(aiSettings.includeNotes){ const n=document.getElementById("f-notes")?document.getElementById("f-notes").value.trim():""; if(n) b.push("[Research notes]\n"+n.slice(0,2000)); }
@@ -617,10 +715,13 @@ function aiBuildPrompt(userText, pageText, selectionText, imageNote, transcript,
   const langName=LANGN[langUi]||langUi;
   let sysBody="";
   try{ if(typeof getI18nText==="function"){ const v=getI18nText("ai_sys_preamble",[langName]); if(v&&v!=="ai_sys_preamble") sysBody=v; } }catch(e){}
-  if(!sysBody) sysBody="BẠN LÀ TRỢ LÝ HỌC THUẬT ScholarFlow. QUY TẮC:\n1) Trả lời bằng "+langName+".\n2) Chỉ dựa trên dữ liệu trong các khối ngữ cảnh và kiến thức đáng tin; KHÔNG BỊA. Thiếu dữ liệu → ghi rõ 'KHÔNG CÓ THÔNG TIN TRONG TRANG' rồi đề xuất cách bổ sung.\n3) Markdown gọn: ## cho phần dài, bullet, BẢNG | cột | khi so sánh, `code` cho thuật ngữ.\n4) Trích dẫn: link trang đang đứng / videoId / [mm:ss].\n5) Kết thúc bằng đúng khối:\nGỢI Ý:\n- <câu hỏi 1>\n- <câu hỏi 2>\n- <câu hỏi 3>";
+  if(!sysBody) sysBody="BẠN LÀ TRỢ LÝ HỌC THUẬT ScholarFlow. QUY TẮC:\n1) Trả lời bằng "+langName+". Vào thẳng câu trả lời — không chào hỏi, không tự giới thiệu.\n2) Ưu tiên dữ liệu trong các khối ngữ cảnh; khi thiếu, HÃY kết hợp kiến thức của bạn và kết quả tìm kiếm web (khối [KET QUA TIM KIEM WEB]) — hai nguồn bổ sung cho nhau; KHÔNG BỊA. Vẫn thiếu và không chắc → nói tự nhiên 'KHÔNG CÓ THÔNG TIN TRONG TRANG'. Chỉ trả lời đúng ý đồ câu hỏi.\n3) Markdown gọn: ## cho phần dài, bullet, BẢNG | cột | khi so sánh, `code` cho thuật ngữ.\n4) Trích dẫn: link trang đang đứng / videoId / [mm:ss].\n5) Kết thúc bằng đúng khối:\nGỢI Ý:\n- <câu hỏi 1>\n- <câu hỏi 2>\n- <câu hỏi 3>";
   if(sysBody.indexOf("{0}")!==-1) sysBody=sysBody.split("{0}").join(langName);
   const sys=sysBody+"\n\n";
-  return sys+guard+linkLine+ctx+"[Câu hỏi]\n"+aiSanitizeExternal(userText,8000).text;
+  let scope=(typeof aiSettings.scope==="string"&&["only","auto","web"].includes(aiSettings.scope))?aiSettings.scope:"auto";
+  if(webNote&&String(webNote).trim()&&scope==="only") scope="auto";
+  const scopeNote=scope==="only"?"[PHAM VI] CHI TRANG: chi duoc dung noi dung trong cac khoi ngu canh o duoi. Bat cu dieu nao trang khong nep → tra loi ro 'KHONG CO THONG TIN TRONG TRANG', khong bua bang kien thuc ngoai.":(scope==="web"?"[PHAM VI] MO RONG: uu tien ngu canh trang; khi thieu du lieu hay dung kien thuc cua ban va khoi [KET QUA TIM KIEM WEB] duoi day (uu tien dan URL trong do); dien dat tu nhien, tuyet doi KHONG chen cac nhan [NGOAI TRANG] hoac [SUY DOAN] vao cau tra loi.":"[PHAM VI] TU NHIEP: uu tien ngu canh trang; khi trang thieu du lieu duoc dung kien thuc va ket qua tim kiem web (neu co); noi chua chac thi dien dat 'co ve / khong chac' tu nhien — tuyet doi khong chen nhan [NGOAI TRANG] hay [SUY DOAN] vao cau tra loi.");
+  return sys+scopeNote+"\n\n"+(memNote?"[BO NHO CUA AI]\n"+memNote+"\n\n":"")+guard+linkLine+ctx+"[Câu hỏi]\n"+aiSanitizeExternal(userText,8000).text;
 }
 function aiTrimHist(hist){ const h=(Array.isArray(hist)?hist:[]).slice(-6).map(m=>({role:m&&m.role==="user"?"user":"assistant",content:String(m&&m.content||"").slice(0,800)})).filter(m=>m.content.trim()); return h; }
 function aiHistoryToGeminiContents(hist, prompt, imgList){ const out=aiTrimHist(hist).map(m=>({role:m.role==="user"?"user":"model",parts:[{text:m.content}]})); const cur=[{text:prompt}].concat((imgList||[]).map(im=>({inline_data:{mime_type:im.mimeType||"image/jpeg",data:im.data}}))); out.push({role:"user",parts:cur}); return out; }
@@ -714,6 +815,9 @@ async function aiSendCurrent(){
   if(!raw){ if(typeof showToast==="function") showToast("ai_toast_empty","warning"); return; }
   if(!aiRateLimitOk()){ if(typeof showToast==="function") showToast("ai_toast_rate_limited","warning"); return; }
   if(raw.length>8000&&input){ input.value=raw.slice(0,8000); }
+  const scopeNow=(typeof aiSettings.scope==="string"&&["only","auto","web"].includes(aiSettings.scope))?aiSettings.scope:"auto";
+  const webOn=!!aiForcedWeb||(aiSettings.webSearch!==false&&scopeNow!=="only");
+  const webPromise=webOn?aiWebSearchCached(raw):Promise.resolve("");
   const provider=aiProvider; const key=aiKeys[provider]||"";
   const imageToSend=aiAttachedImage; const imagePreview=imageToSend?imageToSend.preview:null;
   aiAppendMessage("user", raw, provider, imagePreview);
@@ -745,14 +849,17 @@ async function aiSendCurrent(){
     const vidLink=aiExtractYouTubeId(raw);
     if(vidLink){ try{ transcriptData=await aiFetchTranscriptForVideo(vidLink); }catch(e){} }
   }
-  if(transcriptData&&transcriptData.noCaptions&&typeof showToast==="function") showToast("ai_toast_no_transcript","warning");
   let pageImages=[];
   const hasTranscript=transcriptData&&transcriptData.text;
+  if(hasTranscript){ try{ pageText=aiBuildContext(); }catch(e){} }
   if(!_imageForApi&&aiSettings.includeImages&&provider!=="custom"&&pageText&&!hasTranscript){ try{ pageImages=await aiGetPageImages(); }catch(e){} }
   if(aiSettings.includeSource){ try{ const srcRaw=await aiGetPageSourceText(); if(srcRaw){ const winSrc=aiSelectRelevantWindow(srcRaw, raw, 1600); pageText = pageText ? pageText+"\n\n[Raw page source + scripts - relevant excerpt]\n"+winSrc : winSrc; } }catch(e){} }
   const apiImages=_imageForApi?[{data:_imageForApi.data,mimeType:_imageForApi.mimeType||"image/jpeg"}]:pageImages;
   const imageNote=apiImages.length?("[Attached images: "+apiImages.length+" taken from the current page. If the question needs visual info (counting objects, reading text in the image), answer from these images.]"):null;
-  const prompt=aiBuildPrompt(raw, pageText, selectionText, imageNote, hasTranscript?transcriptData:null, {url:pageUrl||"", title:(function(){ try{ if(typeof currentMeta!=="undefined"&&currentMeta&&currentMeta.title) return String(currentMeta.title); if(typeof currentTabObj!=="undefined"&&currentTabObj&&currentTabObj.title) return String(currentTabObj.title); }catch(e){} return document.title||""; })(), videoId:aiIsYouTubeUrl(pageUrl)?aiExtractYouTubeId(pageUrl):""});
+  let webResults="";
+  try{ webResults=aiForcedWeb||await webPromise; }catch(e){}
+  aiForcedWeb="";
+  const prompt=aiBuildPrompt(raw, pageText, selectionText, imageNote, transcriptData||null, {url:pageUrl||"", title:(function(){ try{ if(typeof currentMeta!=="undefined"&&currentMeta&&currentMeta.title) return String(currentMeta.title); if(typeof currentTabObj!=="undefined"&&currentTabObj&&currentTabObj.title) return String(currentTabObj.title); }catch(e){} return document.title||""; })(), videoId:aiIsYouTubeUrl(pageUrl)?aiExtractYouTubeId(pageUrl):""}, (function(){ try{ return aiMemFor(pageUrl)||""; }catch(e){ return ""; } })(), webResults||null);
   if(aiPromptFlagged&&typeof showToast==="function") showToast("ai_toast_injection","warning");
   let answer=""; let usedFallback=false;
   if(!aiHasKey(provider)){
@@ -788,6 +895,7 @@ async function aiSendCurrent(){
   aiHideTyping();
   if(streaming){ const last=aiHistory[aiHistory.length-1]; if(streamRow&&last&&last.role==="assistant"){ last.content=String(answer).slice(0,16000); aiSaveHistorySoon(); aiRenderHistory(); } else if(answer){ aiAppendMessage("assistant", answer, provider); } }
   else { aiAppendMessage("assistant", answer, provider); }
+  if(!usedFallback){ try{ aiMemRemember(pageUrl, raw); aiSessionsSaveCurrent(); aiShowMemoryHint(pageUrl); }catch(e){} }
   if(!usedFallback&&typeof showToast==="function") showToast("ai_toast_done","success");
   aiIsSending=false; aiAbort=null;
   if(sendBtn){ sendBtn.classList.remove("is-stop"); sendBtn.textContent=(typeof getI18nText==="function")?getI18nText("ai_btn_send"):"Gửi"; sendBtn.title=aiT("ai_btn_send_title",null,"Gửi câu hỏi (Enter)"); }
@@ -829,11 +937,28 @@ function aiInitEvents(){
   const sendBtn=document.getElementById("ai-btn-send"); if(sendBtn) sendBtn.addEventListener("click",()=>{ if(aiIsSending){ if(aiAbort){ aiUserStopped=true; try{ aiAbort.abort(); }catch(e){} } return; } aiSendCurrent(); });
   const input=document.getElementById("ai-input"); if(input) input.addEventListener("keydown",e=>{ if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); aiSendCurrent(); }});
   const clearBtn=document.getElementById("ai-btn-clear-chat"); if(clearBtn) clearBtn.addEventListener("click",aiClearHistory);
-  const newChatBtn=document.getElementById("ai-btn-new-chat"); if(newChatBtn) newChatBtn.addEventListener("click",aiClearHistory);
+  const newChatBtn=document.getElementById("ai-btn-new-chat"); if(newChatBtn) newChatBtn.addEventListener("click",()=>{ const dt=(function(){ try{ return new Date().toLocaleString(); }catch(e){ return ""; } })(); aiSessionsNew(aiT("ai_session_default_name",null,"Phiên")+" "+dt); if(typeof showToast==="function") showToast("ai_toast_session_saved","success"); });
   const copyBtn=document.getElementById("ai-btn-copy-last"); if(copyBtn) copyBtn.addEventListener("click",()=>{ const last=aiHistory.slice().reverse().find(m=>m.role==="assistant"); if(!last){ if(typeof showToast==="function") showToast("ai_toast_no_answer","warning"); return; } navigator.clipboard.writeText(last.content).then(()=>{ if(typeof showToast==="function") showToast("toast_copied","success"); }).catch(()=>{ if(typeof showToast==="function") showToast("toast_copy_failed","error"); }); });
   const insertBtn=document.getElementById("ai-btn-insert-note"); if(insertBtn) insertBtn.addEventListener("click",()=>{ const last=aiHistory.slice().reverse().find(m=>m.role==="assistant"); if(!last){ if(typeof showToast==="function") showToast("ai_toast_no_answer","warning"); return; } const notesEl=document.getElementById("f-notes"); if(!notesEl) return; const sep=notesEl.value.trim()?"\n\n":""; notesEl.value=notesEl.value+sep+last.content.slice(0,2000); notesEl.dispatchEvent(new Event("input",{bubbles:true})); if(typeof showToast==="function") showToast("toast_notes_inserted","success"); });
-  ["ai-opt-page","ai-opt-selection","ai-opt-notes","ai-opt-images","ai-opt-source","ai-opt-stream"].forEach(id=>{ const el=document.getElementById(id); if(!el) return; el.addEventListener("change",()=>{ if(id==="ai-opt-page") aiSettings.includePage=el.checked; if(id==="ai-opt-selection") aiSettings.includeSelection=el.checked; if(id==="ai-opt-notes") aiSettings.includeNotes=el.checked; if(id==="ai-opt-images") aiSettings.includeImages=el.checked; if(id==="ai-opt-source") aiSettings.includeSource=el.checked; if(id==="ai-opt-stream") aiSettings.stream=el.checked; aiSaveSettings(); }); });
+  ["ai-opt-page","ai-opt-selection","ai-opt-notes","ai-opt-images","ai-opt-source","ai-opt-stream","ai-opt-websearch"].forEach(id=>{ const el=document.getElementById(id); if(!el) return; el.addEventListener("change",()=>{ if(id==="ai-opt-page") aiSettings.includePage=el.checked; if(id==="ai-opt-selection") aiSettings.includeSelection=el.checked; if(id==="ai-opt-notes") aiSettings.includeNotes=el.checked; if(id==="ai-opt-images") aiSettings.includeImages=el.checked; if(id==="ai-opt-source") aiSettings.includeSource=el.checked; if(id==="ai-opt-stream") aiSettings.stream=el.checked; if(id==="ai-opt-websearch") aiSettings.webSearch=el.checked; aiSaveSettings(); }); });
+  const scopeSel=document.getElementById("ai-scope-select"); if(scopeSel) scopeSel.addEventListener("change",()=>{ aiSettings.scope=["only","auto","web"].includes(scopeSel.value)?scopeSel.value:"auto"; aiSaveSettings(); });
+  const btnWeb=document.getElementById("ai-btn-web-search"); if(btnWeb) btnBtnWire(btnWeb);
+  function btnBtnWire(btn){ btn.addEventListener("click",async()=>{
+    if(aiIsSending) return;
+    const inp=document.getElementById("ai-input"); const typed=inp?inp.value.trim():"";
+    let q=typed; if(!q){ for(let i=aiHistory.length-1;i>=0;i--){ if(aiHistory[i].role==="user"){ q=String(aiHistory[i].content||""); break; } } }
+    if(!q){ if(typeof showToast==="function") showToast("ai_toast_empty","warning"); return; }
+    if(typeof showToast==="function") showToast("ai_toast_web_searching","info");
+    try{ aiForcedWeb=await aiWebSearchCached(q); }catch(e){ aiForcedWeb=""; }
+    if(inp) inp.value="";
+    if(typed){ aiSendCurrent(); } else { aiRegenerate(); }
+  }); }
   ["ai-btn-toggle-key","ai-btn-toggle-key-main"].forEach(tid=>{ const btn=document.getElementById(tid); if(!btn) return; btn.addEventListener("click",()=>{ ["ai-key-input","ai-key-input-modal","ai-key-gemini","ai-key-openai","ai-key-claude"].forEach(id=>{ const inp=document.getElementById(id); if(inp) inp.type=inp.type==="password"?"text":"password"; }); }); });
+  const btnSessions=document.getElementById("ai-btn-sessions"); if(btnSessions) btnSessions.addEventListener("click",aiShowSessions);
+  const btnCloseSessions=document.getElementById("ai-btn-close-sessions"); if(btnCloseSessions) btnCloseSessions.addEventListener("click",aiHideSessions);
+  const sessBackdrop=document.getElementById("ai-sessions-backdrop"); if(sessBackdrop) sessBackdrop.addEventListener("click",aiHideSessions);
+  const sessSearch=document.getElementById("ai-session-search"); if(sessSearch) sessSearch.addEventListener("input",aiRenderSessions);
+  const sessNew=document.getElementById("ai-btn-new-session"); if(sessNew) sessNew.addEventListener("click",()=>{ const dt=(function(){ try{ return new Date().toLocaleString(); }catch(e){ return ""; } })(); aiSessionsNew(aiT("ai_session_default_name",null,"Phiên")+" "+dt); aiRenderSessions(); if(typeof showToast==="function") showToast("ai_toast_session_saved","success"); });
   const openSettings=document.getElementById("ai-btn-open-settings"); const closeSettings=document.getElementById("ai-btn-close-settings"); const backdrop=document.getElementById("ai-settings-backdrop"); const modal=document.getElementById("ai-settings-modal"); const changeModelBtn=document.getElementById("ai-btn-change-model"); const showModal=()=>{ if(modal) modal.style.display="flex"; aiPopulateModelSelect(); }; const hideModal=()=>{ if(modal) modal.style.display="none"; }; if(openSettings) openSettings.addEventListener("click",showModal); if(changeModelBtn) changeModelBtn.addEventListener("click",showModal); if(closeSettings) closeSettings.addEventListener("click",hideModal); if(backdrop) backdrop.addEventListener("click",hideModal);
   const modelSel=document.getElementById("ai-model-select"); if(modelSel) modelSel.addEventListener("change",()=>{ aiSetModel(aiProvider,modelSel.value); aiUpdateModelLine(); });
   const fetchBtn=document.getElementById("ai-btn-fetch-models");
@@ -867,10 +992,11 @@ function aiInitEvents(){
 async function initAI(){
   await aiLoadSettings(); aiUpdateProviderUI();
   const page=document.getElementById("ai-opt-page"); const sel=document.getElementById("ai-opt-selection"); const notes=document.getElementById("ai-opt-notes"); const imgs=document.getElementById("ai-opt-images"); const src=document.getElementById("ai-opt-source"); const strm=document.getElementById("ai-opt-stream");
-  if(page) page.checked=!!aiSettings.includePage; if(sel) sel.checked=!!aiSettings.includeSelection; if(notes) notes.checked=!!aiSettings.includeNotes; if(imgs) imgs.checked=!!aiSettings.includeImages; if(src) src.checked=!!aiSettings.includeSource; if(strm) strm.checked=aiSettings.stream!==false;
+  if(page) page.checked=!!aiSettings.includePage; if(sel) sel.checked=!!aiSettings.includeSelection; if(notes) notes.checked=!!aiSettings.includeNotes; if(imgs) imgs.checked=!!aiSettings.includeImages; if(src) src.checked=!!aiSettings.includeSource;   if(strm) strm.checked=aiSettings.stream!==false; const wsc=document.getElementById("ai-opt-websearch"); if(wsc) wsc.checked=aiSettings.webSearch!==false;
+  const scp=document.getElementById("ai-scope-select"); if(scp) scp.value=(aiSettings.scope==="only"||aiSettings.scope==="web")?aiSettings.scope:"auto";
   aiRenderHistory(); aiInitEvents(); aiUpdateCurrentPageDisplay(); aiUpdateChatHeight(); setInterval(()=>{ const ta=document.getElementById("tab-ai"); if(ta&&!ta.classList.contains("active")) return; aiUpdateCurrentPageDisplay(); aiUpdateChatHeight(); },2000); window.addEventListener("resize",aiUpdateChatHeight); const aiVisHandler=()=>{ if(document.visibilityState==="visible"){ aiUpdateCurrentPageDisplay(); aiUpdateChatHeight(); } }; document.addEventListener("visibilitychange",aiVisHandler); const tabAi=document.getElementById("tab-ai"); if(tabAi){ const obs=new MutationObserver(()=>{ if(tabAi.classList.contains("active")){ aiUpdateCurrentPageDisplay(); aiUpdateChatHeight(); } }); obs.observe(tabAi,{attributes:true,attributeFilter:["class"]}); }
 }
 if(typeof window!=="undefined"){
-  window.AI_PROVIDERS=AI_PROVIDERS; window.aiValidateCustomUrl=aiValidateCustomUrl; window.aiSanitizeExternal=aiSanitizeExternal; window.aiSanitizeHistory=aiSanitizeHistory; window.aiRateLimitOk=aiRateLimitOk; window.aiSelectRelevantWindow=aiSelectRelevantWindow; window.aiIsYouTubeUrl=aiIsYouTubeUrl; window.aiGetYouTubeTranscript=aiGetYouTubeTranscript; window.aiHistoryToGeminiContents=aiHistoryToGeminiContents; window.aiHistoryToOpenAIMessages=aiHistoryToOpenAIMessages; window.aiHistoryToClaudeMessages=aiHistoryToClaudeMessages; window.aiCollectTabsContext=aiCollectTabsContext; window.aiScholarSearch=aiScholarSearch; window.aiAttachImageFile=aiAttachImageFile; window.aiExtractYouTubeId=aiExtractYouTubeId; window.aiYtBalancedJson=aiYtBalancedJson; window.aiFetchTranscriptForVideo=aiFetchTranscriptForVideo; window.aiScrapeTranscriptViaHiddenTab=aiScrapeTranscriptViaHiddenTab; window.aiYtHiddenTabMeta=aiYtHiddenTabMeta; window.aiCallGeminiLite=aiCallGeminiLite; window.aiSig=aiSig; window.aiRegenerate=aiRegenerate; window.aiGetProviderConfig=aiGetProviderConfig; window.aiGetModel=aiGetModel; window.aiSetModel=aiSetModel; window.aiFetchGeminiModels=aiFetchGeminiModels; window.aiHasKey=aiHasKey; window.aiBuildPrompt=aiBuildPrompt; window.aiLocalFallback=aiLocalFallback; window.aiUseWebBridge=aiUseWebBridge; window.aiCallProvider=aiCallProvider; window.aiLoadSettings=aiLoadSettings; window.aiSaveHistory=aiSaveHistory; window.aiRenderHistory=aiRenderHistory; window.aiAppendMessage=aiAppendMessage; window.aiClearHistory=aiClearHistory; window.aiUpdateProviderUI=aiUpdateProviderUI; window.aiPopulateModelSelect=aiPopulateModelSelect; window.aiSendCurrent=aiSendCurrent; window.aiQuickPrompt=aiQuickPrompt; window.initAI=initAI; window.aiProvider=aiProvider; window.aiSettings=aiSettings; window.aiModels=aiModels; window.aiUpdateCurrentPageDisplay=aiUpdateCurrentPageDisplay;
+  window.AI_PROVIDERS=AI_PROVIDERS; window.aiValidateCustomUrl=aiValidateCustomUrl; window.aiSanitizeExternal=aiSanitizeExternal; window.aiSanitizeHistory=aiSanitizeHistory; window.aiRateLimitOk=aiRateLimitOk; window.aiSelectRelevantWindow=aiSelectRelevantWindow; window.aiIsYouTubeUrl=aiIsYouTubeUrl; window.aiGetYouTubeTranscript=aiGetYouTubeTranscript; window.aiHistoryToGeminiContents=aiHistoryToGeminiContents; window.aiHistoryToOpenAIMessages=aiHistoryToOpenAIMessages; window.aiHistoryToClaudeMessages=aiHistoryToClaudeMessages; window.aiCollectTabsContext=aiCollectTabsContext; window.aiScholarSearch=aiScholarSearch; window.aiAttachImageFile=aiAttachImageFile; window.aiExtractYouTubeId=aiExtractYouTubeId; window.aiYtBalancedJson=aiYtBalancedJson; window.aiFetchTranscriptForVideo=aiFetchTranscriptForVideo; window.aiScrapeTranscriptViaHiddenTab=aiScrapeTranscriptViaHiddenTab; window.aiYtHiddenTabMeta=aiYtHiddenTabMeta; window.aiCallGeminiLite=aiCallGeminiLite; window.aiSig=aiSig; window.aiRegenerate=aiRegenerate; window.aiSelectRelevantWindows=aiSelectRelevantWindows; window.aiSessionsSearch=aiSessionsSearch; window.aiMemKey=aiMemKey; window.aiMemFor=aiMemFor; window.aiRenderSessions=aiRenderSessions; window.aiShowSessions=aiShowSessions; window.aiHideSessions=aiHideSessions; window.aiGetProviderConfig=aiGetProviderConfig; window.aiGetModel=aiGetModel; window.aiSetModel=aiSetModel; window.aiFetchGeminiModels=aiFetchGeminiModels; window.aiHasKey=aiHasKey; window.aiBuildPrompt=aiBuildPrompt; window.aiLocalFallback=aiLocalFallback; window.aiUseWebBridge=aiUseWebBridge; window.aiCallProvider=aiCallProvider; window.aiLoadSettings=aiLoadSettings; window.aiSaveHistory=aiSaveHistory; window.aiRenderHistory=aiRenderHistory; window.aiAppendMessage=aiAppendMessage; window.aiClearHistory=aiClearHistory; window.aiUpdateProviderUI=aiUpdateProviderUI; window.aiPopulateModelSelect=aiPopulateModelSelect; window.aiSendCurrent=aiSendCurrent; window.aiQuickPrompt=aiQuickPrompt; window.initAI=initAI; window.aiProvider=aiProvider; window.aiSettings=aiSettings; window.aiModels=aiModels; window.aiUpdateCurrentPageDisplay=aiUpdateCurrentPageDisplay;
 }
 if(document.readyState!=="loading") initAI(); else document.addEventListener("DOMContentLoaded",initAI);
