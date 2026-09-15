@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ScholarFlow - Trợ Lý Học Thuật",
-  "version": "2.4.2",
+  "version": "2.4.4",
   "description": "ScholarFlow: Advanced academic assistant — International citations IEEE/APA/Harvard/MLA/BibTeX, smart screen capture & recording, privacy redaction and session Cookie Manager.",
   "permissions": [
     "tabs",
@@ -63,5 +63,10 @@
     "16": "icon16.png",
     "48": "icon48.png",
     "128": "icon128.png"
-  }
+  },
+  "optional_host_permissions": [
+    "https://generativelanguage.googleapis.com/*",
+    "https://api.openai.com/*",
+    "https://api.anthropic.com/*"
+  ]
 }

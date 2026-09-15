@@ -25,6 +25,8 @@ onReady(() => {
       const target = btn.dataset.target;
       const sec = document.getElementById(target);
       if (sec) sec.classList.add("active");
+      const aiModal = document.getElementById("ai-settings-modal");
+      if (aiModal) aiModal.style.display = "none";
       const navWrap = document.getElementById("nav-wrapper");
       if (navWrap) {
         const btnLeft = btn.offsetLeft;

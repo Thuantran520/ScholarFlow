@@ -81,6 +81,10 @@
         <span class="nav-icon" id="icon-tab-cite"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg></span>
         <span class="nav-label" data-i18n="nav_cite">Trích Dẫn</span>
       </button>
+      <button class="main-nav-btn" data-target="tab-ai" title="Trợ lý AI — Tóm tắt &amp; hỏi đáp trên trang" data-i18n-title="tip_tab_ai">
+        <span class="nav-icon" id="icon-tab-ai"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17 5.8 21.3l2.4-7.4L2 9.4h7.6z"></path></svg></span>
+        <span class="nav-label" data-i18n="nav_ai">AI Trợ lý</span>
+      </button>
       <button class="main-nav-btn" data-target="tab-redact" title="Bảo mật thông tin, che mờ đối tượng" data-i18n-title="tip_tab_redact">
         <span class="nav-icon" id="icon-tab-redact"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></span>
         <span class="nav-label" data-i18n="nav_redact">Che Mờ</span>
@@ -477,7 +481,140 @@
   </div>
 
   <!-- ══════════════════════ TAB 2: ELEMENT REDACT & BLUR ══════════════════════ -->
-  <div id="tab-redact" class="tab-section">
+  
+  <!-- TAB AI: CHAT BOX -->
+  <div id="tab-ai" class="tab-section ai-chat-tab">
+    <div class="ai-chat-wrapper">
+      <div class="ai-chat-top">
+        <div class="ai-chat-title">
+          <span class="ai-chat-icon">✦</span>
+          <span data-i18n="ai_heading">AI Trợ lý</span>
+          <span id="ai-key-status" class="ai-status" style="display:none;" aria-hidden="true"></span>
+        </div>
+        <button type="button" class="ai-gear-btn" id="ai-btn-open-settings" title="Cài đặt" data-i18n-title="ai_settings_tip">⚙</button>
+      </div>
+      <div class="ai-model-bar">
+        <div class="ai-provider-pills">
+          <button type="button" class="ai-provider-pill active" data-provider="gemini">Gemini</button>
+          <button type="button" class="ai-provider-pill" data-provider="openai">ChatGPT</button>
+          <button type="button" class="ai-provider-pill" data-provider="claude">Claude</button>
+          <button type="button" class="ai-provider-pill" data-provider="custom">Custom</button>
+        </div>
+        <div class="ai-model-select-wrap" style="margin-left:auto;">
+          <select id="ai-model-select-main" class="ai-model-select"></select>
+          <select id="ai-provider-select" style="display:none;" aria-hidden="true"><option value="gemini">Gemini</option><option value="openai">ChatGPT</option><option value="claude">Claude</option><option value="custom">Custom</option></select>
+        </div>
+      </div>
+      <div class="ai-current-page" id="ai-current-page" style="display:flex; gap:8px; align-items:center; padding:8px 10px; background:rgba(15,23,42,0.5); border:1px solid rgba(255,255,255,0.06); border-radius:8px; margin:8px 0; font-size:11px;">
+        <img id="ai-page-favicon" src="" alt="" style="width:16px; height:16px; object-fit:contain; flex-shrink:0; display:none;"><span id="ai-page-favicon-fb" style="font-size:14px;">🌐</span>
+        <div style="flex:1; min-width:0; overflow:hidden;">
+          <div id="ai-page-title" style="font-weight:700; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" data-i18n="ai_page_title_default">Chưa có trang</div>
+          <div id="ai-page-url" style="color:#94a3b8; font-size:10.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">—</div>
+        </div>
+        <button type="button" class="btn btn-secondary" id="ai-btn-copy-page" style="padding:4px 8px; font-size:10.5px;" title="Copy URL" data-i18n-title="ai_btn_copy_page">⎘</button>
+      </div>
+      <div id="ai-chat-history" class="ai-chat-history ai-chat-box"></div>
+      <div class="ai-quick-chips">
+        <button type="button" class="ai-chip" data-ai-quick="summary" data-i18n="ai_quick_summary">Tóm tắt</button>
+        <button type="button" class="ai-chip" data-ai-quick="qa" data-i18n="ai_quick_qa">Hỏi đáp</button>
+        <button type="button" class="ai-chip" data-ai-quick="explain" data-i18n="ai_quick_explain">Giải thích</button>
+        <button type="button" class="ai-chip" data-ai-quick="translate" data-i18n="ai_quick_translate">Dịch</button>
+        <button type="button" class="ai-chip" data-ai-quick="outline" data-i18n="ai_quick_outline">Outline</button>
+        <button type="button" class="ai-chip" data-ai-quick="cite" data-i18n="ai_quick_cite">Gợi ý</button>
+        <button type="button" class="ai-chip" data-ai-quick="answer" data-i18n="ai_quick_answer">Giải đáp án</button>
+      </div>
+      <div id="ai-image-preview" style="display:none; padding:6px; margin:6px 0; background:rgba(15,23,42,0.65); border:1px solid rgba(56,189,248,0.2); border-radius:8px; align-items:center; gap:8px; flex-shrink:0;">
+        <img id="ai-image-thumb" src="" alt="" style="width:48px; height:48px; object-fit:cover; border-radius:6px; border:1px solid rgba(255,255,255,0.08);">
+        <span id="ai-image-name" style="flex:1; min-width:0; font-size:11px; color:#cbd5e1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
+        <button type="button" class="btn btn-secondary" id="ai-btn-remove-image" style="padding:4px 8px; font-size:11px;">✕</button>
+      </div>
+      <div class="ai-input-row">
+        <button type="button" class="btn btn-secondary" id="ai-btn-attach-image" title="Đính kèm" data-i18n-title="ai_btn_attach_image">Ảnh</button>
+        <input type="file" id="ai-image-input" accept="image/*" style="display:none;">
+        <textarea id="ai-input" class="ai-input" rows="2" placeholder="Hỏi gì về trang này... (Enter gửi, Shift+Enter xuống dòng)" data-i18n-placeholder="ai_input_placeholder"></textarea>
+        <button type="button" class="ai-send-btn" id="ai-btn-send" data-i18n="ai_btn_send">Gửi</button>
+      </div>
+      <div class="ai-disclaimer-row" style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:8px; min-height:28px; padding:6px 8px; background:rgba(15,23,42,0.55); border:1px solid rgba(255,255,255,0.05); border-radius:8px;">
+        <span class="ai-disclaimer" style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" data-i18n="ai_disclaimer_short">Chỉ gửi khi bấm Gửi — 4000 ký tự.</span>
+        <span style="display:flex; gap:4px;">
+          <button type="button" class="ai-tool-btn" id="ai-btn-new-chat" title="Cuộc trò chuyện mới" data-i18n-title="ai_btn_new_chat">↻</button>
+          <button type="button" class="ai-tool-btn" id="ai-btn-copy-last" title="Copy" data-i18n-title="ai_btn_copy_last">⎘</button>
+          <button type="button" class="ai-tool-btn" id="ai-btn-insert-note" title="Ghi chú" data-i18n-title="ai_btn_insert_note">→</button>
+          <button type="button" class="ai-tool-btn" id="ai-btn-clear-chat" title="Xóa" data-i18n-title="ai_btn_clear_chat">🗑</button>
+        </span>
+      </div>
+    </div>
+  </div>
+  <!-- AI Settings Modal -->
+  <div id="ai-settings-modal" class="ai-modal" style="display:none;">
+    <div class="ai-modal-backdrop" id="ai-settings-backdrop"></div>
+    <div class="ai-modal-box">
+      <div class="ai-modal-head">
+        <span style="font-weight:800; font-size:13px;" data-i18n="ai_settings_title">Cài đặt AI</span>
+        <button type="button" class="ai-modal-close" id="ai-btn-close-settings">✕</button>
+      </div>
+      <div class="ai-modal-body">
+        <div class="ai-settings-section">
+          <div class="ai-field-label" data-i18n="ai_api_keys_title">API Key theo model</div>
+          <label class="ai-field-sub" data-i18n="ai_key_gemini_label">Gemini</label>
+          <input type="password" id="ai-key-gemini" class="form-control" placeholder="AIza..." style="font-size:11px; margin-bottom:6px;">
+          <label class="ai-field-sub" data-i18n="ai_key_openai_label">ChatGPT</label>
+          <input type="password" id="ai-key-openai" class="form-control" placeholder="sk-..." style="font-size:11px; margin-bottom:6px;">
+          <label class="ai-field-sub" data-i18n="ai_key_claude_label">Claude</label>
+          <input type="password" id="ai-key-claude" class="form-control" placeholder="sk-ant-..." style="font-size:11px; margin-bottom:6px;">
+          <label class="ai-field-sub" data-i18n="ai_key_custom_label">Custom URL</label>
+          <input type="text" id="ai-custom-url" class="form-control" placeholder="https://your-api.example.com/v1/chat" style="font-size:11px;">
+          <input type="password" id="ai-key-input" class="form-control" style="display:none;">
+          <input type="password" id="ai-key-input-modal" class="form-control" style="display:none;">
+          <div style="display:flex; gap:6px; margin-top:8px;">
+            <button type="button" class="btn btn-secondary" id="ai-btn-toggle-key" title="Hiện/ẩn key" data-i18n-title="ai_btn_show_key">👁</button> <button type="button" class="btn btn-primary" id="ai-btn-save-key" style="flex:1;" data-i18n="ai_btn_save_all_keys">Lưu tất cả key</button>
+            <button type="button" class="btn btn-secondary" id="ai-btn-clear-key" data-i18n="ai_btn_clear_key2">Xóa</button>
+            <button type="button" class="btn btn-secondary" id="ai-btn-open-provider" data-i18n="ai_btn_open_provider">Lấy key ↗</button>
+          </div>
+        </div>
+        <div class="ai-settings-section">
+          <div class="ai-field-label" data-i18n="ai_model_label">Model</div>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <select id="ai-model-select" class="form-control" style="flex:1;"></select>
+            <button type="button" class="btn btn-secondary" id="ai-btn-fetch-models" data-i18n="ai_btn_fetch_models">Gợi ý model</button>
+          </div>
+          <div class="ai-hint" data-i18n="ai_model_hint">Chọn model có ✓ là khả dụng cho key.</div>
+        </div>
+        <div class="ai-settings-section">
+          <div class="ai-field-label" data-i18n="ai_prompt_title">Prompt</div>
+          <label class="ai-field-sub" data-i18n="ai_prompt_summary_label">Tóm tắt</label>
+          <textarea id="ai-prompt-summary" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;"></textarea>
+          <label class="ai-field-sub" data-i18n="ai_prompt_qa_label">Hỏi đáp</label>
+          <textarea id="ai-prompt-qa" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;"></textarea>
+          <label class="ai-field-sub" data-i18n="ai_prompt_explain_label">Giải thích</label>
+          <textarea id="ai-prompt-explain" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;"></textarea>
+          <label class="ai-field-sub" data-i18n="ai_prompt_translate_label">Dịch</label>
+          <textarea id="ai-prompt-translate" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;"></textarea>
+          <label class="ai-field-sub" data-i18n="ai_prompt_outline_label">Outline</label>
+          <textarea id="ai-prompt-outline" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;"></textarea>
+          <label class="ai-field-sub" data-i18n="ai_prompt_cite_label">Gợi ý</label>
+          <textarea id="ai-prompt-cite" class="form-control" rows="2" style="font-size:11px;"></textarea>
+          <label class="ai-field-sub" data-i18n="ai_prompt_answer_label">Giải đáp án</label>
+          <textarea id="ai-prompt-answer" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;"></textarea>
+          <button type="button" class="btn btn-secondary" id="ai-btn-save-prompts" style="width:100%; margin-top:8px;" data-i18n="ai_btn_save_prompts">Lưu prompt</button>
+          <button type="button" class="btn btn-secondary" id="ai-btn-reset-prompts" style="width:100%; margin-top:6px;" data-i18n="ai_btn_reset_prompts">Khôi phục</button>
+        </div>
+        <div class="ai-settings-section">
+          <div class="ai-field-label" data-i18n="ai_context_label">Ngữ cảnh</div>
+          <label class="ai-check"><input type="checkbox" id="ai-opt-page" checked> <span data-i18n="ai_opt_page">Nội dung trang</span></label>
+          <label class="ai-check"><input type="checkbox" id="ai-opt-selection" checked> <span data-i18n="ai_opt_selection">Đoạn bôi đen</span></label>
+          <label class="ai-check"><input type="checkbox" id="ai-opt-notes"> <span data-i18n="ai_opt_notes">Ghi chú</span></label>
+          <label class="ai-check"><input type="checkbox" id="ai-opt-images" checked> <span data-i18n="ai_opt_images">Ảnh trên trang</span></label>
+          <label class="ai-check"><input type="checkbox" id="ai-opt-source"> <span data-i18n="ai_opt_source">Nguồn thô + script (nâng cao)</span></label>
+          <div style="display:flex; gap:8px; margin-top:8px; align-items:center;">
+            <label class="ai-field-sub" style="flex:1;" data-i18n="ai_temp_label">Temperature: <span id="ai-temp-val">0.7</span></label>
+            <input type="range" id="ai-temp-range" min="0" max="1" step="0.1" value="0.7" style="flex:1;">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+<div id="tab-redact" class="tab-section">
     <div class="feature-card">
       <div class="feature-title" data-i18n="redact_heading">Che mờ &amp; Bảo mật thông tin trên trang</div>
       <div style="background:rgba(15,23,42,0.6); border:1px solid var(--card-border); border-radius:6px; padding:8px 10px; margin-bottom:10px; font-size:11.5px; line-height:1.5;">
@@ -1113,7 +1250,7 @@
       <div class="rule-card" style="border-color:rgba(245,158,11,0.35); background:rgba(245,158,11,0.06);">
         <div class="rule-card-title" style="color:#f59e0b;" data-i18n="trust_card4_title">⚖️ 4. Thông Tin Bản Quyền &amp; Kỹ Thuật</div>
         <div class="rule-card-body" data-i18n="trust_card4_body_html" data-i18n-html="true">
-          • <b>Phiên bản:</b> ScholarFlow v2.4.2_beta<br>
+          • <b>Phiên bản:</b> ScholarFlow v2.4.4_beta<br>
           • <b>Kiến trúc:</b> Manifest V3 (Chromium 114+ &amp; Firefox 109+ Native Gecko)<br>
           • <b>Bản quyền:</b> Bản quyền phần mềm thuộc về Minh Thuận<br>
           • <b>Chính sách bảo mật:</b> <a href="privacy.html" target="_blank" style="color:#38bdf8; text-decoration:underline;">Xem toàn văn Chính Sách Quyền Riêng Tư (Privacy Policy)</a>
@@ -1518,7 +1655,7 @@
   <div class="footer-trust-bar">
     <div class="trust-pill" title="Phiên bản hiện tại" data-i18n-title="tip_trust_version">
       <span class="trust-dot dot-green"></span>
-      <span id="app-version-display">v2.4.2_beta</span>
+      <span id="app-version-display">v2.4.4_beta</span>
     </div>
     <div class="trust-divider">•</div>
     <div class="trust-pill" title="Được phát triển bởi Minh Thuận" data-i18n-title="tip_trust_author">
@@ -1561,6 +1698,7 @@
   <script src="../js/init.js"></script>
   <script src="../js/tabs/calendar.js"></script>
   <script src="../js/tabs/pomodoro.js"></script>
+  <script src="../js/tabs/ai.js"></script>
   <script src="../js/debug.js"></script>
 </body>
 </html>

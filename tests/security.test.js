@@ -33,7 +33,20 @@ const ALLOWED_HOSTS = new Set([
   "api.crossref.org",
   "www.google.com",
   "scholar.google.com",
-  "search.crossref.org"
+  "search.crossref.org",
+  "generativelanguage.googleapis.com",
+  "api.openai.com",
+  "api.anthropic.com",
+  "aistudio.google.com",
+  "ai.google.dev",
+  "platform.openai.com",
+  "console.anthropic.com",
+  "docs.anthropic.com",
+  "your-api.example.com",
+  "example.com",
+  "gemini.google.com",
+  "chatgpt.com",
+  "claude.ai"
 ]);
 
 function walk(dir, out = []) {

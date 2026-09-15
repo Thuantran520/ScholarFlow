@@ -12,6 +12,65 @@
   window.notifySidebar = notifySidebar;
 
   // Message listener from sidebar / background (Firefox + Chrome compatible)
+  // --- YouTube transcript helpers (reads page's own ytInitialPlayerResponse -> timedtext API) ---
+  function sfYtExtractBalancedJson(s, i0) {
+    let depth = 0, inStr = false, esc = false;
+    for (let i = i0; i < s.length; i++) {
+      const ch = s[i];
+      if (inStr) { if (esc) { esc = false; } else if (ch === "\\") { esc = true; } else if (ch === "\"") { inStr = false; } continue; }
+      if (ch === "\"") { inStr = true; continue; }
+      if (ch === "{") { depth++; continue; }
+      if (ch === "}") { depth--; if (depth === 0) return s.slice(i0, i + 1); }
+      if (depth === 0 && i - i0 > 600000) break;
+    }
+    return "";
+  }
+  function sfYtFmtTs(totalSec) {
+    const s0 = Math.max(0, Math.floor(totalSec) || 0);
+    const h = Math.floor(s0 / 3600), m = Math.floor((s0 % 3600) / 60), sec = s0 % 60;
+    const p = (n) => String(n).padStart(2, "0");
+    return (h ? h + ":" : "") + p(m) + ":" + p(sec);
+  }
+  function sfYtCaptionToLines(json) {
+    let evs = [];
+    try { evs = (json && json.events) || []; } catch (e) { evs = []; }
+    const out = []; let cur = "", curMs = 0, total = 0;
+    for (const ev of evs) {
+      const segs = ev.segs || []; let t = "";
+      for (const sg of segs) { if (sg && typeof sg.utf8 === "string") t += sg.utf8; }
+      if (!t) continue;
+      if (/^\s*\n+\s*$/.test(t)) {
+        if (cur.trim()) { const line = "[" + sfYtFmtTs(curMs) + "] " + cur.replace(/\s+/g, " ").trim(); out.push(line); total += line.length; cur = ""; }
+        if (total > 23000) break;
+        continue;
+      }
+      if (!cur.trim()) curMs = Math.round((ev.tStartMs || 0) / 1000);
+      cur += t;
+    }
+    if (cur.trim() && total <= 23000) out.push("[" + sfYtFmtTs(curMs) + "] " + cur.replace(/\s+/g, " ").trim());
+    return out.join("\n").slice(0, 24000);
+  }
+  function sfYtPickTrack(tracks, lang) {
+    if (!Array.isArray(tracks) || !tracks.length) return null;
+    const want = String(lang || "vi").toLowerCase();
+    const root = want.split("-")[0];
+    let t = tracks.find(x => x && x.languageCode === want && x.kind !== "asr");
+    if (!t) t = tracks.find(x => x && String(x.languageCode || "").toLowerCase().startsWith(root) && x.kind !== "asr");
+    if (!t) t = tracks.find(x => x && String(x.languageCode || "").toLowerCase().startsWith(root));
+    if (!t) t = tracks.find(x => x && String(x.languageCode || "").toLowerCase().startsWith("en"));
+    if (!t) t = tracks.find(x => x && x.kind !== "asr");
+    if (!t) t = tracks[0];
+    return t || null;
+  }
+  function sfYtSafeBaseUrl(u) {
+    try {
+      const x = new URL(u);
+      const h = (x.hostname || "").toLowerCase();
+      if (x.protocol !== "https:" && x.protocol !== "http:") return "";
+      if (!/(^|\.)(youtube|youtube-nocookie|google|googlevideo|ggpht)\.com$/.test(h)) return "";
+      return x.toString();
+    } catch (e) { return ""; }
+  }
   const _runtimeApi = (typeof browser !== "undefined" && browser.runtime) ? browser.runtime
     : ((typeof chrome !== "undefined" && chrome.runtime) ? chrome.runtime : null);
   if (_runtimeApi && _runtimeApi.onMessage) {
@@ -386,6 +445,136 @@
           }
           break;
 
+        case "GET_PAGE_TEXT": {
+          let txt2 = "";
+          try {
+            const rootSel = document.querySelector("article") || document.querySelector("main") || document.querySelector("[role=main]") || document.body;
+            const skip = { SCRIPT: 1, STYLE: 1, NOSCRIPT: 1, NAV: 1, HEADER: 1, FOOTER: 1, ASIDE: 1, IFRAME: 1, FORM: 1, BUTTON: 1, SELECT: 1 };
+            const blockish = { P: 1, DIV: 1, LI: 1, UL: 1, OL: 1, TABLE: 1, TR: 1, SECTION: 1, H1: 1, H2: 1, H3: 1, H4: 1, H5: 1, BLOCKQUOTE: 1, PRE: 1, FIGCAPTION: 1 };
+            const hidden = (el) => {
+              try { const cs = window.getComputedStyle(el); return cs.display === "none" || cs.visibility === "hidden"; } catch (e) { return false; }
+            };
+            let out = "";
+            const imgNotes = [];
+            let guardCount = 0;
+            const walk = (el) => {
+              if (!el || guardCount++ > 12000 || out.length > 30000) return;
+              if (skip[el.tagName] || (el !== document.body && hidden(el))) return;
+              if (el.tagName === "IMG") {
+                const w0 = el.naturalWidth || el.width || 0, h0 = el.naturalHeight || el.height || 0;
+                const alt = (el.getAttribute("alt") || "").trim();
+                if (w0 >= 80 && h0 >= 80) {
+                  imgNotes.push(alt ? "Ảnh: " + alt : "Ảnh minh họa " + w0 + "x" + h0 + " (không có mô tả)");
+                  out += "[ảnh" + (alt ? ": " + alt : "") + "] ";
+                }
+                return;
+              }
+              if (el.children && el.children.length) {
+                for (const c of el.children) walk(c);
+                if (blockish[el.tagName]) out += "\n";
+                return;
+              }
+              const t = el.textContent;
+              if (t && t.trim()) out += t + " ";
+            };
+            walk(rootSel);
+            txt2 = out.replace(/[ \t]+/g, " ").replace(/\n ?/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+            if (imgNotes.length) txt2 += "\n\n[Danh sách ảnh trên trang]\n" + imgNotes.slice(0, 20).join("\n");
+            const max = typeof msg.maxChars === "number" ? Math.min(16000, Math.max(4000, msg.maxChars * 4)) : 12000;
+            if (txt2.length > max) txt2 = txt2.slice(0, max);
+          } catch (e) { txt2 = ""; }
+          sendResponse({ success: true, text: txt2 });
+          break;
+        }
+        case "GET_PAGE_IMAGES": {
+          let done = false;
+          const respond = (arr) => { if (done) return; done = true; sendResponse({ success: true, images: arr }); };
+          try {
+            const rootSel = document.querySelector("article") || document.querySelector("main") || document.body;
+            const cands = Array.prototype.slice.call(rootSel.querySelectorAll("img")).filter(im => {
+              const w0 = im.naturalWidth || im.width || 0, h0 = im.naturalHeight || im.height || 0;
+              return w0 >= 120 && h0 >= 120 && im.complete && im.naturalWidth > 0;
+            }).slice(0, (typeof msg.max === "number" ? msg.max : 3) + 2);
+            if (!cands.length) { respond([]); break; }
+            const conv = (im) => new Promise((res) => {
+              try {
+                const nw = im.naturalWidth || 256, nh = im.naturalHeight || 256;
+                const scale = Math.min(1, 1024 / Math.max(nw, nh));
+                const cv = document.createElement("canvas");
+                cv.width = Math.max(1, Math.round(nw * scale)); cv.height = Math.max(1, Math.round(nh * scale));
+                cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height);
+                const u = cv.toDataURL("image/jpeg", 0.72);
+                res(u.length < 700000 ? u : "");
+              } catch (e) { res(""); }
+            });
+            Promise.all(cands.map(conv)).then((list) => {
+              respond(list.filter(Boolean).slice(0, (typeof msg.max === "number" ? msg.max : 3)));
+            }).catch(() => respond([]));
+            setTimeout(() => respond([]), 6000);
+          } catch (e) { respond([]); }
+          break;
+        }
+        case "GET_SELECTION_TEXT": {
+          let sel = "";
+          try { sel = (window.getSelection ? window.getSelection().toString() : "") || ""; } catch (e) {}
+          sendResponse({ success: true, text: sel });
+          break;
+        }
+        case "GET_PAGE_SOURCE": {
+          let rawText = "";
+          let rawScripts = "";
+          try {
+            rawText = (document.body && document.body.textContent || "").replace(/\s+/g, " ").trim().slice(0, 20000);
+          } catch (e) { rawText = ""; }
+          try {
+            const parts = [];
+            const scs = document.querySelectorAll("script:not([src])");
+            for (let k = 0; k < scs.length && parts.length < 12; k++) {
+              const c = scs[k].textContent || "";
+              if (c.length > 20 && c.length < 30000) parts.push(c.replace(/\s+/g, " ").trim());
+            }
+            rawScripts = parts.join("\n").slice(0, 12000);
+          } catch (e) { rawScripts = ""; }
+          sendResponse({ success: true, text: rawText, scripts: rawScripts });
+          break;
+        }
+        case "GET_YT_TRANSCRIPT": {
+          let ytDone = false;
+          const ytRespond = (o) => { if (!ytDone) { ytDone = true; sendResponse(o); } }
+          try {
+            const host = (location.hostname || "").toLowerCase();
+            const isYtHost = host === "youtube.com" || host.endsWith(".youtube.com") || host === "youtu.be";
+            const isVideoUrl = /\/watch|\/shorts\/|\/embed\/|youtu\.be\//.test(location.href);
+            if (!isYtHost || !isVideoUrl) { ytRespond({ success: true, ok: false, reason: "not_youtube" }); break; }
+            let obj = null;
+            const scs = document.querySelectorAll("script:not([src])");
+            for (let k = 0; k < scs.length; k++) {
+              const c = scs[k].textContent || "";
+              const idx = c.indexOf("ytInitialPlayerResponse");
+              if (idx === -1) continue;
+              const b = c.indexOf("{", idx);
+              if (b === -1 || b - idx > 200) continue;
+              const j = sfYtExtractBalancedJson(c, b);
+              if (!j) continue;
+              try { obj = JSON.parse(j); } catch (e) { obj = null; }
+              if (obj) break;
+            }
+            const title = (obj && obj.videoDetails && obj.videoDetails.title) || document.title || "";
+            const tracks = obj && obj.captions && obj.captions.playerCaptionsTracklistRenderer && obj.captions.playerCaptionsTracklistRenderer.captionTracks;
+            if (!Array.isArray(tracks) || !tracks.length) { ytRespond({ success: true, ok: false, reason: "no_captions", title: title }); break; }
+            const tr = sfYtPickTrack(tracks, (msg && msg.lang) || "vi");
+            const safeUrl = tr && tr.baseUrl ? sfYtSafeBaseUrl(String(tr.baseUrl) + (String(tr.baseUrl).indexOf("?") !== -1 ? "&" : "?") + "fmt=json3") : "";
+            if (!safeUrl) { ytRespond({ success: true, ok: false, reason: "no_captions", title: title }); break; }
+            fetch(safeUrl, { signal: AbortSignal.timeout(8000) }).then(r => r.ok ? r.text() : "").then(txt => {
+              let json = null;
+              try { json = JSON.parse(txt); } catch (e) { json = null; }
+              const transcript = json ? sfYtCaptionToLines(json) : "";
+              ytRespond({ success: true, ok: transcript.length > 0, lang: tr.languageCode || "", kind: tr.kind || "manual", title: title, transcript: transcript });
+            }).catch(() => ytRespond({ success: true, ok: false, reason: "fetch_failed", title: title }));
+            setTimeout(() => ytRespond({ success: true, ok: false, reason: "timeout", title: title }), 9500);
+          } catch (e) { ytRespond({ success: true, ok: false, reason: "error" }); }
+          break;
+        }
         case "PING":
           sendResponse({ pong: true });
           break;

@@ -5,6 +5,17 @@ Tất cả thay đổi đáng chú ý của dự án đều được ghi tại �
 
 ---
 
+## So sánh nhanh v2.4.2 → v2.4.4
+
+| Hạng mục | v2.4.2 | v2.4.4 |
+|---|---|---|
+| **Trợ lý AI** | — | **Tab mới**: tóm tắt / hỏi đáp trên trang, Gemini · ChatGPT · Claude · Custom, key lưu local |
+| **Ngữ cảnh AI** | — | Nội dung trang + đoạn bôi đen + ghi chú (toggle từng phần, tối đa 4000 ký tự) |
+| **Model AI** | — | Gợi ý model theo API key (✓ khả dụng), đính kèm ảnh ≤4MB, 6 prompt chỉnh sửa được |
+| **Bảo mật** | Như v2.4.2 | Gọi API chỉ khi bấm Gửi; thêm `optional_host_permissions` cho 3 host AI |
+
+---
+
 ## So sánh nhanh v2.4.1 → v2.4.2
 
 | Hạng mục | v2.4.1 | v2.4.2 |
@@ -24,6 +35,28 @@ Tất cả thay đổi đáng chú ý của dự án đều được ghi tại �
 | **Autofill nguồn** | — | + tìm & tự điền metadata từ Crossref/OpenAlex |
 | **Teleprompter** | Cơ bản | + chỉnh tốc độ, ghi chú chạy song song, cuộn theo bài |
 | **Chụp & quay** | Ảnh, quay cơ bản | + quay màn hình chất lượng cao, ảnh sắc nét, chống treo iframe/cuộn lồng |
+
+---
+
+## [2.4.4] - 2026-09-15
+
+### Trợ lý AI (tab mới)
+
+- Thêm tab **"AI Trợ lý"** trong sidebar & popup: tóm tắt, hỏi đáp ngay trên trang đang đứng.
+- Hỗ trợ **Gemini (key miễn phí từ aistudio.google.com), ChatGPT, Claude, Custom URL**; API key chỉ lưu **local**, không gửi đi đâu khác.
+- **Ngữ cảnh tuỳ chọn** gửi kèm: nội dung trang (tối đa 4000 ký tự), đoạn bôi đen, ghi chú nghiên cứu.
+- **6 prompt nhanh**: Tóm tắt · Hỏi đáp · Giải thích · Dịch · Outline · Gợi ý — chỉnh sửa & khôi phục được trong Cài đặt.
+- **Gợi ý model theo API key** (Gemini): chỉ hiển thị model khả dụng (đánh dấu ✓), kèm hướng dẫn chuyển sang bản Lite khi model quá tải/404.
+- **Đính kèm ảnh** (≤4MB) để hỏi đa phương tiện; trả lời hiển thị dạng markdown cơ bản (bullet, đậm, code block).
+- **Lịch sử hội thoại** giữ 50 tin gần nhất; copy từng câu trả lời, chèn trả lời vào ghi chú, xoá/nhóm hội thoại.
+- Chế độ **không cần API key**: copy prompt + mở bản Web để dán — vẫn dùng được miễn phí.
+- **Đọc trang thật sự thông minh hơn**: tự bỏ menu/quảng cáo, chọn đoạn **liên quan đến câu hỏi** (không chỉ 4000 ký tự đầu), và **gửi kèm tối đa 3 ảnh trên trang** (resize bằng canvas tại máy bạn) cho model vision như Gemini — chỉ khi bấm Gửi.
+- **Chế độ "Nguồn thô + script" (nâng cao, mặc định TẮT)**: gửi cả text kể cả phần bị CSS ẩn + nội dung `<script>` nội tuyến của trang — dùng cho trang có đáp án/nội dung nhúng trong script; vẫn qua lớp cách ly untrusted + chọn đoạn liên quan.
+- **"Xem video YouTube nói gì"**: trên trang watch, extension tự đọc `ytInitialPlayerResponse` của chính trang → chọn track phụ đề (ưu tiên tiếng Việt, rồi tiếng Anh, kể cả auto-CC) → tải transcript qua API `timedtext` (chỉ cho phép host youtube/google) → đưa vào prompt kèm timestamp `[mm:ss]`, qua lớp cách ly untrusted. Không có phụ đề sẽ có cảnh báo.
+- **Chip "Giải đáp án"**: một chạm gửi prompt mẫu "giải trắc nghiệm + đáp án A/B/C/D + giải thích 1 dòng", tự dựa vào nội dung trang, ảnh câu hỏi hoặc dữ liệu đáp án nhúng trong mã nguồn (bật "Nguồn thô + script"). Prompt mẫu này chỉnh được trong ⚙ Cài đặt → Prompt.
+- **Bảo mật tab AI**: chặn Custom URL độc (chỉ HTTPS công khai; chặn localhost/IP nội bộ/metadata/credentials/redirect), **cách ly nội dung web** trong marker không tin cậy chống prompt injection + heuristic cảnh báo, lọc lịch sử chat (role/ảnh sai định dạng), giới hạn tốc độ gửi (2 giây/tin, 20 tin/5 phút).
+- Manifest: thêm `optional_host_permissions` cho `generativelanguage.googleapis.com`, `api.openai.com`, `api.anthropic.com` — chi dùng khi bấm Gửi.
+- Toàn bộ chuỗi mới đã dịch đủ **5 ngôn ngữ** (vi/en/zh/ru/ja).
 
 ---
 

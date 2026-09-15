@@ -1,0 +1,161 @@
+import pathlib
+
+ai_html = open('scripts/ai_html_snippet.txt', encoding='utf-8').read() if pathlib.Path('scripts/ai_html_snippet.txt').exists() else ''
+
+# If not exists, recreate
+if not ai_html:
+    ai_html = r'''
+  <!-- TAB AI: CHAT BOX -->
+  <div id="tab-ai" class="tab-section ai-chat-tab">
+    <div class="ai-chat-wrapper">
+      <div class="ai-chat-top">
+        <div class="ai-chat-title">
+          <span class="ai-chat-icon">✦</span>
+          <span data-i18n="ai_heading">AI Trợ lý</span>
+          <span id="ai-key-status" class="ai-status" style="display:none;" aria-hidden="true"></span>
+        </div>
+        <button type="button" class="ai-gear-btn" id="ai-btn-open-settings" title="Cài đặt" data-i18n-title="ai_settings_tip">⚙</button>
+      </div>
+      <div class="ai-model-bar">
+        <div class="ai-provider-pills">
+          <button type="button" class="ai-provider-pill active" data-provider="gemini">Gemini</button>
+          <button type="button" class="ai-provider-pill" data-provider="openai">ChatGPT</button>
+          <button type="button" class="ai-provider-pill" data-provider="claude">Claude</button>
+          <button type="button" class="ai-provider-pill" data-provider="custom">Custom</button>
+        </div>
+        <div class="ai-model-select-wrap" style="margin-left:auto;">
+          <select id="ai-model-select-main" class="ai-model-select"></select>
+          <select id="ai-provider-select" style="display:none;" aria-hidden="true"><option value="gemini">Gemini</option><option value="openai">ChatGPT</option><option value="claude">Claude</option><option value="custom">Custom</option></select>
+        </div>
+      </div>
+      <div class="ai-current-page" id="ai-current-page" style="display:flex; gap:8px; align-items:center; padding:8px 10px; background:rgba(15,23,42,0.5); border:1px solid rgba(255,255,255,0.06); border-radius:8px; margin:8px 0; font-size:11px;">
+        <span style="font-size:14px;">🌐</span>
+        <div style="flex:1; min-width:0; overflow:hidden;">
+          <div id="ai-page-title" style="font-weight:700; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" data-i18n="ai_page_title_default">Chưa có trang</div>
+          <div id="ai-page-url" style="color:#94a3b8; font-size:10.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">—</div>
+        </div>
+        <button type="button" class="btn btn-secondary" id="ai-btn-copy-page" style="padding:4px 8px; font-size:10.5px;" title="Copy URL">⎘</button>
+      </div>
+      <div id="ai-chat-history" class="ai-chat-history ai-chat-box"></div>
+      <div class="ai-quick-chips">
+        <button type="button" class="ai-chip" data-ai-quick="summary" data-i18n="ai_quick_summary">Tóm tắt</button>
+        <button type="button" class="ai-chip" data-ai-quick="qa" data-i18n="ai_quick_qa">Hỏi đáp</button>
+        <button type="button" class="ai-chip" data-ai-quick="explain" data-i18n="ai_quick_explain">Giải thích</button>
+        <button type="button" class="ai-chip" data-ai-quick="translate" data-i18n="ai_quick_translate">Dịch</button>
+        <button type="button" class="ai-chip" data-ai-quick="outline" data-i18n="ai_quick_outline">Outline</button>
+        <button type="button" class="ai-chip" data-ai-quick="cite" data-i18n="ai_quick_cite">Gợi ý</button>
+      </div>
+      <div id="ai-image-preview" style="display:none; padding:6px; margin:6px 0; background:rgba(15,23,42,0.65); border:1px solid rgba(56,189,248,0.2); border-radius:8px; align-items:center; gap:8px; flex-shrink:0;">
+        <img id="ai-image-thumb" src="" alt="" style="width:48px; height:48px; object-fit:cover; border-radius:6px; border:1px solid rgba(255,255,255,0.08);">
+        <span id="ai-image-name" style="flex:1; min-width:0; font-size:11px; color:#cbd5e1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
+        <button type="button" class="btn btn-secondary" id="ai-btn-remove-image" style="padding:4px 8px; font-size:11px;">✕</button>
+      </div>
+      <div class="ai-input-row">
+        <button type="button" class="btn btn-secondary" id="ai-btn-attach-image" title="Đính kèm">Ảnh</button>
+        <input type="file" id="ai-image-input" accept="image/*" style="display:none;">
+        <textarea id="ai-input" class="ai-input" rows="2" placeholder="Hỏi gì về trang này... (Enter gửi, Shift+Enter xuống dòng)" data-i18n-placeholder="ai_input_placeholder"></textarea>
+        <button type="button" class="ai-send-btn" id="ai-btn-send" data-i18n="ai_btn_send">Gửi</button>
+      </div>
+      <div class="ai-disclaimer-row" style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:8px; min-height:28px; padding:6px 8px; background:rgba(15,23,42,0.55); border:1px solid rgba(255,255,255,0.05); border-radius:8px;">
+        <span class="ai-disclaimer" style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" data-i18n="ai_disclaimer_short">Chỉ gửi khi bấm Gửi — 4000 ký tự.</span>
+        <span style="display:flex; gap:4px;">
+          <button type="button" class="ai-tool-btn" id="ai-btn-new-chat" title="Cuộc trò chuyện mới" data-i18n-title="ai_btn_new_chat">↻</button>
+          <button type="button" class="ai-tool-btn" id="ai-btn-copy-last" title="Copy" data-i18n-title="ai_btn_copy_last">⎘</button>
+          <button type="button" class="ai-tool-btn" id="ai-btn-insert-note" title="Ghi chú" data-i18n-title="ai_btn_insert_note">→</button>
+          <button type="button" class="ai-tool-btn" id="ai-btn-clear-chat" title="Xóa" data-i18n-title="ai_btn_clear_chat">🗑</button>
+        </span>
+      </div>
+    </div>
+  </div>
+  <!-- AI Settings Modal -->
+  <div id="ai-settings-modal" class="ai-modal" style="display:none;">
+    <div class="ai-modal-backdrop" id="ai-settings-backdrop"></div>
+    <div class="ai-modal-box">
+      <div class="ai-modal-head">
+        <span style="font-weight:800; font-size:13px;" data-i18n="ai_settings_title">Cài đặt AI</span>
+        <button type="button" class="ai-modal-close" id="ai-btn-close-settings">✕</button>
+      </div>
+      <div class="ai-modal-body">
+        <div class="ai-settings-section">
+          <div class="ai-field-label" data-i18n="ai_api_keys_title">API Key theo model</div>
+          <label class="ai-field-sub" data-i18n="ai_key_gemini_label">Gemini</label>
+          <input type="password" id="ai-key-gemini" class="form-control" placeholder="AIza..." style="font-size:11px; margin-bottom:6px;">
+          <label class="ai-field-sub" data-i18n="ai_key_openai_label">ChatGPT</label>
+          <input type="password" id="ai-key-openai" class="form-control" placeholder="sk-..." style="font-size:11px; margin-bottom:6px;">
+          <label class="ai-field-sub" data-i18n="ai_key_claude_label">Claude</label>
+          <input type="password" id="ai-key-claude" class="form-control" placeholder="sk-ant-..." style="font-size:11px; margin-bottom:6px;">
+          <label class="ai-field-sub" data-i18n="ai_key_custom_label">Custom URL</label>
+          <input type="text" id="ai-custom-url" class="form-control" placeholder="https://your-api.example.com/v1/chat" style="font-size:11px;">
+          <input type="password" id="ai-key-input" class="form-control" style="display:none;">
+          <input type="password" id="ai-key-input-modal" class="form-control" style="display:none;">
+          <div style="display:flex; gap:6px; margin-top:8px;">
+            <button type="button" class="btn btn-primary" id="ai-btn-save-key" style="flex:1;" data-i18n="ai_btn_save_all_keys">Lưu tất cả key</button>
+            <button type="button" class="btn btn-secondary" id="ai-btn-clear-key" data-i18n="ai_btn_clear_key2">Xóa</button>
+            <button type="button" class="btn btn-secondary" id="ai-btn-open-provider" data-i18n="ai_btn_open_provider">Lấy key ↗</button>
+          </div>
+        </div>
+        <div class="ai-settings-section">
+          <div class="ai-field-label" data-i18n="ai_model_label">Model</div>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <select id="ai-model-select" class="form-control" style="flex:1;"></select>
+            <button type="button" class="btn btn-secondary" id="ai-btn-fetch-models" data-i18n="ai_btn_fetch_models">Gợi ý model</button>
+          </div>
+          <div class="ai-hint" data-i18n="ai_model_hint">Chọn model có ✓ là khả dụng cho key.</div>
+        </div>
+        <div class="ai-settings-section">
+          <div class="ai-field-label" data-i18n="ai_prompt_title">Prompt</div>
+          <label class="ai-field-sub" data-i18n="ai_prompt_summary_label">Tóm tắt</label>
+          <textarea id="ai-prompt-summary" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;"></textarea>
+          <label class="ai-field-sub" data-i18n="ai_prompt_qa_label">Hỏi đáp</label>
+          <textarea id="ai-prompt-qa" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;"></textarea>
+          <label class="ai-field-sub" data-i18n="ai_prompt_explain_label">Giải thích</label>
+          <textarea id="ai-prompt-explain" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;"></textarea>
+          <label class="ai-field-sub" data-i18n="ai_prompt_translate_label">Dịch</label>
+          <textarea id="ai-prompt-translate" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;"></textarea>
+          <label class="ai-field-sub" data-i18n="ai_prompt_outline_label">Outline</label>
+          <textarea id="ai-prompt-outline" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;"></textarea>
+          <label class="ai-field-sub" data-i18n="ai_prompt_cite_label">Gợi ý</label>
+          <textarea id="ai-prompt-cite" class="form-control" rows="2" style="font-size:11px;"></textarea>
+          <button type="button" class="btn btn-secondary" id="ai-btn-save-prompts" style="width:100%; margin-top:8px;" data-i18n="ai_btn_save_prompts">Lưu prompt</button>
+          <button type="button" class="btn btn-secondary" id="ai-btn-reset-prompts" style="width:100%; margin-top:6px;" data-i18n="ai_btn_reset_prompts">Khôi phục</button>
+        </div>
+        <div class="ai-settings-section">
+          <div class="ai-field-label" data-i18n="ai_context_label">Ngữ cảnh</div>
+          <label class="ai-check"><input type="checkbox" id="ai-opt-page" checked> <span data-i18n="ai_opt_page">Nội dung trang</span></label>
+          <label class="ai-check"><input type="checkbox" id="ai-opt-selection" checked> <span data-i18n="ai_opt_selection">Đoạn bôi đen</span></label>
+          <label class="ai-check"><input type="checkbox" id="ai-opt-notes"> <span data-i18n="ai_opt_notes">Ghi chú</span></label>
+          <div style="display:flex; gap:8px; margin-top:8px; align-items:center;">
+            <label class="ai-field-sub" style="flex:1;" data-i18n="ai_temp_label">Temperature: <span id="ai-temp-val">0.7</span></label>
+            <input type="range" id="ai-temp-range" min="0" max="1" step="0.1" value="0.7" style="flex:1;">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+'''
+    pathlib.Path('scripts/ai_html_snippet.txt').write_text(ai_html, encoding='utf-8')
+    print('created snippet')
+
+for fname in ['OS/html/sidebar.html','OS/html/popup.html']:
+    fp=pathlib.Path(fname)
+    txt=fp.read_text(encoding='utf-8')
+    if 'id="tab-ai"' in txt:
+        print(f'already has AI in {fname}, skipping')
+        continue
+    # Insert before redact
+    insert_at=txt.find('<div id="tab-redact"')
+    if insert_at==-1:
+        print(f'not found redact in {fname}')
+        continue
+    txt=txt[:insert_at] + ai_html + txt[insert_at:]
+    fp.write_text(txt, encoding='utf-8')
+    print(f'inserted AI in {fname}')
+
+# Also ensure script tag for ai.js is present
+for fname in ['OS/html/sidebar.html','OS/html/popup.html']:
+    fp=pathlib.Path(fname)
+    txt=fp.read_text(encoding='utf-8')
+    if 'tabs/ai.js' not in txt:
+        txt=txt.replace('<script src="../js/tabs/security.js"></script>', '<script src="../js/tabs/ai.js"></script>\n<script src="../js/tabs/security.js"></script>')
+        fp.write_text(txt, encoding='utf-8')
+        print(f'added script tag in {fname}')
