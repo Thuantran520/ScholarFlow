@@ -595,6 +595,7 @@
           const ytRespond = (o) => { if (!ytDone) { ytDone = true; sendResponse(o); } }
           try {
             if (!sfYtIsVideoPage()) { ytRespond({ success: true, ok: false, reason: "not_youtube" }); break; }
+            const ytVidCur = sfYtCurrentVideoId();
             const obj = sfYtReadPlayerResponse();
             const vd = (obj && obj.videoDetails) || {};
             const mfObj = obj && obj.microformat && obj.microformat.playerMicroformatRenderer;
@@ -604,15 +605,15 @@
             const dateSnip = String((mfObj && mfObj.publishDate) || (mfObj && mfObj.uploadDate) || "").slice(0, 10);
             const viewsSnip = String(vd.viewCount || "");
             const tracks = obj && obj.captions && obj.captions.playerCaptionsTracklistRenderer && obj.captions.playerCaptionsTracklistRenderer.captionTracks;
-            if (!Array.isArray(tracks) || !tracks.length) { ytRespond({ success: true, ok: false, reason: "no_captions", title: title, author: author, description: descSnip, date: dateSnip, views: viewsSnip }); break; }
+            if (!Array.isArray(tracks) || !tracks.length) { ytRespond({ success: true, ok: false, reason: "no_captions", videoId: ytVidCur, title: title, author: author, description: descSnip, date: dateSnip, views: viewsSnip }); break; }
             const tr = sfYtPickTrack(tracks, (msg && msg.lang) || "vi");
             const safeUrl = tr && tr.baseUrl ? sfYtSafeBaseUrl(String(tr.baseUrl) + (String(tr.baseUrl).indexOf("?") !== -1 ? "&" : "?") + "fmt=json3") : "";
-            if (!safeUrl) { ytRespond({ success: true, ok: false, reason: "no_captions", title: title, author: author, description: descSnip, date: dateSnip, views: viewsSnip }); break; }
+            if (!safeUrl) { ytRespond({ success: true, ok: false, reason: "no_captions", videoId: ytVidCur, title: title, author: author, description: descSnip, date: dateSnip, views: viewsSnip }); break; }
             fetch(safeUrl, { signal: AbortSignal.timeout(8000) }).then(r => r.ok ? r.text() : "").then(txt => {
               let json = null;
               try { json = JSON.parse(txt); } catch (e) { json = null; }
               const transcript = json ? sfYtCaptionToLines(json) : "";
-              ytRespond({ success: true, ok: transcript.length > 0, reason: transcript.length > 0 ? "" : "no_captions", lang: tr.languageCode || "", kind: tr.kind || "manual", title: title, author: author, description: descSnip, date: dateSnip, views: viewsSnip, transcript: transcript });
+              ytRespond({ success: true, ok: transcript.length > 0, reason: transcript.length > 0 ? "" : "no_captions", lang: tr.languageCode || "", kind: tr.kind || "manual", videoId: ytVidCur, title: title, author: author, description: descSnip, date: dateSnip, views: viewsSnip, transcript: transcript });
             }).catch(() => ytRespond({ success: true, ok: false, reason: "fetch_failed", title: title, author: author, description: descSnip, date: dateSnip, views: viewsSnip }));
             setTimeout(() => ytRespond({ success: true, ok: false, reason: "timeout", title: title, author: author, description: descSnip, date: dateSnip, views: viewsSnip }), 9500);
           } catch (e) { ytRespond({ success: true, ok: false, reason: "error" }); }

@@ -449,8 +449,8 @@ function aiGetYouTubeTranscript(){
     setTimeout(()=>fin(null),15000);
     try{
       sendTabMessage({action:"GET_YT_TRANSCRIPT", timeoutMs:14000, lang:(typeof currentAppLanguage!=="undefined"&&currentAppLanguage)||"vi"}, r=>{
-        if(r&&r.ok&&typeof r.transcript==="string"&&r.transcript.trim()){ fin({title:String(r.title||""),author:String(r.author||""),description:String(r.description||""),date:String(r.date||""),views:String(r.views||""),lang:String(r.lang||""),kind:String(r.kind||""),text:String(r.transcript).slice(0,24000)}); }
-        else if(r&&r.reason==="no_captions"){ fin({noCaptions:true,title:String(r.title||""),author:String(r.author||""),description:String(r.description||""),date:String(r.date||""),views:String(r.views||"")}); }
+        if(r&&r.ok&&typeof r.transcript==="string"&&r.transcript.trim()){ fin({vid:String(r.videoId||""),title:String(r.title||""),author:String(r.author||""),description:String(r.description||""),date:String(r.date||""),views:String(r.views||""),lang:String(r.lang||""),kind:String(r.kind||""),text:String(r.transcript).slice(0,24000)}); }
+        else if(r&&r.reason==="no_captions"){ fin({noCaptions:true,vid:String(r.videoId||""),title:String(r.title||""),author:String(r.author||""),description:String(r.description||""),date:String(r.date||""),views:String(r.views||"")}); }
         else fin(null);
       });
     }catch(e){ fin(null); }
@@ -844,10 +844,11 @@ async function aiSendCurrent(){
   }
   let transcriptData=null; let pageUrl="";
   try{ pageUrl=(typeof currentTabUrl!=="undefined"&&currentTabUrl)?String(currentTabUrl):((typeof currentMeta!=="undefined"&&currentMeta&&currentMeta.url)?String(currentMeta.url):""); }catch(e){}
-  if(aiIsYouTubeUrl(pageUrl)){ try{ transcriptData=await aiGetYouTubeTranscript(); }catch(e){} }
+  const pageVid=aiIsYouTubeUrl(pageUrl)?aiExtractYouTubeId(pageUrl):"";
+  if(aiIsYouTubeUrl(pageUrl)){ try{ transcriptData=await aiGetYouTubeTranscript(); }catch(e){} if(transcriptData&&pageVid&&transcriptData.vid&&transcriptData.vid!==pageVid) transcriptData=null; }
   if(!transcriptData||!transcriptData.text){
     const staleLive=!transcriptData||(transcriptData.noCaptions&&!transcriptData.description&&!transcriptData.date);
-    const ytVid=aiExtractYouTubeId(raw)||((staleLive&&aiIsYouTubeUrl(pageUrl))?aiExtractYouTubeId(pageUrl):"");
+    const ytVid=aiExtractYouTubeId(raw)||(staleLive?pageVid:"");
     if(ytVid){ try{ const alt=await aiFetchTranscriptForVideo(ytVid); if(alt&&(!transcriptData||alt.text||(alt.description&&!transcriptData.description))) transcriptData=alt; }catch(e){} }
   }
   let pageImages=[];

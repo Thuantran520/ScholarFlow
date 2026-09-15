@@ -1096,6 +1096,8 @@ async function main() {
     const initSrc = fs.readFileSync(path.join(__dirname, "..", "OS", "js", "init.js"), "utf8");
     check(initSrc.includes("aiYtHiddenTabMeta") && initSrc.includes("oembed"),
       "citation: YouTube meta 3-tier merge (live tab -> hidden hard-load tab -> oEmbed)");
+    check(contentMain.includes("videoId: ytVidCur") && aiSrc.includes("transcriptData.vid!==pageVid") && initSrc.includes("ytMeta.videoId !== ytVid"),
+      "SPA race guard: all consumers discard metadata whose videoId differs from the open video");
     check(aiSrc.includes("function aiBuildMsgRow") && aiSrc.includes("aiSaveHistorySoon"),
       "AI module: incremental row render + debounced history persistence");
     check(aiSrc.includes("streamGenerateContent") && aiSrc.includes("?alt=sse"),
