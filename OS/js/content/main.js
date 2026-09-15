@@ -598,7 +598,7 @@
             const obj = sfYtReadPlayerResponse();
             const vd = (obj && obj.videoDetails) || {};
             const mfObj = obj && obj.microformat && obj.microformat.playerMicroformatRenderer;
-            const title = vd.title || document.title || "";
+            const title = vd.title || String(document.title || "").replace(/ - YouTube$/i, "") || "";
             const author = vd.author || "";
             const descSnip = String(vd.shortDescription || "").slice(0, 6000);
             const dateSnip = String((mfObj && mfObj.publishDate) || (mfObj && mfObj.uploadDate) || "").slice(0, 10);
@@ -628,7 +628,8 @@
             const microVid = (microHref.match(/v=([\w-]{8,12})/) || [])[1] || "";
             const microFresh = !!curVid && microVid === curVid;
             const cleanTitle = (t0) => String(t0 || "").replace(/ - YouTube$/i, "");
-            const fTitle = (microFresh ? (gm('meta[itemprop="name"]') || "") : "") || gm('meta[property="og:title"]') || cleanTitle(document.title);
+            const domTitle = txt("#title h1") || txt("ytd-watch-metadata #title yt-formatted-string") || txt("h1.ytd-video-primary-info-renderer") || txt("ytd-watch-metadata h1") || cleanTitle(document.title);
+            const fTitle = (microFresh ? (gm('meta[itemprop="name"]') || "") : "") || domTitle || gm('meta[property="og:title"]');
             const fAuthor = (microFresh ? (gm("[itemprop='author'] [itemprop='name']") || gm("[itemprop='author'] meta[itemprop='name']") || gm("[itemprop='author'] link[itemprop='name']") || gm('link[itemprop="name"]')) : "")
               || txt("ytd-video-owner-renderer #channel-name a") || txt("#owner #channel-name a") || txt("ytd-channel-name a") || txt("ytd-watch-metadata #owner a");
             const fDate = microFresh ? (gm('meta[itemprop="datePublished"]') || gm('meta[itemprop="uploadDate"]') || gm('meta[itemprop="startDate"]')) : "";

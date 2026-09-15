@@ -1081,6 +1081,8 @@ async function main() {
       "content script: GET_YT_META returns title/author/publishDate for citation");
     check(contentMain.includes("sfYtCurrentVideoId") && contentMain.includes("videoDetails.videoId || \x22\x22) === curVid") && contentMain.includes("microFresh"),
       "content script: playerResponse verified against current videoId (SPA stale-data guard) + microdata freshness check");
+    check(contentMain.includes("domTitle") && contentMain.includes("#title h1"),
+      "content script: video title prefers fresh SPA DOM (h1/#title/document.title) over stale og:title");
     const aiSrc = fs.readFileSync(path.join(__dirname, "..", "OS", "js", "tabs", "ai.js"), "utf8");
     check(aiSrc.includes('addEventListener("paste"'), "AI module: clipboard image paste wired");
     check(aiSrc.includes("window.aiScrapeTranscriptViaHiddenTab") && aiSrc.includes("async function aiScrapeTranscriptViaHiddenTab"),
