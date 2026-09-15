@@ -120,7 +120,7 @@ function main() {
 
   // 5. Static t() / getI18nText() keys in sidebar modules resolve
   const scanDirs = ["OS/js/i18n.js", "OS/js/init.js", "OS/js/tabs", "OS/js/citation", "OS/js/core", "OS/js/editor", "OS/js/utils", "OS/js/verify.js", "OS/js/redact.js"];
-  const keyRe = /(?:\bt\s*\(\s*"|getI18nText\s*\(\s*"|i18n\.t\s*\(\s*")([^")]+)"/g;
+  const keyRe = /(?:\bt\s*\(\s*"|aiT\s*\(\s*"|getI18nText\s*\(\s*"|i18n\.t\s*\(\s*")([^")]+)"\s*[,)]/g;
   const jsKeys = new Set();
   function walk(file) {
     const st = fs.statSync(file);

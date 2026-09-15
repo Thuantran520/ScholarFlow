@@ -81,7 +81,7 @@ balanced `{}` placeholders, HTML `data-i18n*` resolution, static `t()` keys, and
   - `OS/js/core/*` (browser/state/constants/messaging/active-tab), `OS/js/citation/*`,
     `OS/js/tabs/*`, `OS/js/content/*`, `OS/js/utils/*`, `OS/js/editor/*`.
 - Content scripts load in this order (in `manifest*.json` `content_scripts.js`):
-  `i18n.js → inspect.js → snip.js → scroll.js → citation.js → main.js`.
+  `i18n.js → inspect.js → snip.js → scroll.js → citation.js → security.js → main.js`.
   Do not reorder unless you also update all 3 manifests.
 - `OS/js/content/i18n.js` is **generated** — never hand-edit.
 - Sidebar/popup must stay structurally mirrored: same `id` set, same `data-i18n` keys,
@@ -170,6 +170,7 @@ Runs the pre-packaging checks, then writes `dist/ScholarFlow_v<ver>_Chrome.zip` 
 | Pre-packaging checks | `pwsh scripts/check_store.ps1` |
 | Package zips | `pwsh scripts/package.ps1` |
 | Chrome dev load | `pwsh scripts/dev_chrome.ps1` |
+| Refresh dist staging (after editing OS/, before browser Reload) | `pwsh scripts/sync_dist.ps1` (`-Firefox` also) |
 
 ---
 

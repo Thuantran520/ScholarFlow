@@ -71,6 +71,31 @@
       return x.toString();
     } catch (e) { return ""; }
   }
+  function sfYtIsVideoPage() {
+    const host = (location.hostname || "").toLowerCase();
+    return (host === "youtube.com" || host.endsWith(".youtube.com") || host === "youtu.be") && /\/watch|\/shorts\/|\/embed\/|youtu\.be\//.test(location.href);
+  }
+  let _sfYtPRCache = { url: "", at: 0, obj: null };
+  function sfYtReadPlayerResponse() {
+    const now = Date.now();
+    if (_sfYtPRCache.url === location.href && (now - _sfYtPRCache.at) < 90000) return _sfYtPRCache.obj;
+    let found = null;
+    try {
+      const scs = document.querySelectorAll("script:not([src])");
+      for (let k = 0; k < scs.length; k++) {
+        const c = scs[k].textContent || "";
+        const idx = c.indexOf("ytInitialPlayerResponse");
+        if (idx === -1) continue;
+        const b = c.indexOf("{", idx);
+        if (b === -1 || b - idx > 200) continue;
+        const j = sfYtExtractBalancedJson(c, b);
+        if (!j) continue;
+        try { const o = JSON.parse(j); if (o) { found = o; break; } } catch (e) { }
+      }
+    } catch (e) { found = null; }
+    if (found) _sfYtPRCache = { url: location.href, at: now, obj: found };
+    return found;
+  }
   const _runtimeApi = (typeof browser !== "undefined" && browser.runtime) ? browser.runtime
     : ((typeof chrome !== "undefined" && chrome.runtime) ? chrome.runtime : null);
   if (_runtimeApi && _runtimeApi.onMessage) {
@@ -542,37 +567,60 @@
           let ytDone = false;
           const ytRespond = (o) => { if (!ytDone) { ytDone = true; sendResponse(o); } }
           try {
-            const host = (location.hostname || "").toLowerCase();
-            const isYtHost = host === "youtube.com" || host.endsWith(".youtube.com") || host === "youtu.be";
-            const isVideoUrl = /\/watch|\/shorts\/|\/embed\/|youtu\.be\//.test(location.href);
-            if (!isYtHost || !isVideoUrl) { ytRespond({ success: true, ok: false, reason: "not_youtube" }); break; }
-            let obj = null;
-            const scs = document.querySelectorAll("script:not([src])");
-            for (let k = 0; k < scs.length; k++) {
-              const c = scs[k].textContent || "";
-              const idx = c.indexOf("ytInitialPlayerResponse");
-              if (idx === -1) continue;
-              const b = c.indexOf("{", idx);
-              if (b === -1 || b - idx > 200) continue;
-              const j = sfYtExtractBalancedJson(c, b);
-              if (!j) continue;
-              try { obj = JSON.parse(j); } catch (e) { obj = null; }
-              if (obj) break;
-            }
+            if (!sfYtIsVideoPage()) { ytRespond({ success: true, ok: false, reason: "not_youtube" }); break; }
+            const obj = sfYtReadPlayerResponse();
             const title = (obj && obj.videoDetails && obj.videoDetails.title) || document.title || "";
+            const author = (obj && obj.videoDetails && obj.videoDetails.author) || "";
             const tracks = obj && obj.captions && obj.captions.playerCaptionsTracklistRenderer && obj.captions.playerCaptionsTracklistRenderer.captionTracks;
-            if (!Array.isArray(tracks) || !tracks.length) { ytRespond({ success: true, ok: false, reason: "no_captions", title: title }); break; }
+            if (!Array.isArray(tracks) || !tracks.length) { ytRespond({ success: true, ok: false, reason: "no_captions", title: title, author: author }); break; }
             const tr = sfYtPickTrack(tracks, (msg && msg.lang) || "vi");
             const safeUrl = tr && tr.baseUrl ? sfYtSafeBaseUrl(String(tr.baseUrl) + (String(tr.baseUrl).indexOf("?") !== -1 ? "&" : "?") + "fmt=json3") : "";
-            if (!safeUrl) { ytRespond({ success: true, ok: false, reason: "no_captions", title: title }); break; }
+            if (!safeUrl) { ytRespond({ success: true, ok: false, reason: "no_captions", title: title, author: author }); break; }
             fetch(safeUrl, { signal: AbortSignal.timeout(8000) }).then(r => r.ok ? r.text() : "").then(txt => {
               let json = null;
               try { json = JSON.parse(txt); } catch (e) { json = null; }
               const transcript = json ? sfYtCaptionToLines(json) : "";
-              ytRespond({ success: true, ok: transcript.length > 0, lang: tr.languageCode || "", kind: tr.kind || "manual", title: title, transcript: transcript });
-            }).catch(() => ytRespond({ success: true, ok: false, reason: "fetch_failed", title: title }));
-            setTimeout(() => ytRespond({ success: true, ok: false, reason: "timeout", title: title }), 9500);
+              ytRespond({ success: true, ok: transcript.length > 0, lang: tr.languageCode || "", kind: tr.kind || "manual", title: title, author: author, transcript: transcript });
+            }).catch(() => ytRespond({ success: true, ok: false, reason: "fetch_failed", title: title, author: author }));
+            setTimeout(() => ytRespond({ success: true, ok: false, reason: "timeout", title: title, author: author }), 9500);
           } catch (e) { ytRespond({ success: true, ok: false, reason: "error" }); }
+          break;
+        }
+        case "GET_YT_META": {
+          try {
+            if (!sfYtIsVideoPage()) { sendResponse({ success: true, ok: false, reason: "not_youtube" }); break; }
+            const gm = (sel, attr) => { try { const el = document.querySelector(sel); return el ? String(el.getAttribute(attr || "content") || "") : ""; } catch (e) { return ""; } };
+            const vidLoc = (location.href.match(/(?:v=|youtu\.be\/|shorts\/|embed\/)([\w-]{8,12})/) || [])[1] || "";
+            // Fast path: microdata only (no giant JSON parse)
+            const fTitle = gm('meta[itemprop="name"]') || gm('meta[property="og:title"]') || document.title || "";
+            const fAuthor = gm("[itemprop='author'] [itemprop='name']") || gm("[itemprop='author'] meta[itemprop='name']") || gm("[itemprop='author'] link[itemprop='name']") || gm('link[itemprop="name"]');
+            const fDate = gm('meta[itemprop="datePublished"]') || gm('meta[itemprop="uploadDate"]') || gm('meta[itemprop="startDate"]') || (function () { try { const t = document.querySelector('time[itemprop="datePublished"],time[itemprop="uploadDate"]'); return t ? String(t.getAttribute("datetime") || "") : ""; } catch (e) { return ""; } })();
+            if (fAuthor && fDate) {
+              sendResponse({ success: true, ok: true, fast: true, title: fTitle, author: fAuthor, publishDate: fDate, publisher: "YouTube", platform: "YouTube", videoId: vidLoc, lengthSeconds: "" });
+              break;
+            }
+            const obj = sfYtReadPlayerResponse();
+            const mf = obj && obj.microformat && obj.microformat.playerMicroformatRenderer;
+            const title = (obj && obj.videoDetails && obj.videoDetails.title) || fTitle || "";
+            const author = (obj && obj.videoDetails && obj.videoDetails.author) || fAuthor || "";
+            const publishDate = (mf && mf.publishDate) || (mf && mf.uploadDate) || fDate || "";
+            sendResponse({
+              success: true, ok: !!(title || author || publishDate),
+              title: title, author: author, publishDate: publishDate,
+              publisher: "YouTube", platform: "YouTube",
+              videoId: (obj && obj.videoDetails && obj.videoDetails.videoId) || vidLoc,
+              lengthSeconds: (obj && obj.videoDetails && obj.videoDetails.lengthSeconds) || ""
+            });
+          } catch (e) { sendResponse({ success: true, ok: false }); }
+          break;
+        }
+        case "YT_SEEK": {
+          let seekOk = false;
+          try {
+            const v = document.querySelector("video");
+            if (v) { v.currentTime = Math.max(0, Number(msg.seconds) || 0); seekOk = true; }
+          } catch (e) { seekOk = false; }
+          sendResponse({ success: seekOk });
           break;
         }
         case "PING":

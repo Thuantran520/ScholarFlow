@@ -29,6 +29,7 @@ const ALLOWED_HOSTS = new Set([
   "www.youtube.com",
   "music.youtube.com",
   "img.youtube.com",
+  "video.google.com",
   "api.openalex.org",
   "api.crossref.org",
   "www.google.com",

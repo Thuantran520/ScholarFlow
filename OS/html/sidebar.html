@@ -113,6 +113,18 @@
         <span class="nav-icon" id="icon-tab-cal"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></span>
         <span class="nav-label" data-i18n="nav_cal">Lịch</span>
       </button>
+      <button class="main-nav-btn" data-target="tab-tabmgr" title="Quản lý tab trình duyệt" data-i18n-title="tip_tab_tabmgr">
+        <span class="nav-icon" id="icon-tab-tabmgr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect></svg></span>
+        <span class="nav-label" data-i18n="nav_tabmgr">Tab Manager</span>
+      </button>
+      <button class="main-nav-btn" data-target="tab-testhelper" title="Test Helper chuyên sâu" data-i18n-title="tip_tab_testhelper">
+        <span class="nav-icon" id="icon-tab-testhelper"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg></span>
+        <span class="nav-label" data-i18n="nav_testhelper">Test Helper</span>
+      </button>
+      <button class="main-nav-btn" data-target="tab-security" title="Bảo mật thời gian thực" data-i18n-title="tip_tab_security">
+        <span class="nav-icon" id="icon-tab-security"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg></span>
+        <span class="nav-label" data-i18n="nav_security">Security</span>
+      </button>
     </div>
     <button id="nav-scroll-right" class="nav-scroll-arrow" title="Cuộn phải" data-i18n-title="tip_scroll_right">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
@@ -522,6 +534,8 @@
         <button type="button" class="ai-chip" data-ai-quick="outline" data-i18n="ai_quick_outline">Outline</button>
         <button type="button" class="ai-chip" data-ai-quick="cite" data-i18n="ai_quick_cite">Gợi ý</button>
         <button type="button" class="ai-chip" data-ai-quick="answer" data-i18n="ai_quick_answer">Giải đáp án</button>
+        <button type="button" class="ai-chip" data-ai-quick="papers" data-i18n="ai_quick_papers">Tài liệu</button>
+        <button type="button" class="ai-chip" data-ai-quick="tabs" data-i18n="ai_quick_tabs">Tab</button>
       </div>
       <div id="ai-image-preview" style="display:none; padding:6px; margin:6px 0; background:rgba(15,23,42,0.65); border:1px solid rgba(56,189,248,0.2); border-radius:8px; align-items:center; gap:8px; flex-shrink:0;">
         <img id="ai-image-thumb" src="" alt="" style="width:48px; height:48px; object-fit:cover; border-radius:6px; border:1px solid rgba(255,255,255,0.08);">
@@ -529,7 +543,7 @@
         <button type="button" class="btn btn-secondary" id="ai-btn-remove-image" style="padding:4px 8px; font-size:11px;">✕</button>
       </div>
       <div class="ai-input-row">
-        <button type="button" class="btn btn-secondary" id="ai-btn-attach-image" title="Đính kèm" data-i18n-title="ai_btn_attach_image">Ảnh</button>
+        <button type="button" class="btn btn-secondary" id="ai-btn-attach-image" data-i18n="ai_btn_attach_label" title="Đính kèm" data-i18n-title="ai_btn_attach_image">Ảnh</button>
         <input type="file" id="ai-image-input" accept="image/*" style="display:none;">
         <textarea id="ai-input" class="ai-input" rows="2" placeholder="Hỏi gì về trang này... (Enter gửi, Shift+Enter xuống dòng)" data-i18n-placeholder="ai_input_placeholder"></textarea>
         <button type="button" class="ai-send-btn" id="ai-btn-send" data-i18n="ai_btn_send">Gửi</button>
@@ -596,6 +610,10 @@
           <textarea id="ai-prompt-cite" class="form-control" rows="2" style="font-size:11px;"></textarea>
           <label class="ai-field-sub" data-i18n="ai_prompt_answer_label">Giải đáp án</label>
           <textarea id="ai-prompt-answer" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;"></textarea>
+          <label class="ai-field-sub" data-i18n="ai_prompt_papers_label">Tài liệu</label>
+          <textarea id="ai-prompt-papers" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;"></textarea>
+          <label class="ai-field-sub" data-i18n="ai_prompt_tabs_label">Tóm tắt tab</label>
+          <textarea id="ai-prompt-tabs" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;"></textarea>
           <button type="button" class="btn btn-secondary" id="ai-btn-save-prompts" style="width:100%; margin-top:8px;" data-i18n="ai_btn_save_prompts">Lưu prompt</button>
           <button type="button" class="btn btn-secondary" id="ai-btn-reset-prompts" style="width:100%; margin-top:6px;" data-i18n="ai_btn_reset_prompts">Khôi phục</button>
         </div>
@@ -606,6 +624,7 @@
           <label class="ai-check"><input type="checkbox" id="ai-opt-notes"> <span data-i18n="ai_opt_notes">Ghi chú</span></label>
           <label class="ai-check"><input type="checkbox" id="ai-opt-images" checked> <span data-i18n="ai_opt_images">Ảnh trên trang</span></label>
           <label class="ai-check"><input type="checkbox" id="ai-opt-source"> <span data-i18n="ai_opt_source">Nguồn thô + script (nâng cao)</span></label>
+          <label class="ai-check"><input type="checkbox" id="ai-opt-stream" checked> <span data-i18n="ai_opt_stream">Stream từng chữ (Gemini/ChatGPT)</span></label>
           <div style="display:flex; gap:8px; margin-top:8px; align-items:center;">
             <label class="ai-field-sub" style="flex:1;" data-i18n="ai_temp_label">Temperature: <span id="ai-temp-val">0.7</span></label>
             <input type="range" id="ai-temp-range" min="0" max="1" step="0.1" value="0.7" style="flex:1;">
@@ -1652,6 +1671,126 @@
     </div>
   </div>
 
+  <div id="tab-tabmgr" class="tab-section">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+      <div class="feature-title" style="margin-bottom:0;" data-i18n="tabmgr_title">Tab Manager</div>
+      <span id="tabmgr-count-badge" style="font-size:11px; font-weight:700; color:#38bdf8; background:rgba(56,189,248,0.12); padding:2px 8px; border-radius:12px; border:1px solid rgba(56,189,248,0.25);">0</span>
+    </div>
+    <p style="color:var(--text-muted); font-size:11.5px; margin-bottom:8px; line-height:1.4;" data-i18n="tabmgr_desc">Quản lý tab trên cả Firefox & Chromium — ghim, bookmark, đóng, nhân đôi.</p>
+    <div id="tabmgr-active-live" style="font-size:10px; color:#38bdf8; background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.15); border-radius:6px; padding:4px 8px; margin-bottom:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">--:--:--</div>
+    <div style="display:flex; gap:6px; margin-bottom:8px;">
+      <input type="text" id="tabmgr-search" class="form-control" placeholder="Tìm tab..." data-i18n-placeholder="tabmgr_search_ph" style="flex:1; font-size:11px; padding:5px 8px;">
+      <button id="btn-tabmgr-refresh" class="cal-tool-btn" title="Làm mới" data-i18n-title="tabmgr_btn_refresh">↻</button>
+    </div>
+    <div style="display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap; align-items:center;">
+      <select id="tabmgr-sort" class="form-control" style="width:130px; font-size:11px; padding:5px 6px;">
+        <option value="title_asc" data-i18n="tabmgr_sort_title_asc">Tên A→Z</option>
+        <option value="title_desc" data-i18n="tabmgr_sort_title_desc">Tên Z→A</option>
+        <option value="domain" data-i18n="tabmgr_sort_domain">Theo domain</option>
+        <option value="url_asc" data-i18n="tabmgr_sort_url">Theo URL</option>
+      </select>
+      <select id="tabmgr-group-mode" class="form-control" style="width:130px; font-size:11px; padding:5px 6px;">
+        <option value="none" data-i18n="tabmgr_group_none">Không nhóm</option>
+        <option value="domain" data-i18n="tabmgr_group_domain">Nhóm domain</option>
+        <option value="function" data-i18n="tabmgr_group_function">Nhóm chức năng</option>
+      </select>
+      <span style="margin-left:auto; font-size:10px; color:var(--text-muted);"><span id="tabmgr-domain-count">0</span> domain</span>
+    </div>
+    <div style="display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap;">
+      <button id="btn-tabmgr-close-dup" class="btn-text-small" data-i18n="tabmgr_btn_close_dup">Đóng trùng</button>
+      <button id="btn-tabmgr-bookmark-all" class="btn-text-small" data-i18n="tabmgr_btn_bookmark_all">Bookmark tất cả</button>
+      <button id="btn-tabmgr-discard-all" class="btn-text-small" data-i18n="tabmgr_btn_discard_all">Tạm dừng</button>
+      <button id="btn-tabmgr-close-all" class="btn-text-small" style="color:#94a3b8; border-color:rgba(255,255,255,0.08);" data-i18n="tabmgr_btn_close_all">Đóng tất cả</button>
+    </div>
+    <div style="display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap;">
+      <button id="btn-tabmgr-export-md" class="btn-text-small" data-i18n="tabmgr_btn_export_md">Xuất MD</button>
+      <button id="btn-tabmgr-export-txt" class="btn-text-small" data-i18n="tabmgr_btn_export_txt">Xuất TXT</button>
+      <button id="btn-tabmgr-group-browser" class="btn-text-small" style="background:rgba(56,189,248,0.08); border-color:rgba(56,189,248,0.18); color:#38bdf8;" data-i18n="tabmgr_btn_group_browser">Nhóm ở trình duyệt</button>
+    </div>
+    <div style="background:rgba(15,23,42,0.5); border:1px solid var(--card-border); border-radius:8px; padding:8px; margin-bottom:10px;">
+      <div style="font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:6px;" data-i18n="tabmgr_session_title">Phiên làm việc</div>
+      <div style="display:flex; gap:6px; margin-bottom:6px;">
+        <input type="text" id="tabmgr-session-name" class="form-control" placeholder="Tên phiên..." data-i18n-placeholder="tabmgr_session_ph" style="flex:1; font-size:11px; padding:5px 8px;">
+        <button id="btn-tabmgr-save-session" class="btn-text-small" data-i18n="tabmgr_btn_save_session">Lưu</button>
+      </div>
+      <div id="tabmgr-session-list" style="display:flex; flex-direction:column; gap:6px;"></div>
+    </div>
+    <div id="tabmgr-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+  </div>
+
+  <div id="tab-testhelper" class="tab-section">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+      <div class="feature-title" style="margin-bottom:0;" data-i18n="th_title">Test Helper PRO</div>
+      <span id="th-step-count" style="font-size:11px; font-weight:700; color:#38bdf8; background:rgba(56,189,248,0.12); padding:2px 8px; border-radius:12px; border:1px solid rgba(56,189,248,0.25);">0</span>
+    </div>
+    <p style="color:var(--text-muted); font-size:11.5px; margin-bottom:8px; line-height:1.4;" data-i18n="th_desc">Record/replay, crawl, console, visual diff, link check, fuzz, a11y, perf — gom ảnh vào ZIP.</p>
+    <div style="display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap;">
+      <button id="btn-th-record" class="btn-text-small" data-i18n="th_btn_start_rec">Ghi</button>
+      <button id="btn-th-replay" class="btn-text-small" data-i18n="th_btn_replay">Phát lại</button>
+      <button id="btn-th-shot" class="btn-text-small" data-i18n="th_btn_shot">Chụp</button>
+      <button id="btn-th-zip" class="btn-text-small" style="background:rgba(56,189,248,0.08); border-color:rgba(56,189,248,0.18); color:#38bdf8;" data-i18n="th_btn_zip">Tải ZIP</button>
+      <span style="margin-left:auto; font-size:10px; color:var(--text-muted);"><span id="th-shot-count">0</span> shots</span>
+    </div>
+    <div style="display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap;">
+      <button id="btn-th-crawl" class="btn-text-small" data-i18n="th_btn_crawl">Crawl</button>
+      <button id="btn-th-links" class="btn-text-small" data-i18n="th_btn_links">Link check</button>
+      <button id="btn-th-fuzz" class="btn-text-small" data-i18n="th_btn_fuzz">Fuzz</button>
+      <button id="btn-th-a11y" class="btn-text-small" data-i18n="th_btn_a11y">A11y</button>
+      <button id="btn-th-perf" class="btn-text-small" data-i18n="th_btn_perf">Perf</button>
+      <button id="btn-th-bug" class="btn-text-small" style="background:rgba(56,189,248,0.08); border-color:rgba(56,189,248,0.18); color:#38bdf8;" data-i18n="th_btn_bug">Bug Report</button>
+    </div>
+    <div style="display:flex; gap:6px; margin-bottom:8px;">
+      <button id="btn-th-refresh-log" class="cal-tool-btn" data-i18n="th_btn_refresh_log">Làm mới log</button>
+      <button id="btn-th-clear" class="cal-tool-btn" data-i18n="th_btn_clear">Xóa</button>
+    </div>
+    <div id="th-shots" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px; max-height:160px; overflow-y:auto;"></div>
+    <div id="th-log" style="background:rgba(15,23,42,0.5); border:1px solid var(--card-border); border-radius:8px; padding:8px; max-height:180px; overflow-y:auto; font-family:ui-monospace, monospace; font-size:10.5px; color:#94a3b8; white-space:pre-wrap; word-break:break-all;"></div>
+  </div>
+
+  <div id="tab-security" class="tab-section">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+      <div class="feature-title" style="margin-bottom:0;" data-i18n="sec_title">Security</div>
+      <span style="font-size:10px; color:var(--text-muted);" id="sec-status"></span>
+    </div>
+    <p style="color:var(--text-muted); font-size:11.5px; margin-bottom:8px; line-height:1.4;" data-i18n="sec_desc">Real-time phishing scan, anti-clickjacking & unlock right-click/copy.</p>
+    <div class="feature-card" style="padding:10px 12px;">
+      <label class="switch-row" for="sec-toggle-phishing">
+        <div class="switch-row-left">
+          <span class="switch-row-title" data-i18n="sec_toggle_phishing">Real-Time Protection</span>
+          <span class="switch-row-desc" data-i18n="sec_toggle_phishing_desc">Scan pages against phishing ruleset</span>
+        </div>
+        <span class="custom-switch"><input type="checkbox" id="sec-toggle-phishing"><span class="switch-slider"></span></span>
+      </label>
+      <label class="switch-row" for="sec-toggle-clickjack">
+        <div class="switch-row-left">
+          <span class="switch-row-title" data-i18n="sec_toggle_clickjack">Anti-Clickjacking</span>
+          <span class="switch-row-desc" data-i18n="sec_toggle_clickjack_desc">Warn when iframes try to hijack clicks</span>
+        </div>
+        <span class="custom-switch"><input type="checkbox" id="sec-toggle-clickjack"><span class="switch-slider"></span></span>
+      </label>
+      <label class="switch-row" for="sec-toggle-autoblock">
+        <div class="switch-row-left">
+          <span class="switch-row-title" data-i18n="sec_toggle_autoblock">Auto-block iframe</span>
+          <span class="switch-row-desc" data-i18n="sec_toggle_autoblock_desc">Automatically block hijacking iframes</span>
+        </div>
+        <span class="custom-switch"><input type="checkbox" id="sec-toggle-autoblock"><span class="switch-slider"></span></span>
+      </label>
+      <label class="switch-row" for="sec-toggle-unlock" style="margin-bottom:0;">
+        <div class="switch-row-left">
+          <span class="switch-row-title" id="sec-unlock-label" data-i18n="sec_toggle_unlock">Unlock Right-Click & Copy</span>
+          <span class="switch-row-desc" data-i18n="sec_toggle_unlock_desc">Re-enable right-click, selection, copy & shortcuts (per-site)</span>
+        </div>
+        <span class="custom-switch"><input type="checkbox" id="sec-toggle-unlock"><span class="switch-slider"></span></span>
+      </label>
+    </div>
+    <div style="display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap;">
+      <button id="btn-sec-scan-phishing" class="btn-text-small" data-i18n="sec_btn_scan_phishing">Scan phishing</button>
+      <button id="btn-sec-scan-clickjack" class="btn-text-small" data-i18n="sec_btn_scan_clickjack">Scan clickjack</button>
+      <button id="btn-sec-unlock-now" class="btn-text-small" style="background:rgba(56,189,248,0.08); border-color:rgba(56,189,248,0.18); color:#38bdf8;" data-i18n="sec_btn_unlock_now">Unlock now</button>
+    </div>
+    <div id="sec-scan-out" style="background:rgba(15,23,42,0.5); border:1px solid var(--card-border); border-radius:8px; padding:8px; min-height:36px; font-size:11px; color:#94a3b8;"></div>
+  </div>
+
   <div class="footer-trust-bar">
     <div class="trust-pill" title="Phiên bản hiện tại" data-i18n-title="tip_trust_version">
       <span class="trust-dot dot-green"></span>
@@ -1699,6 +1838,9 @@
   <script src="../js/tabs/calendar.js"></script>
   <script src="../js/tabs/pomodoro.js"></script>
   <script src="../js/tabs/ai.js"></script>
+  <script src="../js/tabs/tab-manager.js"></script>
+  <script src="../js/tabs/test-helper.js"></script>
+  <script src="../js/tabs/security.js"></script>
   <script src="../js/debug.js"></script>
 </body>
 </html>

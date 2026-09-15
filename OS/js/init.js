@@ -2003,47 +2003,64 @@ document.getElementById("btn-quick-swap-tabs")?.addEventListener("click", swapDu
       const userTag = document.getElementById("f-tag")?.value || currentMeta.tag;
       if (userTag) currentMeta.tag = userTag;
 
-      // Secondary fallback for YouTube: SPA navigation leaves stale DOM. Fetch HTML directly for accurate date/author.
-      if (currentTabUrl && (currentTabUrl.includes("youtube.com/watch") || currentTabUrl.includes("youtu.be/"))) {
+      // YouTube citation metadata: (1) live tab via content script (fast, same-origin),
+      // (2) hidden HARD-LOADED tab — SPA navigation strips microdata + ytInitialPlayerResponse,
+      //     a fresh load always has them, (3) oEmbed (CORS-open; title/author). No extension-page
+      //     HTML fetch — that is CORS-blocked on Firefox.
+      if (currentTabUrl && /youtube\.com\/(watch|shorts|embed)|youtu\.be\//i.test(currentTabUrl)) {
         try {
-          const ytHtmlRes = await fetch(currentTabUrl);
-          if (ytHtmlRes.ok) {
-            const htmlText = await ytHtmlRes.text();
-            
-            // Extract Date
-            const mDate = htmlText.match(/meta itemprop="startDate" content="([^"]+)"/) || htmlText.match(/meta itemprop="datePublished" content="([^"]+)"/) || htmlText.match(/meta itemprop="uploadDate" content="([^"]+)"/);
-            if (mDate && mDate[1]) {
-              let rawDate = mDate[1];
-              let parsedDate = "";
-              if (rawDate.includes("T")) {
-                const d = new Date(rawDate);
-                if (!isNaN(d.getTime())) {
-                  parsedDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+          const vidM = currentTabUrl.match(/(?:v=|youtu\.be\/|shorts\/|embed\/)([\w-]{8,12})/);
+          const ytVid = vidM ? vidM[1] : "";
+          let ytMeta = null;
+          try { ytMeta = await sendTabMessage({ action: "GET_YT_META", timeoutMs: 15000 }); } catch (e) { ytMeta = null; }
+          console.info("[SF-YT-META] live tab:", ytMeta && ytMeta.ok ? ("ok date=" + (ytMeta.publishDate || "-") + " author=" + (ytMeta.author || "-")) : "empty/fail");
+          const ytIncomplete = !ytMeta || !ytMeta.ok || !ytMeta.publishDate || !ytMeta.author;
+          if (ytIncomplete && ytVid && typeof aiYtHiddenTabMeta === "function") {
+            try {
+              const hm = await aiYtHiddenTabMeta(ytVid);
+              console.info("[SF-YT-META] hidden tab:", hm && hm.ok ? ("ok date=" + (hm.publishDate || "-") + " author=" + (hm.author || "-")) : "empty/fail");
+              if (hm && hm.ok) {
+                ytMeta = {
+                  ok: true,
+                  title: (ytMeta && ytMeta.title) || hm.title || "",
+                  author: (ytMeta && ytMeta.author) || hm.author || "",
+                  publishDate: (ytMeta && ytMeta.publishDate) || hm.publishDate || "",
+                  publisher: "YouTube", platform: "YouTube", videoId: ytVid
+                };
+              }
+            } catch (e) { /* keep previous */ }
+          }
+          if ((!ytMeta || !ytMeta.ok || !ytMeta.author) && ytVid) {
+            try {
+              const oe = await fetch("https://www.youtube.com/oembed?url=" + encodeURIComponent("https://www.youtube.com/watch?v=" + ytVid) + "&format=json", { signal: AbortSignal.timeout(6000) });
+              if (oe.ok) {
+                const oj = await oe.json().catch(() => null);
+                if (oj && oj.title) {
+                  ytMeta = {
+                    ok: true,
+                    title: (ytMeta && ytMeta.title) || oj.title,
+                    author: (ytMeta && ytMeta.author) || oj.author_name || "",
+                    publishDate: (ytMeta && ytMeta.publishDate) || "",
+                    publisher: "YouTube", platform: "YouTube", videoId: ytVid
+                  };
                 }
               }
-              if (!parsedDate || parsedDate.length < 4) {
-                const p = rawDate.split("T")[0];
-                if (p.length >= 4) parsedDate = p;
-              }
-              if (parsedDate) currentMeta.date = parsedDate; // FORCE OVERWRITE
+            } catch (e) { /* oembed optional */ }
+          }
+          if (ytMeta && ytMeta.ok) {
+            if (ytMeta.publishDate) {
+              const pd = String(ytMeta.publishDate).slice(0, 10);
+              if (/^\d{4}-\d{2}-\d{2}$/.test(pd)) currentMeta.date = pd;
             }
-            
-            // Extract Author
-            const mAuth = htmlText.match(/<link itemprop="name" content="([^"]+)">/) || htmlText.match(/"author"\s*:\s*"([^"]+)"/);
-            if (mAuth && mAuth[1]) {
-              currentMeta.authors = mAuth[1]; // FORCE OVERWRITE
-            }
-
-            // Extract Title
-            const mTitle = htmlText.match(/meta name="title" content="([^"]+)"/);
-            if (mTitle && mTitle[1]) {
-              currentMeta.title = mTitle[1]; // FORCE OVERWRITE
-            }
-            
+            if (ytMeta.author) currentMeta.authors = String(ytMeta.author);
+            if (ytMeta.title) currentMeta.title = String(ytMeta.title);
+            const ytLabel = String(ytMeta.publisher || ytMeta.platform || "YouTube");
+            if (!currentMeta.container || /youtube/i.test(String(currentMeta.container))) currentMeta.container = ytLabel;
+            if (!currentMeta.publisher) currentMeta.publisher = ytLabel;
             originalExtractedMeta = { ...currentMeta };
           }
         } catch (e) {
-          console.warn("YouTube direct fetch fallback failed:", e);
+          console.warn("YouTube meta fallback failed:", e);
         }
       }
 

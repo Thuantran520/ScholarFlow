@@ -42,7 +42,10 @@ const LOAD_ORDER_MODULES = [
   "init.js",
   "tabs/calendar.js",
   "tabs/pomodoro.js",
-  "tabs/ai.js"
+  "tabs/ai.js",
+  "tabs/tab-manager.js",
+  "tabs/test-helper.js",
+  "tabs/security.js"
 ];
 
 const KEY_GLOBALS = [
@@ -70,6 +73,12 @@ const KEY_GLOBALS = [
 // Minimal chrome/browser stub (callback + promise styles, resolved promises).
 function makeChromeStub(storeInit = {}) {
   const store = { ...storeInit };
+  const tabQueryCalls = { n: 0 };
+  const tabListeners = {};
+  function listenerBag(name) {
+    if (!tabListeners[name]) tabListeners[name] = { handlers: [], addListener(fn) { this.handlers.push(fn); }, removeListener() {} };
+    return tabListeners[name];
+  }
   const storageLocal = {
     get(key, cb) {
       let res = {};
@@ -110,16 +119,20 @@ function makeChromeStub(storeInit = {}) {
       onStartup: { addListener: () => {} }
     },
     tabs: {
-      query: (q) => Promise.resolve([{ id: 1, url: "https://example.com/paper", title: "Paper", active: true, windowId: 1 }]),
+      query: (q) => { tabQueryCalls.n++; return Promise.resolve([{ id: 1, url: "https://example.com/paper", title: "Paper", active: true, windowId: 1 }]); },
       create: (o) => Promise.resolve({ id: 99, url: o && o.url }),
       update: (t, o) => Promise.resolve({}),
       get: (t) => Promise.resolve({ id: Number(t) || 1, url: "https://example.com/paper", title: "Paper" }),
       remove: (t) => Promise.resolve(),
       reload: (t) => Promise.resolve({}),
       sendMessage: (t, msg) => Promise.resolve({}),
-      onUpdated: { addListener: () => {} },
-      onActivated: { addListener: () => {} },
-      onRemoved: { addListener: () => {} }
+      onUpdated: listenerBag("onUpdated"),
+      onActivated: listenerBag("onActivated"),
+      onRemoved: listenerBag("onRemoved"),
+      onCreated: listenerBag("onCreated"),
+      onHighlighted: listenerBag("onHighlighted"),
+      __tabListeners: tabListeners,
+      __queryCount: () => tabQueryCalls.n
     },
     windows: {
       getCurrent: (o) => Promise.resolve({ id: 1, focused: true }),
@@ -233,10 +246,10 @@ async function main() {
     const navCount = w.document.querySelectorAll(".main-nav-btn").length;
     const tabCount = w.document.querySelectorAll(".tab-section").length;
     const ids = [...w.document.querySelectorAll(".main-nav-btn")].map(b => b.dataset.target);
-    check(navCount === 9, `9 nav buttons (found ${navCount})`);
-    check(tabCount === 9, `9 tab sections (found ${tabCount})`);
-    check(["tab-cite", "tab-ai", "tab-redact", "tab-capture", "tab-cookie", "tab-autofill", "tab-todo", "tab-pomo", "tab-cal"].every(t => ids.includes(t)),
-      `all 9 targets present in nav: ${ids.join(",")}`);
+    check(navCount === 12, `12 nav buttons (found ${navCount})`);
+    check(tabCount === 12, `12 tab sections (found ${tabCount})`);
+    check(["tab-cite", "tab-ai", "tab-redact", "tab-capture", "tab-cookie", "tab-autofill", "tab-todo", "tab-pomo", "tab-cal", "tab-tabmgr", "tab-testhelper", "tab-security"].every(t => ids.includes(t)),
+      `all 12 targets present in nav: ${ids.join(",")}`);
   }
 
   // 2. Unified i18n: upgraded t() supports positional {0} and function fallback
@@ -952,14 +965,16 @@ async function main() {
     check(!!w.document.getElementById("tab-ai") && !!w.document.querySelector("#tab-ai .ai-chat-wrapper") &&
       !!w.document.getElementById("ai-chat-history") && !!w.document.getElementById("ai-input") &&
       !!w.document.getElementById("ai-btn-send") &&
-      w.document.querySelectorAll("#tab-ai [data-ai-quick]").length === 7 &&
+      w.document.querySelectorAll("#tab-ai [data-ai-quick]").length === 9 &&
       !!w.document.querySelector('#tab-ai [data-ai-quick="answer"]') &&
-      !!w.document.getElementById("ai-prompt-answer"),
-      `${htmlFile}: tab-ai markup + 7 quick chips (incl. Solve quiz) present`);
+      !!w.document.querySelector('#tab-ai [data-ai-quick="tabs"]') &&
+      !!w.document.querySelector('#tab-ai [data-ai-quick="papers"]') &&
+      !!w.document.getElementById("ai-prompt-answer") && !!w.document.getElementById("ai-prompt-tabs") && !!w.document.getElementById("ai-prompt-papers"),
+      `${htmlFile}: tab-ai markup + 9 quick chips (answer/tabs/papers) present`);
     check(!!w.document.getElementById("ai-settings-modal") && !!w.document.getElementById("ai-key-gemini") &&
       !!w.document.getElementById("ai-key-openai") && !!w.document.getElementById("ai-key-claude") &&
       !!w.document.getElementById("ai-btn-save-key") && !!w.document.getElementById("ai-btn-toggle-key") &&
-      !!w.document.getElementById("ai-opt-images") && !!w.document.getElementById("ai-opt-source"),
+      !!w.document.getElementById("ai-opt-images") && !!w.document.getElementById("ai-opt-source") && !!w.document.getElementById("ai-opt-stream"),
       `${htmlFile}: AI settings modal + key inputs + save/toggle + context checkboxes wired`);
     const emptyShown = await w.eval(`!!document.querySelector("#ai-chat-history .ai-empty")`);
     check(emptyShown, `${htmlFile}: initAI booted and rendered empty-state`);
@@ -988,6 +1003,40 @@ async function main() {
         "sidebar: transcript enters prompt isolated in untrusted block");
       check(await w.eval(`typeof aiGetYouTubeTranscript === "function" && typeof aiGetPageImages === "function"`),
         "sidebar: transcript + page-image helpers exported");
+      check(await w.eval(`(function(){var c=aiHistoryToGeminiContents([{role:"user",content:"hi"},{role:"assistant",content:"yo"}],"NOW",[]); return c.length===3 && c[1].role==="model" && c[2].role==="user" && c[2].parts[0].text==="NOW";})()`),
+        "sidebar: multi-turn history -> Gemini contents");
+      check(await w.eval(`(function(){var m=aiHistoryToClaudeMessages([{role:"user",content:"a"},{role:"assistant",content:"b"}],"NOW",[]); return m.length===3 && m[0].role==="user" && m[1].role==="assistant" && m[2].role==="user" && m[2].content==="NOW";})()`),
+        "sidebar: history -> Claude messages (alternating, ends with current user)");
+      check(await w.eval(`(function(){var m=aiHistoryToClaudeMessages([{role:"assistant",content:"lead"},{role:"user",content:"a"},{role:"user",content:"b"}],"NOW",[]); return m.length===1 && m[0].role==="user" && m[0].content.indexOf("a\\nb")===0 && m[0].content.indexOf("NOW")!==-1;})()`),
+        "sidebar: Claude history merge: drops assistant-lead, folds trailing user + prompt");
+      check(await w.eval(`(function(){var d=document.createElement("div"); aiRenderFormattedText(d,"nói lúc [01:30] và [2:05:09] nhé"); return d.querySelectorAll(".ai-ts").length===2 && d.querySelector(".ai-ts").getAttribute("data-ts")==="90";})()`),
+        "sidebar: timestamps in answers render as clickable .ai-ts spans");
+      check(await w.eval(`(function(){var p=aiBuildPrompt("QQ","","","",null,{url:"example.com/x",title:"T",videoId:"abc"}); return p.indexOf("example.com/x") !== -1 && p.indexOf("abc") !== -1 && p.endsWith("QQ");})()`),
+        "sidebar: current page URL + videoId are injected into every prompt");
+      check(await w.eval(`typeof aiCallGeminiLite === "function" && aiHistoryToGeminiContents([], "P", [{data:"AA",mimeType:"image/jpeg"}]).length === 1`),
+        "sidebar: Lite-fallback helper exported; contents shape valid");
+      check(await w.eval(`typeof aiCollectTabsContext === "function" && typeof aiScholarSearch === "function" && typeof aiAttachImageFile === "function"`),
+        "sidebar: tabs-collect + scholar-search + image-attach helpers exported");
+      check(await w.eval(`aiExtractYouTubeId("xem youtu.be/dQw4w9WgXcQ nha") === "dQw4w9WgXcQ" && aiExtractYouTubeId("lien ket www.youtube.com/watch?v=abcdefgh123&x=1 ok") === "abcdefgh123" && aiExtractYouTubeId("khong co link") === ""`),
+        "sidebar: aiExtractYouTubeId parses youtu.be / watch / shorts ids");
+      check(await w.eval(`aiYtBalancedJson('x = {"a":{"b":"}{"}} tail', 4) === '{"a":{"b":"}{"}}'`),
+        "sidebar: aiYtBalancedJson respects strings/escapes");
+      check(await w.eval(`(function(){var d=document.createElement("div"); aiRenderFormattedText(d,"nguon: https://youtu.be/abc123 end"); var a=d.querySelector("a.ai-link"); return !!a && a.target==="_blank" && a.rel==="noopener noreferrer";})()`),
+        "sidebar: URLs in answers render as safe noopener links");
+      check(await w.eval(`(function(){var d=document.createElement("div"); aiRenderFormattedText(d,"Nguồn: [xem video](https://www.youtube.com/watch?v=2YoLd1RFitg) nhé"); var a=d.querySelector("a.ai-link"); return !!a && a.textContent==="xem video" && a.href==="https://www.youtube.com/watch?v=2YoLd1RFitg" && d.textContent.indexOf("](")===-1;})()`),
+        "sidebar: markdown links [label](url) render as labeled anchors");
+      check(await w.eval(`(function(){var d=document.createElement("div"); aiRenderFormattedText(d,"1. mot\\n2. hai\\n3) ba"); return d.textContent.indexOf("1.")!==-1 && d.textContent.indexOf("2.")!==-1;})()`),
+        "sidebar: ordered lists (1. / 3)) render numbered, not as plain text");
+      check(await w.eval(`(function(){var d=document.createElement("div"); aiRenderFormattedText(d,"# Chu de lon\\n##### nho"); var html=d.innerHTML; return html.indexOf("14px")!==-1;})()`),
+        "sidebar: H1..H6 headings render with size hierarchy");
+      check(await w.eval(`(function(){var d=document.createElement("div"); aiRenderFormattedText(d,"gia ~~cu~~ moi"); return d.innerHTML.indexOf("<s>")!==-1;})()`),
+        "sidebar: strikethrough ~~text~~ renders");
+      check(await w.eval(`(function(){var d=document.createElement("div"); aiRenderFormattedText(d,"| A | B |\\n|---|---|\\n| 1 | 2 |\\n| 3 | 4 |"); var t=d.querySelector("table.ai-table"); return !!t && t.querySelectorAll("tr").length===3;})()`),
+        "sidebar: markdown tables render as real <table>");
+      check(await w.eval(`(function(){var d=document.createElement("div"); aiRenderFormattedText(d,"tra loi nhe\\nGỢI Ý:\\n- cau a\\n- cau b\\n- cau c"); return d.querySelectorAll(".ai-suggest").length===3;})()`),
+        "sidebar: follow-up suggestion block renders clickable chips");
+      check(await w.eval(`typeof aiSig === "function" && typeof aiRegenerate === "function"`),
+        "sidebar: abort-signal helper + regenerate exported");
     }
     w.close();
   }
@@ -1002,6 +1051,46 @@ async function main() {
       "content script: GET_PAGE_SOURCE returns hidden text + inline scripts");
     check(contentMain.includes('"GET_YT_TRANSCRIPT"') && contentMain.includes("captionTracks") && contentMain.includes("fmt=json3") && contentMain.includes("sfYtSafeBaseUrl"),
       "content script: GET_YT_TRANSCRIPT reads ytInitialPlayerResponse -> safe caption URL");
+    check(contentMain.includes('"YT_SEEK"') && contentMain.includes("currentTime"),
+      "content script: YT_SEEK seeks the page video element");
+    check(contentMain.includes('"GET_YT_META"') && contentMain.includes("playerMicroformatRenderer"),
+      "content script: GET_YT_META returns title/author/publishDate for citation");
+    const aiSrc = fs.readFileSync(path.join(__dirname, "..", "OS", "js", "tabs", "ai.js"), "utf8");
+    check(aiSrc.includes('addEventListener("paste"'), "AI module: clipboard image paste wired");
+    check(aiSrc.includes("window.aiScrapeTranscriptViaHiddenTab") && aiSrc.includes("async function aiScrapeTranscriptViaHiddenTab"),
+      "AI module: hidden-tab transcript scrape wired (CORS-proof fallback)");
+    check(aiSrc.includes("async function aiYtHiddenTabMeta") && aiSrc.includes("window.aiYtHiddenTabMeta"),
+      "AI module: hidden-tab hard-load YT meta scraper exported");
+    const initSrc = fs.readFileSync(path.join(__dirname, "..", "OS", "js", "init.js"), "utf8");
+    check(initSrc.includes("aiYtHiddenTabMeta") && initSrc.includes("oembed"),
+      "citation: YouTube meta 3-tier merge (live tab -> hidden hard-load tab -> oEmbed)");
+    check(aiSrc.includes("function aiBuildMsgRow") && aiSrc.includes("aiSaveHistorySoon"),
+      "AI module: incremental row render + debounced history persistence");
+    check(aiSrc.includes("streamGenerateContent") && aiSrc.includes("?alt=sse"),
+      "AI module: SSE streaming for Gemini wired");
+    const msgSrc = fs.readFileSync(path.join(__dirname, "..", "OS", "js", "core", "messaging.js"), "utf8");
+    check(msgSrc.includes("timeoutMs") && aiSrc.includes("timeoutMs:9000") && aiSrc.includes("timeoutMs:14000"),
+      "messaging: per-action timeoutMs plumbed (fixes 1.2s race killing heavy YT/page actions)");
+    check(contentMain.includes("_sfYtPRCache") && contentMain.includes('meta[itemprop="datePublished"]') && contentMain.includes("startDate"),
+      "content script: GET_YT_META fast microdata path + playerResponse cache");
+    check(aiSrc.includes('"is-stop"') && aiSrc.includes("aiAbort.abort()"),
+      "AI module: stop-generating (AbortController) wired");
+    check(aiSrc.includes("KHÔNG CÓ THÔNG TIN TRONG TRANG"),
+      "AI module: anti-hallucination rule in system preamble");
+  }
+
+  console.log("Regressing Tab Manager live refresh (browser-side close):");
+  {
+    const { window: w } = await loadPage("sidebar.html");
+    const bag = w.chrome.tabs.__tabListeners;
+    check(bag && bag.onRemoved && bag.onRemoved.handlers.length > 0,
+      `onRemoved listener registered (found ${bag && bag.onRemoved ? bag.onRemoved.handlers.length : 0})`);
+    const before = w.chrome.tabs.__queryCount();
+    bag.onRemoved.handlers.slice().forEach((f) => { try { f(1, { windowId: 1, isWindowClosing: false }); } catch (e) {} });
+    await new Promise((r) => setTimeout(r, 500));
+    check(w.chrome.tabs.__queryCount() > before,
+      "closing a tab browser-side (onRemoved) auto-requeries the manager list (no manual refresh)");
+    w.close();
   }
 
   console.log("Regressing Cookie manager (detail list / Netscape / profiles):");
