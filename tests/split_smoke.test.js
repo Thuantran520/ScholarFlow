@@ -1098,6 +1098,10 @@ async function main() {
       "citation: YouTube meta 3-tier merge (live tab -> hidden hard-load tab -> oEmbed)");
     check(contentMain.includes("videoId: ytVidCur") && aiSrc.includes("transcriptData.vid!==pageVid") && initSrc.includes("ytMeta.videoId !== ytVid"),
       "SPA race guard: all consumers discard metadata whose videoId differs from the open video");
+    check(contentMain.includes("sfYtParseUiDate") && contentMain.includes("thg"),
+      "content script: on-screen VN/EN publish date parsed when playerResponse not yet inserted");
+    check(initSrc.includes("for (let ytTry = 0; ytTry < 3"),
+      "citation: live-tab GET_YT_META retried 3x before slow paths (kills the 'press reload twice' case)");
     check(aiSrc.includes("function aiBuildMsgRow") && aiSrc.includes("aiSaveHistorySoon"),
       "AI module: incremental row render + debounced history persistence");
     check(aiSrc.includes("streamGenerateContent") && aiSrc.includes("?alt=sse"),

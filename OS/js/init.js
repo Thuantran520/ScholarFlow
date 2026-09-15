@@ -2012,8 +2012,12 @@ document.getElementById("btn-quick-swap-tabs")?.addEventListener("click", swapDu
           const vidM = currentTabUrl.match(/(?:v=|youtu\.be\/|shorts\/|embed\/)([\w-]{8,12})/);
           const ytVid = vidM ? vidM[1] : "";
           let ytMeta = null;
-          try { ytMeta = await sendTabMessage({ action: "GET_YT_META", timeoutMs: 15000 }); } catch (e) { ytMeta = null; }
-          if (ytMeta && ytVid && ytMeta.videoId && ytMeta.videoId !== ytVid) ytMeta = null;
+          for (let ytTry = 0; ytTry < 3; ytTry++) {
+            try { ytMeta = await sendTabMessage({ action: "GET_YT_META", timeoutMs: 8000 }); } catch (e) { ytMeta = null; }
+            if (ytMeta && ytVid && ytMeta.videoId && ytMeta.videoId !== ytVid) ytMeta = null;
+            if (ytMeta && ytMeta.ok && ytMeta.publishDate && ytMeta.author) break;
+            if (ytTry < 2) await new Promise((r) => setTimeout(r, 700));
+          }
           console.info("[SF-YT-META] live tab:", ytMeta && ytMeta.ok ? ("ok date=" + (ytMeta.publishDate || "-") + " author=" + (ytMeta.author || "-")) : "empty/fail");
           const ytIncomplete = !ytMeta || !ytMeta.ok || !ytMeta.publishDate || !ytMeta.author;
           if (ytIncomplete && ytVid && typeof aiYtHiddenTabMeta === "function") {

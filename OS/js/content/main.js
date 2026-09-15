@@ -86,6 +86,18 @@
       return x.toString();
     } catch (e) { return ""; }
   }
+  function sfYtPad2(n) { n = Number(n) || 0; return (n < 10 ? "0" : "") + n; }
+  function sfYtParseUiDate(s) {
+    s = String(s || "");
+    let m = s.match(/(\d{1,2})\s*thg\.?\s*(\d{1,2})[,\s]+(\d{4})/);
+    if (m) return m[3] + "-" + sfYtPad2(m[2]) + "-" + sfYtPad2(m[1]);
+    m = s.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (m) return m[3] + "-" + sfYtPad2(m[2]) + "-" + sfYtPad2(m[1]);
+    const MON = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+    m = s.match(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{1,2}),?\s+(\d{4})/i);
+    if (m) return m[3] + "-" + sfYtPad2(MON[m[1].toLowerCase()]) + "-" + sfYtPad2(m[2]);
+    return "";
+  }
   function sfYtIsVideoPage() {
     const host = (location.hostname || "").toLowerCase();
     return (host === "youtube.com" || host.endsWith(".youtube.com") || host === "youtu.be") && /\/watch|\/shorts\/|\/embed\/|youtu\.be\//.test(location.href);
@@ -640,7 +652,14 @@
             }
             const obj = sfYtReadPlayerResponse();
             if (!obj) {
-              sendResponse({ success: true, ok: !!(fTitle || fAuthor), domOnly: true, title: fTitle, author: fAuthor, publishDate: "", publisher: "YouTube", platform: "YouTube", videoId: curVid, lengthSeconds: "" });
+              let uiDate = fDate;
+              if (!uiDate) {
+                try {
+                  const box = document.querySelector("ytd-watch-metadata") || document.querySelector("ytd-video-secondary-info-renderer") || document.querySelector("#meta");
+                  if (box) uiDate = sfYtParseUiDate(String(box.textContent || "").slice(0, 3000));
+                } catch (e) { uiDate = ""; }
+              }
+              sendResponse({ success: true, ok: !!(fTitle && fAuthor && uiDate), domOnly: true, title: fTitle, author: fAuthor, publishDate: uiDate, publisher: "YouTube", platform: "YouTube", videoId: curVid, lengthSeconds: "" });
               break;
             }
             const mf = obj && obj.microformat && obj.microformat.playerMicroformatRenderer;
