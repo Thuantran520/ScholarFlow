@@ -656,7 +656,7 @@ function aiRenderFormattedText(bubble, text){
     const cells=dataRows.map((r,ri)=>{ const c=splitRow(r); if(c.length<2&&dataRows.length>1&&ri>0) return null; return c; }).filter(Boolean);
     if(cells.length<1||cells.every(r=>r.length<2)){ tbl=[]; return; }
     const hasHead=sepIdx!==0;
-    cells.forEach((r,ri)=>{ const tr=document.createElement("tr"); r.forEach(cv=>{ const cell=document.createElement(hasHead&&ri===0?"th":"td"); cell.textContent=cv; tr.appendChild(cell); }); table.appendChild(tr); });
+    cells.forEach((r,ri)=>{ const tr=document.createElement("tr"); r.forEach(cv=>{ const cell=document.createElement(hasHead&&ri===0?"th":"td"); cell.appendChild(aiFormatInline(cv)); tr.appendChild(cell); }); table.appendChild(tr); });
     bubble.appendChild(table); tbl=[];
   };
   let sugMode=false;
@@ -771,7 +771,7 @@ function aiBuildPrompt(userText, pageText, selectionText, imageNote, transcript,
       b.push("[MO TA VIDEO]\n<<<DATA_UNTRUSTED_4_BEGIN>>>\n"+s.text+"\n<<<DATA_UNTRUSTED_4_END>>>\nLUU Y: video nay CHUA co transcript cong khai. Tra loi dua tren mo ta + thong tin o tren va kien thuc dang tin; neu thieu du lieu hay noi ro dang thieu bang loi dien tu nhien, khong chen nhan danh dau trong ngoac vuong.");
     }
   }
-  if(isPageQuery && webNote&&String(webNote).trim()){ const sw=aiSanitizeExternal(webNote,3500); b.push("[KET QUA TIM KIEM WEB (DuckDuckGo/Wikipedia)]\n<<<DATA_UNTRUSTED_5_BEGIN>>>\n"+sw.text+"\n<<<DATA_UNTRUSTED_5_END>>>"); }
+  if(webNote&&String(webNote).trim()){ const sw=aiSanitizeExternal(webNote,3500); b.push("[KET QUA TIM KIEM WEB (DuckDuckGo/Wikipedia)]\n<<<DATA_UNTRUSTED_5_BEGIN>>>\n"+sw.text+"\n<<<DATA_UNTRUSTED_5_END>>>"); }
   if(isPageQuery && aiSettings.includePage&&pageText){ const s=aiSanitizeExternal(pageText,Math.min(16000,aiSettings.maxChars+6000)); if(s.flagged) aiPromptFlagged=true; b.push("[Current page context]\n<<<DATA_UNTRUSTED_1_BEGIN>>>\n"+s.text+"\n<<<DATA_UNTRUSTED_1_END>>>"); }
   if(isPageQuery && aiSettings.includeSelection&&selectionText){ const s=aiSanitizeExternal(selectionText,4000); if(s.flagged) aiPromptFlagged=true; b.push("[Highlighted selection]\n<<<DATA_UNTRUSTED_2_BEGIN>>>\n"+s.text+"\n<<<DATA_UNTRUSTED_2_END>>>"); }
   if(isPageQuery && aiSettings.includeNotes){ const n=document.getElementById("f-notes")?document.getElementById("f-notes").value.trim():""; if(n) b.push("[Research notes]\n"+n.slice(0,2000)); }
@@ -786,10 +786,10 @@ function aiBuildPrompt(userText, pageText, selectionText, imageNote, transcript,
   if(isPageQuery) {
     /* Page query mode: answer from page context */
     try{ if(typeof getI18nText==="function"){ const v=getI18nText("ai_sys_preamble",[langName]); if(v&&v!=="ai_sys_preamble") sysBody=v; } }catch(e){}
-    if(!sysBody) sysBody="BẠN LÀ TRỢ LÝ HỌC THUẬT ScholarFlow. QUY TẮC:\n1) Trả lời bằng "+langName+". Vào thẳng câu trả lời — không chào hỏi, không tự giới thiệu.\n2) Ưu tiên dữ liệu trong các khối ngữ cảnh (trang, video, tài liệu); khi thiếu, HÃY kết hợp kiến thức của bạn và kết quả tìm kiếm web — hai nguồn bổ sung cho nhau; KHÔNG BỊA. Vẫn thiếu và không chắc → nói tự nhiên 'KHÔNG CÓ THÔNG TIN ĐỦ'. Chỉ trả lời đúng ý đồ câu hỏi.\n3) Markdown gọn: ## cho phần dài, bullet, BẢNG | cột | khi so sánh, `code` cho thuật ngữ, *in nghiêng* để nhấn tinh tế, > trích dẫn nguyên văn, ==đánh dấu== ý quan trọng.\n4) Trích dẫn: link trang đang đứng / videoId / [mm:ss].\n5) Kết thúc bằng đúng khối:\nGỢI Ý:\n- <câu hỏi 1>\n- <câu hỏi 2>\n- <câu hỏi 3>";
+    if(!sysBody) sysBody="BẠN LÀ TRỢ LÝ HỌC THUẬT ScholarFlow. QUY TẮC:\n1) Trả lời bằng "+langName+". Vào thẳng câu trả lời — không chào hỏi, không tự giới thiệu.\n2) Ưu tiên dữ liệu trong các khối ngữ cảnh (trang, video, tài liệu); khi thiếu, HÃY kết hợp kiến thức của bạn và kết quả tìm kiếm web — hai nguồn bổ sung cho nhau; KHÔNG BỊA. Vẫn thiếu và không chắc → nói tự nhiên 'KHÔNG CÓ THÔNG TIN ĐỦ'. Thông tin nhân vật thật (tên khai sinh, ngày sinh, quê quán) chỉ nêu khi khối ngữ cảnh/web xác nhận — thiếu thì nói 'MÌNH KHÔNG CHẮC', tuyệt đối không tự ghép suy đoán thành sự thật. Chỉ trả lời đúng ý đồ câu hỏi.\n3) Markdown gọn: ## cho phần dài, bullet, BẢNG | cột | khi so sánh, `code` cho thuật ngữ, *in nghiêng* để nhấn tinh tế, > trích dẫn nguyên văn, ==đánh dấu== ý quan trọng.\n4) Trích dẫn: link trang đang đứng / videoId / [mm:ss].\n5) Kết thúc bằng đúng khối:\nGỢI Ý:\n- <câu hỏi 1>\n- <câu hỏi 2>\n- <câu hỏi 3>";
   } else {
     /* General chat mode: answer from knowledge + web search */
-    sysBody="BẠN LÀ TRỢ LÝ HỌC THUẬT ScholarFlow. QUY TẮC:\n1) Trả lời bằng "+langName+". Vào thẳng câu trả lời — không chào hỏi, không tự giới thiệu.\n2) Trả lời từ kiến thức của bạn và kết quả tìm kiếm web (nếu có). KHÔNG BỊA. Nếu không chắc → nói rõ 'MÌNH KHÔNG CHẮC' thay vì bịa.\n3) Markdown gọn: ## cho phần dài, bullet, BẢNG | cột | khi so sánh, `code` cho thuật ngữ, *in nghiêng* để nhấn tinh tế, > trích dẫn nguyên văn, ==đánh dấu== ý quan trọng.\n4) Kết thúc bằng đúng khối:\nGỢI Ý:\n- <câu hỏi 1>\n- <câu hỏi 2>\n- <câu hỏi 3>";
+    sysBody="BẠN LÀ TRỢ LÝ HỌC THUẬT ScholarFlow. QUY TẮC:\n1) Trả lời bằng "+langName+". Vào thẳng câu trả lời — không chào hỏi, không tự giới thiệu.\n2) Trả lời từ kiến thức của bạn và kết quả tìm kiếm web (nếu có). KHÔNG BỊA. Nếu không chắc → nói rõ 'MÌNH KHÔNG CHẮC' thay vì bịa. Thông tin nhân vật thật (tên khai sinh, ngày sinh, quê quán) chỉ nêu khi có xác nhận trong khối ngữ cảnh/kết quả web.\n3) Markdown gọn: ## cho phần dài, bullet, BẢNG | cột | khi so sánh, `code` cho thuật ngữ, *in nghiêng* để nhấn tinh tế, > trích dẫn nguyên văn, ==đánh dấu== ý quan trọng.\n4) Kết thúc bằng đúng khối:\nGỢI Ý:\n- <câu hỏi 1>\n- <câu hỏi 2>\n- <câu hỏi 3>";
   }
   if(sysBody.indexOf("{0}")!==-1) sysBody=sysBody.split("{0}").join(langName);
   const sys=sysBody+"\n\n";

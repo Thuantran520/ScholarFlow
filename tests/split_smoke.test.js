@@ -1056,6 +1056,10 @@ async function main() {
         "sidebar: underscores inside URLs are not turned into italics");
       check(await w.eval(`(function(){var d=document.createElement("div"); aiRenderFormattedText(d,"| A | B |\\n|---|---|\\n| 1 | 2 |\\n| 3 | 4 |"); var t=d.querySelector("table.ai-table"); return !!t && t.querySelectorAll("tr").length===3;})()`),
         "sidebar: markdown tables render as real <table>");
+      check(await w.eval(`(function(){var d=document.createElement("div"); aiRenderFormattedText(d,"| A | B |\\n|---|---|\\n| **1** | ==x== |"); var t=d.querySelector("table.ai-table"); return !!t && !!t.querySelector("td strong") && t.querySelector("td strong").textContent==="1" && !!t.querySelector("td span");})()`),
+        "sidebar: inline formatting (**bold**, ==highlight==) applies INSIDE table cells");
+      check(await w.eval(`(function(){var p=aiBuildPrompt("QQ","","",null,null,"","","WEBRESULT123XYZ",false); return p.indexOf("WEBRESULT123XYZ")!==-1 && p.indexOf("DATA_UNTRUSTED_5")!==-1;})()`),
+        "sidebar: web-search results reach the prompt even in general-chat mode (no + prefix)");
       check(await w.eval(`(function(){var d=document.createElement("div"); aiRenderFormattedText(d,"tra loi nhe\\nGỢI Ý:\\n- cau a\\n- cau b\\n- cau c"); return d.querySelectorAll(".ai-suggest").length===3;})()`),
         "sidebar: follow-up suggestion block renders clickable chips");
       check(await w.eval(`typeof aiSig === "function" && typeof aiRegenerate === "function"`),
