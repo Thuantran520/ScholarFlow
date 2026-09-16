@@ -28,11 +28,13 @@ body.is-popup .ai-chat-wrapper {
   max-height: calc(600px - 140px);
 }
 
+/* Merged header: title + actions on row 1, provider pills + model select on row 2 (one box) */
 .ai-chat-top {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 8px 10px;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  padding: 6px 10px;
   background: rgba(15, 23, 42, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 10px;
@@ -43,20 +45,28 @@ body.is-popup .ai-chat-wrapper {
   align-items: center;
   gap: 6px;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 12.5px;
   color: #f1f5f9;
+  flex-shrink: 0;
+}
+
+.ai-chat-top .ai-top-actions {
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .ai-model-bar {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  padding: 6px 8px;
-  background: rgba(15, 23, 42, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 8px;
+  order: 3;
+  flex: 1 0 100%;
+  min-width: 0;
+}
+
+.ai-model-bar .ai-model-select-wrap {
+  margin-left: auto;
+  min-width: 0;
 }
 
 .ai-provider-pills {
@@ -963,7 +973,6 @@ body:has(.ai-chat-tab.active) {
 
 .tab-section.ai-chat-tab.active .ai-quick-chips,
 .tab-section.ai-chat-tab.active .ai-chat-top,
-.tab-section.ai-chat-tab.active .ai-model-bar,
 .tab-section.ai-chat-tab.active .ai-current-page,
 .tab-section.ai-chat-tab.active .ai-input-row,
 .tab-section.ai-chat-tab.active .ai-disclaimer-row {
@@ -974,9 +983,50 @@ body:has(.ai-chat-tab.active) {
   margin-top: 0;
 }
 
-/* Khu vực trang đã ghim: giới hạn chiều cao, tự cuộn thay vì đẩy layout */
+/* Pinned-pages strip: MỘT hàng ngang — nhãn trái + chip cuộn ngang, không chiếm thêm chiều cao */
 .ai-pages-context {
-  max-height: 64px;
-  overflow-y: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex-shrink: 0;
+  padding: 3px 8px;
+  background: rgba(56, 189, 248, 0.06);
+  border: 1px solid rgba(56, 189, 248, 0.15);
+  border-radius: 8px;
+  font-size: 11px;
+  min-height: 26px;
+}
+
+.ai-pages-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.ai-pages-count {
+  color: #38bdf8;
+}
+
+.ai-pages-list {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
   scrollbar-width: thin;
+  padding: 2px 0;
+}
+
+.ai-pages-list .ai-page-chip {
+  flex-shrink: 0;
+  white-space: nowrap;
 }

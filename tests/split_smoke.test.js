@@ -982,6 +982,8 @@ async function main() {
     check(emptyShown, `${htmlFile}: initAI booted and rendered empty-state`);
     check(!!w.document.getElementById("ai-btn-add-page") && !!w.document.getElementById("ai-pages-context") && !!w.document.getElementById("ai-pages-list") && !!w.document.getElementById("ai-pages-count") && !!w.document.getElementById("ai-page-badge") && !!w.document.querySelector(".ai-input-wrap"),
       `${htmlFile}: page-context UI mirrored (add-page btn, pages strip, input badge+wrap)`);
+    check(!!w.document.querySelector("#tab-ai .ai-chat-top .ai-model-bar .ai-provider-pills") && !!w.document.querySelector("#tab-ai .ai-chat-top .ai-top-actions") && !!w.document.querySelector(".ai-pages-context .ai-pages-label"),
+      `${htmlFile}: merged chat-top (model-bar inside header) + horizontal pages strip markup`);
     if (htmlFile === "sidebar.html") {
       check(await w.eval(`aiT("ai_you", null, "x") !== "x" && aiT("ai_you", null, "x") !== "ai_you"`),
         "sidebar: aiT resolves localized AI strings");
@@ -1131,8 +1133,8 @@ async function main() {
       const aiCssSrc = fs.readFileSync(path.join(__dirname, "..", "OS", "css", "tabs", "ai.css"), "utf8");
       check(aiCssSrc.includes("body:has(.ai-chat-tab.active)") && aiCssSrc.includes("height: 100vh") && aiCssSrc.includes("flex-direction: column"),
         "AI CSS: chat tab locks to viewport height with internal history scroll (input always visible)");
-      check(/\.ai-pages-context\s*\{[^}]*max-height:\s*64px/.test(aiCssSrc),
-        "AI CSS: pinned-pages strip is height-capped (adding pages no longer pushes the input down)");
+      check(/\.ai-pages-list\s*\{[^}]*overflow-x:\s*auto/.test(aiCssSrc) && /\.ai-pages-context\s*\{[^}]*align-items:\s*center/.test(aiCssSrc),
+        "AI CSS: pinned-pages strip is one horizontal scrolling row (no vertical growth when adding pages)");
     }
   }
 

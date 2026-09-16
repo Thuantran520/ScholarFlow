@@ -279,9 +279,9 @@ body.is-popup .ai-chat-top {
 }
 
 body.is-popup .ai-model-bar {
-  background: rgba(2, 6, 23, 0.45);
-  border-radius: 999px;
-  padding: 4px 8px;
+  background: none;
+  border-radius: 0;
+  padding: 0;
 }
 
 body.is-popup .ai-provider-pill {

@@ -5,6 +5,18 @@
       <span data-i18n="ai_heading">AI Trợ lý</span>
       <span id="ai-key-status" class="ai-status" style="display:none;" aria-hidden="true"></span>
     </div>
+    <div class="ai-model-bar">
+      <div class="ai-provider-pills">
+        <button type="button" class="ai-provider-pill active" data-provider="gemini">Gemini</button>
+        <button type="button" class="ai-provider-pill" data-provider="openai">ChatGPT</button>
+        <button type="button" class="ai-provider-pill" data-provider="claude">Claude</button>
+        <button type="button" class="ai-provider-pill" data-provider="custom">Custom</button>
+      </div>
+      <div class="ai-model-select-wrap">
+        <select id="ai-model-select-main" class="ai-model-select"></select>
+        <select id="ai-provider-select" style="display:none;" aria-hidden="true"><option value="gemini">Gemini</option><option value="openai">ChatGPT</option><option value="claude">Claude</option><option value="custom">Custom</option></select>
+      </div>
+    </div>
     <div class="ai-top-actions">
       <button type="button" class="ai-gear-btn ai-web-btn" id="ai-btn-web-search" title="Tìm nội dung này trên web" data-i18n-title="ai_btn_web_search">🔎</button>
       <button type="button" class="ai-gear-btn ai-history-btn" id="ai-btn-sessions" title="Lịch sử &amp; Phiên chat" data-i18n-title="ai_btn_sessions"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></button>
@@ -12,21 +24,8 @@
     </div>
   </div>
 
-  <div class="ai-model-bar">
-    <div class="ai-provider-pills">
-      <button type="button" class="ai-provider-pill active" data-provider="gemini">Gemini</button>
-      <button type="button" class="ai-provider-pill" data-provider="openai">ChatGPT</button>
-      <button type="button" class="ai-provider-pill" data-provider="claude">Claude</button>
-      <button type="button" class="ai-provider-pill" data-provider="custom">Custom</button>
-    </div>
-    <div class="ai-model-select-wrap" style="margin-left:auto;">
-      <select id="ai-model-select-main" class="ai-model-select"></select>
-      <select id="ai-provider-select" style="display:none;" aria-hidden="true"><option value="gemini">Gemini</option><option value="openai">ChatGPT</option><option value="claude">Claude</option><option value="custom">Custom</option></select>
-    </div>
-  </div>
-
   <!-- Current page bar -->
-  <div class="ai-current-page" id="ai-current-page" style="display:flex; gap:8px; align-items:center; padding:8px 10px; background:rgba(15,23,42,0.5); border:1px solid rgba(255,255,255,0.06); border-radius:8px; margin:8px 0; font-size:11px;">
+  <div class="ai-current-page" id="ai-current-page" style="display:flex; gap:8px; align-items:center; padding:8px 10px; background:rgba(15,23,42,0.5); border:1px solid rgba(255,255,255,0.06); border-radius:8px; font-size:11px;">
     <img id="ai-page-favicon" src="" alt="" style="width:16px; height:16px; object-fit:contain; flex-shrink:0; display:none;"><span id="ai-page-favicon-fb" style="font-size:14px;">🌐</span>
     <div style="flex:1; min-width:0; overflow:hidden;">
       <div id="ai-page-title" style="font-weight:700; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" data-i18n="ai_page_title_default">Chưa có trang</div>
@@ -36,14 +35,10 @@
     <button type="button" class="btn btn-secondary" id="ai-btn-copy-page" style="padding:4px 8px; font-size:10.5px;" title="Copy URL" data-i18n-title="ai_btn_copy_page">⎘</button>
   </div>
 
-  <!-- Pages added to context -->
-  <div id="ai-pages-context" class="ai-pages-context" style="display:none; padding:6px 8px; margin-bottom:8px; background:rgba(56,189,248,0.06); border:1px solid rgba(56,189,248,0.15); border-radius:8px; font-size:11px;">
-    <div style="display:flex; align-items:center; gap:4px; margin-bottom:4px; color:#94a3b8; font-size:10px; font-weight:600;">
-      <span>📌</span>
-      <span data-i18n="ai_pages_added">Trang đã thêm</span>
-      <span id="ai-pages-count" style="color:#38bdf8;">(0)</span>
-    </div>
-    <div id="ai-pages-list" style="display:flex; flex-wrap:wrap; gap:4px;"></div>
+  <!-- Pages added to context (single horizontal strip) -->
+  <div id="ai-pages-context" class="ai-pages-context" style="display:none;">
+    <span class="ai-pages-label"><span aria-hidden="true">📌</span> <span data-i18n="ai_pages_added">Trang đã thêm</span> <span id="ai-pages-count" class="ai-pages-count">(0)</span></span>
+    <div id="ai-pages-list" class="ai-pages-list"></div>
   </div>
 
   <div id="ai-memory-hint" class="ai-memory-hint" style="display:none;"></div>
