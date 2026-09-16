@@ -1,0 +1,197 @@
+/* ScholarFlow — Pomodoro tab: steppers, selects, plan grid, music controls */
+
+/* Custom Number Steppers & Selects (no native arrows) */
+.pm-stepper {
+  display: inline-flex;
+  align-items: stretch;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.pm-stepper input {
+  width: 52px;
+  background: transparent;
+  border: none;
+  color: #f8fafc;
+  text-align: center;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 4px 0;
+  outline: none;
+  font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.pm-stepper input::-webkit-outer-spin-button,
+.pm-stepper input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.pm-stepper button {
+  width: 26px;
+  border: none;
+  background: rgba(255, 255, 255, 0.06);
+  color: #cbd5e1;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.pm-stepper button:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+}
+
+.pm-stepper button:active {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.pm-select {
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 22px !important;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2394a3b8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 7px center;
+}
+
+.pm-select option {
+  background-color: #0f172a;
+  color: #f8fafc;
+}
+
+.pm-popout-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.pm-popout-row button {
+  padding: 4px 12px;
+  font-size: 11px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #93c5fd;
+  background: rgba(147, 197, 253, 0.1);
+  border: 1px solid rgba(147, 197, 253, 0.3);
+}
+
+.pm-popout-row button:hover {
+  background: rgba(147, 197, 253, 0.22);
+}
+
+.pm-plan-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.pm-plan-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.pm-plan-field label {
+  font-size: 10.5px;
+  color: #94a3b8;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.pm-plan-field .pm-stepper {
+  align-self: flex-start;
+}
+
+.pm-plan-field select.pm-select {
+  width: 100%;
+  min-width: 0;
+}
+
+.pm-plan-check {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+.pm-plan-check label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #cbd5e1;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pm-plan-check input[type="checkbox"] {
+  accent-color: #38bdf8;
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.pm-music-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.pm-music-row select.pm-select {
+  flex: 1 1 96px;
+  min-width: 0;
+  font-size: 11px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+.pm-music-row button {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  font-size: 11px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+#btn-pm-music-open {
+  color: #0f172a;
+  background: #4ade80;
+  border: 1px solid rgba(74, 222, 128, 0.6);
+}
+
+#btn-pm-music-open:hover {
+  background: #22c55e;
+}
+
+#btn-pm-music-stop {
+  color: #fecaca;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+}
+
+#btn-pm-music-stop:hover {
+  background: rgba(239, 68, 68, 0.35);
+}
+
+.pm-music-auto-note {
+  width: 100%;
+  text-align: center;
+  font-size: 10px;
+  color: #64748b;
+  line-height: 1.4;
+}

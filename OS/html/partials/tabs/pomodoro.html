@@ -1,0 +1,125 @@
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+      <div class="feature-title" style="margin-bottom:0;">🍅 <span data-i18n="pm_heading">Pomodoro nghiên cứu</span></div>
+      <span id="pm-today-stats" style="font-size:11px; font-weight:700; color:#10b981; background:rgba(16,185,129,0.12); padding:2px 8px; border-radius:12px; border:1px solid rgba(16,185,129,0.25);"></span>
+    </div>
+    <p style="color:var(--text-muted); font-size:11.5px; margin-bottom:10px; line-height:1.5;" data-i18n="pm_desc">Tập trung sâu 25-50 phút, nghỉ ngắn 5 phút và nghỉ dài sau mỗi 4 lượt. Hoàn thành phiên được tự ghi nhật ký vào to-do.</p>
+
+    <!-- Timer -->
+    <div class="feature-card" style="padding:14px; margin-bottom:12px; background:linear-gradient(150deg, rgba(249,115,22,0.14), rgba(15,23,42,0.5) 55%); border:1px solid rgba(249,115,22,0.35); border-radius:14px;">
+      <div style="display:flex; align-items:center; gap:14px;">
+        <svg id="pm-ring" width="112" height="112" viewBox="0 0 112 112" style="flex-shrink:0;">
+          <circle cx="56" cy="56" r="49" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="8"/>
+          <circle id="pm-ring-fg" cx="56" cy="56" r="49" fill="none" stroke="#f97316" stroke-width="8" stroke-linecap="round" stroke-dasharray="307.9" stroke-dashoffset="0" transform="rotate(-90 56 56)"/>
+        </svg>
+        <div style="flex:1; text-align:center;">
+          <div id="pm-time" style="font-size:35px; font-weight:800; color:#f8fafc; font-variant-numeric:tabular-nums; letter-spacing:0.03em;">25:00</div>
+          <div id="pm-mode-label" style="font-size:11px; margin-top:2px;"></div>
+          <div id="pm-session-dots" style="display:flex; gap:5px; justify-content:center; margin-top:8px;"></div>
+        </div>
+      </div>
+      <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:center; align-items:center; margin-top:12px;">
+        <button id="pm-preset-focus" class="btn-text-small" data-i18n="pm_focus" style="padding:4px 10px; font-size:11px; color:#f97316; background:rgba(249,115,22,0.12); border-radius:6px; cursor:pointer; border:1px solid rgba(249,115,22,0.35);">25 phút</button>
+        <button id="pm-preset-long" class="btn-text-small" data-i18n="pm_long" style="padding:4px 10px; font-size:11px; color:#8b5cf6; background:rgba(139,92,246,0.12); border-radius:6px; cursor:pointer; border:1px solid rgba(139,92,246,0.35);">50 phút</button>
+        <button id="pm-preset-short" class="btn-text-small" data-i18n="pm_short" style="padding:4px 10px; font-size:11px; color:#10b981; background:rgba(16,185,129,0.12); border-radius:6px; cursor:pointer; border:1px solid rgba(16,185,129,0.35);">5 phút</button>
+        <div class="pm-stepper">
+          <button type="button" data-step-for="pm-focus-custom" data-step-delta="-5" data-i18n-aria="pm_step_dec" aria-label="Giảm">−</button>
+          <input type="number" id="pm-focus-custom" min="1" max="180" value="25">
+          <button type="button" data-step-for="pm-focus-custom" data-step-delta="5" data-i18n-aria="pm_step_inc" aria-label="Tăng">+</button>
+        </div>
+        <button id="btn-pm-apply-custom" class="btn-text-small" data-i18n="pm_btn_apply" style="padding:4px 10px; font-size:11px; color:#fbbf24; background:rgba(245,158,11,0.12); border-radius:6px; cursor:pointer; border:1px solid rgba(245,158,11,0.35);">Áp dụng</button>
+      </div>
+      <div style="display:flex; gap:6px; margin-top:10px;">
+        <button id="btn-pm-toggle" class="btn btn-primary" style="flex:1; padding:9px; font-size:13px; font-weight:700;">▶ <span data-i18n="pm_start">Bắt đầu</span></button>
+        <button id="btn-pm-reset" class="btn btn-secondary" style="flex:1; padding:9px; font-size:13px;">↺ <span data-i18n="pm_reset">Đặt lại</span></button>
+        <button id="btn-pm-popout" class="btn btn-secondary" style="flex:1; padding:9px; font-size:13px;">⛶ <span data-i18n="pm_popout">Cửa sổ nổi</span></button>
+      </div>
+      <div id="pm-note" style="display:none; margin-top:10px; background:rgba(0,0,0,0.25); border:1px solid rgba(74,222,128,0.4); border-radius:10px; padding:9px; font-size:12.5px; line-height:1.5;"></div>
+      <div class="pm-popout-row pm-music-row" style="margin-top:10px;">
+        <select id="pm-music-scene" class="pm-select" style="font-size:11px; padding:4px 24px 4px 6px; background-color:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8fafc; cursor:pointer;">
+          <option value="lofi" data-i18n="pm_music_lofi">Lofi nhẹ nhàng</option>
+          <option value="focus" data-i18n="pm_music_focus">Deep focus</option>
+          <option value="chill" data-i18n="pm_music_chill">Chill / thư giãn</option>
+          <option value="piano" data-i18n="pm_music_piano">Piano</option>
+        </select>
+        <button id="btn-pm-music-open" type="button" data-i18n="pm_music_open">▶ Phát nhạc</button>
+        <button id="btn-pm-music-stop" type="button" data-i18n="pm_music_stop">■ Dừng nhạc</button>
+        <span class="pm-music-auto-note" data-i18n="pm_music_auto">🎵 Tự dừng khi hết giờ nghỉ</span>
+      </div>
+    </div>
+
+    <!-- Break plan calculator -->
+    <div class="feature-card" style="padding:12px 14px; margin-bottom:12px; background:rgba(15,23,42,0.5); border:1px solid rgba(56,189,248,0.25); border-radius:12px;">
+      <div style="font-size:12px; font-weight:700; color:#38bdf8; margin-bottom:3px; display:flex; align-items:center; gap:5px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><path d="M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"></path></svg>
+        <span data-i18n="pm_plan_title">Kế hoạch ngắt nghỉ thông minh</span>
+      </div>
+      <p style="color:var(--text-muted); font-size:11px; margin-bottom:8px; line-height:1.5;" data-i18n="pm_plan_hint">Nhập tổng thời gian bạn có — công cụ sẽ tự phân bổ các lượt tập trung và thời gian nghỉ hợp lý.</p>
+      <div class="pm-plan-grid">
+        <div class="pm-plan-field">
+          <label data-i18n="pm_plan_work">Tổng thời gian (phút):</label>
+          <div class="pm-stepper">
+            <button type="button" data-step-for="pm-plan-work" data-step-delta="-5" data-i18n-aria="pm_step_dec" aria-label="Giảm">−</button>
+            <input type="number" id="pm-plan-work" min="1" max="600" value="90">
+            <button type="button" data-step-for="pm-plan-work" data-step-delta="5" data-i18n-aria="pm_step_inc" aria-label="Tăng">+</button>
+          </div>
+        </div>
+        <div class="pm-plan-field">
+          <label data-i18n="pm_plan_focus">1 lượt tập trung:</label>
+          <select id="pm-plan-focus" class="pm-select" style="font-size:11.5px; padding:5px 26px 5px 6px; background-color:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8fafc; cursor:pointer;">
+            <option value="25">25'</option>
+            <option value="30">30'</option>
+            <option value="45">45'</option>
+            <option value="50">50'</option>
+          </select>
+        </div>
+        <div class="pm-plan-field">
+          <label data-i18n="pm_plan_short_title">Nghỉ ngắn (phút):</label>
+          <div class="pm-stepper">
+            <button type="button" data-step-for="pm-plan-short-len" data-step-delta="-1" data-i18n-aria="pm_step_dec" aria-label="Giảm">−</button>
+            <input type="number" id="pm-plan-short-len" min="1" max="30" value="5">
+            <button type="button" data-step-for="pm-plan-short-len" data-step-delta="1" data-i18n-aria="pm_step_inc" aria-label="Tăng">+</button>
+          </div>
+        </div>
+        <div class="pm-plan-field">
+          <label data-i18n="pm_plan_long_title">Nghỉ dài (phút):</label>
+          <div class="pm-stepper">
+            <button type="button" data-step-for="pm-plan-long-len" data-step-delta="-5" data-i18n-aria="pm_step_dec" aria-label="Giảm">−</button>
+            <input type="number" id="pm-plan-long-len" min="5" max="45" value="15">
+            <button type="button" data-step-for="pm-plan-long-len" data-step-delta="5" data-i18n-aria="pm_step_inc" aria-label="Tăng">+</button>
+          </div>
+        </div>
+        <div class="pm-plan-field">
+          <label data-i18n="pm_plan_long_every">Nghỉ dài sau mỗi N lượt:</label>
+          <select id="pm-plan-long-every" class="pm-select" style="font-size:11.5px; padding:5px 26px 5px 6px; background-color:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8fafc; cursor:pointer;">
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4" selected>4</option>
+            <option value="5">5</option>
+          </select>
+        </div>
+        <div class="pm-plan-field pm-plan-check">
+          <label>
+            <input type="checkbox" id="pm-plan-trail-sb" checked>
+            <span data-i18n="pm_plan_trail">Thêm nghỉ ngắn ở cuối khi còn dư thời gian</span>
+          </label>
+        </div>
+      </div>
+      <div style="display:flex; justify-content:center;">
+        <button id="btn-pm-plan-calc" class="btn btn-primary" style="padding:6px 16px; font-size:11.5px; font-weight:700;" data-i18n="pm_plan_btn">🧮 Tính kế hoạch</button>
+      </div>
+      <div id="pm-plan-result" style="display:none; margin-top:10px; background:rgba(0,0,0,0.25); border:1px solid rgba(56,189,248,0.3); border-radius:10px; padding:10px;">
+        <div id="pm-plan-summary" style="font-size:12px; font-weight:700; color:#f8fafc; line-height:1.5; margin-bottom:8px;"></div>
+        <div id="pm-plan-timeline" style="display:flex; gap:5px; flex-wrap:wrap; margin-bottom:8px;"></div>
+        <div id="pm-plan-leftover" style="font-size:11px; color:#94a3b8; margin-bottom:8px;"></div>
+        <button id="btn-pm-plan-apply" class="btn-text-small" data-i18n="pm_plan_apply" style="padding:4px 12px; font-size:11.5px; color:#0f172a; background:#38bdf8; border-radius:6px; cursor:pointer; border:none; font-weight:700;">▶ Dùng kế hoạch này</button>
+      </div>
+    </div>
+
+    <!-- 7-day stats -->
+    <div class="feature-card" style="padding:12px 14px; background:rgba(15,23,42,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:12px;">
+      <div style="font-size:12px; font-weight:700; color:#fbbf24; margin-bottom:10px; display:flex; align-items:center; gap:5px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+        <span data-i18n="pm_week_title">Tổng kết 7 ngày gần nhất</span>
+      </div>
+      <div id="pm-week-bars" style="display:flex; align-items:flex-end; gap:8px; height:86px;"></div>
+    </div>

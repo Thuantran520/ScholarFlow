@@ -1,0 +1,77 @@
+<div id="author-rules-modal" class="modal-overlay">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span data-i18n="author_rules_modal_title">Quy tắc trích nhiều tác giả chuẩn quốc tế</span>
+      </div>
+      <button class="btn btn-secondary" id="btn-close-author-rules" style="padding:4px 10px; font-size:12px; flex-shrink:0;" data-i18n="btn_close">✕ Đóng</button>
+    </div>
+
+    <div style="font-size:11px; color:#94a3b8; margin-bottom:8px; line-height:1.4; flex-shrink:0;" data-i18n="author_rules_intro">
+      Khi bài báo hoặc tài liệu có nhiều tác giả tham gia, các tổ chức học thuật quốc tế (IEEE, APA 7th, Harvard, MLA 9th, BibTeX) quy định cách viết rất chặt chẽ như sau:
+    </div>
+
+    <div class="modal-body-scroll">
+      <!-- Rule IEEE -->
+      <div class="rule-card">
+        <div class="rule-card-title" data-i18n="author_rules_ieee_title">1. Chuẩn IEEE (CNTT &amp; Kỹ thuật - Viện IEEE)</div>
+        <div class="rule-card-body" data-i18n="author_rules_ieee_body_html" data-i18n-html="true">
+          • <b>1 tác giả:</b> Viết tắt tên đệm/tên gọi, họ giữ nguyên: <span class="rule-code">A. Vaswani</span><br>
+          • <b>2 tác giả:</b> Nối bằng chữ 'and': <span class="rule-code">A. Vaswani and N. Shazeer</span><br>
+          • <b>3 đến 6 tác giả:</b> Liệt kê đầy đủ tất cả tác giả, có dấu phẩy Oxford trước 'and': <span class="rule-code">A. Vaswani, N. Shazeer, N. Parmar, and J. Uszkoreit</span><br>
+          • <b>Trên 6 tác giả (&gt; 6):</b> Chỉ ghi tác giả đầu tiên kèm cụm 'et al.': <span class="rule-code">A. Vaswani et al.</span><br>
+          • <b>Trong bài:</b> Dùng ngoặc vuông số thứ tự <span class="rule-code">[1]</span> hoặc <span class="rule-code">theo Vaswani et al. [1]</span>.
+        </div>
+      </div>
+
+      <!-- Rule APA 7th -->
+      <div class="rule-card">
+        <div class="rule-card-title" data-i18n="author_rules_apa_title">2. Chuẩn APA 7th (Hiệp hội Tâm lý học Hoa Kỳ - Mới nhất)</div>
+        <div class="rule-card-body" data-i18n="author_rules_apa_body_html" data-i18n-html="true">
+          • <b>1 tác giả:</b> Họ viết trước, chữ cái đầu tên sau: <span class="rule-code">Vaswani, A.</span><br>
+          • <b>2 tác giả:</b> Nối bằng ký tự '&amp;': <span class="rule-code">Vaswani, A., &amp; Shazeer, N.</span><br>
+          • <b>3 đến 20 tác giả:</b> Liệt kê TẤT CẢ các tác giả, dấu phẩy và ký tự '&amp;' trước tác giả cuối: <span class="rule-code">Vaswani, A., Shazeer, N., &amp; Parmar, N.</span><br>
+          • <b>Từ 21 tác giả trở lên:</b> Liệt kê 19 tác giả đầu, thêm dấu ba chấm <span class="rule-code">...</span> rồi ghi tên tác giả cuối cùng (không có &amp;).<br>
+          • <b>Trong bài (In-Text):</b> Từ <b>3 tác giả trở lên</b>, chuẩn APA 7th quy định dùng ngay <span class="rule-code">(Vaswani et al., 2017)</span> ngay từ lần nhắc đầu tiên!
+        </div>
+      </div>
+
+      <!-- Rule Harvard -->
+      <div class="rule-card">
+        <div class="rule-card-title" data-i18n="author_rules_harvard_title">3. Chuẩn Harvard (Kinh tế, Quản trị, Châu Âu &amp; Úc)</div>
+        <div class="rule-card-body" data-i18n="author_rules_harvard_body_html" data-i18n-html="true">
+          • <b>1 tác giả:</b> <span class="rule-code">Vaswani, A. (2017)</span><br>
+          • <b>2 tác giả:</b> <span class="rule-code">Vaswani, A. and Shazeer, N. (2017)</span><br>
+          • <b>3 tác giả:</b> <span class="rule-code">Vaswani, A., Shazeer, N. and Parmar, N. (2017)</span><br>
+          • <b>Từ 4 tác giả trở lên:</b> Dùng et al.: <span class="rule-code">Vaswani, A. et al. (2017)</span>
+        </div>
+      </div>
+
+      <!-- Rule MLA 9th -->
+      <div class="rule-card">
+        <div class="rule-card-title" data-i18n="author_rules_mla_title">4. Chuẩn MLA 9th (Ngôn ngữ, Nhân văn &amp; Báo chí)</div>
+        <div class="rule-card-body" data-i18n="author_rules_mla_body_html" data-i18n-html="true">
+          • <b>1 tác giả:</b> <span class="rule-code">Vaswani, Ashish.</span><br>
+          • <b>2 tác giả:</b> Tác giả 1 đảo họ, tác giả 2 để nguyên: <span class="rule-code">Vaswani, Ashish, and Noam Shazeer.</span><br>
+          • <b>Từ 3 tác giả trở lên:</b> <span class="rule-code">Vaswani, Ashish, et al.</span>
+        </div>
+      </div>
+
+      <!-- Rule BibTeX -->
+      <div class="rule-card">
+        <div class="rule-card-title" data-i18n="author_rules_bibtex_title">5. Chuẩn BibTeX (LaTeX / Overleaf / ACM)</div>
+        <div class="rule-card-body" data-i18n="author_rules_bibtex_body_html" data-i18n-html="true">
+          • Bắt buộc nối tất cả các tác giả bằng chữ <span class="rule-code">and</span>: <br>
+          <span class="rule-code">author = {Vaswani, Ashish and Shazeer, Noam and Parmar, Niki}</span><br>
+          • <b>Tổ chức / Cơ quan:</b> Bọc 2 cặp ngoặc nhọn <span class="rule-code">author = {{OpenAI Research}}</span> để BibTeX không chia nhầm họ tên.
+        </div>
+      </div>
+
+      <!-- Quick input guide -->
+      <div class="rule-card" style="border-color:rgba(16,185,129,0.3); background:rgba(16,185,129,0.06);">
+        <div class="rule-card-title" style="color:#10b981;" data-i18n="author_rules_tip_title">Lưu ý nhập liệu nhanh</div>
+        <div class="rule-card-body" data-i18n="author_rules_tip_body_html" data-i18n-html="true">
+          Bạn chỉ cần gõ hoặc dán danh sách tác giả phân cách bằng dấu phẩy <span class="rule-code">,</span> hoặc chữ <span class="rule-code">and</span> hoặc chấm phẩy <span class="rule-code">;</span>. Tiện ích sẽ tự động tách tên, chuẩn hóa họ tên và áp dụng đúng quy chuẩn của từng chuẩn trích dẫn bạn chọn!
+        </div>
+      </div>
+    </div>
+  </div>

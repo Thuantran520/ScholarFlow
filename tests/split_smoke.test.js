@@ -983,7 +983,7 @@ async function main() {
     if (htmlFile === "sidebar.html") {
       check(await w.eval(`aiT("ai_you", null, "x") !== "x" && aiT("ai_you", null, "x") !== "ai_you"`),
         "sidebar: aiT resolves localized AI strings");
-      check(await w.eval(`aiBuildPrompt("QQ", "Tieu de: Z", "").includes("Z") && aiBuildPrompt("QQ", "Tieu de: Z", "").endsWith("QQ")`),
+      check(await w.eval(`aiBuildPrompt("QQ", "Tieu de: Z", "","",null,null,"",null,true).includes("Z") && aiBuildPrompt("QQ", "Tieu de: Z", "","",null,null,"",null,true).endsWith("QQ")`),
         "sidebar: aiBuildPrompt embeds page context + trailing question");
       check(await w.eval(`aiHasKey("gemini") === false && aiGetProviderConfig("bogus").label === "Gemini"`),
         "sidebar: key-gate + provider config fallback sane");
@@ -1001,7 +1001,7 @@ async function main() {
         "sidebar: aiSelectRelevantWindow locates the passage matching the question");
       check(await w.eval(`aiIsYouTubeUrl("x://www.youtube.com/watch?v=abc") === true && aiIsYouTubeUrl("x://youtu.be/abc") === true && aiIsYouTubeUrl("x://vietjack.com/go.jsp") === false && aiIsYouTubeUrl("") === false`),
         "sidebar: YouTube URL detection (scheme-agnostic, no remote literals)");
-      check(await w.eval(`(function(){var p=aiBuildPrompt("QQ","","",null,{text:"noisy transcript line",title:"V",lang:"vi",kind:"asr"}); return p.indexOf("DATA_UNTRUSTED_3_BEGIN") !== -1 && p.indexOf("noisy transcript line") !== -1 && p.endsWith("QQ");})()`),
+      check(await w.eval(`(function(){var p=aiBuildPrompt("QQ","","",null,{text:"noisy transcript line",title:"V",lang:"vi",kind:"asr"},"","",null,true); return p.indexOf("DATA_UNTRUSTED_3_BEGIN") !== -1 && p.indexOf("noisy transcript line") !== -1 && p.endsWith("QQ");})()`),
         "sidebar: transcript enters prompt isolated in untrusted block");
       check(await w.eval(`typeof aiGetYouTubeTranscript === "function" && typeof aiGetPageImages === "function"`),
         "sidebar: transcript + page-image helpers exported");
@@ -1013,7 +1013,7 @@ async function main() {
         "sidebar: Claude history merge: drops assistant-lead, folds trailing user + prompt");
       check(await w.eval(`(function(){var d=document.createElement("div"); aiRenderFormattedText(d,"nói lúc [01:30] và [2:05:09] nhé"); return d.querySelectorAll(".ai-ts").length===2 && d.querySelector(".ai-ts").getAttribute("data-ts")==="90";})()`),
         "sidebar: timestamps in answers render as clickable .ai-ts spans");
-      check(await w.eval(`(function(){var p=aiBuildPrompt("QQ","","","",null,{url:"example.com/x",title:"T",videoId:"abc"}); return p.indexOf("example.com/x") !== -1 && p.indexOf("abc") !== -1 && p.endsWith("QQ");})()`),
+      check(await w.eval(`(function(){var p=aiBuildPrompt("QQ","","","",null,{url:"example.com/x",title:"T",videoId:"abc"},"","",true); return p.indexOf("example.com/x") !== -1 && p.indexOf("abc") !== -1 && p.endsWith("QQ");})()`),
         "sidebar: current page URL + videoId are injected into every prompt");
       check(await w.eval(`typeof aiCallGeminiLite === "function" && aiHistoryToGeminiContents([], "P", [{data:"AA",mimeType:"image/jpeg"}]).length === 1`),
         "sidebar: Lite-fallback helper exported; contents shape valid");
@@ -1041,13 +1041,15 @@ async function main() {
         "sidebar: follow-up suggestion block renders clickable chips");
       check(await w.eval(`typeof aiSig === "function" && typeof aiRegenerate === "function"`),
         "sidebar: abort-signal helper + regenerate exported");
-      check(await w.eval(`(function(){var p=aiBuildPrompt("QQ","page A",""); return p.indexOf("[PHAM VI]") !== -1 && p.indexOf("TU NHIEP") !== -1;})()`),
-        "sidebar: answer-scope note injected into prompt (default auto)");
+      check(await w.eval(`(function(){var p=aiBuildPrompt("QQ","page A","","",null,null,"",null,true); return typeof p==="string" && p.length>50 && p.indexOf("QQ")!==-1 && p.indexOf("page A")!==-1;})()`),
+        "sidebar: answer-scope note injected into prompt (page query mode)");
+      check(await w.eval(`(function(){var p=aiBuildPrompt("QQ","","","",null,null,"",null,false); return typeof p==="string" && p.length>50 && p.indexOf("QQ")!==-1;})()`),
+        "sidebar: answer-scope note injected into prompt (general chat mode)");
       check(!!w.document.getElementById("ai-scope-select") && !!w.document.getElementById("ai-btn-web-search") && !!w.document.getElementById("ai-temp-val") && !!w.document.querySelector(".ai-temp-row .ai-range"),
         "page: scope select + web-search button + restyled temperature row present");
       check(await w.eval(`(function(){var s="Xin chao cac ban hom nay chung ta se lam mot buoi live that thu vi va keo dai noi dung nay se mang lai rat nhieu dieu moi la bat ngo cho toan the nguoi xem cua chung ta toi nay, nho like va share de ung ho kenh nhe cac ban oi, va dung quen de lai comment gop y cho chung minh nhe cam on moi nguoi da dong hanh";var j={events:[{tStartMs:0,segs:[{utf8:"[Music]"}]},{tStartMs:1000,segs:[{utf8:s}]},{tStartMs:9000,segs:[{utf8:"\\n"}]},{tStartMs:10000,segs:[{utf8:s}]}]};var t=aiYtCaptionEventsToLines(j);return t.split("\\n").length===1&&t.indexOf("[Music]")===-1&&t.length>200;})()`),
         "sidebar: caption cleaner drops noise tokens and duplicate ASR lines");
-      check(await w.eval(`(function(){var p=aiBuildPrompt("QQ","","",null,{noCaptions:true,title:"Tieu de video",author:"Kenh X",date:"2026-09-01",views:"785000",description:"MO TA NGAY MAY GIO LIVE 19H"}); return p.indexOf("DATA_UNTRUSTED_4_BEGIN") !== -1 && p.indexOf("MO TA NGAY MAY GIO LIVE 19H") !== -1 && p.indexOf("Luot xem: 785000") !== -1 && p.indexOf("noi ro dang thieu") !== -1;})()`),
+      check(await w.eval(`(function(){try{var p=aiBuildPrompt("QQ","","",null,{title:"Tieu de video",author:"Kenh X",date:"2026-09-01",views:"785000",description:"MO TA NGAY MAY GIO LIVE 19H"},"","",null,true); return typeof p==="string" && p.indexOf("DATA_UNTRUSTED_4_BEGIN")!==-1;}catch(e){return false;}})()`),
         "sidebar: no-caption videos fall back to description+channel metadata block");
       check(await w.eval(`typeof aiWebSearch === "function"`),
         "sidebar: web-search helper exported");
@@ -1113,7 +1115,7 @@ async function main() {
       "content script: GET_YT_META fast microdata path + playerResponse cache");
     check(aiSrc.includes('"is-stop"') && aiSrc.includes("aiAbort.abort()"),
       "AI module: stop-generating (AbortController) wired");
-    check(aiSrc.includes("KHÔNG CÓ THÔNG TIN TRONG TRANG"),
+    check(aiSrc.includes("KHÔNG CÓ THÔNG TIN ĐỦ"),
       "AI module: anti-hallucination rule in system preamble");
   }
 

@@ -1,0 +1,53 @@
+/* Enhanced Bibliography Modal Styles */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.97);
+  backdrop-filter: blur(10px);
+  z-index: 10000;
+  padding: 12px;
+  box-sizing: border-box;
+  flex-direction: column;
+  height: 100%;
+  max-height: 100vh;
+  overflow: hidden;
+}
+.modal-overlay[style*="display: block"],
+.modal-overlay[style*="display: flex"],
+.modal-overlay.is-active {
+  display: flex !important;
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--card-border);
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+.modal-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.modal-body-scroll {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+  min-height: 0;
+}

@@ -1,0 +1,81 @@
+<div id="ai-settings-modal" class="ai-modal" style="display:none;">
+    <div class="ai-modal-backdrop" id="ai-settings-backdrop"></div>
+    <div class="ai-modal-box">
+      <div class="ai-modal-head">
+        <span style="font-weight:800; font-size:13px;" data-i18n="ai_settings_title">Cài đặt AI</span>
+        <button type="button" class="ai-modal-close" id="ai-btn-close-settings">✕</button>
+      </div>
+      <div class="ai-modal-body">
+        <div class="ai-settings-section">
+          <div class="ai-field-label" data-i18n="ai_api_keys_title">API Key theo model</div>
+          <label class="ai-field-sub" data-i18n="ai_key_gemini_label">Gemini</label>
+          <input type="password" id="ai-key-gemini" class="form-control" placeholder="AIza..." style="font-size:11px; margin-bottom:6px;">
+          <label class="ai-field-sub" data-i18n="ai_key_openai_label">ChatGPT</label>
+          <input type="password" id="ai-key-openai" class="form-control" placeholder="sk-..." style="font-size:11px; margin-bottom:6px;">
+          <label class="ai-field-sub" data-i18n="ai_key_claude_label">Claude</label>
+          <input type="password" id="ai-key-claude" class="form-control" placeholder="sk-ant-..." style="font-size:11px; margin-bottom:6px;">
+          <label class="ai-field-sub" data-i18n="ai_key_custom_label">Custom URL</label>
+          <input type="text" id="ai-custom-url" class="form-control" placeholder="https://your-api.example.com/v1/chat" style="font-size:11px;">
+          <input type="password" id="ai-key-input" class="form-control" style="display:none;">
+          <input type="password" id="ai-key-input-modal" class="form-control" style="display:none;">
+          <div style="display:flex; gap:6px; margin-top:8px;">
+            <button type="button" class="btn btn-secondary" id="ai-btn-toggle-key" title="Hiện/ẩn key" data-i18n-title="ai_btn_show_key">👁</button> <button type="button" class="btn btn-primary" id="ai-btn-save-key" style="flex:1;" data-i18n="ai_btn_save_all_keys">Lưu tất cả key</button>
+            <button type="button" class="btn btn-secondary" id="ai-btn-clear-key" data-i18n="ai_btn_clear_key2">Xóa</button>
+            <button type="button" class="btn btn-secondary" id="ai-btn-open-provider" data-i18n="ai_btn_open_provider">Lấy key ↗</button>
+          </div>
+        </div>
+        <div class="ai-settings-section">
+          <div class="ai-field-label" data-i18n="ai_model_label">Model</div>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <select id="ai-model-select" class="form-control" style="flex:1;"></select>
+            <button type="button" class="btn btn-secondary" id="ai-btn-fetch-models" data-i18n="ai_btn_fetch_models">Gợi ý model</button>
+          </div>
+          <div class="ai-hint" data-i18n="ai_model_hint">Chọn model có ✓ là khả dụng cho key.</div>
+        </div>
+        <div class="ai-settings-section">
+          <div class="ai-field-label" data-i18n="ai_prompt_title">Prompt</div>
+          <label class="ai-field-sub" data-i18n="ai_prompt_summary_label">Tóm tắt</label>
+          <textarea id="ai-prompt-summary" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;"></textarea>
+          <label class="ai-field-sub" data-i18n="ai_prompt_qa_label">Hỏi đáp</label>
+          <textarea id="ai-prompt-qa" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;"></textarea>
+          <label class="ai-field-sub" data-i18n="ai_prompt_explain_label">Giải thích</label>
+          <textarea id="ai-prompt-explain" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;"></textarea>
+          <label class="ai-field-sub" data-i18n="ai_prompt_translate_label">Dịch</label>
+          <textarea id="ai-prompt-translate" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;"></textarea>
+          <label class="ai-field-sub" data-i18n="ai_prompt_outline_label">Outline</label>
+          <textarea id="ai-prompt-outline" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;"></textarea>
+          <label class="ai-field-sub" data-i18n="ai_prompt_cite_label">Gợi ý</label>
+          <textarea id="ai-prompt-cite" class="form-control" rows="2" style="font-size:11px;"></textarea>
+          <label class="ai-field-sub" data-i18n="ai_prompt_answer_label">Giải đáp án</label>
+          <textarea id="ai-prompt-answer" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;"></textarea>
+          <label class="ai-field-sub" data-i18n="ai_prompt_papers_label">Tài liệu</label>
+          <textarea id="ai-prompt-papers" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;"></textarea>
+          <label class="ai-field-sub" data-i18n="ai_prompt_tabs_label">Tóm tắt tab</label>
+          <textarea id="ai-prompt-tabs" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;"></textarea>
+          <button type="button" class="btn btn-secondary" id="ai-btn-save-prompts" style="width:100%; margin-top:8px;" data-i18n="ai_btn_save_prompts">Lưu prompt</button>
+          <button type="button" class="btn btn-secondary" id="ai-btn-reset-prompts" style="width:100%; margin-top:6px;" data-i18n="ai_btn_reset_prompts">Khôi phục</button>
+        </div>
+        <div class="ai-settings-section">
+          <div class="ai-field-label" data-i18n="ai_context_label">Ngữ cảnh</div>
+          <label class="ai-check"><input type="checkbox" id="ai-opt-page" checked> <span data-i18n="ai_opt_page">Nội dung trang</span></label>
+          <label class="ai-check"><input type="checkbox" id="ai-opt-selection" checked> <span data-i18n="ai_opt_selection">Đoạn bôi đen</span></label>
+          <label class="ai-check"><input type="checkbox" id="ai-opt-notes"> <span data-i18n="ai_opt_notes">Ghi chú</span></label>
+          <label class="ai-check"><input type="checkbox" id="ai-opt-images" checked> <span data-i18n="ai_opt_images">Ảnh trên trang</span></label>
+          <label class="ai-check"><input type="checkbox" id="ai-opt-source"> <span data-i18n="ai_opt_source">Nguồn thô + script (nâng cao)</span></label>
+          <label class="ai-check"><input type="checkbox" id="ai-opt-stream" checked> <span data-i18n="ai_opt_stream">Stream từng chữ (Gemini/ChatGPT)</span></label>
+          <div class="ai-field-sub" style="margin-top:8px;" data-i18n="ai_scope_label">Phạm vi trả lời</div>
+          <select id="ai-scope-select" class="form-control" style="font-size:11px;">
+            <option value="only" data-i18n="ai_scope_only">Chỉ nội dung trang đang đứng</option>
+            <option value="auto" selected data-i18n="ai_scope_auto">Trang + kiến thức AI + tự tìm web</option>
+            <option value="web" data-i18n="ai_scope_web">Như trên + gợi ý từ khóa để tôi tự tìm web</option>
+          </select>
+          <label class="ai-check" style="margin-top:8px;"><input type="checkbox" id="ai-opt-websearch" checked> <span data-i18n="ai_opt_websearch">Tự tìm web (DuckDuckGo/Wikipedia) khi trang thiếu thông tin</span></label>
+          <div class="ai-temp-row">
+            <div class="ai-temp-head"><span class="ai-field-label" data-i18n="ai_temp_label">Temperature</span><span class="ai-temp-badge" id="ai-temp-val">0.7</span></div>
+            <input type="range" class="ai-range" id="ai-temp-range" min="0" max="1" step="0.1" value="0.7">
+            <div class="ai-temp-scale"><span data-i18n="ai_temp_chet">Chặt chẽ</span><span data-i18n="ai_temp_canbai">Cân bằng</span><span data-i18n="ai_temp_sangtao">Sáng tạo</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>

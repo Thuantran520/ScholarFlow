@@ -1,0 +1,61 @@
+<div id="trust-modal" class="modal-overlay">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span style="display:inline-flex; align-items:center; gap:6px; min-width:0;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          <span data-i18n="trust_modal_title" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Trung Tâm Uy Tín &amp; Chuẩn Học Thuật</span>
+        </span>
+      </div>
+      <button class="btn btn-secondary" id="btn-close-trust" style="padding:4px 10px; font-size:12px; flex-shrink:0;" data-i18n="btn_close">✕ Đóng</button>
+    </div>
+
+    <div class="modal-body-scroll">
+      <!-- Card 1: 100% Client-side Privacy -->
+      <div class="rule-card" style="border-color:rgba(16,185,129,0.35); background:rgba(16,185,129,0.06);">
+        <div class="rule-card-title" style="color:#10b981;">
+          <span data-i18n="trust_card1_title">🛡️ 1. Chứng Nhận Quyền Riêng Tư 100% Cục Bộ (Zero Tracking)</span>
+          <span data-i18n="trust_store_verified" style="font-size:9.5px; background:rgba(16,185,129,0.2); color:#10b981; padding:2px 6px; border-radius:4px; font-weight:600; white-space:nowrap;">STORE VERIFIED</span>
+        </div>
+        <div class="rule-card-body" data-i18n="trust_card1_body_html" data-i18n-html="true">
+          • <b>Bảo vệ dữ liệu tuyệt đối:</b> Toàn bộ thông tin trích dẫn, hình ảnh chụp màn hình, video và các phần tử che mờ được xử lý và lưu trữ <b>100% cục bộ trên trình duyệt</b> của bạn.<br>
+          • <b>Không máy chủ trung gian:</b> Tiện ích không thu thập thông tin cá nhân, không có máy chủ theo dõi (telemetry) và không bao giờ bán dữ liệu.<br>
+          • <b>Tuân thủ quy định Store:</b> Đạt chuẩn chính sách dữ liệu người dùng của <b>Google Chrome Web Store</b> và <b>Mozilla Add-ons (AMO) Review Guidelines</b>.
+        </div>
+      </div>
+
+      <!-- Card 2: International Academic Standards -->
+      <div class="rule-card" style="border-color:rgba(56,189,248,0.35); background:rgba(56,189,248,0.06);">
+        <div class="rule-card-title" style="color:#38bdf8;" data-i18n="trust_card2_title">🎓 2. Tuân Thủ 6 Chuẩn Trích Dẫn Quốc Tế</div>
+        <div class="rule-card-body" data-i18n="trust_card2_body_html" data-i18n-html="true">
+          • <b>IEEE Standard 2026:</b> Viện Kỹ nghệ Điện &amp; Điện tử (CNTT, phần mềm, kỹ thuật).<br>
+          • <b>APA 7th Edition:</b> Hiệp hội Tâm lý học Hoa Kỳ (khoa học xã hội, giáo dục, tâm lý).<br>
+          • <b>Harvard Referencing:</b> Chuẩn Tác giả - Năm phổ biến tại Châu Âu &amp; khối Kinh tế.<br>
+          • <b>MLA 9th Edition:</b> Hiệp hội Ngôn ngữ Hiện đại (Văn học, nghệ thuật, nhân văn).<br>
+          • <b>BibTeX Standard:</b> Định dạng chuẩn cho LaTeX, Overleaf và ấn phẩm ACM.<br>
+          • <b>Trích dẫn trong bài (In-Text):</b> Tự động tạo định dạng phù hợp chuẩn (ví dụ: [1] cho IEEE, (Nguyễn et al., 2026) cho APA/Harvard).<br>
+          • <b>Hỗ trợ tên Tiếng Việt:</b> Tự động bỏ dấu và chuẩn hóa chữ hoa theo đúng yêu cầu bài báo quốc tế.
+        </div>
+      </div>
+
+      <!-- Card 3: Official Global Academic APIs -->
+      <div class="rule-card" style="border-color:rgba(129,140,248,0.35); background:rgba(129,140,248,0.06);">
+        <div class="rule-card-title" style="color:#818cf8;" data-i18n="trust_card3_title">🌐 3. Mạng Lưới Học Thuật Mở Toàn Cầu</div>
+        <div class="rule-card-body" data-i18n="trust_card3_body_html" data-i18n-html="true">
+          • <b>OpenAlex Integration:</b> Kết nối trực tiếp với 250+ triệu công trình nghiên cứu khoa học mở.<br>
+          • <b>Crossref Official Registry:</b> Kiểm tra và đối soát DOI với 150+ triệu bản ghi học thuật.<br>
+          • <b>ArXiv &amp; Semantic Scholar:</b> Hỗ trợ định danh nghiên cứu điện tử mở toàn cầu.
+        </div>
+      </div>
+
+      <!-- Card 4: Store & License Specs -->
+      <div class="rule-card" style="border-color:rgba(245,158,11,0.35); background:rgba(245,158,11,0.06);">
+        <div class="rule-card-title" style="color:#f59e0b;" data-i18n="trust_card4_title">⚖️ 4. Thông Tin Bản Quyền &amp; Kỹ Thuật</div>
+        <div class="rule-card-body" data-i18n="trust_card4_body_html" data-i18n-html="true">
+          • <b>Phiên bản:</b> ScholarFlow v2.4.4_beta<br>
+          • <b>Kiến trúc:</b> Manifest V3 (Chromium 114+ &amp; Firefox 109+ Native Gecko)<br>
+          • <b>Bản quyền:</b> Bản quyền phần mềm thuộc về Minh Thuận<br>
+          • <b>Chính sách bảo mật:</b> <a href="privacy.html" target="_blank" style="color:#38bdf8; text-decoration:underline;">Xem toàn văn Chính Sách Quyền Riêng Tư (Privacy Policy)</a>
+        </div>
+      </div>
+    </div>
+  </div>

@@ -1,0 +1,59 @@
+<div class="header">
+    <div class="header-left">
+      <div class="header-icon-wrap">
+        <img src="../../icon.svg" alt="Icon" class="header-icon">
+      </div>
+      <div class="header-brand">
+        <span class="title">ScholarFlow</span>
+        <span class="version-tag">PRO</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="custom-dropdown-wrap" id="lang-dropdown-wrap">
+        <button type="button" class="custom-dropdown-btn lang-dropdown-btn" id="lang-dropdown-trigger" title="Language / Ngôn ngữ" data-i18n-title="tip_lang">
+          <span class="lang-btn-flag" id="lang-active-flag">🇻🇳</span>
+          <span class="lang-btn-text" id="lang-active-text">VI</span>
+          <svg class="dropdown-arrow" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <div class="custom-dropdown-menu lang-dropdown-menu" id="lang-dropdown-menu">
+          <div class="custom-dropdown-item active" data-lang="vi">
+            <span class="item-flag">🇻🇳</span>
+            <span class="item-label">Tiếng Việt</span>
+            <span class="item-code">VI</span>
+          </div>
+          <div class="custom-dropdown-item" data-lang="en">
+            <span class="item-flag">🇬🇧</span>
+            <span class="item-label">English</span>
+            <span class="item-code">EN</span>
+          </div>
+          <div class="custom-dropdown-item" data-lang="zh">
+            <span class="item-flag">🇨🇳</span>
+            <span class="item-label">中文</span>
+            <span class="item-code">ZH</span>
+          </div>
+          <div class="custom-dropdown-item" data-lang="ru">
+            <span class="item-flag">🇷🇺</span>
+            <span class="item-label">Русский</span>
+            <span class="item-code">RU</span>
+          </div>
+          <div class="custom-dropdown-item" data-lang="ja">
+            <span class="item-flag">🇯🇵</span>
+            <span class="item-label">日本語</span>
+            <span class="item-code">JA</span>
+          </div>
+        </div>
+        <select id="select-app-lang" style="display:none;" tabindex="-1" aria-hidden="true">
+          <option value="vi">🇻🇳 VI</option>
+          <option value="en">🇬🇧 EN</option>
+          <option value="zh">🇨🇳 中文</option>
+          <option value="ru">🇷🇺 RU</option>
+          <option value="ja">🇯🇵 日本語</option>
+        </select>
+      </div>
+      <button class="header-btn btn-trust-pill" id="btn-open-trust" title="Trung tâm uy tín, bảo mật & chuẩn" data-i18n-title="tip_trust_center">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+        <span class="header-btn-text" data-i18n="btn_trust">Uy tín</span>
+      </button>
+      <span class="badge is-detected" id="source-badge" data-i18n="badge_web">Web</span>
+    </div>
+  </div>

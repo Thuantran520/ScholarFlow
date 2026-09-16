@@ -1,0 +1,8 @@
+/* ScholarFlow — Security tab: result row */
+
+/* Security — monochrome + app blue */
+.sec-result-row {
+  padding: 6px 0;
+  line-height: 1.5;
+  font-weight: 600;
+}

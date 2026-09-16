@@ -1,0 +1,18 @@
+<div class="feature-title" data-i18n="autofill_title">Tự Động Điền Data</div>
+    <p style="color:var(--text-muted); font-size:11.5px; margin-bottom:10px; line-height:1.4;" data-i18n="autofill_desc">
+      Thêm các trường dữ liệu hay dùng (Email, SĐT, Địa chỉ, Mã số thuế...) để điền nhanh vào form trên web.
+    </p>
+
+    <!-- New Item Form -->
+    <div style="background:rgba(15,23,42,0.65); border:1px solid var(--card-border); border-radius:8px; padding:10px; margin-bottom:10px;">
+      <div style="font-size:11.5px; font-weight:700; color:var(--primary); margin-bottom:8px;" data-i18n="autofill_add_header">Thêm trường mới</div>
+      <input type="text" class="form-control" id="autofill-name" placeholder="Tên trường (vd: Email công ty)" data-i18n-placeholder="autofill_name_placeholder" style="margin-bottom:6px; font-size:11px; padding:6px;">
+      <textarea class="form-control" id="autofill-value" placeholder="Giá trị (vd: contact@company.com)" data-i18n-placeholder="autofill_val_placeholder" style="margin-bottom:8px; font-size:11px; padding:6px; min-height:40px; resize:vertical;"></textarea>
+      <button class="btn btn-primary" id="btn-autofill-add" style="width:100%; padding:7px;" data-i18n="autofill_btn_add">Thêm vào danh sách</button>
+    </div>
+
+    <!-- Saved Items List -->
+    <div class="feature-title" style="font-size:12px; margin-top:10px;" data-i18n="autofill_list_title">Danh sách dữ liệu mẫu</div>
+    <div id="autofill-list" style="display: flex; flex-direction: column; gap: 8px;">
+      <!-- JavaScript will populate items here -->
+    </div>

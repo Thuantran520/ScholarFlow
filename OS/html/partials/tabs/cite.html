@@ -1,0 +1,354 @@
+<!-- Draft notification banner -->
+    <div id="draft-banner" class="draft-banner" style="display:none;">
+      <span data-i18n="draft_banner">Đang chỉnh sửa bản nháp</span>
+      <button id="btn-reset-draft" class="btn-text" data-i18n="btn_reset_draft">Lấy lại bản gốc</button>
+    </div>
+
+    <!-- 6-Style Citation Selector Grid -->
+    <div class="sub-tabs-grid">
+      <button class="sub-tab-btn active" data-tab="ieee" title="Chuẩn Viện Kỹ nghệ Điện - Điện tử (CNTT &amp; Kỹ thuật)" data-i18n-title="tip_ieee">IEEE</button>
+      <button class="sub-tab-btn" data-tab="apa" title="Chuẩn Hiệp hội Tâm lý học Hoa Kỳ ấn bản 7 (Khoa học &amp; Đồ án)" data-i18n-title="tip_apa">APA 7th</button>
+      <button class="sub-tab-btn" data-tab="harvard" title="Chuẩn Harvard Tác giả - Năm (Kinh tế &amp; Quản trị)" data-i18n-title="tip_harvard">Harvard</button>
+      <button class="sub-tab-btn" data-tab="bibtex" title="Chuẩn BibTeX cho LaTeX, Overleaf, ACM" data-i18n-title="tip_bibtex">BibTeX</button>
+      <button class="sub-tab-btn" data-tab="mla" title="Chuẩn Modern Language Association ấn bản 9 (Nhân văn &amp; Báo chí)" data-i18n-title="tip_mla">MLA 9th</button>
+      <button class="sub-tab-btn" data-tab="vancouver" title="Chuẩn Vancouver / NLM (Y khoa &amp; Dược học)" data-i18n-title="tip_vancouver">Vancouver</button>
+      <button class="sub-tab-btn" data-tab="chicago" title="Chuẩn Chicago ấn bản 17 - Chú thích &amp; Thư mục (Lịch sử &amp; KHXH)" data-i18n-title="tip_chicago">Chicago 17</button>
+      <button class="sub-tab-btn" data-tab="acs" title="Chuẩn American Chemical Society (Hóa học &amp; KHTN)" data-i18n-title="tip_acs">ACS</button>
+      <button class="sub-tab-btn" data-tab="ama" title="Chuẩn American Medical Association ấn bản 11 (Y khoa &amp; Sinh học)" data-i18n-title="tip_ama">AMA 11th</button>
+      <button class="sub-tab-btn" data-tab="intext" title="Cách trích dẫn trong ngoặc hoặc mạch văn bài viết" data-i18n-title="tip_intext" data-i18n="subtab_intext">Trong bài</button>
+    </div>
+
+    <!-- Result Display Card -->
+    <div class="citation-box">
+      <div class="citation-box-header">
+        <span class="citation-box-badge" id="citation-box-style-label">Định dạng: IEEE</span>
+        <span id="citation-box-source-badge" class="badge" style="font-size:9.5px; padding:1px 6px;" data-i18n="badge_web">Trang Web</span>        <span id="citation-box-metrics-badge" class="badge" style="font-size:9.5px; padding:1px 6px; display:none; background:var(--primary); color:white; margin-left:4px;" title="Lượt trích dẫn (OpenAlex)" data-i18n-title="tip_citations_openalex"></span>
+      </div>
+      <div class="citation-content" id="citation-text" data-i18n="analyzing">Đang phân tích trang web...</div>
+    </div>
+
+    <!-- Action Buttons: Row 1 - Main Actions -->
+    <div class="actions-row" style="margin-bottom:6px;">
+      <button class="btn btn-primary" id="btn-copy-cite" style="flex:1.4; padding:8px 12px; font-size:12px;" title="Sao chép trích dẫn hiện tại vào Clipboard" data-i18n-title="tip_copy_cite">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        <span data-i18n="btn_copy">Sao chép</span>
+      </button>
+      <button class="btn btn-secondary" id="btn-refresh-cite" style="flex:1; padding:8px 12px; font-size:12px;" title="Tải lại và trích xuất dữ liệu mới nhất từ trang hiện tại" data-i18n-title="tip_refresh_cite">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+        <span data-i18n="btn_reload">Tải lại</span>
+      </button>
+    </div>
+
+    <!-- Action Buttons: Row 2 - Utilities -->
+    <div class="actions-row" style="margin-bottom:10px;">
+      <button class="btn btn-secondary" id="btn-save-biblio" style="flex:1; padding:7px 6px; font-size:11.5px;" title="Lưu vào danh mục tài liệu tham khảo [1], [2]..." data-i18n-title="tip_save_biblio">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+        <span data-i18n="btn_save_biblio">Lưu</span>
+      </button>
+      <button class="btn btn-secondary" id="btn-download-ris" style="flex:1; padding:7px 6px; font-size:11.5px;" title="Tải tệp .ris cho Zotero, EndNote, Mendeley" data-i18n-title="tip_download_ris">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        <span data-i18n="btn_export_ris">Xuất .ris</span>
+      </button>
+      <button class="btn btn-secondary" id="btn-upload-local-pdf" style="flex:1; padding:7px 6px; font-size:11.5px;" title="Nạp file PDF từ máy tính hoặc kéo thả để trích xuất tự động" data-i18n-title="tip_upload_pdf">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+        <span data-i18n="btn_upload_pdf">Nạp PDF</span>
+      </button>
+      <input type="file" id="input-local-pdf-file" accept=".pdf,application/pdf" style="display:none;">
+    </div>
+
+    <!-- ════════ CARD 1: METADATA & AUTHORS EDITOR ════════ -->
+    <div class="feature-card" style="padding:10px; margin-bottom:10px;">
+      <div class="feature-title" style="font-size:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+        <span style="display:flex; align-items:center; gap:5px;">
+          <span data-i18n="meta_title">Thông tin nguồn trích dẫn</span>
+        </span>
+        <button id="btn-show-author-rules" class="author-rules-pill" data-i18n="btn_author_rules">Quy tắc tác giả</button>
+      </div>
+
+      <div class="form-group">
+        <label data-i18n="lbl_source_type">Loại tài liệu (Hợp chuẩn quốc tế)</label>
+        <select class="form-control" id="f-source-type">
+          <option value="academic" data-i18n="opt_source_academic">Bài báo học thuật / Tạp chí (Journal Article)</option>
+          <option value="conference" data-i18n="opt_source_conference">Kỷ yếu hội thảo khoa học (Conference Proceedings)</option>
+          <option value="webpage" data-i18n="opt_source_web">Trang web / Báo điện tử (Webpage)</option>
+          <option value="pdf" data-i18n="opt_source_pdf">Tài liệu PDF / Báo cáo kỹ thuật (PDF / Tech Report)</option>
+          <option value="software" data-i18n="opt_source_software">Kho mã nguồn GitHub / Phần mềm (Software)</option>
+          <option value="video" data-i18n="opt_source_youtube">Video trực tuyến (YouTube / Webinar)</option>
+          <option value="book" data-i18n="opt_source_book">Sách / Sách điện tử / Giáo trình (Book)</option>
+          <option value="book-chapter" data-i18n="opt_source_book_chapter">Chương sách / Bài trong tuyển tập (Book Chapter)</option>
+          <option value="thesis" data-i18n="opt_source_thesis">Luận văn / Đồ án (Thesis / Dissertation)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <label style="margin-bottom:0;" data-i18n="lbl_authors_hint">Tác giả (Cách nhau bằng dấu phẩy ',' hoặc 'and')</label>
+          <div style="display:flex; gap:4px;">
+            <button type="button" class="btn-author-quick" id="btn-quick-nodiacritics" data-i18n="btn_nodiacritics">Bỏ dấu</button>
+            <button type="button" class="btn-author-quick" id="btn-quick-uppercase" data-i18n="btn_uppercase">IN HOA</button>
+          </div>
+        </div>
+        <input type="text" class="form-control" id="f-authors" placeholder="Vd: A. Vaswani, Nguyễn Văn A hoặc Nguyen Van A" data-i18n-placeholder="placeholder_authors">
+      </div>
+
+      <div class="form-group">
+        <label data-i18n="lbl_title">Tiêu đề tài liệu / Bài viết</label>
+        <input type="text" class="form-control" id="f-title" placeholder="Tiêu đề bài báo hoặc trang web..." data-i18n-placeholder="placeholder_title" data-i18n-title="tip_cite_autofill">
+      </div>
+
+      <div class="row">
+        <div class="col form-group">
+          <label><span data-i18n="lbl_date">Năm / Ngày xuất bản</span></label>
+          <input type="text" class="form-control" id="f-date" placeholder="Vd: 2026 hoặc Sept. 5, 2026" data-i18n-placeholder="placeholder_date">
+        </div>
+        <div class="col form-group">
+          <label data-i18n="lbl_container">Tạp chí / Nền tảng / Nơi XB</label>
+          <input type="text" class="form-control" id="f-container" placeholder="Vd: The Hacker News / IEEE Trans." data-i18n-placeholder="placeholder_container">
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col form-group">
+          <label data-i18n="lbl_doi">Mã DOI (nếu có)</label>
+          <input type="text" class="form-control" id="f-doi" placeholder="10.xxxx/yyyy" data-i18n-placeholder="placeholder_doi">
+        </div>
+        <div class="col form-group">
+          <label data-i18n="lbl_pages">Tập/Số/Trang/Phiên bản</label>
+          <input type="text" class="form-control" id="f-pages" placeholder="vol. 1, pp. 1-10" data-i18n-placeholder="placeholder_pages">
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col form-group">
+          <label data-i18n="lbl_publisher">Nhà xuất bản / Nơi XB (Sách)</label>
+          <input type="text" class="form-control" id="f-publisher" placeholder="Vd: Cambridge, MA: MIT Press" data-i18n-placeholder="placeholder_publisher">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label data-i18n="lbl_url">Đường dẫn URL</label>
+        <input type="text" class="form-control" id="f-url" placeholder="https://..." data-i18n-placeholder="placeholder_url">
+      </div>
+
+      <div class="row" style="margin-bottom:0;">
+        <div class="col form-group" style="margin-bottom:0;">
+          <label data-i18n="lbl_tag">Nhãn / Chuyên mục (Tag)</label>
+          <input type="text" class="form-control" id="f-tag" placeholder="Vd: An ninh mạng, AI..." data-i18n-placeholder="placeholder_tag">
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:0; margin-top:9px;">
+        <label data-i18n="goal_label">Mục đích học tập</label>
+        <select class="form-control" id="f-goal"></select>
+        <div class="goal-hint" style="font-size:10.5px; color:var(--text-muted); margin-top:3px; line-height:1.45;" data-i18n="goal_hint">Chọn mục đích rồi bấm lưu → tạo việc cần làm liên kết để hoàn thành chu trình: mục đích → nguồn → tóm tắt → hoàn thành.</div>
+      </div>
+
+      <div class="form-group notes-col" style="margin-bottom:0; margin-top:9px;">
+          <div class="notes-composer">
+            <div class="notes-composer-head">
+              <label class="notes-composer-label" for="f-notes" data-i18n="lbl_notes">Ghi chú nghiên cứu</label>
+              <span class="notes-count" id="notes-count"></span>
+              <button type="button" class="notes-tool-btn notes-tool-btn-math" id="btn-insert-math" style="display:none; margin-left:auto; white-space:nowrap; font-size:11px;" data-i18n-title="math_insert_tip"></button>
+            </div>
+            <div class="notes-composer-body">
+              <div style="position:relative;">
+                <textarea class="form-control" id="f-notes" rows="2" style="padding-right:30px; padding-top:8px; resize:none; min-height:48px; font-size:11px; line-height:1.55;" placeholder="Vd: Tham khảo chương 2... In đậm: **từ**, nghiêng: *từ*, link: [chữ](https://...)" data-i18n-placeholder="placeholder_notes"></textarea>
+                <button type="button" id="btn-clear-notes" title="Xóa ghi chú" data-i18n-title="tip_clear_notes" style="position:absolute; right:8px; top:8px; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:12px; display:none; padding:2px; line-height:0; border-radius:4px;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+              </div>
+              <div class="notes-toolbar" id="notes-toolbar">
+                <button type="button" class="notes-tool-btn" data-md="bold" data-i18n-title="notes_fmt_bold"><span class="ntb-b">B</span></button>
+                <button type="button" class="notes-tool-btn" data-md="italic" data-i18n-title="notes_fmt_italic"><span class="ntb-i">I</span></button>
+                <span class="notes-tb-sep" aria-hidden="true"></span>
+                <button type="button" class="notes-tool-btn" data-md="link" data-i18n-title="notes_fmt_link">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                </button>
+                <button type="button" class="notes-tool-btn" data-md="list" data-i18n-title="notes_fmt_list">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                </button>
+                <span class="notes-tb-sep" aria-hidden="true"></span>
+                <button type="button" class="notes-tool-btn notes-tool-btn-preview" data-md="preview" data-i18n-title="notes_fmt_preview" aria-pressed="false">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                  <span data-i18n="notes_preview_btn">Xem</span>
+                </button>
+              </div>
+            </div>
+            <div class="notes-preview" id="notes-preview" style="display:none;"></div>
+          </div>
+        </div>
+    </div>
+
+    <!-- ════════ CARD 2: SOURCE VERIFICATION & FACT CHECKING ════════ -->
+    <div class="feature-card" style="border: 1px solid rgba(56, 189, 248, 0.3); background: rgba(15, 23, 42, 0.3); margin-bottom: 10px; padding: 10px;">
+      <div class="feature-title" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <span style="display:flex; align-items:center; gap:6px;">
+          <span data-i18n="verify_heading">Xác minh Tính xác thực của Nguồn</span>
+        </span>
+        <span class="badge is-detected" style="font-size:9.5px; padding:1px 7px;" data-i18n="badge_global_db">CSDL Quốc tế</span>
+      </div>
+      <p data-i18n="verify_desc" style="color:var(--text-muted); font-size:11px; margin-bottom:8px; line-height:1.4;">Đối soát trích dẫn với cơ sở dữ liệu học thuật toàn cầu (Crossref, OpenAlex, DOI) để kiểm tra tính chính xác và nhận diện nguồn nhân tạo từ mô hình ngôn ngữ lớn (LLM).</p>
+
+      <!-- Input box with clear button -->
+      <div style="position:relative; margin-bottom:8px;">
+        <textarea id="verify-input" class="form-control" rows="2" style="font-size:11px; resize:vertical; padding-right:26px;" placeholder="Dán trích dẫn (IEEE, APA...), tên bài báo, mã DOI (10.xxxx/...) hoặc liên kết cần đối soát..." data-i18n-placeholder="verify_placeholder"></textarea>
+        <button id="btn-clear-verify-input" title="Xóa nội dung" data-i18n-title="tip_clear_input" style="position:absolute; right:6px; top:6px; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:12px; display:none;">✕</button>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display:flex; gap:5px; margin-bottom:8px;">
+        <button class="btn btn-secondary" id="btn-paste-verify" style="flex:1; padding:6px 6px; font-size:11px;" title="Dán nhanh nội dung từ Clipboard" data-i18n-title="tip_verify_paste">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+          <span data-i18n="btn_paste_verify">Dán nhanh</span>
+        </button>
+        <button class="btn btn-secondary" id="btn-use-current-page-verify" style="flex:1; padding:6px 6px; font-size:11px;" title="Lấy tiêu đề trang web đang mở" data-i18n-title="tip_verify_current">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+          <span data-i18n="btn_use_current_page">Trang hiện tại</span>
+        </button>
+        <button class="btn btn-primary" id="btn-run-verify" style="flex:1.4; padding:6px 8px; font-size:11px; ">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <span data-i18n="btn_verify">Kiểm tra đối soát</span>
+        </button>
+      </div>
+
+      <!-- Results Container -->
+      <div id="verify-result-box" style="display:none; border-radius:8px; padding:10px; border:1px solid rgba(255,255,255,0.1); background:rgba(15,23,42,0.85);">
+        <div id="verify-status-banner" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid rgba(255,255,255,0.08);">
+          <div id="verify-status-title" data-i18n="verify_checking" style="font-weight:700; font-size:11.5px;">Đang kiểm tra...</div>
+          <span id="verify-confidence-badge" class="badge" style="font-size:9.5px; padding:1px 6px;">Đang xác minh</span>
+        </div>
+
+        <div id="verify-status-desc" style="font-size:11px; color:#cbd5e1; margin-bottom:8px; line-height:1.4;"></div>
+
+        <div id="verify-matched-details" style="display:none; background:rgba(30,41,59,0.7); border:1px solid rgba(56,189,248,0.2); border-radius:6px; padding:8px; margin-bottom:8px; font-size:11px;">
+          <div style="font-weight:700; color:#38bdf8; margin-bottom:4px; font-size:11.5px; word-break:break-word;" id="verify-matched-title">---</div>
+          <div style="color:#cbd5e1; margin-bottom:3px;" id="verify-matched-authors">Tác giả: ---</div>
+          <div style="color:#cbd5e1; margin-bottom:3px;" id="verify-matched-venue">Nơi XB: ---</div>
+          <div style="color:#cbd5e1; margin-bottom:3px; word-break:break-all;" id="verify-matched-doi">DOI: ---</div>
+        </div>
+
+        <div id="verify-action-links" style="display:flex; flex-direction:column; gap:5px;">
+          <button class="btn btn-primary" id="btn-open-real-source" style="width:100%; padding:7px; font-size:11px; display:none;  border-color:rgba(16,185,129,0.4);" title="Mở trang bài báo chính thức (DOI / Publisher Link)" data-i18n-title="tip_verify_real">
+            <span data-i18n="btn_open_real_source">Mở trực tiếp bài báo gốc ↗</span>
+          </button>
+          <button class="btn btn-secondary" id="btn-open-oa-pdf" style="width:100%; padding:6px; font-size:11px; display:none; color:#38bdf8;" title="Mở bản PDF toàn văn miễn phí" data-i18n-title="tip_verify_pdf">
+            <span data-i18n="btn_open_oa_pdf">Đọc bản PDF toàn văn (Open Access) ↗</span>
+          </button>
+          <div style="display:flex; gap:4px;">
+            <button class="btn btn-secondary" id="btn-open-google" style="flex:1; padding:5px 2px; font-size:10.5px;" title="Tìm kiếm trên Google để đối soát bài viết, tin tức hoặc video" data-i18n-title="tip_verify_google">
+              Google ↗
+            </button>
+            <button class="btn btn-secondary" id="btn-open-scholar" style="flex:1; padding:5px 2px; font-size:10.5px;" title="Tìm kiếm trên kho dữ liệu Google Scholar" data-i18n-title="tip_verify_scholar">
+              Scholar ↗
+            </button>
+            <button class="btn btn-secondary" id="btn-open-crossref" style="flex:1; padding:5px 2px; font-size:10.5px;" title="Đối soát trên hệ thống chỉ số DOI Crossref" data-i18n-title="tip_verify_crossref">
+              Crossref ↗
+            </button>
+          </div>
+          <button class="btn btn-secondary" id="btn-apply-verified-to-form" style="width:100%; padding:6px; font-size:11px; margin-top:2px; color:var(--primary);" title="Điền thông tin chuẩn xác này vào khung chỉnh sửa trích dẫn" data-i18n-title="tip_verify_apply">
+            <span data-i18n="btn_apply_verified">Cập nhật thông tin đối soát vào trích dẫn</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════ CARD 3: PREFERENCES & BIBLIOGRAPHY ════════ -->
+    <div style="background:rgba(15,23,42,0.65); border:1px solid var(--card-border); border-radius:8px; padding:10px; margin-bottom:8px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span style="font-size:11.5px; font-weight:700; color:var(--primary); display:flex; align-items:center; gap:5px;">
+          <span data-i18n="pref_heading">Cài đặt trích dẫn</span>
+        </span>
+        <span style="font-size:10px; color:#10b981; font-weight:600;" id="cite-settings-status" data-i18n="pref_autosave">Tự động lưu</span>
+      </div>
+
+      <!-- Option 1: Auto include accessed date -->
+      <label class="switch-row">
+        <div class="switch-row-left">
+          <span class="switch-row-title"><span data-i18n="pref_accessed">Kèm ngày truy cập</span> ([Accessed: ...])</span>
+          <span class="switch-row-desc" data-i18n="pref_accessed_desc">Hiển thị ngày truy cập theo chuẩn quốc tế khi trích nguồn website.</span>
+        </div>
+        <div class="custom-switch">
+          <input type="checkbox" id="cite-pref-accessed" checked>
+          <span class="switch-slider"></span>
+        </div>
+      </label>
+
+      <!-- Option: Bỏ dấu tiếng Việt (Latin / ASCII) -->
+      <label class="switch-row">
+        <div class="switch-row-left">
+          <span class="switch-row-title" data-i18n="pref_nodiacritics">Chuẩn hóa tên Latin / Bỏ dấu tiếng Việt</span>
+          <span class="switch-row-desc" data-i18n="pref_nodiacritics_desc">Tự động bỏ dấu khi trích nguồn (Nguyễn Văn A ➔ Nguyen Van A / N. V. A) tương thích chuẩn quốc tế &amp; BibTeX.</span>
+        </div>
+        <div class="custom-switch">
+          <input type="checkbox" id="cite-pref-remove-diacritics">
+          <span class="switch-slider"></span>
+        </div>
+      </label>
+
+            <!-- Option 2: Author formatting & Default Style -->
+      <div class="row" style="margin-bottom:6px;">
+        <div class="col form-group" style="margin-bottom:0; position:relative;">
+          <label style="font-size:10.5px; font-weight:600; color:var(--text-muted);" data-i18n="pref_author_style">Định dạng tên tác giả:</label>
+          <div class="custom-select-wrap" id="wrap-author-style">
+            <button type="button" class="custom-select-trigger" id="btn-author-style" aria-haspopup="listbox">
+              <span class="custom-select-label" id="label-author-style" data-i18n="opt_author_standard">Chuẩn (Vd: A. Vaswani / V. A. Nguyễn)</span>
+              <svg class="dropdown-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="custom-select-menu" id="menu-author-style" role="listbox">
+              <div class="custom-select-item selected" data-value="standard" data-i18n="opt_author_standard">Chuẩn (Vd: A. Vaswani / V. A. Nguyễn)</div>
+              <div class="custom-select-item" data-value="last-first" data-i18n="opt_author_last_first">Họ trước (Nguyễn, V. A. / Vaswani, A.)</div>
+              <div class="custom-select-item" data-value="uppercase-last" data-i18n="opt_author_uppercase_last">Họ in hoa (NGUYỄN, V. A. / VASWANI, A.)</div>
+              <div class="custom-select-item" data-value="uppercase-all" data-i18n="opt_author_uppercase_all">In hoa toàn bộ (NGUYEN VAN A)</div>
+              <div class="custom-select-item" data-value="full">Tên đầy đủ (Liliana Porras-Hurtado / Nguyễn Văn A)</div>
+              <div class="custom-select-item" data-value="original" data-i18n="opt_author_original">Giữ nguyên gốc (Nguyễn Văn A)</div>
+            </div>
+            <select class="form-control" id="cite-pref-author-style" style="display:none;" tabindex="-1" aria-hidden="true">
+              <option value="standard" data-i18n="opt_author_standard">Chuẩn (Vd: A. Vaswani / V. A. Nguyễn)</option>
+              <option value="last-first" data-i18n="opt_author_last_first">Họ trước (Nguyễn, V. A. / Vaswani, A.)</option>
+              <option value="uppercase-last" data-i18n="opt_author_uppercase_last">Họ in hoa (NGUYỄN, V. A. / VASWANI, A.)</option>
+              <option value="uppercase-all" data-i18n="opt_author_uppercase_all">In hoa toàn bộ (NGUYEN VAN A)</option>
+              <option value="full">Tên đầy đủ (Liliana Porras-Hurtado / Nguyễn Văn A)</option>
+              <option value="original" data-i18n="opt_author_original">Giữ nguyên gốc (Nguyễn Văn A)</option>
+            </select>
+          </div>
+        </div>
+        <div class="col form-group" style="margin-bottom:0; position:relative;">
+          <label style="font-size:10.5px; font-weight:600; color:var(--text-muted);" data-i18n="pref_date_style">Định dạng thời gian:</label>
+          <div class="custom-select-wrap" id="wrap-date-style">
+            <button type="button" class="custom-select-trigger" id="btn-date-style" aria-haspopup="listbox">
+              <span class="custom-select-label" id="label-date-style">Tự động (Theo chuẩn)</span>
+              <svg class="dropdown-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="custom-select-menu" id="menu-date-style" role="listbox">
+              <div class="custom-select-item selected" data-value="auto" data-i18n="opt_date_auto">Tự động (Theo chuẩn)</div>
+              <div class="custom-select-item" data-value="year" data-i18n="opt_date_year">Chỉ lấy Năm (Vd: 2026)</div>
+              <div class="custom-select-item" data-value="full" data-i18n="opt_date_full">Đầy đủ ngày tháng (Vd: 15/10/2026)</div>
+            </div>
+            <select class="form-control" id="cite-pref-date-style" style="display:none;" tabindex="-1" aria-hidden="true">
+              <option value="auto" data-i18n="opt_date_auto">Tự động (Theo chuẩn)</option>
+              <option value="year" data-i18n="opt_date_year">Chỉ lấy Năm (Vd: 2026)</option>
+              <option value="full" data-i18n="opt_date_full">Đầy đủ ngày tháng (Vd: 15/10/2026)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Option 3: Auto Copy switch -->
+      <label class="switch-row" style="margin-bottom:0;">
+        <div class="switch-row-left">
+          <span class="switch-row-title" data-i18n="pref_autocopy">Tự sao chép khi bấm chuyển Tab chuẩn</span>
+          <span class="switch-row-desc" data-i18n="pref_autocopy_desc">Bấm chuyển sang IEEE / APA / BibTeX là tự chép ngay vào Clipboard.</span>
+        </div>
+        <div class="custom-switch">
+          <input type="checkbox" id="cite-pref-autocopy">
+          <span class="switch-slider"></span>
+        </div>
+      </label>
+    </div>
+
+    <!-- Bibliography quick button -->
+    <div>
+      <button class="btn btn-secondary" id="btn-open-biblio" style="width:100%; padding:8px; font-size:12px; font-weight:700;">
+        <span data-i18n="btn_manage_biblio">Quản lý danh mục đã lưu</span> (<span id="biblio-count">0</span>)
+      </button>
+    </div>

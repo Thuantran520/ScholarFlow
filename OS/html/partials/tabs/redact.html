@@ -1,0 +1,119 @@
+<div class="feature-card">
+      <div class="feature-title" data-i18n="redact_heading">Che mờ &amp; Bảo mật thông tin trên trang</div>
+      <div style="background:rgba(15,23,42,0.6); border:1px solid var(--card-border); border-radius:6px; padding:8px 10px; margin-bottom:10px; font-size:11.5px; line-height:1.5;">
+        <div style="color:var(--primary); font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:5px;">
+          <span data-i18n="redact_guide_title">Hướng dẫn thao tác:</span>
+        </div>
+        <div style="color:var(--text); margin-bottom:4px;" data-i18n="redact_guide_desc_html" data-i18n-html="true">
+          • Bấm <b>Bật chọn che</b> → Rê chuột vào phần tử → <b>Click chuột trái</b> để che mờ / hộp đen.<br>
+          • Để gỡ bỏ che một phần tử, nhấp vào nút xóa tương ứng trong <b>Danh sách phần tử đã che</b> bên dưới.
+        </div>
+        <div style="color:#fbbf24; font-size:11px; margin-top:4px; border-top:1px dashed var(--card-border); padding-top:4px;" data-i18n="redact_shortcut_hint_html" data-i18n-html="true">
+          Phím tắt: Nhấn <b>[ESC]</b> trên bàn phím hoặc nút <b>Dừng chọn</b> để thoát bất kỳ lúc nào.
+        </div>
+        <div style="color:#0ea5e9; font-size:11px; margin-top:4px; border-top:1px dashed var(--card-border); padding-top:4px;">
+          💡 Để che <b>chính xác 1 vùng / đoạn văn bản</b>: giữ chuột trái và <b>kéo thành khung</b> ngay trên trang trong lúc đang ở chế độ chọn che.
+        </div>
+      </div>
+
+      <!-- 2 Nút riêng biệt: Bật chọn che / Tắt chọn -->
+      <div class="actions-row" style="margin-bottom:10px;">
+        <button class="btn btn-primary" id="btn-start-inspect" style="flex:1; padding:9px 6px; font-size:12px; font-weight:700;" data-i18n="btn_start_inspect">Bật chọn che</button>
+        <button class="btn btn-secondary" id="btn-stop-inspect" style="flex:1; padding:9px 6px; font-size:12px; font-weight:600; opacity:0.65;" data-i18n="btn_stop_inspect">Dừng chọn</button>
+      </div>
+
+      <div class="feature-title" style="font-size:12px; margin-top:8px;" data-i18n="lbl_redact_style">Kiểu che bảo mật:</div>
+      <div class="radio-grid">
+        <label class="radio-card">
+          <input type="radio" name="redact-style" value="blur" checked>
+          <span data-i18n="opt_style_blur">Làm mờ (Blur)</span>
+        </label>
+        <label class="radio-card">
+          <input type="radio" name="redact-style" value="blackout">
+          <span data-i18n="opt_style_black">Hộp đen (Blackout)</span>
+        </label>
+        <label class="radio-card">
+          <input type="radio" name="redact-style" value="pixelate">
+          <span data-i18n="opt_style_pixel">Điểm ảnh (Pixelate)</span>
+        </label>
+        <label class="radio-card">
+          <input type="radio" name="redact-style" value="hide">
+          <span data-i18n="opt_style_hide">Ẩn phần tử (Hide)</span>
+        </label>
+      </div>
+
+      <div id="blur-slider-box" style="margin-top:6px;">
+        <label style="font-size:11px; color:var(--text-muted); font-weight:600;"><span data-i18n="lbl_blur_level">Mức độ mờ (Blur):</span> <span id="blur-val-text">12px</span></label>
+        <div class="slider-row">
+          <input type="range" id="blur-slider" min="4" max="30" value="12" step="2">
+        </div>
+      </div>
+    </div>
+
+    <!-- Redaction Management -->
+    <div class="feature-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span style="font-weight:600; font-size:12px;"><span data-i18n="lbl_redacted_count">Đã che:</span> <strong id="redact-count" style="color:var(--primary);">0</strong> <span data-i18n="lbl_elements">phần tử</span></span>
+        <button class="btn btn-secondary" id="btn-undo-redact" style="padding:4px 8px; font-size:11px;" data-i18n="btn_undo">Hoàn tác</button>
+      </div>
+
+      <!-- 2 Nút riêng biệt: Bật che / Tắt che (Xem gốc) -->
+      <div style="margin-bottom:8px;">
+        <div style="font-size:11px; color:var(--text-muted); font-weight:600; margin-bottom:4px;" data-i18n="lbl_display_redact">Hiển thị che trên trang:</div>
+        <div class="actions-row" style="margin-bottom:0;">
+          <button class="btn btn-success" id="btn-enable-redactions" style="flex:1; padding:7px 4px; font-size:11.5px; font-weight:700;" title="Bật lại hiệu ứng che mờ / hộp đen cho các phần tử" data-i18n-title="tip_enable_redact">
+            <span data-i18n="btn_enable_redact">Bật che</span>
+          </button>
+          <button class="btn btn-secondary" id="btn-disable-redactions" style="flex:1; padding:7px 4px; font-size:11.5px; font-weight:600; opacity:0.75;" title="Tạm thời tắt che để xem nội dung trang gốc" data-i18n-title="tip_disable_redact">
+            <span data-i18n="btn_disable_redact">Xem bản gốc</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Danh sách phần tử đã che & nút xóa từng phần tử -->
+      <div style="margin-top:10px; margin-bottom:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <span style="font-size:11px; color:var(--text-muted); font-weight:600;" data-i18n="lbl_redacted_list">Danh sách phần tử đã che:</span>
+          <span style="font-size:10px; color:#94a3b8;" data-i18n="lbl_hover_hint">Rê chuột để soi vị trí</span>
+        </div>
+        <div id="redacted-items-list" class="redacted-list-box">
+          <div class="empty-list-box">
+            <div class="empty-list-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:0.6;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            </div>
+            <div class="empty-list-title" data-i18n="lbl_no_redacted">Chưa có phần tử nào được che</div>
+            <div class="empty-list-sub" data-i18n="lbl_no_redacted_sub">Bấm "Bật chọn che" rồi nhấp vào đối tượng trên trang để bảo mật.</div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-secondary" id="btn-apply-all-style" style="width:100%; padding:7px; font-size:11.5px; margin-bottom:6px;">
+        <span data-i18n="btn_apply_all_style">Áp dụng kiểu này cho tất cả</span>
+      </button>
+      <button class="btn btn-danger" id="btn-clear-redact" style="width:100%; padding:7px; font-size:11.5px;">
+        <span data-i18n="btn_clear_redact">Khôi phục trang gốc (Xóa hết che)</span>
+      </button>
+    </div>
+
+    <!-- Auto-detect sensitive data + keyword masking (Group B) -->
+    <div class="feature-card">
+      <div class="feature-title" style="font-size:12px;">🛡️ Tự động quét & che dữ liệu nhạy cảm</div>
+      <button class="btn btn-primary" id="btn-detect-sensitive" style="width:100%; padding:8px; font-size:11.5px; margin-bottom:8px;">
+        🔍 Quét & che dữ liệu nhạy cảm (Email, SĐT, CCCD...)
+      </button>
+      <div style="display:flex; gap:6px; align-items:center;">
+        <input type="text" id="redact-keyword-input" class="form-control" style="flex:1; font-size:11px; padding:6px;" placeholder="Từ khóa cần che, VD: tên riêng" autocomplete="off">
+        <button class="btn btn-secondary" id="btn-mask-keyword" style="padding:6px 10px; font-size:11px;">Che theo từ</button>
+      </div>
+    </div>
+
+    <!-- PIN lock for "Xem bản gốc" (reveal original) -->
+    <div class="feature-card">
+      <div class="feature-title" style="font-size:12px;">🔒 Bảo vệ nút "Xem bản gốc" bằng mã PIN</div>
+      <div style="display:flex; gap:6px; align-items:center; margin-bottom:8px;">
+        <input type="password" id="redact-pin-input" class="form-control" style="flex:1; font-size:11px; padding:6px;" placeholder="Nhập mã PIN 4-6 ký số" maxlength="6" autocomplete="off" inputmode="numeric">
+        <button class="btn btn-primary" id="btn-set-redact-pin" style="padding:6px 10px; font-size:11px;">Đặt mã</button>
+        <button class="btn btn-secondary" id="btn-clear-redact-pin" style="padding:6px 10px; font-size:11px;">Xoá</button>
+      </div>
+      <div style="font-size:10.5px; color:#cbd5e1;" id="redact-pin-state">Chưa đặt mã PIN.</div>
+    </div>

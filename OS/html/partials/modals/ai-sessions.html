@@ -1,0 +1,16 @@
+<div id="ai-sessions-modal" class="ai-modal" style="display:none;">
+    <div class="ai-modal-backdrop" id="ai-sessions-backdrop"></div>
+    <div class="ai-modal-box">
+      <div class="ai-modal-head">
+        <span style="font-weight:800; font-size:13px;" data-i18n="ai_sessions_title">Lịch sử & Phiên chat</span>
+        <button type="button" class="ai-modal-close" id="ai-btn-close-sessions">✕</button>
+      </div>
+      <div class="ai-modal-body">
+        <div style="display:flex; gap:6px; margin-bottom:8px;">
+          <input type="text" id="ai-session-search" class="form-control" style="flex:1; font-size:11px;" placeholder="Tìm trong phiên và bại viết..." data-i18n-placeholder="ai_sessions_search_ph">
+          <button type="button" class="btn btn-primary" id="ai-btn-new-session" style="font-size:11px; padding:4px 10px; white-space:nowrap;" data-i18n="ai_sessions_new">➕ Phiên mới</button>
+        </div>
+        <div id="ai-session-list"></div>
+      </div>
+    </div>
+  </div>
