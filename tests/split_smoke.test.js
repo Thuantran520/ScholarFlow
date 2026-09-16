@@ -985,6 +985,8 @@ async function main() {
       `${htmlFile}: page-context UI mirrored (add-page btn, pages strip, input wrap)`);
     check(!!w.document.getElementById("ai-input") && w.document.getElementById("ai-input").getAttribute("rows")==="1" && !w.document.getElementById("ai-page-badge"),
       `${htmlFile}: chat input is single-row autogrow, +Trang badge removed`);
+    check(!!w.document.getElementById("ai-btn-copy-convo"),
+      `${htmlFile}: copy-conversation (Markdown) button present in settings modal`);
     check(!!w.document.querySelector("#tab-ai .ai-chat-top .ai-model-bar .ai-provider-pills") && !!w.document.querySelector("#tab-ai .ai-chat-top .ai-top-actions") && !!w.document.querySelector(".ai-pages-context .ai-pages-label"),
       `${htmlFile}: merged chat-top (model-bar inside header) + horizontal pages strip markup`);
     if (htmlFile === "sidebar.html") {
@@ -1072,6 +1074,12 @@ async function main() {
         "sidebar: pinned-pages strip renders chips safely (title XSS inert, add/remove + auto-hide)");
       check(await w.eval(`typeof aiAddPage==="function" && typeof aiRemovePage==="function" && typeof aiGetCurrentPageInfo==="function"`),
         "sidebar: multi-page context helpers exported");
+      check(await w.eval(`(function(){try{aiAppendMessage("user","cau hoi demo","gemini");aiAppendMessage("assistant","tra loi demo","gemini");var md=aiConversationMarkdown();var ok=typeof md==="string"&&md.indexOf("tra loi demo")!==-1&&md.indexOf("**")!==-1;var editBtns=document.querySelectorAll(".ai-msg-user button").length;aiClearHistory();return ok&&editBtns>=2;}catch(e){return false;}})()`),
+        "sidebar: copy-conversation Markdown + user message has copy/edit buttons");
+      check(await w.eval(`(function(){try{aiAppendMessage("user","lan dau","gemini");var found=false;var editBtn=null;document.querySelectorAll(".ai-msg-user button").forEach(function(b){ if(b.textContent==="\u270e"){found=true;editBtn=b;} });var inp=document.getElementById("ai-input");if(inp) inp.value="lan dau";if(editBtn) editBtn.click();var histEmpty=document.querySelectorAll(".ai-msg").length===0;var val=inp?inp.value:"";aiClearHistory();return found&&histEmpty&&val==="lan dau";}catch(e){return false;}})()`),
+        "sidebar: edit (\\u270e) truncates history from that message and refills input");
+      check(await w.eval(`!!document.getElementById("ai-btn-latest")`),
+        "sidebar: floating \\u2193-newest pill created in chat wrapper");
       check(await w.eval(`typeof aiWebSearch === "function"`),
         "sidebar: web-search helper exported");
       check(!!w.document.getElementById("ai-opt-websearch"),
