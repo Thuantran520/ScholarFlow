@@ -157,9 +157,10 @@ async function aiStreamSSE(res, extract, opts){
   }
   return full;
 }
-async function aiStreamGemini(model, apiKey, contents, temperature, opts){
+async function aiStreamGemini(model, apiKey, contents, temperature, opts, tools){
   const url="https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(model)+":streamGenerateContent?alt=sse&key="+encodeURIComponent(apiKey);
-  const res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:contents,generationConfig:{temperature:temperature}}),signal:aiSig(opts&&opts.signal,90000)});
+  const body={contents:contents,generationConfig:{temperature:temperature}}; if(tools&&tools.length) body.tools=tools;
+  const res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),signal:aiSig(opts&&opts.signal,90000)});
   if(!res.ok){ const t=res.status===404?"model_404":String(res.status); throw new Error("gemini_stream_"+t); }
   const full=await aiStreamSSE(res, (o)=>{ const cand=o.candidates&&o.candidates[0]; const p2=cand&&cand.content&&cand.content.parts; return p2&&p2[0]&&typeof p2[0].text==="string"?p2[0].text:""; }, opts);
   if(!full) throw new Error("gemini_stream_empty");
@@ -821,6 +822,8 @@ async function aiCallGeminiLite(prompt, apiKey, imgs, hist){
   }
   return "";
 }
+/* Gemini 2.x/3.x models support native Google Search grounding via tools:[{google_search:{}}]. */
+function aiGeminiSupportsGrounding(model){ const m=String(model||"").toLowerCase(); return /gemini-[23]/.test(m)||m.includes("latest"); }
 async function aiCallProvider(provider, prompt, apiKey, image, hist, opts){
   const cfg=aiGetProviderConfig(provider);
   const imgs=Array.isArray(image)?image.filter(x=>x&&x.data):((image&&image.data)?[image]:[]);
@@ -833,16 +836,19 @@ async function aiCallProvider(provider, prompt, apiKey, image, hist, opts){
   }
   if(provider==="gemini"){
     const model=aiGetModel(provider); let lastErr="";
-    if(wantStream){ try{ return await aiStreamGemini(model, apiKey, aiHistoryToGeminiContents(hist,prompt,imgs), aiSettings.temperature, opts); }catch(se){ if(opts&&opts.signal&&opts.signal.aborted) throw se; } }
+    let grounding=(aiSettings.webSearch!==false)&&aiGeminiSupportsGrounding(model);
+    if(wantStream){ try{ return await aiStreamGemini(model, apiKey, aiHistoryToGeminiContents(hist,prompt,imgs), aiSettings.temperature, opts, grounding?[{google_search:{}}]:null); }catch(se){ if(opts&&opts.signal&&opts.signal.aborted) throw se; } }
     for(const ver of ["v1beta","v1"]){
       let res;
       try{
         const base="https://generativelanguage.googleapis.com/"+ver+"/models/";
         const url=base+encodeURIComponent(model)+":generateContent?key="+encodeURIComponent(apiKey);
-        res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:aiHistoryToGeminiContents(hist,prompt,imgs),generationConfig:{temperature:aiSettings.temperature}}),signal:aiSig(opts&&opts.signal,prompt.length>9000?45000:28000)});
+        const body={contents:aiHistoryToGeminiContents(hist,prompt,imgs),generationConfig:{temperature:aiSettings.temperature}}; if(grounding) body.tools=[{google_search:{}}];
+        res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),signal:aiSig(opts&&opts.signal,prompt.length>9000?45000:28000)});
       }catch(e){ lastErr=String(e&&e.message||e); if(lastErr.toLowerCase().includes("timed out")||lastErr.toLowerCase().includes("timeout")||lastErr.includes("AbortError")){ if(ver==="v1beta"){ await new Promise(r=>setTimeout(r,1200)); continue; } throw new Error("gemini_timeout_"+lastErr.slice(0,120)+" — Model "+model+" overloaded/timeout - switch to a Lite model in Settings"); } throw new Error("gemini_network_"+lastErr.slice(0,120)); }
       if(res.ok){ const d=await res.json(); const cand=d.candidates&&d.candidates[0]; const parts=cand&&cand.content&&cand.content.parts; if(parts&&parts[0]&&parts[0].text) return parts[0].text; return JSON.stringify(d).slice(0,4000); }
       const t=await res.text().catch(()=> ""); lastErr=t;
+      if(res.status===400&&grounding){ grounding=false; continue; }
       if((res.status===503||res.status===429)&&ver==="v1beta"){ await new Promise(r=>setTimeout(r,1200)); continue; }
       if(res.status===408||res.status===504){ await new Promise(r=>setTimeout(r,1000)); continue; }
       if(res.status===404&&t.includes("not found")&&ver==="v1beta") continue;
@@ -899,7 +905,9 @@ async function aiSendCurrent(){
   const cleanQuery = raw.replace(/^[+@]\s*/, "");
   const scopeNow=(typeof aiSettings.scope==="string"&&["only","auto","web"].includes(aiSettings.scope))?aiSettings.scope:"auto";
   const webOn=!!aiForcedWeb||(aiSettings.webSearch!==false);
-  const webPromise=webOn?aiWebSearchCached(isPageQuery?cleanQuery:raw):Promise.resolve("");
+  /* When Gemini grounds natively on Google Search, skip our DDG/Wikipedia pre-fetch (no double search). */
+  const geminiGrounds=(aiProvider==="gemini")&&aiHasKey("gemini")&&aiSettings.webSearch!==false&&aiGeminiSupportsGrounding(aiGetModel("gemini"));
+  const webPromise=(webOn&&!geminiGrounds)?aiWebSearchCached(isPageQuery?cleanQuery:raw):Promise.resolve("");
   const provider=aiProvider; const key=aiKeys[provider]||"";
   const imageToSend=aiAttachedImage; const imagePreview=imageToSend?imageToSend.preview:null;
   aiAppendMessage("user", raw, provider, imagePreview);
@@ -1107,6 +1115,6 @@ async function initAI(){
   aiRenderHistory(); aiInitEvents(); aiUpdateCurrentPageDisplay(); aiUpdateChatHeight(); setInterval(()=>{ const ta=document.getElementById("tab-ai"); if(ta&&!ta.classList.contains("active")) return; aiUpdateCurrentPageDisplay(); aiUpdateChatHeight(); },2000); window.addEventListener("resize",aiUpdateChatHeight); const aiVisHandler=()=>{ if(document.visibilityState==="visible"){ aiUpdateCurrentPageDisplay(); aiUpdateChatHeight(); } }; document.addEventListener("visibilitychange",aiVisHandler); const tabAi=document.getElementById("tab-ai"); if(tabAi){ const obs=new MutationObserver(()=>{ if(tabAi.classList.contains("active")){ aiUpdateCurrentPageDisplay(); aiUpdateChatHeight(); requestAnimationFrame(()=>requestAnimationFrame(aiScrollToBottom)); } }); obs.observe(tabAi,{attributes:true,attributeFilter:["class"]}); }
 }
 if(typeof window!=="undefined"){
-  window.AI_PROVIDERS=AI_PROVIDERS; window.aiValidateCustomUrl=aiValidateCustomUrl; window.aiSanitizeExternal=aiSanitizeExternal; window.aiSanitizeHistory=aiSanitizeHistory; window.aiRateLimitOk=aiRateLimitOk; window.aiSelectRelevantWindow=aiSelectRelevantWindow; window.aiIsYouTubeUrl=aiIsYouTubeUrl; window.aiGetYouTubeTranscript=aiGetYouTubeTranscript; window.aiHistoryToGeminiContents=aiHistoryToGeminiContents; window.aiHistoryToOpenAIMessages=aiHistoryToOpenAIMessages; window.aiHistoryToClaudeMessages=aiHistoryToClaudeMessages; window.aiCollectTabsContext=aiCollectTabsContext; window.aiScholarSearch=aiScholarSearch; window.aiAttachImageFile=aiAttachImageFile; window.aiExtractYouTubeId=aiExtractYouTubeId; window.aiYtBalancedJson=aiYtBalancedJson; window.aiFetchTranscriptForVideo=aiFetchTranscriptForVideo; window.aiScrapeTranscriptViaHiddenTab=aiScrapeTranscriptViaHiddenTab; window.aiYtHiddenTabMeta=aiYtHiddenTabMeta; window.aiCallGeminiLite=aiCallGeminiLite; window.aiSig=aiSig; window.aiRegenerate=aiRegenerate; window.aiSelectRelevantWindows=aiSelectRelevantWindows; window.aiSessionsSearch=aiSessionsSearch; window.aiMemKey=aiMemKey; window.aiMemFor=aiMemFor; window.aiRenderSessions=aiRenderSessions; window.aiShowSessions=aiShowSessions; window.aiHideSessions=aiHideSessions; window.aiGetProviderConfig=aiGetProviderConfig; window.aiGetModel=aiGetModel; window.aiSetModel=aiSetModel; window.aiFetchGeminiModels=aiFetchGeminiModels; window.aiHasKey=aiHasKey; window.aiBuildPrompt=aiBuildPrompt; window.aiAddPage=aiAddPage; window.aiRemovePage=aiRemovePage; window.aiRenderPages=aiRenderPages; window.aiGetCurrentPageInfo=aiGetCurrentPageInfo; window.aiLocalFallback=aiLocalFallback; window.aiUseWebBridge=aiUseWebBridge; window.aiCallProvider=aiCallProvider; window.aiLoadSettings=aiLoadSettings; window.aiSaveHistory=aiSaveHistory; window.aiRenderHistory=aiRenderHistory; window.aiScrollToBottom=aiScrollToBottom; window.aiConversationMarkdown=aiConversationMarkdown; window.aiUpdateLatestBtn=aiUpdateLatestBtn; window.aiAppendMessage=aiAppendMessage; window.aiClearHistory=aiClearHistory; window.aiUpdateProviderUI=aiUpdateProviderUI; window.aiPopulateModelSelect=aiPopulateModelSelect; window.aiSendCurrent=aiSendCurrent; window.aiQuickPrompt=aiQuickPrompt; window.initAI=initAI; window.aiProvider=aiProvider; window.aiSettings=aiSettings; window.aiModels=aiModels; window.aiUpdateCurrentPageDisplay=aiUpdateCurrentPageDisplay;
+  window.AI_PROVIDERS=AI_PROVIDERS; window.aiValidateCustomUrl=aiValidateCustomUrl; window.aiSanitizeExternal=aiSanitizeExternal; window.aiSanitizeHistory=aiSanitizeHistory; window.aiRateLimitOk=aiRateLimitOk; window.aiSelectRelevantWindow=aiSelectRelevantWindow; window.aiIsYouTubeUrl=aiIsYouTubeUrl; window.aiGetYouTubeTranscript=aiGetYouTubeTranscript; window.aiHistoryToGeminiContents=aiHistoryToGeminiContents; window.aiHistoryToOpenAIMessages=aiHistoryToOpenAIMessages; window.aiHistoryToClaudeMessages=aiHistoryToClaudeMessages; window.aiCollectTabsContext=aiCollectTabsContext; window.aiScholarSearch=aiScholarSearch; window.aiAttachImageFile=aiAttachImageFile; window.aiExtractYouTubeId=aiExtractYouTubeId; window.aiYtBalancedJson=aiYtBalancedJson; window.aiFetchTranscriptForVideo=aiFetchTranscriptForVideo; window.aiScrapeTranscriptViaHiddenTab=aiScrapeTranscriptViaHiddenTab; window.aiYtHiddenTabMeta=aiYtHiddenTabMeta; window.aiCallGeminiLite=aiCallGeminiLite; window.aiSig=aiSig; window.aiRegenerate=aiRegenerate; window.aiSelectRelevantWindows=aiSelectRelevantWindows; window.aiSessionsSearch=aiSessionsSearch; window.aiMemKey=aiMemKey; window.aiMemFor=aiMemFor; window.aiRenderSessions=aiRenderSessions; window.aiShowSessions=aiShowSessions; window.aiHideSessions=aiHideSessions; window.aiGetProviderConfig=aiGetProviderConfig; window.aiGetModel=aiGetModel; window.aiSetModel=aiSetModel; window.aiFetchGeminiModels=aiFetchGeminiModels; window.aiHasKey=aiHasKey; window.aiBuildPrompt=aiBuildPrompt; window.aiAddPage=aiAddPage; window.aiRemovePage=aiRemovePage; window.aiRenderPages=aiRenderPages; window.aiGetCurrentPageInfo=aiGetCurrentPageInfo; window.aiLocalFallback=aiLocalFallback; window.aiUseWebBridge=aiUseWebBridge; window.aiCallProvider=aiCallProvider; window.aiLoadSettings=aiLoadSettings; window.aiSaveHistory=aiSaveHistory; window.aiRenderHistory=aiRenderHistory; window.aiScrollToBottom=aiScrollToBottom; window.aiGeminiSupportsGrounding=aiGeminiSupportsGrounding; window.aiConversationMarkdown=aiConversationMarkdown; window.aiUpdateLatestBtn=aiUpdateLatestBtn; window.aiAppendMessage=aiAppendMessage; window.aiClearHistory=aiClearHistory; window.aiUpdateProviderUI=aiUpdateProviderUI; window.aiPopulateModelSelect=aiPopulateModelSelect; window.aiSendCurrent=aiSendCurrent; window.aiQuickPrompt=aiQuickPrompt; window.initAI=initAI; window.aiProvider=aiProvider; window.aiSettings=aiSettings; window.aiModels=aiModels; window.aiUpdateCurrentPageDisplay=aiUpdateCurrentPageDisplay;
 }
 if(document.readyState!=="loading") initAI(); else document.addEventListener("DOMContentLoaded",initAI);

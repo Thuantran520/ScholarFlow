@@ -892,7 +892,7 @@ window.I18N_ZH = {
     "ai_opt_images": "页面图片",
     "ai_opt_source": "原始源码与脚本（高级）",
     "ai_opt_stream": "逐字流式输出（Gemini/ChatGPT）",
-    "ai_opt_websearch": "页面信息不足时自动搜索网络（DuckDuckGo/维基百科）",
+    "ai_opt_websearch": "信息不足时自动联网搜索（Gemini：内置谷歌搜索；其他：DuckDuckGo/维基百科）",
     "ai_toast_web_searching": "🌐 正在搜索网络…",
     "ai_scope_label": "回答范围",
     "ai_scope_only": "仅当前页面内容",

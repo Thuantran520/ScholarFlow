@@ -892,7 +892,7 @@ window.I18N_RU = {
     "ai_opt_images": "Изображения страницы",
     "ai_opt_source": "Исходник и скрипты (для продвинутых)",
     "ai_opt_stream": "Пословный вывод (Gemini/ChatGPT)",
-    "ai_opt_websearch": "Автопоиск в сети (DuckDuckGo/Википедия), когда на странице не хватает данных",
+    "ai_opt_websearch": "Автопоиск в сети при нехватке данных (Gemini: встроенный Google Search; другие: DuckDuckGo/Википедия)",
     "ai_toast_web_searching": "🌐 Ищу в интернете...",
     "ai_scope_label": "Границы ответа",
     "ai_scope_only": "Только содержимое текущей страницы",

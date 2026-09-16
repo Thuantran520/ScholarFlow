@@ -892,7 +892,7 @@ window.I18N_VI = {
     "ai_opt_images": "Ảnh trên trang",
     "ai_opt_source": "Ngưồn thô + script (nâng cao)",
     "ai_opt_stream": "Stream từng chữ (Gemini/ChatGPT)",
-    "ai_opt_websearch": "Tự tìm web (DuckDuckGo/Wikipedia) khi trang thiếu thông tin",
+    "ai_opt_websearch": "Tự tìm web khi thiếu thông tin (Gemini: Google Search tích hợp; model khác: DuckDuckGo/Wikipedia)",
     "ai_toast_web_searching": "🌐 Đang tìm kiếm web...",
     "ai_scope_label": "Phạm vi trả lời",
     "ai_scope_only": "Chỉ nội dung trang đang đứng",

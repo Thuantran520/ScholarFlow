@@ -892,7 +892,7 @@ window.I18N_JA = {
     "ai_opt_images": "ページ内の画像",
     "ai_opt_source": "ソースとスクリプト（高度者向け）",
     "ai_opt_stream": "ストリーム出力 (Gemini/ChatGPT)",
-    "ai_opt_websearch": "ページに情報が不足の時は自動でWeb検索 (DuckDuckGo/Wikipedia)",
+    "ai_opt_websearch": "情報不足時に自動Web検索（Gemini：内蔵Google検索、その他：DuckDuckGo/ウィキペディア）",
     "ai_toast_web_searching": "🌐 Webを検索中...",
     "ai_scope_label": "回答の範囲",
     "ai_scope_only": "現在のページ内容のみ",

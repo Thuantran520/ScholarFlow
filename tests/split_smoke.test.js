@@ -1084,6 +1084,8 @@ async function main() {
         "sidebar: edit (\\u270e) truncates history from that message and refills input");
       check(await w.eval(`!!document.getElementById("ai-btn-latest")`),
         "sidebar: floating \\u2193-newest pill created in chat wrapper");
+      check(await w.eval(`typeof aiGeminiSupportsGrounding==="function" && aiGeminiSupportsGrounding("gemini-2.5-flash")===true && aiGeminiSupportsGrounding("gemini-3.1-flash-lite")===true && aiGeminiSupportsGrounding("gemini-flash-lite-latest")===true && aiGeminiSupportsGrounding("gemini-1.5-flash")===false && aiGeminiSupportsGrounding("")===false`),
+        "sidebar: Gemini native Google-Search grounding detection (2.x/3.x yes, 1.5 no)");
       check(await w.eval(`typeof aiWebSearch === "function"`),
         "sidebar: web-search helper exported");
       check(!!w.document.getElementById("ai-opt-websearch"),
@@ -1152,6 +1154,8 @@ async function main() {
       "AI module: chat auto-scrolls to newest message on tab activation (no manual scrolling)");
     check(aiSrc.includes("KHÔNG CÓ THÔNG TIN ĐỦ"),
       "AI module: anti-hallucination rule in system preamble");
+    check(aiSrc.includes("google_search") && aiSrc.includes("geminiGrounds") && aiSrc.includes("function aiGeminiSupportsGrounding"),
+      "AI module: Gemini native Google Search grounding wired (tools:[{google_search}], 400 fallback, DDG skipped when grounding)");
     check(aiSrc.includes('aiQuickCtx={kind:"page"}') && aiSrc.includes("const quickReq = aiQuickCtx") && aiSrc.includes("|| !!quickReq"),
       "AI module: quick chips (summary/qa/...) always send page context via quickReq (fixes empty-context chip answers)");
     check(aiSrc.includes("text:pgText") && aiSrc.includes('await aiGetPageContextText("")'),

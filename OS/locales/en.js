@@ -892,7 +892,7 @@ window.I18N_EN = {
     "ai_opt_images": "Page images",
     "ai_opt_source": "Raw source + scripts (advanced)",
     "ai_opt_stream": "Word-by-word streaming (Gemini/ChatGPT)",
-    "ai_opt_websearch": "Auto web search (DuckDuckGo/Wikipedia) when the page lacks info",
+    "ai_opt_websearch": "Auto web search when info is missing (Gemini: built-in Google Search; others: DuckDuckGo/Wikipedia)",
     "ai_toast_web_searching": "🌐 Searching the web...",
     "ai_scope_label": "Answer scope",
     "ai_scope_only": "Only the current page content",
