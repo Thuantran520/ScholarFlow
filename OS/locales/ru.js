@@ -917,7 +917,6 @@ window.I18N_RU = {
     "ai_sessions_current": "Текущая сессия",
     "ai_sessions_open": "Открыть сессию",
     "ai_sessions_delete": "Удалить сессию",
-    "ai_memory_found": "Ранее вы задали об этой странице вопросов: {0}",
     "ai_session_default_name": "Сессия",
     "ai_toast_session_saved": "Сессия сохранена!",
     "ai_toast_session_deleted": "Сессия удалена!",

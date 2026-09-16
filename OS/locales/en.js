@@ -917,7 +917,6 @@ window.I18N_EN = {
     "ai_sessions_current": "Current session",
     "ai_sessions_open": "Open session",
     "ai_sessions_delete": "Delete session",
-    "ai_memory_found": "{0} previous questions about this page",
     "ai_session_default_name": "Session",
     "ai_toast_session_saved": "Chat session saved!",
     "ai_toast_session_deleted": "Session deleted!",

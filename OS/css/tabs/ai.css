@@ -666,19 +666,6 @@ body.is-popup .ai-chat-wrapper {
 }
 
 /* AI Sessions & Memory */
-.ai-memory-hint {
-  font-size: 10.5px;
-  color: #a78bfa;
-  background: rgba(124, 58, 237, 0.08);
-  border: 1px solid rgba(124, 58, 237, 0.22);
-  border-radius: 8px;
-  padding: 5px 8px;
-  margin-bottom: 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .ai-session-row {
   display: flex;
   align-items: center;

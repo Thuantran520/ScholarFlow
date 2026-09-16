@@ -917,7 +917,6 @@ window.I18N_VI = {
     "ai_sessions_current": "Phiên hiện tại",
     "ai_sessions_open": "Mở phiên",
     "ai_sessions_delete": "Xoá phiên",
-    "ai_memory_found": "Đã có {0} câu hỏi trước về trang này",
     "ai_session_default_name": "Phiên",
     "ai_toast_session_saved": "Đã lưu phiên chat!",
     "ai_toast_session_deleted": "Đã xoá phiên!",

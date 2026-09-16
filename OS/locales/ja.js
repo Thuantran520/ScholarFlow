@@ -917,7 +917,6 @@ window.I18N_JA = {
     "ai_sessions_current": "現在のセッション",
     "ai_sessions_open": "セッションを開く",
     "ai_sessions_delete": "セッションを削除",
-    "ai_memory_found": "このページについて以前 {0} 件の質問があります",
     "ai_session_default_name": "セッション",
     "ai_toast_session_saved": "セッションを保存しました！",
     "ai_toast_session_deleted": "セッションを削除しました！",

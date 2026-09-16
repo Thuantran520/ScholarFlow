@@ -917,7 +917,6 @@ window.I18N_ZH = {
     "ai_sessions_current": "当前会话",
     "ai_sessions_open": "打开会话",
     "ai_sessions_delete": "删除会话",
-    "ai_memory_found": "此页 曾有有 {0} 个问题",
     "ai_session_default_name": "会话",
     "ai_toast_session_saved": "会话已保存！",
     "ai_toast_session_deleted": "会话已删除！",

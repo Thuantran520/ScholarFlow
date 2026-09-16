@@ -121,7 +121,6 @@ function aiMemKey(url){ return String(url||"").replace(/^https?:\/\//,"").replac
 function aiMemPersist(){ try{ const keys=Object.keys(aiMem); while(keys.length>60){ delete aiMem[keys.shift()]; } storSet({[AI_STORAGE_KEYS.mem]:aiMem}); }catch(e){} }
 function aiMemRemember(url, question){ if(!url||url==="—"||/^(about|chrome|moz-extension|file):/i.test(url)) return; const k=aiMemKey(url); const e=aiMem[k]||{q:[],ts:0,hits:0}; const q=String(question).slice(0,180); const arr=(Array.isArray(e.q)?e.q:[]).filter(x=>x!==q); arr.unshift(q); aiMem[k]={q:arr.slice(0,3),ts:Date.now(),hits:(e.hits||0)+1}; aiMemPersist(); }
 function aiMemFor(url){ const k=aiMemKey(url); const e=aiMem[k]; if(!e||!Array.isArray(e.q)||!e.q.length) return ""; if(Date.now()-(e.ts||0)>30*864e5) return ""; return "[Kỷ niệm AI về trang này] Lan truoc day ban da hoi:\n- "+e.q.join("\n- ")+"\n(Can nhac lai neu cau hoi hom nay lien quan.)"; }
-function aiShowMemoryHint(url){ const el=document.getElementById("ai-memory-hint"); if(!el) return; const k=url?aiMemKey(url):""; const e=k?aiMem[k]:null; if(e&&Array.isArray(e.q)&&e.q.length&&Date.now()-(e.ts||0)<=30*864e5){ el.textContent="💭 "+aiT("ai_memory_found",null,"Đã có "+e.q.length+" câu hỏi trước về trang này")+" — “"+String(e.q[0]).slice(0,46)+"…”"; el.style.display=""; } else { el.style.display="none"; } }
 /* ── Multi-passage RAG ── */
 function aiSelectRelevantWindows(fullText, query, budget){
   const T=String(fullText||"");
@@ -275,7 +274,6 @@ function aiUpdateCurrentPageDisplay(){
   if(tEl.textContent!==t){ tEl.textContent=t; tEl.title=t; }
   if(uEl.textContent!==u){ uEl.textContent=u; uEl.title=u; }
   aiUpdateFavicon(u);
-  try{ aiShowMemoryHint(u); }catch(e){}
 }
 function aiLoadSettings(){
   return new Promise(res=>{
@@ -990,7 +988,7 @@ async function aiSendCurrent(){
   aiHideTyping();
   if(streaming){ const last=aiHistory[aiHistory.length-1]; if(streamRow&&last&&last.role==="assistant"){ last.content=String(answer).slice(0,16000); aiSaveHistorySoon(); aiRenderHistory(); } else if(answer){ aiAppendMessage("assistant", answer, provider); } }
   else { aiAppendMessage("assistant", answer, provider); }
-  if(!usedFallback){ try{ aiMemRemember(pageUrl, raw); aiSessionsSaveCurrent(); aiShowMemoryHint(pageUrl); }catch(e){} }
+  if(!usedFallback){ try{ aiMemRemember(pageUrl, raw); aiSessionsSaveCurrent(); }catch(e){} }
   if(!usedFallback&&typeof showToast==="function") showToast("ai_toast_done","success");
   aiIsSending=false; aiAbort=null;
   if(sendBtn){ sendBtn.classList.remove("is-stop"); sendBtn.textContent=(typeof getI18nText==="function")?getI18nText("ai_btn_send"):"Gửi"; sendBtn.title=aiT("ai_btn_send_title",null,"Gửi câu hỏi (Enter)"); }
