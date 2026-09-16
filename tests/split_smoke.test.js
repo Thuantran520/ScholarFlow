@@ -976,13 +976,15 @@ async function main() {
       !!w.document.getElementById("ai-key-openai") && !!w.document.getElementById("ai-key-claude") &&
       !!w.document.getElementById("ai-btn-save-key") && !!w.document.getElementById("ai-btn-toggle-key") &&
       !!w.document.getElementById("ai-opt-images") && !!w.document.getElementById("ai-opt-source") && !!w.document.getElementById("ai-opt-stream") &&
-      !!w.document.getElementById("ai-sessions-modal") && !!w.document.getElementById("ai-btn-sessions") && !!w.document.getElementById("ai-page-badge"),
+      !!w.document.getElementById("ai-sessions-modal") && !!w.document.getElementById("ai-btn-sessions") && !!w.document.getElementById("ai-current-page"),
       `${htmlFile}: AI settings modal + key inputs + save/toggle + context checkboxes wired`);
     check(!w.document.getElementById("ai-memory-hint"), `${htmlFile}: memory-hint banner removed (chat no longer pushed down)`);
     const emptyShown = await w.eval(`!!document.querySelector("#ai-chat-history .ai-empty")`);
     check(emptyShown, `${htmlFile}: initAI booted and rendered empty-state`);
-    check(!!w.document.getElementById("ai-btn-add-page") && !!w.document.getElementById("ai-pages-context") && !!w.document.getElementById("ai-pages-list") && !!w.document.getElementById("ai-pages-count") && !!w.document.getElementById("ai-page-badge") && !!w.document.querySelector(".ai-input-wrap"),
-      `${htmlFile}: page-context UI mirrored (add-page btn, pages strip, input badge+wrap)`);
+    check(!!w.document.getElementById("ai-btn-add-page") && !!w.document.getElementById("ai-pages-context") && !!w.document.getElementById("ai-pages-list") && !!w.document.getElementById("ai-pages-count") && !!w.document.querySelector(".ai-input-wrap"),
+      `${htmlFile}: page-context UI mirrored (add-page btn, pages strip, input wrap)`);
+    check(!!w.document.getElementById("ai-input") && w.document.getElementById("ai-input").getAttribute("rows")==="1" && !w.document.getElementById("ai-page-badge"),
+      `${htmlFile}: chat input is single-row autogrow, +Trang badge removed`);
     check(!!w.document.querySelector("#tab-ai .ai-chat-top .ai-model-bar .ai-provider-pills") && !!w.document.querySelector("#tab-ai .ai-chat-top .ai-top-actions") && !!w.document.querySelector(".ai-pages-context .ai-pages-label"),
       `${htmlFile}: merged chat-top (model-bar inside header) + horizontal pages strip markup`);
     if (htmlFile === "sidebar.html") {

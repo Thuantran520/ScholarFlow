@@ -170,14 +170,17 @@ body.is-popup .ai-chat-wrapper {
   flex: 1;
   background: transparent;
   border: none;
-  padding: 9px 6px;
+  padding: 7px 6px;
   font-size: 12px;
   color: #f1f5f9;
   resize: none;
   outline: none;
-  min-height: 0;
+  min-height: 20px;
+  max-height: 140px;
+  overflow-y: auto;
   line-height: 1.5;
   box-sizing: border-box;
+  scrollbar-width: thin;
 }
 
 .ai-send-btn {
@@ -854,15 +857,16 @@ body.is-popup .ai-chat-wrapper {
 }
 
 .ai-page-chip-remove {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
-  width: 14px;
-  height: 14px;
+  width: 15px;
+  height: 15px;
   border-radius: 50%;
   background: rgba(239, 68, 68, 0.2);
   color: #f87171;
-  font-size: 9px;
+  font-size: 8.5px;
+  line-height: 1;
   cursor: pointer;
   margin-left: 2px;
   transition: all 0.15s ease;
@@ -887,20 +891,6 @@ body.is-popup .ai-chat-wrapper {
   background: rgba(56, 189, 248, 0.25) !important;
   border-color: #38bdf8 !important;
   color: #ffffff !important;
-}
-
-.ai-page-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 6px;
-  background: rgba(56, 189, 248, 0.15);
-  border: 1px solid rgba(56, 189, 248, 0.3);
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 700;
-  color: #38bdf8;
-  margin-right: 4px;
-  flex-shrink: 0;
 }
 
 .ai-input-wrap {
