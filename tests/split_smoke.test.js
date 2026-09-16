@@ -1040,6 +1040,16 @@ async function main() {
         "sidebar: H1..H6 headings render with size hierarchy");
       check(await w.eval(`(function(){var d=document.createElement("div"); aiRenderFormattedText(d,"gia ~~cu~~ moi"); return d.innerHTML.indexOf("<s>")!==-1;})()`),
         "sidebar: strikethrough ~~text~~ renders");
+      check(await w.eval(`(function(){var d=document.createElement("div"); aiRenderFormattedText(d,"phim *Haunted House* rat hay"); var em=d.querySelector("em"); return !!em && em.textContent==="Haunted House" && d.textContent.indexOf("*")===-1;})()`),
+        "sidebar: single-asterisk *italics* renders as <em> (no literal asterisks left)");
+      check(await w.eval(`(function(){var d=document.createElement("div"); aiRenderFormattedText(d,"tinh huong ***both*** xong"); var s=d.querySelector("strong em"); return !!s && s.textContent==="both";})()`),
+        "sidebar: ***bold italic*** nests em inside strong");
+      check(await w.eval(`(function(){var d=document.createElement("div"); aiRenderFormattedText(d,"y ==trong tam== nhe"); var m=d.querySelector("span"); return !!m && m.textContent==="trong tam" && m.style.background.length>0;})()`),
+        "sidebar: ==highlight== renders as styled span");
+      check(await w.eval(`(function(){var d=document.createElement("div"); aiRenderFormattedText(d,"\\n> trich dan hay\\n> dong hai\\n\\nbinh thuong"); var q=d.querySelectorAll(".ai-quote"); return q.length===2 && q[0].textContent.indexOf("trich dan hay")!==-1;})()`),
+        "sidebar: > blockquote lines render as .ai-quote boxes");
+      check(await w.eval(`(function(){var d=document.createElement("div"); aiRenderFormattedText(d,"xem https://example.com/a_b_c nhé"); var a=d.querySelector("a.ai-link"); return !!a && a.href==="https://example.com/a_b_c";})()`),
+        "sidebar: underscores inside URLs are not turned into italics");
       check(await w.eval(`(function(){var d=document.createElement("div"); aiRenderFormattedText(d,"| A | B |\\n|---|---|\\n| 1 | 2 |\\n| 3 | 4 |"); var t=d.querySelector("table.ai-table"); return !!t && t.querySelectorAll("tr").length===3;})()`),
         "sidebar: markdown tables render as real <table>");
       check(await w.eval(`(function(){var d=document.createElement("div"); aiRenderFormattedText(d,"tra loi nhe\\nGỢI Ý:\\n- cau a\\n- cau b\\n- cau c"); return d.querySelectorAll(".ai-suggest").length===3;})()`),

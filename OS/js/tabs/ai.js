@@ -623,13 +623,17 @@ function aiAppendUrlTs(frag, text){
   if(last<text.length) aiAppendTsPlain(frag, text.slice(last));
 }
 function aiFormatInline(text){
-  const frag=document.createDocumentFragment(); let i=0;
+  const frag=document.createDocumentFragment(); text=String(text||""); let i=0;
+  const nextMarker=(from)=>{ const marks=[text.indexOf("***",from),text.indexOf("**",from),text.indexOf("~~",from),text.indexOf("==",from),text.indexOf("`",from),text.indexOf("*",from)]; let m=-1; for(const x of marks){ if(x!==-1&&(m===-1||x<m)) m=x; } return m; };
   while(i<text.length){
-    if(text.startsWith("**",i)){ const e=text.indexOf("**",i+2); if(e!==-1){ const s=document.createElement("strong"); s.textContent=text.slice(i+2,e); frag.appendChild(s); i=e+2; continue; } }
-    if(text.startsWith("~~",i)){ const e=text.indexOf("~~",i+2); if(e!==-1){ const st=document.createElement("s"); st.textContent=text.slice(i+2,e); frag.appendChild(st); i=e+2; continue; } }
-    if(text[i]==="`"&&text.indexOf("`",i+1)!==-1){ const e=text.indexOf("`",i+1); const c=document.createElement("code"); c.style.background="rgba(0,0,0,0.25)"; c.style.padding="1px 4px"; c.style.borderRadius="4px"; c.textContent=text.slice(i+1,e); frag.appendChild(c); i=e+1; continue; }
-    const n=Math.min(text.indexOf("**",i)===-1?Infinity:text.indexOf("**",i), text.indexOf("`",i)===-1?Infinity:text.indexOf("`",i), text.indexOf("~~",i)===-1?Infinity:text.indexOf("~~",i));
-    const chunk=n===Infinity?text.slice(i):text.slice(i,n); aiAppendTextWithTs(frag, chunk); i=n===Infinity?text.length:n;
+    if(text.startsWith("***",i)){ const e=text.indexOf("***",i+3); if(e!==-1){ const s=document.createElement("strong"); const em=document.createElement("em"); em.textContent=text.slice(i+3,e); s.appendChild(em); frag.appendChild(s); i=e+3; continue; } }
+    if(text.startsWith("**",i)){ const e=text.indexOf("**",i+2); if(e!==-1&&e>i+2){ const s=document.createElement("strong"); s.textContent=text.slice(i+2,e); frag.appendChild(s); i=e+2; continue; } }
+    if(text.startsWith("~~",i)){ const e=text.indexOf("~~",i+2); if(e!==-1&&e>i+2){ const st=document.createElement("s"); st.textContent=text.slice(i+2,e); frag.appendChild(st); i=e+2; continue; } }
+    if(text.startsWith("==",i)){ const e=text.indexOf("==",i+2); if(e!==-1&&e>i+2){ const mk=document.createElement("span"); mk.textContent=text.slice(i+2,e); mk.style.background="rgba(250,204,21,0.2)"; mk.style.color="#fde68a"; mk.style.padding="0 3px"; mk.style.borderRadius="3px"; mk.style.fontWeight="600"; frag.appendChild(mk); i=e+2; continue; } }
+    if(text[i]==="`"){ const e=text.indexOf("`",i+1); if(e!==-1){ const c=document.createElement("code"); c.style.background="rgba(0,0,0,0.25)"; c.style.padding="1px 4px"; c.style.borderRadius="4px"; c.textContent=text.slice(i+1,e); frag.appendChild(c); i=e+1; continue; } }
+    if(text[i]==="*"){ const e=text.indexOf("*",i+1); if(e!==-1&&e>i+1){ const em=document.createElement("em"); em.textContent=text.slice(i+1,e); frag.appendChild(em); i=e+1; continue; } }
+    const n=nextMarker(i+1); const chunkEnd=(n!==-1)?n:text.length;
+    aiAppendTextWithTs(frag, text.slice(i,chunkEnd)); i=chunkEnd;
   }
   return frag;
 }
@@ -690,6 +694,7 @@ function aiRenderFormattedText(bubble, text){
       bubble.appendChild(chip); return;
     }
     sugMode=false;
+    if(trimmed.startsWith(">")){ sugMode=false; const bq=document.createElement("div"); bq.className="ai-quote"; bq.style.borderLeft="3px solid rgba(124,58,237,0.55)"; bq.style.background="rgba(124,58,237,0.08)"; bq.style.padding="5px 10px"; bq.style.margin="3px 0"; bq.style.borderRadius="0 8px 8px 0"; bq.style.color="#c4b5fd"; bq.appendChild(aiFormatInline(trimmed.replace(/^>\s?/,""))); bubble.appendChild(bq); return; }
     if(/^#{1,6} /.test(trimmed)){ const hashes=trimmed.match(/^#+/)[0].length; const h=document.createElement("div"); h.style.fontWeight="800"; h.style.fontSize=hashes===1?"14px":(hashes<=3?"12px":"11.5px"); h.style.color=hashes===1?"#f8fafc":"#e2e8f0"; h.style.margin=(hashes===1?"10px":"8px")+" 0 4px"; h.appendChild(aiFormatInline(trimmed.replace(/^#+\s+/,""))); bubble.appendChild(h); return; }
     if(trimmed.startsWith("### ")){ const h=document.createElement("div"); h.style.fontWeight="800"; h.style.fontSize="12px"; h.style.color="#e2e8f0"; h.style.margin="8px 0 4px"; h.appendChild(aiFormatInline(trimmed.slice(4))); bubble.appendChild(h); return; }
     if(trimmed.startsWith("## ")){ const h=document.createElement("div"); h.style.fontWeight="800"; h.style.fontSize="12.5px"; h.style.color="#f1f5f9"; h.style.margin="8px 0 4px"; h.appendChild(aiFormatInline(trimmed.slice(3))); bubble.appendChild(h); return; }
@@ -780,10 +785,10 @@ function aiBuildPrompt(userText, pageText, selectionText, imageNote, transcript,
   if(isPageQuery) {
     /* Page query mode: answer from page context */
     try{ if(typeof getI18nText==="function"){ const v=getI18nText("ai_sys_preamble",[langName]); if(v&&v!=="ai_sys_preamble") sysBody=v; } }catch(e){}
-    if(!sysBody) sysBody="BẠN LÀ TRỢ LÝ HỌC THUẬT ScholarFlow. QUY TẮC:\n1) Trả lời bằng "+langName+". Vào thẳng câu trả lời — không chào hỏi, không tự giới thiệu.\n2) Ưu tiên dữ liệu trong các khối ngữ cảnh (trang, video, tài liệu); khi thiếu, HÃY kết hợp kiến thức của bạn và kết quả tìm kiếm web — hai nguồn bổ sung cho nhau; KHÔNG BỊA. Vẫn thiếu và không chắc → nói tự nhiên 'KHÔNG CÓ THÔNG TIN ĐỦ'. Chỉ trả lời đúng ý đồ câu hỏi.\n3) Markdown gọn: ## cho phần dài, bullet, BẢNG | cột | khi so sánh, `code` cho thuật ngữ.\n4) Trích dẫn: link trang đang đứng / videoId / [mm:ss].\n5) Kết thúc bằng đúng khối:\nGỢI Ý:\n- <câu hỏi 1>\n- <câu hỏi 2>\n- <câu hỏi 3>";
+    if(!sysBody) sysBody="BẠN LÀ TRỢ LÝ HỌC THUẬT ScholarFlow. QUY TẮC:\n1) Trả lời bằng "+langName+". Vào thẳng câu trả lời — không chào hỏi, không tự giới thiệu.\n2) Ưu tiên dữ liệu trong các khối ngữ cảnh (trang, video, tài liệu); khi thiếu, HÃY kết hợp kiến thức của bạn và kết quả tìm kiếm web — hai nguồn bổ sung cho nhau; KHÔNG BỊA. Vẫn thiếu và không chắc → nói tự nhiên 'KHÔNG CÓ THÔNG TIN ĐỦ'. Chỉ trả lời đúng ý đồ câu hỏi.\n3) Markdown gọn: ## cho phần dài, bullet, BẢNG | cột | khi so sánh, `code` cho thuật ngữ, *in nghiêng* để nhấn tinh tế, > trích dẫn nguyên văn, ==đánh dấu== ý quan trọng.\n4) Trích dẫn: link trang đang đứng / videoId / [mm:ss].\n5) Kết thúc bằng đúng khối:\nGỢI Ý:\n- <câu hỏi 1>\n- <câu hỏi 2>\n- <câu hỏi 3>";
   } else {
     /* General chat mode: answer from knowledge + web search */
-    sysBody="BẠN LÀ TRỢ LÝ HỌC THUẬT ScholarFlow. QUY TẮC:\n1) Trả lời bằng "+langName+". Vào thẳng câu trả lời — không chào hỏi, không tự giới thiệu.\n2) Trả lời từ kiến thức của bạn và kết quả tìm kiếm web (nếu có). KHÔNG BỊA. Nếu không chắc → nói rõ 'MÌNH KHÔNG CHẮC' thay vì bịa.\n3) Markdown gọn: ## cho phần dài, bullet, BẢNG | cột | khi so sánh, `code` cho thuật ngữ.\n4) Kết thúc bằng đúng khối:\nGỢI Ý:\n- <câu hỏi 1>\n- <câu hỏi 2>\n- <câu hỏi 3>";
+    sysBody="BẠN LÀ TRỢ LÝ HỌC THUẬT ScholarFlow. QUY TẮC:\n1) Trả lời bằng "+langName+". Vào thẳng câu trả lời — không chào hỏi, không tự giới thiệu.\n2) Trả lời từ kiến thức của bạn và kết quả tìm kiếm web (nếu có). KHÔNG BỊA. Nếu không chắc → nói rõ 'MÌNH KHÔNG CHẮC' thay vì bịa.\n3) Markdown gọn: ## cho phần dài, bullet, BẢNG | cột | khi so sánh, `code` cho thuật ngữ, *in nghiêng* để nhấn tinh tế, > trích dẫn nguyên văn, ==đánh dấu== ý quan trọng.\n4) Kết thúc bằng đúng khối:\nGỢI Ý:\n- <câu hỏi 1>\n- <câu hỏi 2>\n- <câu hỏi 3>";
   }
   if(sysBody.indexOf("{0}")!==-1) sysBody=sysBody.split("{0}").join(langName);
   const sys=sysBody+"\n\n";
