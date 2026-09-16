@@ -835,6 +835,7 @@ window.I18N_ZH = {
     "ai_btn_add_page": "添加页面",
     "ai_pages_added": "已添加页面",
     "ai_page_badge": "+页面",
+    "ai_page_remove_tip": "移除此页面",
     "ai_toast_page_added": "已添加页面: {0}",
     "ai_toast_no_page": "没有可添加的页面",
     "ai_input_placeholder": "输入问题... (Enter发送, Shift+Enter换行, +页面询问页面内容)",

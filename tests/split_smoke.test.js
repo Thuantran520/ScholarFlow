@@ -980,6 +980,8 @@ async function main() {
       `${htmlFile}: AI settings modal + key inputs + save/toggle + context checkboxes wired`);
     const emptyShown = await w.eval(`!!document.querySelector("#ai-chat-history .ai-empty")`);
     check(emptyShown, `${htmlFile}: initAI booted and rendered empty-state`);
+    check(!!w.document.getElementById("ai-btn-add-page") && !!w.document.getElementById("ai-pages-context") && !!w.document.getElementById("ai-pages-list") && !!w.document.getElementById("ai-pages-count") && !!w.document.getElementById("ai-page-badge") && !!w.document.querySelector(".ai-input-wrap"),
+      `${htmlFile}: page-context UI mirrored (add-page btn, pages strip, input badge+wrap)`);
     if (htmlFile === "sidebar.html") {
       check(await w.eval(`aiT("ai_you", null, "x") !== "x" && aiT("ai_you", null, "x") !== "ai_you"`),
         "sidebar: aiT resolves localized AI strings");
@@ -1051,6 +1053,10 @@ async function main() {
         "sidebar: caption cleaner drops noise tokens and duplicate ASR lines");
       check(await w.eval(`(function(){try{var p=aiBuildPrompt("QQ","","",null,{title:"Tieu de video",author:"Kenh X",date:"2026-09-01",views:"785000",description:"MO TA NGAY MAY GIO LIVE 19H"},"","",null,true); return typeof p==="string" && p.indexOf("DATA_UNTRUSTED_4_BEGIN")!==-1;}catch(e){return false;}})()`),
         "sidebar: no-caption videos fall back to description+channel metadata block");
+      check(await w.eval(`(function(){try{aiAddPage({url:"https://alpha.test/1",title:"Alpha",text:"noi dung A"});aiAddPage({url:"https://xss.test/2",title:'<img src=x onerror=alert(1)>',text:"B"});var chips=document.querySelectorAll(".ai-page-chip").length;var vis=document.getElementById("ai-pages-context").style.display!=="none";var cnt=document.getElementById("ai-pages-count").textContent==="(2)";var inj=document.querySelector(".ai-page-chip img")!==null;var rmbs=document.querySelectorAll(".ai-page-chip-remove").length===2;aiRemovePage("https://alpha.test/1");var after=document.querySelectorAll(".ai-page-chip").length===1;aiRemovePage("https://xss.test/2");var hidden=document.getElementById("ai-pages-context").style.display==="none";return chips===2&&vis&&cnt&&!inj&&rmbs&&after&&hidden;}catch(e){return false;}})()`),
+        "sidebar: pinned-pages strip renders chips safely (title XSS inert, add/remove + auto-hide)");
+      check(await w.eval(`typeof aiAddPage==="function" && typeof aiRemovePage==="function" && typeof aiGetCurrentPageInfo==="function"`),
+        "sidebar: multi-page context helpers exported");
       check(await w.eval(`typeof aiWebSearch === "function"`),
         "sidebar: web-search helper exported");
       check(!!w.document.getElementById("ai-opt-websearch"),
@@ -1117,6 +1123,17 @@ async function main() {
       "AI module: stop-generating (AbortController) wired");
     check(aiSrc.includes("KHÔNG CÓ THÔNG TIN ĐỦ"),
       "AI module: anti-hallucination rule in system preamble");
+    check(aiSrc.includes('aiQuickCtx={kind:"page"}') && aiSrc.includes("const quickReq = aiQuickCtx") && aiSrc.includes("|| !!quickReq"),
+      "AI module: quick chips (summary/qa/...) always send page context via quickReq (fixes empty-context chip answers)");
+    check(aiSrc.includes("text:pgText") && aiSrc.includes('await aiGetPageContextText("")'),
+      "AI module: add-page (+) captures page text so pinned pages reach the multi-page context");
+    {
+      const aiCssSrc = fs.readFileSync(path.join(__dirname, "..", "OS", "css", "tabs", "ai.css"), "utf8");
+      check(aiCssSrc.includes("body:has(.ai-chat-tab.active)") && aiCssSrc.includes("height: 100vh") && aiCssSrc.includes("flex-direction: column"),
+        "AI CSS: chat tab locks to viewport height with internal history scroll (input always visible)");
+      check(/\.ai-pages-context\s*\{[^}]*max-height:\s*64px/.test(aiCssSrc),
+        "AI CSS: pinned-pages strip is height-capped (adding pages no longer pushes the input down)");
+    }
   }
 
   console.log("Regressing Tab Manager live refresh (browser-side close):");

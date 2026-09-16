@@ -835,6 +835,7 @@ window.I18N_JA = {
     "ai_btn_add_page": "ページを追加",
     "ai_pages_added": "追加されたページ",
     "ai_page_badge": "+ページ",
+    "ai_page_remove_tip": "このページを削除",
     "ai_toast_page_added": "ページを追加しました: {0}",
     "ai_toast_no_page": "追加するページがありません",
     "ai_input_placeholder": "質問を入力... (Enter送信, Shift+Enter改行, +ページでページについて質問)",

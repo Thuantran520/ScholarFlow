@@ -51,13 +51,23 @@ function aiRenderPages() {
     var chip = document.createElement("span");
     chip.className = "ai-page-chip";
     chip.title = page.url;
-    var favicon = page.favicon ? (page.favicon.startsWith("http") ? page.favicon : "") : "";
-    var icon = favicon ? "<img src=\"" + favicon + "\" width=\"12\" height=\"12\" style=\"object-fit:contain;border-radius:2px;\">" : "🌐";
-    chip.innerHTML = icon + " <span style=\"max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle;\">" + (page.title || page.url).slice(0, 40) + "</span>";
+    var icon;
+    if (page.favicon && page.favicon.indexOf("http") === 0) {
+      icon = document.createElement("img");
+      icon.src = page.favicon; icon.width = 12; icon.height = 12;
+      icon.style.cssText = "object-fit:contain;border-radius:2px;vertical-align:middle;";
+    } else {
+      icon = document.createElement("span"); icon.textContent = "🌐";
+    }
+    chip.appendChild(icon);
+    var label = document.createElement("span");
+    label.style.cssText = "max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle;margin-left:3px;";
+    label.textContent = String(page.title || page.url).slice(0, 40);
+    chip.appendChild(label);
     var removeBtn = document.createElement("span");
     removeBtn.className = "ai-page-chip-remove";
     removeBtn.textContent = "✕";
-    removeBtn.title = "Xóa trang này";
+    removeBtn.title = aiT("ai_page_remove_tip", null, "Xóa trang này");
     removeBtn.addEventListener("click", function(e) {
       e.stopPropagation();
       aiRemovePage(page.url);
@@ -872,13 +882,14 @@ function aiAttachImageFile(f){
   return true;
 }
 async function aiSendCurrent(){
-  if(aiIsSending) return;
+  if(aiIsSending){ aiQuickCtx=null; return; }
+  const quickReq = aiQuickCtx; aiQuickCtx = null;
   const input=document.getElementById("ai-input"); const raw=input?input.value.trim():"";
   if(!raw){ if(typeof showToast==="function") showToast("ai_toast_empty","warning"); return; }
   if(!aiRateLimitOk()){ if(typeof showToast==="function") showToast("ai_toast_rate_limited","warning"); return; }
   if(raw.length>8000&&input){ input.value=raw.slice(0,8000); }
-  /* ── Trigger detection: +trang or @trang at start ── */
-  const isPageQuery = /^[+@]\s*/.test(raw);
+  /* ── Trigger detection: +/@ prefix, or a quick-chip request (always page-bound) ── */
+  const isPageQuery = /^[+@]\s*/.test(raw) || !!quickReq;
   const cleanQuery = raw.replace(/^[+@]\s*/, "");
   const scopeNow=(typeof aiSettings.scope==="string"&&["only","auto","web"].includes(aiSettings.scope))?aiSettings.scope:"auto";
   const webOn=!!aiForcedWeb||(aiSettings.webSearch!==false);
@@ -899,12 +910,12 @@ async function aiSendCurrent(){
   const onToken=(piece)=>{ streamAcc+=piece; if(!streamRow){ aiHideTyping(); aiAppendMessage("assistant","",provider); const c=document.getElementById("ai-chat-history"); streamRow=c&&c.lastElementChild?c.lastElementChild.querySelector(".ai-bubble"):null; } if(streamRow){ streamRow.textContent=streamAcc; const c2=document.getElementById("ai-chat-history"); if(c2) c2.scrollTop=c2.scrollHeight; } };
   aiShowTyping();
   let pageText=""; let selectionText="";
-  /* Only fetch page context if user triggered +trang or quick-prompt */
-  if(isPageQuery || aiQuickCtx) {
+  /* Fetch page context when user triggered +/@ prefix or a quick-chip request */
+  if(isPageQuery) {
     try{ pageText=await aiGetPageContextText(cleanQuery); selectionText=await aiGetSelectionText(); }catch(e){}
   }
-  if(aiQuickCtx){
-    const kc=aiQuickCtx; aiQuickCtx=null;
+  if(quickReq){
+    const kc=quickReq;
     try{
       if(kc.kind==="tabs"){ const tb=await aiCollectTabsContext(); if(tb){ pageText=tb; } else if(typeof showToast==="function") showToast("ai_toast_tabs_empty","warning"); }
       else if(kc.kind==="papers"){ const sc=await aiScholarSearch(cleanQuery); if(sc){ pageText = pageText ? pageText+"\n\n[Scholarly search results]\n"+sc : "[Scholarly search results]\n"+sc; } else if(typeof showToast==="function") showToast("ai_toast_scholar_empty","warning"); }
@@ -996,6 +1007,7 @@ function aiQuickPrompt(kind){
   const map={ summary:aiPrompts.summary||((typeof getI18nText==="function")?getI18nText("ai_prompt_summary"):"Tóm tắt trang này thành 5 bullet + 1 đoạn 100 chữ."), qa:aiPrompts.qa||((typeof getI18nText==="function")?getI18nText("ai_prompt_qa"):"Trả lời câu hỏi dựa trên nội dung trang."), explain:aiPrompts.explain||((typeof getI18nText==="function")?getI18nText("ai_prompt_explain"):"Giải thích đoạn bôi đen bằng tiếng Việt đơn giản."), translate:aiPrompts.translate||((typeof getI18nText==="function")?getI18nText("ai_prompt_translate"):"Dịch nội dung chính sang tiếng Việt."), outline:aiPrompts.outline||((typeof getI18nText==="function")?getI18nText("ai_prompt_outline"):"Tạo outline 3 cấp cho bài viết này."), cite:aiPrompts.cite||((typeof getI18nText==="function")?getI18nText("ai_prompt_cite"):"Gợi ý 3 câu hỏi nghiên cứu + 5 từ khóa từ trang này."), answer:aiPrompts.answer||((typeof getI18nText==="function")?getI18nText("ai_prompt_answer"):"Giải các câu trắc nghiệm trong nội dung trang: mỗi câu nêu đáp án đúng kèm giải thích 1 dòng."), tabs:aiPrompts.tabs||((typeof getI18nText==="function")?getI18nText("ai_prompt_tabs"):"Tóm tắt từng tab đang mở và lập bảng so sánh."), papers:aiPrompts.papers||((typeof getI18nText==="function")?getI18nText("ai_prompt_papers"):"Chọn 5 tài liệu liên quan nhất từ danh sách tìm được, trích dẫn APA.") };
   if(kind==="tabs") aiQuickCtx={kind:"tabs"};
   else if(kind==="papers") aiQuickCtx={kind:"papers"};
+  else aiQuickCtx={kind:"page"}; /* page-bound chips: summary/qa/explain/translate/outline/cite/answer */
   const input=document.getElementById("ai-input"); if(input){ input.value=map[kind]||map.summary; input.focus(); } aiSendCurrent();
 }
 function aiInitEvents(){
@@ -1065,7 +1077,7 @@ function aiInitEvents(){
   const savePromptsBtn=document.getElementById("ai-btn-save-prompts"); if(savePromptsBtn) savePromptsBtn.addEventListener("click",()=>{ promptIds.forEach(k=>{ const el=document.getElementById("ai-prompt-"+k); if(el) aiPrompts[k]=el.value.trim()||AI_DEFAULT_PROMPTS[k]; }); storSet({[AI_STORAGE_KEYS.prompts]:aiPrompts}); if(typeof showToast==="function") showToast("ai_toast_prompts_saved","success"); });
   const resetPromptsBtn=document.getElementById("ai-btn-reset-prompts"); if(resetPromptsBtn) resetPromptsBtn.addEventListener("click",()=>{ aiPrompts=aiDefaultPrompts(); try{ storRemove([AI_STORAGE_KEYS.prompts]); }catch(e){} promptIds.forEach(k=>{ const el=document.getElementById("ai-prompt-"+k); if(el) el.value=aiPrompts[k]; }); if(typeof showToast==="function") showToast("ai_toast_prompts_reset","success"); });
   const copyPageBtn=document.getElementById("ai-btn-copy-page"); if(copyPageBtn) copyPageBtn.addEventListener("click",()=>{ const u=document.getElementById("ai-page-url"); const t=u?u.textContent:""; if(t&&t!=="—") navigator.clipboard.writeText(t).then(()=>{ if(typeof showToast==="function") showToast("toast_copied","success"); }); });
-  const addPageBtn=document.getElementById("ai-btn-add-page"); if(addPageBtn) addPageBtn.addEventListener("click",()=>{ const info=aiGetCurrentPageInfo(); if(!info.url){ if(typeof showToast==="function") showToast("ai_toast_no_page","warning"); return; } aiAddPage({ url:info.url, title:info.title, favicon:info.favicon, text:"", transcript:null }); if(typeof showToast==="function") showToast("ai_toast_page_added","success",[info.title||info.url]); });
+  const addPageBtn=document.getElementById("ai-btn-add-page"); if(addPageBtn) addPageBtn.addEventListener("click",async()=>{ const info=aiGetCurrentPageInfo(); if(!info.url){ if(typeof showToast==="function") showToast("ai_toast_no_page","warning"); return; } if(aiPages.some(p=>p.url===info.url)){ if(typeof showToast==="function") showToast("ai_toast_page_added","success",[info.title||info.url]); return; } let pgText=""; try{ pgText=await aiGetPageContextText(""); }catch(e){} aiAddPage({ url:info.url, title:info.title, favicon:info.favicon, text:pgText, transcript:null }); if(typeof showToast==="function") showToast("ai_toast_page_added","success",[info.title||info.url]); });
   const attachBtn=document.getElementById("ai-btn-attach-image"); const imgInput=document.getElementById("ai-image-input"); const preview=document.getElementById("ai-image-preview"); const thumb=document.getElementById("ai-image-thumb"); const nameEl=document.getElementById("ai-image-name"); const removeBtn=document.getElementById("ai-btn-remove-image");
   if(attachBtn&&imgInput){ attachBtn.addEventListener("click",()=>imgInput.click()); imgInput.addEventListener("change",()=>{ const f=imgInput.files&&imgInput.files[0]; if(!f) return; aiAttachImageFile(f); }); }
   const pasteHandler=(e)=>{ const cd=e.clipboardData||null; if(!cd||!cd.items) return; let img=null; for(const it of cd.items){ try{ if(it.kind==="file"&&it.type&&it.type.startsWith("image/")){ img=it.getAsFile(); if(img) break; } }catch(e2){} } if(img){ if(e.preventDefault) e.preventDefault(); aiAttachImageFile(img); } };
@@ -1080,6 +1092,6 @@ async function initAI(){
   aiRenderHistory(); aiInitEvents(); aiUpdateCurrentPageDisplay(); aiUpdateChatHeight(); setInterval(()=>{ const ta=document.getElementById("tab-ai"); if(ta&&!ta.classList.contains("active")) return; aiUpdateCurrentPageDisplay(); aiUpdateChatHeight(); },2000); window.addEventListener("resize",aiUpdateChatHeight); const aiVisHandler=()=>{ if(document.visibilityState==="visible"){ aiUpdateCurrentPageDisplay(); aiUpdateChatHeight(); } }; document.addEventListener("visibilitychange",aiVisHandler); const tabAi=document.getElementById("tab-ai"); if(tabAi){ const obs=new MutationObserver(()=>{ if(tabAi.classList.contains("active")){ aiUpdateCurrentPageDisplay(); aiUpdateChatHeight(); } }); obs.observe(tabAi,{attributes:true,attributeFilter:["class"]}); }
 }
 if(typeof window!=="undefined"){
-  window.AI_PROVIDERS=AI_PROVIDERS; window.aiValidateCustomUrl=aiValidateCustomUrl; window.aiSanitizeExternal=aiSanitizeExternal; window.aiSanitizeHistory=aiSanitizeHistory; window.aiRateLimitOk=aiRateLimitOk; window.aiSelectRelevantWindow=aiSelectRelevantWindow; window.aiIsYouTubeUrl=aiIsYouTubeUrl; window.aiGetYouTubeTranscript=aiGetYouTubeTranscript; window.aiHistoryToGeminiContents=aiHistoryToGeminiContents; window.aiHistoryToOpenAIMessages=aiHistoryToOpenAIMessages; window.aiHistoryToClaudeMessages=aiHistoryToClaudeMessages; window.aiCollectTabsContext=aiCollectTabsContext; window.aiScholarSearch=aiScholarSearch; window.aiAttachImageFile=aiAttachImageFile; window.aiExtractYouTubeId=aiExtractYouTubeId; window.aiYtBalancedJson=aiYtBalancedJson; window.aiFetchTranscriptForVideo=aiFetchTranscriptForVideo; window.aiScrapeTranscriptViaHiddenTab=aiScrapeTranscriptViaHiddenTab; window.aiYtHiddenTabMeta=aiYtHiddenTabMeta; window.aiCallGeminiLite=aiCallGeminiLite; window.aiSig=aiSig; window.aiRegenerate=aiRegenerate; window.aiSelectRelevantWindows=aiSelectRelevantWindows; window.aiSessionsSearch=aiSessionsSearch; window.aiMemKey=aiMemKey; window.aiMemFor=aiMemFor; window.aiRenderSessions=aiRenderSessions; window.aiShowSessions=aiShowSessions; window.aiHideSessions=aiHideSessions; window.aiGetProviderConfig=aiGetProviderConfig; window.aiGetModel=aiGetModel; window.aiSetModel=aiSetModel; window.aiFetchGeminiModels=aiFetchGeminiModels; window.aiHasKey=aiHasKey; window.aiBuildPrompt=aiBuildPrompt; window.aiLocalFallback=aiLocalFallback; window.aiUseWebBridge=aiUseWebBridge; window.aiCallProvider=aiCallProvider; window.aiLoadSettings=aiLoadSettings; window.aiSaveHistory=aiSaveHistory; window.aiRenderHistory=aiRenderHistory; window.aiAppendMessage=aiAppendMessage; window.aiClearHistory=aiClearHistory; window.aiUpdateProviderUI=aiUpdateProviderUI; window.aiPopulateModelSelect=aiPopulateModelSelect; window.aiSendCurrent=aiSendCurrent; window.aiQuickPrompt=aiQuickPrompt; window.initAI=initAI; window.aiProvider=aiProvider; window.aiSettings=aiSettings; window.aiModels=aiModels; window.aiUpdateCurrentPageDisplay=aiUpdateCurrentPageDisplay;
+  window.AI_PROVIDERS=AI_PROVIDERS; window.aiValidateCustomUrl=aiValidateCustomUrl; window.aiSanitizeExternal=aiSanitizeExternal; window.aiSanitizeHistory=aiSanitizeHistory; window.aiRateLimitOk=aiRateLimitOk; window.aiSelectRelevantWindow=aiSelectRelevantWindow; window.aiIsYouTubeUrl=aiIsYouTubeUrl; window.aiGetYouTubeTranscript=aiGetYouTubeTranscript; window.aiHistoryToGeminiContents=aiHistoryToGeminiContents; window.aiHistoryToOpenAIMessages=aiHistoryToOpenAIMessages; window.aiHistoryToClaudeMessages=aiHistoryToClaudeMessages; window.aiCollectTabsContext=aiCollectTabsContext; window.aiScholarSearch=aiScholarSearch; window.aiAttachImageFile=aiAttachImageFile; window.aiExtractYouTubeId=aiExtractYouTubeId; window.aiYtBalancedJson=aiYtBalancedJson; window.aiFetchTranscriptForVideo=aiFetchTranscriptForVideo; window.aiScrapeTranscriptViaHiddenTab=aiScrapeTranscriptViaHiddenTab; window.aiYtHiddenTabMeta=aiYtHiddenTabMeta; window.aiCallGeminiLite=aiCallGeminiLite; window.aiSig=aiSig; window.aiRegenerate=aiRegenerate; window.aiSelectRelevantWindows=aiSelectRelevantWindows; window.aiSessionsSearch=aiSessionsSearch; window.aiMemKey=aiMemKey; window.aiMemFor=aiMemFor; window.aiRenderSessions=aiRenderSessions; window.aiShowSessions=aiShowSessions; window.aiHideSessions=aiHideSessions; window.aiGetProviderConfig=aiGetProviderConfig; window.aiGetModel=aiGetModel; window.aiSetModel=aiSetModel; window.aiFetchGeminiModels=aiFetchGeminiModels; window.aiHasKey=aiHasKey; window.aiBuildPrompt=aiBuildPrompt; window.aiAddPage=aiAddPage; window.aiRemovePage=aiRemovePage; window.aiRenderPages=aiRenderPages; window.aiGetCurrentPageInfo=aiGetCurrentPageInfo; window.aiLocalFallback=aiLocalFallback; window.aiUseWebBridge=aiUseWebBridge; window.aiCallProvider=aiCallProvider; window.aiLoadSettings=aiLoadSettings; window.aiSaveHistory=aiSaveHistory; window.aiRenderHistory=aiRenderHistory; window.aiAppendMessage=aiAppendMessage; window.aiClearHistory=aiClearHistory; window.aiUpdateProviderUI=aiUpdateProviderUI; window.aiPopulateModelSelect=aiPopulateModelSelect; window.aiSendCurrent=aiSendCurrent; window.aiQuickPrompt=aiQuickPrompt; window.initAI=initAI; window.aiProvider=aiProvider; window.aiSettings=aiSettings; window.aiModels=aiModels; window.aiUpdateCurrentPageDisplay=aiUpdateCurrentPageDisplay;
 }
 if(document.readyState!=="loading") initAI(); else document.addEventListener("DOMContentLoaded",initAI);

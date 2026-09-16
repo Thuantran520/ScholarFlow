@@ -934,3 +934,49 @@ body.is-popup .ai-chat-wrapper {
   border: none;
   box-shadow: none;
 }
+
+/* ════════════ CHAT LAYOUT: tab AI chiếm đúng chiều cao khả dụng ════════════
+   Khi tab AI đang mở: body khóa ở 100vh, phần chat cuộn nội bộ,
+   hàng input + disclaimer luôn nằm gọn ở đáy — không phải lăn chuột
+   xuống mỗi lần thêm trang ngữ cảnh. */
+body:has(.ai-chat-tab.active) {
+  height: 100vh;
+}
+
+.tab-section.ai-chat-tab.active {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.tab-section.ai-chat-tab.active .ai-chat-wrapper {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+}
+
+.tab-section.ai-chat-tab.active .ai-chat-history {
+  flex: 1 1 auto;
+  min-height: 60px;
+  max-height: none;
+}
+
+.tab-section.ai-chat-tab.active .ai-quick-chips,
+.tab-section.ai-chat-tab.active .ai-chat-top,
+.tab-section.ai-chat-tab.active .ai-model-bar,
+.tab-section.ai-chat-tab.active .ai-current-page,
+.tab-section.ai-chat-tab.active .ai-input-row,
+.tab-section.ai-chat-tab.active .ai-disclaimer-row {
+  flex-shrink: 0;
+}
+
+.tab-section.ai-chat-tab.active .ai-quick-chips {
+  margin-top: 0;
+}
+
+/* Khu vực trang đã ghim: giới hạn chiều cao, tự cuộn thay vì đẩy layout */
+.ai-pages-context {
+  max-height: 64px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}

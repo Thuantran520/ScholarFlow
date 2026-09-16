@@ -835,6 +835,7 @@ window.I18N_RU = {
     "ai_btn_add_page": "Добавить страницу",
     "ai_pages_added": "Добавленные страницы",
     "ai_page_badge": "+Страница",
+    "ai_page_remove_tip": "Удалить эту страницу",
     "ai_toast_page_added": "Страница добавлена: {0}",
     "ai_toast_no_page": "Нет страницы для добавления",
     "ai_input_placeholder": "Введите вопрос... (Enter — отправить, Shift+Enter — новая строка, +страница — спросить о странице)",

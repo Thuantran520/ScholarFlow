@@ -835,6 +835,7 @@ window.I18N_VI = {
     "ai_btn_add_page": "Thêm trang",
     "ai_pages_added": "Trang đã thêm",
     "ai_page_badge": "+Trang",
+    "ai_page_remove_tip": "Xóa trang này",
     "ai_toast_page_added": "Đã thêm trang: {0}",
     "ai_toast_no_page": "Chưa có trang nào để thêm",
     "ai_quick_summary": "Tóm tắt",

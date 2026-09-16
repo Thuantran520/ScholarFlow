@@ -835,6 +835,7 @@ window.I18N_EN = {
     "ai_btn_add_page": "Add page",
     "ai_pages_added": "Pages added",
     "ai_page_badge": "+Page",
+    "ai_page_remove_tip": "Remove this page",
     "ai_toast_page_added": "Page added: {0}",
     "ai_toast_no_page": "No page to add",
     "ai_input_placeholder": "Type a question... (Enter to send, Shift+Enter for new line, +page to ask about page)",
