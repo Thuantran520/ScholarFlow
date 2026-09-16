@@ -1055,7 +1055,7 @@ async function main() {
         "sidebar: caption cleaner drops noise tokens and duplicate ASR lines");
       check(await w.eval(`(function(){try{var p=aiBuildPrompt("QQ","","",null,{title:"Tieu de video",author:"Kenh X",date:"2026-09-01",views:"785000",description:"MO TA NGAY MAY GIO LIVE 19H"},"","",null,true); return typeof p==="string" && p.indexOf("DATA_UNTRUSTED_4_BEGIN")!==-1;}catch(e){return false;}})()`),
         "sidebar: no-caption videos fall back to description+channel metadata block");
-      check(await w.eval(`(function(){try{aiAddPage({url:"https://alpha.test/1",title:"Alpha",text:"noi dung A"});aiAddPage({url:"https://xss.test/2",title:'<img src=x onerror=alert(1)>',text:"B"});var chips=document.querySelectorAll(".ai-page-chip").length;var vis=document.getElementById("ai-pages-context").style.display!=="none";var cnt=document.getElementById("ai-pages-count").textContent==="(2)";var inj=document.querySelector(".ai-page-chip img")!==null;var rmbs=document.querySelectorAll(".ai-page-chip-remove").length===2;aiRemovePage("https://alpha.test/1");var after=document.querySelectorAll(".ai-page-chip").length===1;aiRemovePage("https://xss.test/2");var hidden=document.getElementById("ai-pages-context").style.display==="none";return chips===2&&vis&&cnt&&!inj&&rmbs&&after&&hidden;}catch(e){return false;}})()`),
+      check(await w.eval(`(function(){try{aiAddPage({url:"https://alpha.test/1",title:"Alpha",text:"noi dung A"});aiAddPage({url:"https://xss.test/2",title:'<img src=x onerror=alert(1)>',text:"B"});var chips=document.querySelectorAll(".ai-page-chip").length;var vis=document.getElementById("ai-pages-context").style.display!=="none";var cnt=document.getElementById("ai-pages-count").textContent==="2";var inj=document.querySelector(".ai-page-chip img")!==null;var rmbs=document.querySelectorAll(".ai-page-chip-remove").length===2;aiRemovePage("https://alpha.test/1");var after=document.querySelectorAll(".ai-page-chip").length===1;aiRemovePage("https://xss.test/2");var hidden=document.getElementById("ai-pages-context").style.display==="none";return chips===2&&vis&&cnt&&!inj&&rmbs&&after&&hidden;}catch(e){return false;}})()`),
         "sidebar: pinned-pages strip renders chips safely (title XSS inert, add/remove + auto-hide)");
       check(await w.eval(`typeof aiAddPage==="function" && typeof aiRemovePage==="function" && typeof aiGetCurrentPageInfo==="function"`),
         "sidebar: multi-page context helpers exported");
@@ -1123,6 +1123,8 @@ async function main() {
       "content script: GET_YT_META fast microdata path + playerResponse cache");
     check(aiSrc.includes('"is-stop"') && aiSrc.includes("aiAbort.abort()"),
       "AI module: stop-generating (AbortController) wired");
+    check(aiSrc.includes("function aiScrollToBottom") && aiSrc.includes("requestAnimationFrame(()=>requestAnimationFrame(aiScrollToBottom))") && aiSrc.includes("window.aiScrollToBottom=aiScrollToBottom"),
+      "AI module: chat auto-scrolls to newest message on tab activation (no manual scrolling)");
     check(aiSrc.includes("KHÔNG CÓ THÔNG TIN ĐỦ"),
       "AI module: anti-hallucination rule in system preamble");
     check(aiSrc.includes('aiQuickCtx={kind:"page"}') && aiSrc.includes("const quickReq = aiQuickCtx") && aiSrc.includes("|| !!quickReq"),
