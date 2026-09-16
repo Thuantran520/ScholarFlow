@@ -2,7 +2,7 @@
 // ScholarFlow module: OS/js/tabs/security.js
 // Security UI: phishing+typo-squat, anti-clickjacking auto-block, unlock per-site
 // ---------------------------------------------------------------------------
-let secState = { phishing: true, clickjack: true, autoBlock: true, unlockSites: {}, lastScan: null };
+let secState = { phishing: true, clickjack: true, autoBlock: true, cookieReject: false, pasteGuard: false, unlockSites: {}, lastScan: null };
 let _secCurrentHost = "";
 
 function secLoadSettings() {
@@ -12,6 +12,8 @@ function secLoadSettings() {
       secState.phishing = s.phishing !== false;
       secState.clickjack = s.clickjack !== false;
       secState.autoBlock = s.autoBlock !== false;
+      secState.cookieReject = s.cookieReject === true;
+      secState.pasteGuard = s.pasteGuard === true;
       secState.unlockSites = s.unlockSites || (s.unlock ? { _legacy: true } : {});
       // migrate legacy global unlock
       if (s.unlock && !s.unlockSites) {
@@ -23,7 +25,7 @@ function secLoadSettings() {
   });
 }
 function secSaveSettings() {
-  storSet({ sf_security_settings: { phishing: secState.phishing, clickjack: secState.clickjack, autoBlock: !!secState.autoBlock, unlockSites: secState.unlockSites, lastScan: secState.lastScan } }, function () {
+  storSet({ sf_security_settings: { phishing: secState.phishing, clickjack: secState.clickjack, autoBlock: !!secState.autoBlock, cookieReject: !!secState.cookieReject, pasteGuard: !!secState.pasteGuard, unlockSites: secState.unlockSites, lastScan: secState.lastScan } }, function () {
     secUpdateUI();
     secPushToActiveTab();
   });
@@ -41,9 +43,13 @@ function secUpdateUI() {
   const c = document.getElementById("sec-toggle-clickjack");
   const a = document.getElementById("sec-toggle-autoblock");
   const u = document.getElementById("sec-toggle-unlock");
+  const g = document.getElementById("sec-toggle-pasteguard");
+  const r = document.getElementById("sec-toggle-cookiereject");
   if (p) p.checked = !!secState.phishing;
   if (c) c.checked = !!secState.clickjack;
   if (a) a.checked = !!secState.autoBlock;
+  if (g) g.checked = !!secState.pasteGuard;
+  if (r) r.checked = !!secState.cookieReject;
   const host = _secCurrentHost || "";
   const unlockOn = !!(host && secState.unlockSites[host]) || !!secState.unlockSites._legacy;
   if (u) u.checked = unlockOn;
@@ -99,7 +105,7 @@ function secScanPhishing() {
     }
     out.appendChild(row);
     secState.lastScan = new Date().toISOString();
-    storSet({ sf_security_settings: { phishing: secState.phishing, clickjack: secState.clickjack, autoBlock: secState.autoBlock, unlockSites: secState.unlockSites, lastScan: secState.lastScan } }, function () {});
+    storSet({ sf_security_settings: { phishing: secState.phishing, clickjack: secState.clickjack, autoBlock: secState.autoBlock, cookieReject: !!secState.cookieReject, pasteGuard: !!secState.pasteGuard, unlockSites: secState.unlockSites, lastScan: secState.lastScan } }, function () {});
   });
 }
 function secScanClickjack() {
@@ -154,6 +160,186 @@ function secUnlockNow() {
   });
 }
 
+// ── Upgrades: strong password generator (local crypto) + breach checks ────
+function _secOpenExt(url) { try { window.open(url, "_blank", "noopener"); } catch (e) {} }
+let secPwLen = 20;
+function _secPwShowLen() {
+  const el = document.getElementById("sec-pw-len-val");
+  if (el) el.textContent = String(secPwLen);
+}
+function _secPwStep(delta) {
+  secPwLen += delta;
+  if (secPwLen < 8) secPwLen = 8;
+  if (secPwLen > 64) secPwLen = 64;
+  _secPwShowLen();
+}
+function secGenPassword() {
+  const useU = (document.getElementById("sec-pw-upper") || {}).checked;
+  const useL = (document.getElementById("sec-pw-lower") || {}).checked;
+  const useD = (document.getElementById("sec-pw-digit") || {}).checked;
+  const useS = (document.getElementById("sec-pw-symbol") || {}).checked;
+  let pool = "";
+  if (useU) pool += "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  if (useL) pool += "abcdefghijkmnopqrstuvwxyz";
+  if (useD) pool += "23456789";
+  if (useS) pool += "!@#$%^&*()-_=+[]{};:,.?";
+  if (!pool) { showToast(t("sec_pw_nochars")); return; }
+  const len = secPwLen;
+  const rnd = new Uint32Array(len);
+  try { window.crypto.getRandomValues(rnd); } catch (e) { return; }
+  let pw = "";
+  for (let i = 0; i < len; i++) pw += pool[rnd[i] % pool.length];
+  const outEl = document.getElementById("sec-pw-out");
+  if (outEl) outEl.value = pw;
+}
+function secCopyPassword() {
+  const outEl = document.getElementById("sec-pw-out");
+  const v = outEl ? outEl.value : "";
+  if (!v) { showToast(t("sec_pw_nochars")); return; }
+  try {
+    navigator.clipboard.writeText(v).then(function () { showToast(t("sec_pw_copied")); }, function () { showToast(t("toast_copy_failed")); });
+  } catch (e) { showToast(t("toast_copy_failed")); }
+}
+function secClearUnlockSites() {
+  secState.unlockSites = {};
+  secSaveSettings();
+  showToast(t("sec_breach_cleared"));
+}
+
+// ── Site trust report (deep heuristics run in content script) ─────────────
+function _secRow(text, color) {
+  const row = document.createElement("div");
+  row.className = "sec-result-row";
+  row.textContent = text;
+  if (color) row.style.color = color;
+  return row;
+}
+function secTrustReport() {
+  secSendToActive({ action: "SEC_TRUST_REPORT" }, function (res) {
+    const out = document.getElementById("sec-trust-out");
+    if (!out) return;
+    while (out.firstChild) out.removeChild(out.firstChild);
+    if (!res || !res.ok) { out.appendChild(_secRow(t("sec_result_err"), "#94a3b8")); return; }
+    const head = _secRow((res.host || "?") + " — ", "#cbd5e1");
+    head.style.fontWeight = "700";
+    out.appendChild(head);
+    if (res.official) {
+      out.appendChild(_secRow(t("sec_trust_official").replace("{0}", res.official), "#34d399"));
+      return;
+    }
+    const score = Math.min(10, Math.max(0, res.score || 0));
+    const meter = document.createElement("div");
+    meter.className = "sec-trust-meter";
+    const fill = document.createElement("span");
+    const pct = score * 10;
+    fill.style.width = pct + "%";
+    fill.style.background = score >= 4 ? "#ef4444" : score >= 1 ? "#f59e0b" : "#10b981";
+    meter.appendChild(fill);
+    out.appendChild(meter);
+    const verdictColor = score >= 4 ? "#f87171" : score >= 1 ? "#fbbf24" : "#94a3b8";
+    out.appendChild(_secRow(t("sec_trust_score").replace("{0}", String(score)), verdictColor));
+    (res.reasons || []).forEach(function (r) {
+      const txt = t(r.k);
+      out.appendChild(_secRow("• " + (r.p ? txt.replace("{0}", r.p) : txt), r.k === "sec_trust_http" || r.k.indexOf("trust_unknown") !== -1 || r.k.indexOf("hyphen") !== -1 || r.k.indexOf("entropy") !== -1 || r.k.indexOf("shortener") !== -1 || r.k.indexOf("port") !== -1 || r.k.indexOf("brand_path") !== -1 ? "#fbbf24" : "#f87171"));
+    });
+  });
+}
+
+// ── Cookie audit for current domain ───────────────────────────────────────
+const SEC_AD_DOMAINS = ["doubleclick.net", "googletagmanager.com", "google-analytics.com", "facebook.net",
+  "connect.facebook", "analytics.tiktok.com", "analytics.twitter.com", "bat.bing.com", "hotjar.com",
+  "clarity.ms", "criteo.com", "taboola.com", "outbrain.com", "scorecardresearch.com", "mixpanel.com",
+  "segment.", "licdn.com", "ads-twitter.com", "snapchat.com", "tiktok.com"];
+const SEC_AN_PREFIX = ["_ga", "_gid", "_fbp", "_gcl", "_tt", "_pk", "_hs", "matomo", "plank", "_ym", "_dcg", "_klaviyo", "mp_", "_mkto"];
+function _secCookieCat(c) {
+  const d = (c.domain || "").replace(/^\./, "").toLowerCase();
+  const n = (c.name || "").toLowerCase();
+  for (let i = 0; i < SEC_AD_DOMAINS.length; i++) { if (d.indexOf(SEC_AD_DOMAINS[i].replace(/\.$/, "")) !== -1 || d === SEC_AD_DOMAINS[i]) return "ad"; }
+  if (d === "facebook.com" && (n === "fr" || n === "reg_ext_referrer")) return "ad";
+  if (d.indexOf("facebook.com") !== -1 && n === "datr") return "tracker";
+  for (let i = 0; i < SEC_AN_PREFIX.length; i++) { if (n.indexOf(SEC_AN_PREFIX[i].trim().toLowerCase()) === 0) return "analytics"; }
+  return "functional";
+}
+function _secCookieRisks(c) {
+  const r = [];
+  if (!c.secure) r.push("Secure");
+  if (!c.httpOnly) r.push("HttpOnly");
+  if (c.sameSite === "no_restriction") r.push("SameSite");
+  return r;
+}
+function _secCookieProto(c) {
+  return (c.secure ? "https://" : "http://") + (c.domain || "").replace(/^\./, "") + (c.path || "/");
+}
+let _secAudited = [];
+function secCookieAudit() {
+  const out = document.getElementById("sec-cookie-out");
+  if (!out) return;
+  while (out.firstChild) out.removeChild(out.firstChild);
+  const api = (typeof chrome !== "undefined" && chrome.cookies) ? chrome.cookies : null;
+  if (!api) { out.appendChild(_secRow(t("sec_ca_none"), "#f87171")); return; }
+  try {
+    ensureActiveTab().then(function (tab) {
+      let host = "";
+      try { host = tab && tab.url ? new URL(tab.url).hostname.replace(/^www\./, "") : ""; } catch (e) {}
+      if (!host) { out.appendChild(_secRow(t("sec_result_err"), "#94a3b8")); return; }
+      api.getAll({ domain: host }, function (cookies) {
+        _secAudited = cookies || [];
+        if (!_secAudited.length) { out.appendChild(_secRow(t("sec_ca_none"), "#94a3b8")); return; }
+        let risky = 0, track = 0;
+        _secAudited.forEach(function (c) {
+          const cat = _secCookieCat(c);
+          const risks = _secCookieRisks(c);
+          if (cat === "ad" || cat === "tracker" || cat === "analytics") track++;
+          if (risks.length) risky++;
+          const row = document.createElement("div");
+          row.className = "sec-ck-row";
+          const name = document.createElement("span");
+          name.className = "sec-ck-name";
+          name.textContent = c.name;
+          name.title = c.domain + " • " + (c.expirationDate ? new Date(c.expirationDate * 1000).toISOString().slice(0, 10) : "session");
+          row.appendChild(name);
+          const catLbl = document.createElement("span");
+          catLbl.className = "sec-ck-cat";
+          catLbl.textContent = cat === "ad" || cat === "tracker" ? t("sec_ca_ad") : cat === "analytics" ? t("sec_ca_an") : t("sec_ca_fn");
+          catLbl.style.color = (cat === "ad" || cat === "tracker") ? "#f87171" : cat === "analytics" ? "#fbbf24" : "#34d399";
+          row.appendChild(catLbl);
+          if (risks.length) {
+            const rk = document.createElement("span");
+            rk.className = "sec-ck-risk";
+            rk.textContent = t("sec_ca_risk").replace("{0}", risks.join(", "));
+            row.appendChild(rk);
+          }
+          const del = document.createElement("button");
+          del.type = "button";
+          del.className = "btn-text-small sec-ck-del";
+          del.textContent = t("sec_ca_del");
+          del.addEventListener("click", function () {
+            try {
+              api.remove({ url: _secCookieProto(c), name: c.name, storeId: c.storeId }, function () { secCookieAudit(); showToast(t("sec_ca_deleted").replace("{0}", "1")); });
+            } catch (e) {}
+          });
+          row.appendChild(del);
+          out.appendChild(row);
+        });
+        const sum = _secRow(t("sec_ca_summary").replace("{n}", String(_secAudited.length)).replace("{r}", String(risky)).replace("{t}", String(track)), "#94a3b8");
+        sum.style.fontWeight = "700";
+        out.insertBefore(sum, out.firstChild);
+        if (!track) { out.insertBefore(_secRow(t("sec_ca_ok"), "#34d399"), sum.nextSibling); }
+      });
+    }).catch(function () { out.appendChild(_secRow(t("sec_result_err"), "#f87171")); });
+  } catch (e) { out.appendChild(_secRow(t("sec_result_err"), "#f87171")); }
+}
+function secCookieDelTrackers() {
+  const api = (typeof chrome !== "undefined" && chrome.cookies) ? chrome.cookies : null;
+  if (!api || !_secAudited.length) return;
+  const doomed = _secAudited.filter(function (c) { const cat = _secCookieCat(c); return cat === "ad" || cat === "tracker" || cat === "analytics"; });
+  if (!doomed.length) { showToast(t("sec_ca_ok")); return; }
+  let n = 0;
+  doomed.forEach(function (c) {
+    try { api.remove({ url: _secCookieProto(c), name: c.name, storeId: c.storeId }, function () { n++; if (n === doomed.length) { showToast(t("sec_ca_deleted").replace("{0}", String(n))); secCookieAudit(); } }); } catch (e) {}
+  });
+}
+
 onReady(function () {
   const p = document.getElementById("sec-toggle-phishing");
   const c = document.getElementById("sec-toggle-clickjack");
@@ -169,6 +355,33 @@ onReady(function () {
   if (btnJack) btnJack.addEventListener("click", secScanClickjack);
   const btnUnlock = document.getElementById("btn-sec-unlock-now");
   if (btnUnlock) btnUnlock.addEventListener("click", secUnlockNow);
+  const g = document.getElementById("sec-toggle-pasteguard");
+  if (g) g.addEventListener("change", function () { secState.pasteGuard = !!g.checked; secSaveSettings(); });
+  const r = document.getElementById("sec-toggle-cookiereject");
+  if (r) r.addEventListener("change", function () { secState.cookieReject = !!r.checked; secSaveSettings(); });
+  const btnTrust = document.getElementById("btn-sec-trust");
+  if (btnTrust) btnTrust.addEventListener("click", secTrustReport);
+  const btnAudit = document.getElementById("btn-sec-cookie-audit");
+  if (btnAudit) btnAudit.addEventListener("click", secCookieAudit);
+  const btnDelAll = document.getElementById("btn-sec-cookie-delall");
+  if (btnDelAll) btnDelAll.addEventListener("click", secCookieDelTrackers);
+  const btnPwGen = document.getElementById("btn-sec-pw-gen");
+  if (btnPwGen) btnPwGen.addEventListener("click", secGenPassword);
+  const btnPwCopy = document.getElementById("btn-sec-pw-copy");
+  if (btnPwCopy) btnPwCopy.addEventListener("click", secCopyPassword);
+  const btnHibp = document.getElementById("btn-sec-hibp");
+  if (btnHibp) btnHibp.addEventListener("click", function () { _secOpenExt("https://haveibeenpwned.com/"); });
+  const btnWrtc = document.getElementById("btn-sec-webrtc");
+  if (btnWrtc) btnWrtc.addEventListener("click", function () { _secOpenExt("https://browserleaks.com/webrtc"); });
+  const btnDns = document.getElementById("btn-sec-dns");
+  if (btnDns) btnDns.addEventListener("click", function () { _secOpenExt("https://www.dnsleaktest.com/"); });
+  const btnClrUnlock = document.getElementById("btn-sec-clear-unlock");
+  if (btnClrUnlock) btnClrUnlock.addEventListener("click", secClearUnlockSites);
+  const pwMinus = document.getElementById("sec-pw-minus");
+  if (pwMinus) pwMinus.addEventListener("click", function () { _secPwStep(-4); });
+  const pwPlus = document.getElementById("sec-pw-plus");
+  if (pwPlus) pwPlus.addEventListener("click", function () { _secPwStep(4); });
+  _secPwShowLen();
   secLoadSettings();
   // refresh host when tab changes
   try {

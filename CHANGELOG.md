@@ -38,6 +38,59 @@ Tất cả thay đổi đáng chú ý của dự án đều được ghi tại �
 
 ---
 
+## So sánh nhanh v2.4.4 → v2.4.5
+
+| Hạng mục | v2.4.4 | v2.4.5 |
+|---|---|---|
+| **Bảo vệ MXH** | - | **Tab "Social" mới**: khiên ẩn typing/đã xem/online cho Facebook, Zalo, Instagram + WhatsApp/TikTok/Discord/X/Telegram |
+| **Khôi phục tài khoản** | - | Wizard 8 kịch bản bị hack (mất email/SĐT/2FA, WhatsApp PIN, SIM swap...) × 9 nền tảng, xuất hướng dẫn .txt gửi bạn bè |
+| **Két sắt mã hóa** | - | **AES-256-GCM** bằng mật khẩu chủ: email/SĐT dự phòng, trusted contacts, recovery codes 2FA — 100% máy bạn |
+| **Dark Mode** | - | **Tab "Dark" riêng (Studio)**: tối mọi trang kiểu Dark Reader, tự bỏ qua trang dark-native, ⚡ép tối, chỉnh sáng/tương phản/độ màu theo site, bảng màu đọc giấy, font/giãn dòng/từ cách |
+| **Security** | Phishing, clickjack, unlock | + **trust report 12 lớp heuristic** (typo/punycode/form giả/shortener/entropy...), **tự từ chối banner cookie** 16+ CMP, **audit cookie**, trình tạo mật khẩu mạnh, cảnh báo dán CCCD/thẻ |
+| **Creator (KOL/KOC)** | - | + kế hoạch bài đăng, metrics (views/likes/shares/comments), xuất CSV KPI, quản lý Group/Kênh |
+| **Pomodoro** | 25/50/5 + timer | + 4 preset lịch ngắt nghỉ 1 chạm, đồng hồ giờ kết thúc, stepper đầy khung |
+
+---
+
+## [2.4.5] - 2026-09-17
+
+### Bảo vệ mạng xã hội (tab Social mới)
+
+- **Khiên riêng tư client-side**: ẩn "đang gõ", "đã xem", "Active now" trên Facebook/Messenger, Zalo, Instagram (9 công tắc) + khiên đơn cho WhatsApp Web, TikTok, Discord, X, Telegram — content script `social.js` tiêm CSS best-effort, tự cập nhật khi đổi cấu hình (không cần F5).
+- **Recovery Wizard 8 kịch bản × 9 nền tảng**: còn phiên đăng nhập / còn email-SĐT / hacker đổi email / đổi SĐT / mất cả hai (verify giấy tờ) / bị bật 2FA / WhatsApp bị đặt PIN 2 lớp / SIM swap — mỗi bước kèm link chính thức + cảnh báo lừa đảo; **xuất hướng dẫn .txt** để gửi cho bạn bè bị hack.
+- **Két sắt thông tin khôi phục**: mã hóa **AES-256-GCM, PBKDF2 150k vòng** bằng mật khẩu chủ ngay trên máy (WebCrypto), lưu email/SĐT dự phòng, trusted contacts, recovery codes; quên master = mất dữ liệu (thiết kế không后门).
+- **Checklist phòng thủ 10 mục** + **Công cụ**: quét tracker trên trang, dọn cookie theo dõi MXH, link mở hộp chưa đọc 7 nền tảng, **nút báo cáo** Google Safe Browsing + Meta, mẫu bằng chứng cho đơn Cảnh sát mạng.
+- **Creator workspace (KOL/KOC)**: lên lịch bài đăng theo nền tảng/trạng thái, ghi chỉ số views/likes/shares/comments, tổng KPI, **xuất CSV**, danh sách Group/Kênh + mở tất cả.
+
+### Dark Mode Studio (tab riêng mới)
+
+- Engine v4 chạy **`document_start`** + cache `darkKnown` theo hostname → **không còn flash nền trắng**: trang sáng tối ngay từ frame đầu, trang dark-native (GitHub/YouTube...) tự bỏ qua không invert 2 lần.
+- **Chỉnh theo site**: độ sáng/tương phản/độ màu (0% = chế độ xám đọc sách) với ảnh tự bù filter; ⚡ép tối thủ công.
+- **Chế độ đọc dịu mắt**: 5 màu giấy (Giấy/Bạc hà/Xanh/Hổ phách/Hồng) + tự chọn color picker, cường độ qua lớp phủ `mix-blend multiply` không phá layout.
+- **Typography toàn trang**: font (Serif/Sans/Mono/Verdana...), cỡ 85–150%, giãn dòng, khoảng chữ, khoảng từ — toggle bật/tắt tức thì.
+- Quản lý danh sách loại trừ/chọn theo host, pill trạng thái, thanh trượt có nhãn + value.
+
+### Security nâng cấp
+
+- **Trust report 12 lớp**: brand title-mismatch, form password + action lạ, URL rút gọn, entropy/hyphen domain, @-spoof, cổng lạ, http, punycode... + **thang điểm rủi ro 0–10** — bắt cả trang giả mạo giao diện tinh vi (thêm danh sách brand NH & ví VN: Vietcombank, BIDV, Agribank, Techcombank, MoMo, ZaloPay...).
+- **Tự từ chối banner cookie** (engine `cookie_reject.js`, `all_frames: true`): rules riêng cho 16+ CMP (OneTrust, CookieYes, Osano, iubenda, Complianz, Tarteaucitron, consentmanager, Quantcast, Didomi, Sourcepoint, Cookiebot...), text 15+ ngôn ngữ, **không bao giờ bấm Accept**, mở khóa scroll.
+- **Audit cookie theo domain**: phân loại tracker/phân tích/chức năng, cảnh báo thiếu Secure/HttpOnly/SameSite=None, xóa từng cái hoặc xóa hết tracker.
+- **Trình tạo mật khẩu mạnh** (crypto + stepper độ dài pill), **cảnh báo dán số nhạy cảm** (SĐT/CCCD/thẻ), quick-link HaveIBeenPwned/WebRTC/DNS leak, dọn site đã mở right-click.
+
+### Tinh chỉnh UI/UX
+
+- **Dark Mode hết dấu ✓ trong dropdown model AI** → model khả dụng tô màu xanh lá.
+- Làm đẹp toàn cục: checkbox/radio accent, select option nền tối, **scrollbar mỏng** (Chrome + Firefox `scrollbar-width`), stepper `pm-stepper` full khung có value-focus.
+- Pomodoro: 4 preset lịch (Deep 90/50-10, Sprint 2H, Đọc 60', Nhẹ 45') 1 chạm tính luôn timeline, **⏰ giờ kết thúc dự kiến**, card gọn.
+
+### Kỹ thuật & tuân thủ
+
+- Nội dung mới i18n **đủ 5 ngôn ngữ** (vi/en/zh/ru/ja) — parity pass; key `ai_model_hint`/`ai_key_*`/`sec_trust_*`... cập nhật.
+- 3 manifest đồng bộ version **2.4.5**, thêm content script `social.js`, `cookie_reject.js` (all_frames), `darkmode.js` (document_start); `manifest_firefox.json` ≡ `manifest.json`.
+- Bộ test mở rộng: tab-nav 14/14, allowlist host chính thức mới, 6/6 suites xanh.
+
+---
+
 ## [2.4.4] - 2026-09-15
 
 ### Trợ lý AI (tab mới)

@@ -345,6 +345,14 @@ function pmRunPlanCalc() {
     leftEl.textContent = pmPlan.leftover > 0 ? (getI18nText("pm_plan_leftover", [String(pmPlan.leftover)]) || "") : "";
   }
   const resEl = document.getElementById("pm-plan-result");
+  const endEl = document.getElementById("pm-plan-endclock");
+  if (endEl) {
+    const endMs = Date.now() + (pmPlan.totalMinutes + (pmPlan.leftover || 0)) * 60000;
+    const d = new Date(endMs);
+    const hh = ("0" + d.getHours()).slice(-2); const mm = ("0" + d.getMinutes()).slice(-2);
+    endEl.textContent = getI18nText("pm_plan_end_at", [hh + ":" + mm]) || ("~" + hh + ":" + mm);
+    endEl.style.display = "";
+  }
   if (resEl) resEl.style.display = "block";
 }
 
@@ -574,6 +582,18 @@ function pmBind() {
   });
   const btnCalc = document.getElementById("btn-pm-plan-calc");
   if (btnCalc) btnCalc.addEventListener("click", pmRunPlanCalc);
+  ["pm-preset-deep", "pm-preset-sprint", "pm-preset-reading", "pm-preset-light"].forEach(function (id) {
+    const chip = document.getElementById(id);
+    if (!chip) return;
+    chip.addEventListener("click", function () {
+      const w = document.getElementById("pm-plan-work"); if (w) w.value = chip.getAttribute("data-w");
+      const f = document.getElementById("pm-plan-focus"); if (f) f.value = chip.getAttribute("data-f");
+      const s = document.getElementById("pm-plan-short-len"); if (s) s.value = chip.getAttribute("data-s");
+      const l = document.getElementById("pm-plan-long-len"); if (l) l.value = chip.getAttribute("data-l");
+      const e = document.getElementById("pm-plan-long-every"); if (e) e.value = chip.getAttribute("data-e");
+      pmRunPlanCalc();
+    });
+  });
   const btnPlanApply = document.getElementById("btn-pm-plan-apply");
   if (btnPlanApply) btnPlanApply.addEventListener("click", pmPlanApply);
   pmBindSteppers();

@@ -195,3 +195,28 @@
   color: #64748b;
   line-height: 1.4;
 }
+
+/* v2.4.5 smart-plan presets + end clock */
+.pm-preset-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.pm-preset-chip { font-size: 10.5px; font-weight: 600; color: #7dd3fc; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 999px; padding: 4px 11px; cursor: pointer; transition: all 0.15s ease; }
+.pm-preset-chip:hover { background: rgba(56, 189, 248, 0.2); transform: translateY(-1px); color: #bae6fd; }
+#pm-plan-endclock { font-size: 11px; font-weight: 700; color: #fbbf24; }
+
+/* --- Smart-plan card visual polish (ids/tests untouched) --- */
+.pm-plan-grid { gap:6px; }
+.pm-plan-field { background:rgba(15,23,42,0.45); border:1px solid var(--card-border); border-radius:8px; padding:6px 8px; }
+.pm-plan-field.pm-plan-check { background:transparent; border:none; padding:2px 2px 0; }
+#pm-plan-result { background:linear-gradient(160deg, rgba(56,189,248,0.10), rgba(15,23,42,0.6) 60%) !important; }
+#pm-plan-summary { font-size:12.5px; color:#bae6fd; }
+#pm-plan-timeline > span { border:1px solid rgba(255,255,255,0.12); box-shadow:0 1px 4px rgba(0,0,0,0.25); border-radius:999px; }
+#pm-plan-endclock { display:inline-block; background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.3); border-radius:6px; padding:3px 8px; }
+.pm-preset-row { margin-top:2px; }
+
+/* pm-stepper full-frame (v2.4.5) */
+.pm-plan-field .pm-stepper { width: 100%; justify-content: space-between; min-height: 28px; }
+.pm-plan-field .pm-stepper input { flex: 1; width: auto; padding: 5px 0; font-size: 12px; }
+.pm-plan-field .pm-stepper button { width: 32px; font-size: 15px; background: rgba(255, 255, 255, 0.08); }
+.pm-plan-field .pm-stepper button:first-child { border-right: 1px solid rgba(255, 255, 255, 0.12); }
+.pm-plan-field .pm-stepper button:last-child { border-left: 1px solid rgba(255, 255, 255, 0.12); }
+.pm-plan-field .pm-stepper button:active { background: rgba(56, 189, 248, 0.35); }
+.pm-stepper:focus-within { border-color: rgba(56, 189, 248, 0.55); box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.12); }

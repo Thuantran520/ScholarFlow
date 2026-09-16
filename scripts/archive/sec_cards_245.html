@@ -1,0 +1,33 @@
+    <div class="feature-card" style="padding:10px 12px; margin-top:8px; border-left:3px solid #10b981;">
+      <div class="feature-title" style="margin-bottom:6px;" data-i18n="sec_pw_title">Trình tạo mật khẩu mạnh</div>
+      <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom:6px;">
+        <input type="number" class="form-control" id="sec-pw-len" value="20" min="8" max="64" style="width:56px; font-size:11px; padding:4px 6px;" title="Độ dài" data-i18n-title="sec_pw_len">
+        <label class="sec-pw-chip"><input type="checkbox" id="sec-pw-upper" checked> A-Z</label>
+        <label class="sec-pw-chip"><input type="checkbox" id="sec-pw-lower" checked> a-z</label>
+        <label class="sec-pw-chip"><input type="checkbox" id="sec-pw-digit" checked> 0-9</label>
+        <label class="sec-pw-chip"><input type="checkbox" id="sec-pw-symbol" checked> #$%</label>
+        <button id="btn-sec-pw-gen" class="btn-text-small" style="background:rgba(16,185,129,0.1); border-color:rgba(16,185,129,0.3); color:#34d399;" data-i18n="sec_pw_gen">Tạo</button>
+      </div>
+      <div style="display:flex; gap:6px;">
+        <input type="text" class="form-control" id="sec-pw-out" readonly style="flex:1; font-size:11px; font-family:ui-monospace,monospace; padding:5px 8px;">
+        <button id="btn-sec-pw-copy" class="btn-text-small" data-i18n="sec_pw_copy">Copy</button>
+      </div>
+    </div>
+    <div class="feature-card" style="padding:10px 12px; margin-top:8px; border-left:3px solid #f59e0b;">
+      <label class="switch-row" for="sec-toggle-pasteguard" style="margin-bottom:0;">
+        <div class="switch-row-left">
+          <span class="switch-row-title" data-i18n="sec_pg_title">Cảnh báo dán nội dung nhạy cảm</span>
+          <span class="switch-row-desc" data-i18n="sec_pg_desc">Nhắc khi bạn dán số điện thoại / CCCD / thẻ ngân hàng vào trang web</span>
+        </div>
+        <span class="custom-switch"><input type="checkbox" id="sec-toggle-pasteguard"><span class="switch-slider"></span></span>
+      </label>
+    </div>
+    <div class="feature-card" style="padding:10px 12px; margin-top:8px; border-left:3px solid #ef4444;">
+      <div class="feature-title" style="margin-bottom:6px;" data-i18n="sec_breach_title">Kiểm tra lộ & rò rỉ</div>
+      <div style="display:flex; gap:6px; flex-wrap:wrap;">
+        <button id="btn-sec-hibp" class="btn-text-small" style="background:rgba(239,68,68,0.1); border-color:rgba(239,68,68,0.3); color:#f87171;" data-i18n="sec_breach_hibp">Email bị lộ?</button>
+        <button id="btn-sec-webrtc" class="btn-text-small" data-i18n="sec_breach_webrtc">WebRTC leak</button>
+        <button id="btn-sec-dns" class="btn-text-small" data-i18n="sec_breach_dns">DNS leak</button>
+        <button id="btn-sec-clear-unlock" class="btn-text-small" style="color:#94a3b8; border-color:rgba(255,255,255,0.08);" data-i18n="sec_breach_clear">Xóa site đã mở khóa</button>
+      </div>
+    </div>

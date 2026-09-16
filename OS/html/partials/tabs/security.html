@@ -25,6 +25,13 @@
         </div>
         <span class="custom-switch"><input type="checkbox" id="sec-toggle-autoblock"><span class="switch-slider"></span></span>
       </label>
+      <label class="switch-row" for="sec-toggle-cookiereject">
+        <div class="switch-row-left">
+          <span class="switch-row-title" data-i18n="sec_toggle_cookiereject">Tự từ chối banner Cookie</span>
+          <span class="switch-row-desc" data-i18n="sec_toggle_cookiereject_desc">Tự bấm 'Từ chối / Necessary only' khi popup cookie xuất hiện — không bao giờ bấm Đồng ý thay bạn</span>
+        </div>
+        <span class="custom-switch"><input type="checkbox" id="sec-toggle-cookiereject"><span class="switch-slider"></span></span>
+      </label>
       <label class="switch-row" for="sec-toggle-unlock" style="margin-bottom:0;">
         <div class="switch-row-left">
           <span class="switch-row-title" id="sec-unlock-label" data-i18n="sec_toggle_unlock">Unlock Right-Click & Copy</span>
@@ -39,3 +46,55 @@
       <button id="btn-sec-unlock-now" class="btn-text-small" style="background:rgba(56,189,248,0.08); border-color:rgba(56,189,248,0.18); color:#38bdf8;" data-i18n="sec_btn_unlock_now">Unlock now</button>
     </div>
     <div id="sec-scan-out" style="background:rgba(15,23,42,0.5); border:1px solid var(--card-border); border-radius:8px; padding:8px; min-height:36px; font-size:11px; color:#94a3b8;"></div>
+    <div class="feature-card" style="padding:10px 12px; margin-top:8px; border-left:3px solid #10b981;">
+      <div class="feature-title" style="margin-bottom:6px;" data-i18n="sec_pw_title">Trình tạo mật khẩu mạnh</div>
+      <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom:6px;">
+        <div class="sec-pw-stepper" title="Độ dài" data-i18n-title="sec_pw_len" role="group">
+          <button type="button" class="sec-pw-step" id="sec-pw-minus" aria-label="-4">−</button>
+          <span class="sec-pw-lenval" id="sec-pw-len-val">20</span>
+          <button type="button" class="sec-pw-step" id="sec-pw-plus" aria-label="+4">+</button>
+        </div>
+        <label class="sec-pw-chip"><input type="checkbox" id="sec-pw-upper" checked> A-Z</label>
+        <label class="sec-pw-chip"><input type="checkbox" id="sec-pw-lower" checked> a-z</label>
+        <label class="sec-pw-chip"><input type="checkbox" id="sec-pw-digit" checked> 0-9</label>
+        <label class="sec-pw-chip"><input type="checkbox" id="sec-pw-symbol" checked> #$%</label>
+        <button id="btn-sec-pw-gen" class="btn-text-small" style="background:rgba(16,185,129,0.1); border-color:rgba(16,185,129,0.3); color:#34d399;" data-i18n="sec_pw_gen">Tạo</button>
+      </div>
+      <div style="display:flex; gap:6px;">
+        <input type="text" class="form-control" id="sec-pw-out" readonly style="flex:1; font-size:11px; font-family:ui-monospace,monospace; padding:5px 8px;">
+        <button id="btn-sec-pw-copy" class="btn-text-small" data-i18n="sec_pw_copy">Copy</button>
+      </div>
+    </div>
+    <div class="feature-card" style="padding:10px 12px; margin-top:8px; border-left:3px solid #38bdf8;">
+      <div class="feature-title" style="margin-bottom:6px;" data-i18n="sec_trust_title">Đánh giá độ tin cậy trang web</div>
+      <div style="display:flex; gap:6px;">
+        <button id="btn-sec-trust" class="btn-text-small" style="background:rgba(56,189,248,0.08); border-color:rgba(56,189,248,0.25); color:#38bdf8;" data-i18n="sec_trust_btn">Đánh giá độ tin cậy trang này</button>
+      </div>
+      <div id="sec-trust-out" style="margin-top:6px; display:flex; flex-direction:column; gap:4px;"></div>
+    </div>
+    <div class="feature-card" style="padding:10px 12px; margin-top:8px; border-left:3px solid #a78bfa;">
+      <div class="feature-title" style="margin-bottom:6px;" data-i18n="sec_ca_title">Kiểm tra an toàn cookie (domain hiện tại)</div>
+      <div style="display:flex; gap:6px; flex-wrap:wrap;">
+        <button id="btn-sec-cookie-audit" class="btn-text-small" style="background:rgba(167,139,250,0.1); border-color:rgba(167,139,250,0.3); color:#a78bfa;" data-i18n="sec_ca_btn">Audit cookie</button>
+        <button id="btn-sec-cookie-delall" class="btn-text-small" style="background:rgba(249,115,22,0.1); border-color:rgba(249,115,22,0.3); color:#fb923c;" data-i18n="sec_ca_del_all">Xóa hết tracker/analytics</button>
+      </div>
+      <div id="sec-cookie-out" style="margin-top:6px; display:flex; flex-direction:column; gap:4px;"></div>
+    </div>
+    <div class="feature-card" style="padding:10px 12px; margin-top:8px; border-left:3px solid #f59e0b;">
+      <label class="switch-row" for="sec-toggle-pasteguard" style="margin-bottom:0;">
+        <div class="switch-row-left">
+          <span class="switch-row-title" data-i18n="sec_pg_title">Cảnh báo dán nội dung nhạy cảm</span>
+          <span class="switch-row-desc" data-i18n="sec_pg_desc">Nhắc khi bạn dán số điện thoại / CCCD / thẻ ngân hàng vào trang web</span>
+        </div>
+        <span class="custom-switch"><input type="checkbox" id="sec-toggle-pasteguard"><span class="switch-slider"></span></span>
+      </label>
+    </div>
+    <div class="feature-card" style="padding:10px 12px; margin-top:8px; border-left:3px solid #ef4444;">
+      <div class="feature-title" style="margin-bottom:6px;" data-i18n="sec_breach_title">Kiểm tra lộ & rò rỉ</div>
+      <div style="display:flex; gap:6px; flex-wrap:wrap;">
+        <button id="btn-sec-hibp" class="btn-text-small" style="background:rgba(239,68,68,0.1); border-color:rgba(239,68,68,0.3); color:#f87171;" data-i18n="sec_breach_hibp">Email bị lộ?</button>
+        <button id="btn-sec-webrtc" class="btn-text-small" data-i18n="sec_breach_webrtc">WebRTC leak</button>
+        <button id="btn-sec-dns" class="btn-text-small" data-i18n="sec_breach_dns">DNS leak</button>
+        <button id="btn-sec-clear-unlock" class="btn-text-small" style="color:#94a3b8; border-color:rgba(255,255,255,0.08);" data-i18n="sec_breach_clear">Xóa site đã mở khóa</button>
+      </div>
+    </div>

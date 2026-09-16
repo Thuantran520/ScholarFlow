@@ -1,0 +1,137 @@
+  <div id="tab-dm" class="tab-section">
+    <div class="dm-hero">
+      <svg class="dm-hero-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      <span class="dm-hero-title" data-i18n="dm_hero_title">Dark Mode Studio</span>
+      <span id="dm-status-pill" class="dm-pill">—</span>
+    </div>
+    <p class="dm-page-desc" data-i18n="dm_page_desc">Tối mọi trang web như extension darkmode chuyên nghiệp: tự nhận diện trang đã tối để bỏ qua, ⚡ ép tối trang không hỗ trợ, chỉnh độ sáng & gam màu. 100% cục bộ.</p>
+
+    <div class="feature-card dm-card dm-tight">
+      <label class="switch-row" for="sec-dm-toggle">
+        <div class="switch-row-left">
+          <span class="switch-row-title" data-i18n="dm_master_title">Bật Dark Mode</span>
+          <span class="switch-row-desc" data-i18n="dm_master_desc">Áp dụng bộ lọc nghịch đảo màu lên trang web</span>
+        </div>
+        <span class="custom-switch"><input type="checkbox" id="sec-dm-toggle"><span class="switch-slider"></span></span>
+      </label>
+      <label class="switch-row" for="sec-dm-auto" style="margin-bottom:0;">
+        <div class="switch-row-left">
+          <span class="switch-row-title" data-i18n="dm_auto">Bỏ qua trang đã có nền tối</span>
+          <span class="switch-row-desc" data-i18n="dm_auto_desc">Tự phát hiện site dark-native (GitHub, YouTube...) để không invert 2 lần</span>
+        </div>
+        <span class="custom-switch"><input type="checkbox" id="sec-dm-auto"><span class="switch-slider"></span></span>
+      </label>
+    </div>
+
+    <div class="feature-card dm-card dm-tight">
+      <div class="dm-grid">
+        <div class="dm-cell">
+          <label class="dm-lbl" for="sec-dm-mode" data-i18n="dm_scope_title">Phạm vi</label>
+          <select class="form-control dm-sel" id="sec-dm-mode">
+            <option value="all" data-i18n="dm_mode_all">Tối mọi trang (trừ trang loại trừ)</option>
+            <option value="selected" data-i18n="dm_mode_selected">Chỉ tối trang được chọn</option>
+          </select>
+        </div>
+        <div class="dm-cell">
+          <label class="dm-lbl" for="sec-dm-theme" data-i18n="dm_theme">Gam màu</label>
+          <select class="form-control dm-sel" id="sec-dm-theme">
+            <option value="std" data-i18n="dm_theme_std">Chuẩn</option>
+            <option value="dim" data-i18n="dm_theme_dim">Dịu mắt</option>
+            <option value="warm" data-i18n="dm_theme_warm">Ấm áp</option>
+            <option value="contrast" data-i18n="dm_theme_contrast">Rõ nét</option>
+          </select>
+        </div>
+      </div>
+      <div class="dm-slider" style="--dm-acc:#f59e0b;">
+        <span class="dm-sl-l" data-i18n="dm_bright">Độ sáng</span>
+        <input type="range" id="sec-dm-bright" min="60" max="140" value="100">
+        <span id="dm-bright-val" class="dm-sl-v">100%</span>
+      </div>
+    </div>
+
+    <div class="feature-card dm-card dm-tight">
+      <div class="dm-site-row">
+        <span id="sec-dm-status" class="dm-host">—</span>
+        <span class="dm-host-btns">
+          <button id="btn-sec-dm-site" class="btn-text-small dm-btn" data-i18n="dm_this_on">🌙 Tối trang này</button>
+          <button id="btn-sec-dm-force" class="btn-text-small dm-btn" data-i18n="dm_force_on">⚡ Ép tối</button>
+        </span>
+      </div>
+      <div class="dm-slider" style="--dm-acc:#f59e0b;">
+        <span class="dm-sl-l" data-i18n="dm_bright">Sáng</span>
+        <input type="range" id="dm-tune-bright" min="60" max="140" value="100">
+        <span id="dm-tune-bright-val" class="dm-sl-v">100%</span>
+      </div>
+      <div class="dm-slider" style="--dm-acc:#38bdf8;">
+        <span class="dm-sl-l" data-i18n="dm_tune_contrast">Tương phản</span>
+        <input type="range" id="dm-tune-contrast" min="60" max="160" value="100">
+        <span id="dm-tune-contrast-val" class="dm-sl-v">100%</span>
+      </div>
+      <div class="dm-slider" style="--dm-acc:#f472b6;">
+        <span class="dm-sl-l" data-i18n="dm_tune_color">Độ màu</span>
+        <input type="range" id="dm-tune-color" min="0" max="160" value="100">
+        <span id="dm-tune-color-val" class="dm-sl-v">100%</span>
+      </div>
+      <button id="btn-dm-tune-reset" class="dm-mini" data-i18n="dm_tune_reset">↺ Mặc định</button>
+    </div>
+
+    <div class="feature-card dm-card dm-tight">
+      <div class="dm-lbl" data-i18n="dm_paper_title">Chế độ đọc dịu mắt (màu nền)</div>
+      <div id="dm-paper-chips" class="dm-paper-chips"></div>
+      <div class="dm-slider" style="--dm-acc:#fbbf24; margin-top:8px;">
+        <input type="color" id="dm-paper-custom" value="#f6ecd9" aria-label="custom">
+        <span class="dm-sl-l" data-i18n="dm_paper_alpha">Cường độ</span>
+        <input type="range" id="dm-paper-alpha" min="4" max="60" value="18">
+        <span id="dm-paper-alpha-val" class="dm-sl-v">18%</span>
+      </div>
+      <p class="dm-hint" data-i18n="dm_paper_hint">Phủ màu giấy lên nền trang — chữ &amp; ảnh giữ nguyên, không phá giao diện.</p>
+    </div>
+
+    <div class="feature-card dm-card dm-tight">
+      <label class="switch-row" for="sec-dm-typo">
+        <div class="switch-row-left">
+          <span class="switch-row-title" data-i18n="dm_typo_title">Chỉnh font &amp; giãn dòng</span>
+          <span class="switch-row-desc" data-i18n="dm_typo_desc">Cỡ chữ, font, giãn dòng, khoảng chữ cho mọi trang web</span>
+        </div>
+        <span class="custom-switch"><input type="checkbox" id="sec-dm-typo"><span class="switch-slider"></span></span>
+      </label>
+      <div class="dm-grid" style="margin-top:6px;">
+        <div class="dm-cell dm-cell-wide">
+          <label class="dm-lbl" for="dm-font-family" data-i18n="dm_font">Font chữ</label>
+          <select class="form-control dm-sel" id="dm-font-family"></select>
+        </div>
+        <div class="dm-cell" style="grid-column:1/-1;">
+          <div class="dm-slider" style="--dm-acc:#22d3ee;">
+            <span class="dm-sl-l" data-i18n="dm_font_size">Cỡ chữ</span>
+            <input type="range" id="dm-font-size" min="85" max="150" value="100">
+            <span id="dm-font-size-val" class="dm-sl-v">100%</span>
+          </div>
+          <div class="dm-slider" style="--dm-acc:#a78bfa;">
+            <span class="dm-sl-l" data-i18n="dm_line">Giãn dòng</span>
+            <input type="range" id="dm-font-line" min="110" max="240" value="160">
+            <span id="dm-font-line-val" class="dm-sl-v">1.6×</span>
+          </div>
+          <div class="dm-slider" style="--dm-acc:#f472b6;">
+            <span class="dm-sl-l" data-i18n="dm_ls">Khoảng chữ</span>
+            <input type="range" id="dm-font-ls" min="-100" max="300" value="0">
+            <span id="dm-font-ls-val" class="dm-sl-v">0.00px</span>
+          </div>
+          <div class="dm-slider" style="--dm-acc:#10b981;">
+            <span class="dm-sl-l" data-i18n="dm_ws">Từ cách</span>
+            <input type="range" id="dm-font-ws" min="-50" max="150" value="0">
+            <span id="dm-font-ws-val" class="dm-sl-v">0.00px</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-card dm-card dm-tight">
+      <div class="dm-row-between">
+        <span class="dm-lbl" data-i18n="dm_excl_title">Danh sách loại trừ / đã chọn</span>
+        <button id="btn-dm-clear-excl" class="dm-mini" data-i18n="dm_clear">Xóa</button>
+      </div>
+      <div id="dm-excl-list" class="dm-excl-list"></div>
+      <p class="dm-hint" data-i18n="dm_hint">Trang nào bị lệch màu sau khi invert? Bấm ☀️ để loại trừ — lưu cục bộ theo hostname.</p>
+    </div>
+  </div>
+

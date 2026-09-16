@@ -1,0 +1,68 @@
+  <div id="tab-dm" class="tab-section">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+      <div class="feature-title" style="margin-bottom:0;" data-i18n="nav_dm">Dark Mode</div>
+      <span id="dm-status-pill" class="dm-pill-off">—</span>
+    </div>
+    <p style="color:var(--text-muted); font-size:11.5px; margin-bottom:8px; line-height:1.45;" data-i18n="dm_page_desc">Tối mọi trang web như extension darkmode chuyên nghiệp: tự nhận diện trang đã tối để bỏ qua, ⚡ ép tối trang không hỗ trợ, chỉnh độ sáng & gam màu. 100% cục bộ.</p>
+
+    <div class="feature-card dm-card" style="margin-bottom:10px; border-left:3px solid #818cf8;">
+      <label class="switch-row" for="sec-dm-toggle">
+        <div class="switch-row-left">
+          <span class="switch-row-title" data-i18n="dm_master_title">Bật Dark Mode</span>
+          <span class="switch-row-desc" data-i18n="dm_master_desc">Áp dụng bộ lọc nghịch đảo màu lên trang web</span>
+        </div>
+        <span class="custom-switch"><input type="checkbox" id="sec-dm-toggle"><span class="switch-slider"></span></span>
+      </label>
+      <label class="switch-row" for="sec-dm-auto" style="margin-bottom:0;">
+        <div class="switch-row-left">
+          <span class="switch-row-title" data-i18n="dm_auto">Bỏ qua trang đã có nền tối</span>
+          <span class="switch-row-desc" data-i18n="dm_auto_desc">Tự phát hiện site dark-native (GitHub, YouTube...) để không invert 2 lần</span>
+        </div>
+        <span class="custom-switch"><input type="checkbox" id="sec-dm-auto"><span class="switch-slider"></span></span>
+      </label>
+    </div>
+
+    <div class="feature-card dm-card" style="margin-bottom:10px; border-left:3px solid #38bdf8;">
+      <div class="feature-title" style="margin-bottom:6px;" data-i18n="dm_cur_title">Tab đang mở</div>
+      <div class="dm-host-row">
+        <span id="sec-dm-status" class="dm-host">—</span>
+        <span class="dm-host-btns">
+          <button id="btn-sec-dm-site" class="btn-text-small" data-i18n="dm_this_on">🌙 Tối trang này</button>
+          <button id="btn-sec-dm-force" class="btn-text-small" data-i18n="dm_force_on">⚡ Ép tối</button>
+        </span>
+      </div>
+    </div>
+
+    <div class="feature-card dm-card" style="margin-bottom:10px; border-left:3px solid #f59e0b;">
+      <div class="feature-title" style="margin-bottom:6px;" data-i18n="dm_appearance">Gam màu & độ sáng</div>
+      <div class="dm-scope-row" style="margin-bottom:8px;">
+        <select class="form-control" id="sec-dm-mode" data-i18n-title="dm_scope_title">
+          <option value="all" data-i18n="dm_mode_all">Tối mọi trang (trừ trang loại trừ)</option>
+          <option value="selected" data-i18n="dm_mode_selected">Chỉ tối trang được chọn</option>
+        </select>
+      </div>
+      <div class="dm-scope-row" style="margin-bottom:8px;">
+        <select class="form-control" id="sec-dm-theme" data-i18n-title="dm_theme">
+          <option value="std" data-i18n="dm_theme_std">Chuẩn</option>
+          <option value="dim" data-i18n="dm_theme_dim">Dịu mắt</option>
+          <option value="warm" data-i18n="dm_theme_warm">Ấm áp</option>
+          <option value="contrast" data-i18n="dm_theme_contrast">Rõ nét</option>
+        </select>
+      </div>
+      <div class="dm-bright-row">
+        <span class="dm-bright-l" data-i18n="dm_bright">Độ sáng</span>
+        <input type="range" id="sec-dm-bright" min="60" max="140" value="100">
+        <span id="dm-bright-val" class="dm-bright-v">100%</span>
+      </div>
+    </div>
+
+    <div class="feature-card dm-card" style="border-left:3px solid #10b981;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+        <span class="feature-title" style="margin-bottom:0;" data-i18n="dm_excl_title">Danh sách loại trừ / đã chọn</span>
+        <button id="btn-dm-clear-excl" class="btn-text-small" data-i18n="dm_clear">Xóa</button>
+      </div>
+      <div id="dm-excl-list" class="dm-excl-list"></div>
+      <p style="color:var(--text-muted); font-size:10px; margin-top:6px; line-height:1.45;" data-i18n="dm_hint">Trang nào bị lệch màu sau khi invert? Bấm ☀️ để loại trừ — lưu cục bộ theo hostname.</p>
+    </div>
+  </div>
+

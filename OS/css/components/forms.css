@@ -84,3 +84,16 @@
   transform: translateX(16px);
   background-color: #ffffff;
 }
+
+/* v2.4.5 control polish */
+input[type="checkbox"],
+input[type="radio"] { accent-color:#38bdf8; cursor:pointer; width:14px; height:14px; }
+input[type="radio"] { border-radius:50%; }
+input[type="range"] { accent-color:#38bdf8; cursor:pointer; }
+select option { background:#0f172a; color:#e2e8f0; }
+*::-webkit-scrollbar { width:8px; height:8px; }
+*::-webkit-scrollbar-track { background:transparent; }
+*::-webkit-scrollbar-thumb { background:rgba(148,163,184,0.28); border-radius:8px; }
+*::-webkit-scrollbar-thumb:hover { background:rgba(148,163,184,0.5); }
+*::-webkit-scrollbar-corner { background:transparent; }
+html { scrollbar-width:thin; scrollbar-color:rgba(148,163,184,0.3) transparent; }

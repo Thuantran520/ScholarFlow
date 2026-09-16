@@ -246,10 +246,10 @@ async function main() {
     const navCount = w.document.querySelectorAll(".main-nav-btn").length;
     const tabCount = w.document.querySelectorAll(".tab-section").length;
     const ids = [...w.document.querySelectorAll(".main-nav-btn")].map(b => b.dataset.target);
-    check(navCount === 12, `12 nav buttons (found ${navCount})`);
-    check(tabCount === 12, `12 tab sections (found ${tabCount})`);
-    check(["tab-cite", "tab-ai", "tab-redact", "tab-capture", "tab-cookie", "tab-autofill", "tab-todo", "tab-pomo", "tab-cal", "tab-tabmgr", "tab-testhelper", "tab-security"].every(t => ids.includes(t)),
-      `all 12 targets present in nav: ${ids.join(",")}`);
+    check(navCount === 14, `14 nav buttons (found ${navCount})`);
+    check(tabCount === 14, `14 tab sections (found ${tabCount})`);
+    check(["tab-cite", "tab-ai", "tab-redact", "tab-capture", "tab-cookie", "tab-autofill", "tab-todo", "tab-pomo", "tab-cal", "tab-tabmgr", "tab-testhelper", "tab-security", "tab-social", "tab-dm"].every(t => ids.includes(t)),
+      `all 14 targets present in nav: ${ids.join(",")}`);
   }
 
   // 2. Unified i18n: upgraded t() supports positional {0} and function fallback

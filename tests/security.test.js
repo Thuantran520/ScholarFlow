@@ -50,7 +50,26 @@ const ALLOWED_HOSTS = new Set([
   "example.com",
   "gemini.google.com",
   "chatgpt.com",
-  "claude.ai"
+  "claude.ai",
+  "www.facebook.com",
+  "zalo.me",
+  "www.instagram.com",
+  "www.messenger.com",
+  "faq.whatsapp.com",
+  "accounts.google.com",
+  "support.google.com",
+  "safebrowsing.google.com",
+  "www.tiktok.com",
+  "support.tiktok.com",
+  "discord.com",
+  "support.discord.com",
+  "x.com",
+  "help.x.com",
+  "my.telegram.org",
+  "web.telegram.org",
+  "haveibeenpwned.com",
+  "browserleaks.com",
+  "www.dnsleaktest.com"
 ]);
 
 function walk(dir, out = []) {

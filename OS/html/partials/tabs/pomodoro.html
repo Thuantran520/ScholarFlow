@@ -54,6 +54,12 @@
         <span data-i18n="pm_plan_title">Kế hoạch ngắt nghỉ thông minh</span>
       </div>
       <p style="color:var(--text-muted); font-size:11px; margin-bottom:8px; line-height:1.5;" data-i18n="pm_plan_hint">Nhập tổng thời gian bạn có — công cụ sẽ tự phân bổ các lượt tập trung và thời gian nghỉ hợp lý.</p>
+      <div class="pm-preset-row">
+        <button type="button" class="pm-preset-chip" id="pm-preset-deep" data-w="90" data-f="50" data-s="10" data-l="20" data-e="2" data-i18n="pm_preset_deep">🔥 Deep 90' · 50/10</button>
+        <button type="button" class="pm-preset-chip" id="pm-preset-sprint" data-w="120" data-f="25" data-s="5" data-l="15" data-e="4" data-i18n="pm_preset_sprint">⚡ Sprint 2H · 25/5</button>
+        <button type="button" class="pm-preset-chip" id="pm-preset-reading" data-w="60" data-f="45" data-s="8" data-l="15" data-e="4" data-i18n="pm_preset_reading">📖 Đọc 60' · 45/8</button>
+        <button type="button" class="pm-preset-chip" id="pm-preset-light" data-w="45" data-f="25" data-s="5" data-l="15" data-e="4" data-i18n="pm_preset_light">🌱 Nhẹ 45' · 25/5</button>
+      </div>
       <div class="pm-plan-grid">
         <div class="pm-plan-field">
           <label data-i18n="pm_plan_work">Tổng thời gian (phút):</label>
@@ -111,6 +117,7 @@
         <div id="pm-plan-summary" style="font-size:12px; font-weight:700; color:#f8fafc; line-height:1.5; margin-bottom:8px;"></div>
         <div id="pm-plan-timeline" style="display:flex; gap:5px; flex-wrap:wrap; margin-bottom:8px;"></div>
         <div id="pm-plan-leftover" style="font-size:11px; color:#94a3b8; margin-bottom:8px;"></div>
+        <div id="pm-plan-endclock" style="font-size:11px; color:#fbbf24; margin-bottom:8px; display:none;"></div>
         <button id="btn-pm-plan-apply" class="btn-text-small" data-i18n="pm_plan_apply" style="padding:4px 12px; font-size:11.5px; color:#0f172a; background:#38bdf8; border-radius:6px; cursor:pointer; border:none; font-weight:700;">▶ Dùng kế hoạch này</button>
       </div>
     </div>

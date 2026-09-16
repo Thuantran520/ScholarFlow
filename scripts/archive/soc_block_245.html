@@ -1,0 +1,341 @@
+  <div id="tab-social" class="tab-section">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+      <div class="feature-title" style="margin-bottom:0;" data-i18n="soc_title">Social Protection</div>
+      <span style="font-size:10px; color:var(--text-muted);" id="soc-status"></span>
+    </div>
+    <p style="color:var(--text-muted); font-size:11.5px; margin-bottom:8px; line-height:1.4;" data-i18n="soc_desc">Bảo vệ & khôi phục tài khoản mạng xã hội: Facebook, Zalo, Instagram, WhatsApp, TikTok, Discord, X, Telegram, Google.</p>
+
+    <div class="soc-subtabs" role="tablist">
+      <button type="button" class="soc-subtab active" data-soc-sub="protect" data-i18n="soc_st_protect">Bảo vệ</button>
+      <button type="button" class="soc-subtab" data-soc-sub="recover" data-i18n="soc_st_recover">Khôi phục</button>
+      <button type="button" class="soc-subtab" data-soc-sub="vault" data-i18n="soc_st_vault">Két sắt</button>
+      <button type="button" class="soc-subtab" data-soc-sub="checklist" data-i18n="soc_st_checklist">Checklist</button>
+      <button type="button" class="soc-subtab" data-soc-sub="creator" data-i18n="soc_st_creator">Creator</button>
+      <button type="button" class="soc-subtab" data-soc-sub="tools" data-i18n="soc_st_tools">Công cụ</button>
+    </div>
+
+    <div id="soc-sub-protect" class="soc-subpanel active">
+      <div class="feature-card" style="padding:10px 12px; margin-bottom:8px; border-left:3px solid #1877f2;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#1877f2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+          <span class="feature-title" style="margin-bottom:0; color:#1877f2;" data-i18n="soc_fb_title">Facebook</span>
+        </div>
+        <label class="switch-row" for="soc-fb-typing">
+          <div class="switch-row-left">
+            <span class="switch-row-title" data-i18n="soc_fb_typing">Ẩn đang gõ (Typing Indicator)</span>
+            <span class="switch-row-desc" data-i18n="soc_fb_typing_desc">Ngăn hiển thị biểu tượng 'đang gõ tin nhắn' khi bạn nhập liệu</span>
+          </div>
+          <span class="custom-switch"><input type="checkbox" id="soc-fb-typing"><span class="switch-slider"></span></span>
+        </label>
+        <label class="switch-row" for="soc-fb-seen">
+          <div class="switch-row-left">
+            <span class="switch-row-title" data-i18n="soc_fb_seen">Ẩn đã xem (Read Receipts)</span>
+            <span class="switch-row-desc" data-i18n="soc_fb_seen_desc">Tắt biểu tượng 'đã xem' trên Messenger</span>
+          </div>
+          <span class="custom-switch"><input type="checkbox" id="soc-fb-seen"><span class="switch-slider"></span></span>
+        </label>
+        <label class="switch-row" for="soc-fb-online" style="margin-bottom:0;">
+          <div class="switch-row-left">
+            <span class="switch-row-title" data-i18n="soc_fb_online">Ẩn trạng thái Online</span>
+            <span class="switch-row-desc" data-i18n="soc_fb_online_desc">Ngăn hiển thị chấm xanh 'Active now' trên hồ sơ</span>
+          </div>
+          <span class="custom-switch"><input type="checkbox" id="soc-fb-online"><span class="switch-slider"></span></span>
+        </label>
+      </div>
+      <div class="feature-card" style="padding:10px 12px; margin-bottom:8px; border-left:3px solid #0068ff;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#0068ff"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+          <span class="feature-title" style="margin-bottom:0; color:#0068ff;" data-i18n="soc_zalo_title">Zalo</span>
+        </div>
+        <label class="switch-row" for="soc-zalo-typing">
+          <div class="switch-row-left">
+            <span class="switch-row-title" data-i18n="soc_zalo_typing">Ẩn đang gõ</span>
+            <span class="switch-row-desc" data-i18n="soc_zalo_typing_desc">Ngăn hiển thị 'đang soạn tin' trên Zalo</span>
+          </div>
+          <span class="custom-switch"><input type="checkbox" id="soc-zalo-typing"><span class="switch-slider"></span></span>
+        </label>
+        <label class="switch-row" for="soc-zalo-seen">
+          <div class="switch-row-left">
+            <span class="switch-row-title" data-i18n="soc_zalo_seen">Ẩn đã xem</span>
+            <span class="switch-row-desc" data-i18n="soc_zalo_seen_desc">Tắt thông báo 'đã đọc' tin nhắn</span>
+          </div>
+          <span class="custom-switch"><input type="checkbox" id="soc-zalo-seen"><span class="switch-slider"></span></span>
+        </label>
+        <label class="switch-row" for="soc-zalo-online" style="margin-bottom:0;">
+          <div class="switch-row-left">
+            <span class="switch-row-title" data-i18n="soc_zalo_online">Ẩn trực tuyến</span>
+            <span class="switch-row-desc" data-i18n="soc_zalo_online_desc">Ngăn hiển thị trạng thái 'Đang hoạt động'</span>
+          </div>
+          <span class="custom-switch"><input type="checkbox" id="soc-zalo-online"><span class="switch-slider"></span></span>
+        </label>
+      </div>
+      <div class="feature-card" style="padding:10px 12px; margin-bottom:8px; border-left:3px solid #e4405f;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#e4405f"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+          <span class="feature-title" style="margin-bottom:0; color:#e4405f;" data-i18n="soc_ig_title">Instagram</span>
+        </div>
+        <label class="switch-row" for="soc-ig-typing">
+          <div class="switch-row-left">
+            <span class="switch-row-title" data-i18n="soc_ig_typing">Ẩn đang gõ</span>
+            <span class="switch-row-desc" data-i18n="soc_ig_typing_desc">Ngăn hiển thị 'đang nhập...' trên DM</span>
+          </div>
+          <span class="custom-switch"><input type="checkbox" id="soc-ig-typing"><span class="switch-slider"></span></span>
+        </label>
+        <label class="switch-row" for="soc-ig-seen">
+          <div class="switch-row-left">
+            <span class="switch-row-title" data-i18n="soc_ig_seen">Ẩn đã xem</span>
+            <span class="switch-row-desc" data-i18n="soc_ig_seen_desc">Tắt 'Seen' trên tin nhắn trực tiếp</span>
+          </div>
+          <span class="custom-switch"><input type="checkbox" id="soc-ig-seen"><span class="switch-slider"></span></span>
+        </label>
+        <label class="switch-row" for="soc-ig-activity" style="margin-bottom:0;">
+          <div class="switch-row-left">
+            <span class="switch-row-title" data-i18n="soc_ig_activity">Ẩn trạng thái hoạt động</span>
+            <span class="switch-row-desc" data-i18n="soc_ig_activity_desc">Tắt 'Active now' và 'Active today'</span>
+          </div>
+          <span class="custom-switch"><input type="checkbox" id="soc-ig-activity"><span class="switch-slider"></span></span>
+        </label>
+      </div>
+      <div class="feature-card" style="padding:10px 12px; border-left:3px solid #64748b;">
+        <div class="feature-title" style="margin-bottom:2px;" data-i18n="soc_sh_more">Khiên riêng tư nền tảng khác</div>
+        <p style="color:var(--text-muted); font-size:10.5px; margin-bottom:8px; line-height:1.4;" data-i18n="soc_sh_desc">Bật để tự ẩn typing/online trên web app của nền tảng đó (best-effort, tự cập nhật khi load lại trang).</p>
+        <label class="switch-row" for="soc-wa-shield">
+          <div class="switch-row-left"><span class="switch-row-title">WhatsApp Web</span></div>
+          <span class="custom-switch"><input type="checkbox" id="soc-wa-shield"><span class="switch-slider"></span></span>
+        </label>
+        <label class="switch-row" for="soc-tt-shield">
+          <div class="switch-row-left"><span class="switch-row-title">TikTok Web</span></div>
+          <span class="custom-switch"><input type="checkbox" id="soc-tt-shield"><span class="switch-slider"></span></span>
+        </label>
+        <label class="switch-row" for="soc-dc-shield">
+          <div class="switch-row-left"><span class="switch-row-title">Discord</span></div>
+          <span class="custom-switch"><input type="checkbox" id="soc-dc-shield"><span class="switch-slider"></span></span>
+        </label>
+        <label class="switch-row" for="soc-x-shield">
+          <div class="switch-row-left"><span class="switch-row-title">X (Twitter)</span></div>
+          <span class="custom-switch"><input type="checkbox" id="soc-x-shield"><span class="switch-slider"></span></span>
+        </label>
+        <label class="switch-row" for="soc-tg-shield" style="margin-bottom:0;">
+          <div class="switch-row-left"><span class="switch-row-title">Telegram Web</span></div>
+          <span class="custom-switch"><input type="checkbox" id="soc-tg-shield"><span class="switch-slider"></span></span>
+        </label>
+      </div>
+      <div id="soc-protect-note" style="font-size:10px; color:var(--text-muted); margin-top:6px; line-height:1.45;" data-i18n="soc_protect_note">Lưu ý: biện pháp CSS best-effort — nền tảng đổi giao diện có thể cần cập nhật selector.</div>
+    </div>
+
+    <div id="soc-sub-recover" class="soc-subpanel">
+      <div class="feature-card" style="padding:10px 12px; margin-bottom:8px;">
+        <div class="feature-title" style="margin-bottom:8px;" data-i18n="soc_wz_title">Wizard Khôi phục tài khoản</div>
+        <div class="form-group" style="margin-bottom:6px;">
+          <label style="font-size:10.5px;" data-i18n="soc_wz_plat">Nền tảng</label>
+          <select class="form-control" id="soc-wz-platform" style="font-size:11px; padding:5px 8px;">
+            <option value="facebook">Facebook</option>
+            <option value="instagram">Instagram</option>
+            <option value="zalo">Zalo</option>
+            <option value="whatsapp">WhatsApp</option>
+            <option value="google">Google / Gmail</option>
+            <option value="tiktok">TikTok</option>
+            <option value="discord">Discord</option>
+            <option value="x">X (Twitter)</option>
+            <option value="telegram">Telegram</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:8px;">
+          <label style="font-size:10.5px;" data-i18n="soc_wz_scene">Tình huống của bạn</label>
+          <select class="form-control" id="soc-wz-scenario" style="font-size:11px; padding:5px 8px;">
+            <option value="active_session" data-i18n="soc_wz_opt_active_session">Còn thiết bị/phiên đã đăng nhập</option>
+            <option value="still_pw" data-i18n="soc_wz_opt_still_pw">Còn vào được email/SĐT gắn với acc</option>
+            <option value="email_lost" data-i18n="soc_wz_opt_email_lost">Hacker đã đổi email</option>
+            <option value="phone_lost" data-i18n="soc_wz_opt_phone_lost">Hacker đã đổi SĐT</option>
+            <option value="both_lost" data-i18n="soc_wz_opt_both_lost">Mất cả email + SĐT</option>
+            <option value="twofa" data-i18n="soc_wz_opt_twofa">Bị bật 2FA khóa ngoài</option>
+            <option value="whatsapp" data-i18n="soc_wz_opt_whatsapp">WhatsApp bị đặt PIN 2 lớp</option>
+            <option value="sim" data-i18n="soc_wz_opt_sim">SIM bị chiếm quyền (SIM swap)</option>
+          </select>
+        </div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button id="btn-soc-wz-start" class="btn-text-small" style="background:rgba(239,68,68,0.1); border-color:rgba(239,68,68,0.3); color:#f87171;" data-i18n="soc_wz_btn_start">Bắt đầu hướng dẫn</button>
+          <button id="btn-soc-wz-export" class="btn-text-small" data-i18n="soc_wz_export">Tải hướng dẫn (.txt)</button>
+        </div>
+        <div id="soc-wz-out" style="margin-top:8px;"></div>
+      </div>
+      <div class="feature-card" style="padding:10px 12px;">
+        <div class="feature-title" style="margin-bottom:6px;" data-i18n="soc_rp_title">Báo cáo hacker / unlock service lừa đảo</div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button id="btn-soc-rp-phish" class="btn-text-small" data-i18n="soc_rp_phish">Báo phishing Google</button>
+          <button id="btn-soc-rp-meta" class="btn-text-small" style="background:rgba(24,119,242,0.1); border-color:rgba(24,119,242,0.3); color:#60a5fa;" data-i18n="soc_rp_meta">Báo tài khoản bị chiếm</button>
+          <button id="btn-soc-rp-copy" class="btn-text-small" data-i18n="soc_rp_copy">Copy mẫu bằng chứng</button>
+        </div>
+        <p style="color:var(--text-muted); font-size:10.5px; margin:6px 0 0; line-height:1.45;" data-i18n="soc_rp_hint">Dán mẫu bằng chứng (kèm screenshot) vào đơn trình báo Cảnh sát mạng A05 và form Meta.</p>
+      </div>
+    </div>
+
+    <div id="soc-sub-vault" class="soc-subpanel">
+      <div class="feature-card" style="padding:10px 12px;">
+        <div class="feature-title" style="margin-bottom:6px;" data-i18n="soc_vt_title">Két sắt thông tin khôi phục</div>
+        <p style="color:var(--text-muted); font-size:10.5px; margin-bottom:8px; line-height:1.4;" data-i18n="soc_vt_desc">Mã hóa AES-256-GCM ngay trên máy bạn bằng mật khẩu chủ. Quên mật khẩu chủ = mất dữ liệu (không có đường lùi).</p>
+        <div id="soc-vt-lockview">
+          <div class="form-group" style="margin-bottom:6px;">
+            <input type="password" class="form-control" id="soc-vt-pw" placeholder="Mật khẩu chủ" data-i18n-placeholder="soc_vt_pw" style="font-size:11px; padding:6px 8px;">
+          </div>
+          <div class="form-group" id="soc-vt-pw2-wrap" style="margin-bottom:8px;">
+            <input type="password" class="form-control" id="soc-vt-pw2" placeholder="Nhập lại mật khẩu chủ" data-i18n-placeholder="soc_vt_pw2" style="font-size:11px; padding:6px 8px;">
+          </div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button id="btn-soc-vt-create" class="btn-text-small" style="display:none;" data-i18n="soc_vt_create">Tạo két sắt</button>
+            <button id="btn-soc-vt-unlock" class="btn-text-small" style="background:rgba(139,92,246,0.1); border-color:rgba(139,92,246,0.3); color:#a78bfa;" data-i18n="soc_vt_unlock">Mở khóa</button>
+          </div>
+          <div id="soc-vt-msg" style="margin-top:6px; font-size:10.5px; min-height:14px;"></div>
+        </div>
+        <div id="soc-vt-editview" style="display:none;">
+          <div class="form-group" style="margin-bottom:6px;">
+            <label style="font-size:10.5px;" data-i18n="soc_vt_f_email">Email dự phòng</label>
+            <input type="text" class="form-control" id="soc-vt-email" style="font-size:11px; padding:5px 8px;">
+          </div>
+          <div class="form-group" style="margin-bottom:6px;">
+            <label style="font-size:10.5px;" data-i18n="soc_vt_f_phone">SĐT dự phòng</label>
+            <input type="text" class="form-control" id="soc-vt-phone" style="font-size:11px; padding:5px 8px;">
+          </div>
+          <div class="form-group" style="margin-bottom:6px;">
+            <label style="font-size:10.5px;" data-i18n="soc_vt_f_contacts">Trusted contacts (tên + link)</label>
+            <textarea class="form-control" id="soc-vt-contacts" rows="2" style="font-size:11px; padding:5px 8px;"></textarea>
+          </div>
+          <div class="form-group" style="margin-bottom:6px;">
+            <label style="font-size:10.5px;" data-i18n="soc_vt_f_codes">Recovery codes 2FA (mỗi dòng 1 mã)</label>
+            <textarea class="form-control" id="soc-vt-codes" rows="3" style="font-size:11px; padding:5px 8px; font-family:ui-monospace,monospace;"></textarea>
+          </div>
+          <div class="form-group" style="margin-bottom:8px;">
+            <label style="font-size:10.5px;" data-i18n="soc_vt_f_notes">Ghi chú tài khoản (user, ngày tạo...)</label>
+            <textarea class="form-control" id="soc-vt-notes" rows="2" style="font-size:11px; padding:5px 8px;"></textarea>
+          </div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button id="btn-soc-vt-save" class="btn-text-small" style="background:rgba(16,185,129,0.1); border-color:rgba(16,185,129,0.3); color:#34d399;" data-i18n="soc_vt_save">Lưu & khóa</button>
+            <button id="btn-soc-vt-copy" class="btn-text-small" data-i18n="soc_vt_copy">Copy tất cả</button>
+            <button id="btn-soc-vt-lock" class="btn-text-small" data-i18n="soc_vt_lock">Khóa lại</button>
+            <button id="btn-soc-vt-clear" class="btn-text-small" style="color:#94a3b8; border-color:rgba(255,255,255,0.08);" data-i18n="soc_vt_clear">Xóa két</button>
+          </div>
+          <div id="soc-vt-savedat" style="margin-top:6px; font-size:10px; color:var(--text-muted);"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="soc-sub-checklist" class="soc-subpanel">
+      <div class="feature-card" style="padding:10px 12px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+          <span class="feature-title" style="margin-bottom:0;" data-i18n="soc_ck_title">Checklist phòng thủ</span>
+          <span id="soc-ck-progress" style="font-size:10px; color:#34d399; font-weight:700;"></span>
+        </div>
+        <p style="color:var(--text-muted); font-size:10.5px; margin-bottom:8px; line-height:1.4;" data-i18n="soc_ck_desc">Làm đủ 10 mục này HÔM NAY, khi còn truy cập được tài khoản. Tiến độ lưu tự động.</p>
+        <div id="soc-ck-list" style="display:flex; flex-direction:column; gap:4px; margin-bottom:8px;"></div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button id="btn-soc-ck-export" class="btn-text-small" data-i18n="soc_ck_export">Tải checklist</button>
+          <button id="btn-soc-ck-reset" class="btn-text-small" style="color:#94a3b8; border-color:rgba(255,255,255,0.08);" data-i18n="soc_ck_reset">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="soc-sub-creator" class="soc-subpanel">
+      <div class="feature-card" style="padding:10px 12px; margin-bottom:8px; border-left:3px solid #f472b6;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+          <div class="feature-title" style="margin-bottom:0;" data-i18n="soc_cr_title">Kế hoạch bài đăng & Số liệu</div>
+        </div>
+        <p style="font-size:10px; color:#f472b6; font-weight:600; margin-bottom:6px;" id="soc-cr-summary"></p>
+        <div class="form-group" style="margin-bottom:6px;">
+          <input type="text" class="form-control" id="soc-cr-title" placeholder="Tên bài / chiến dịch..." data-i18n-placeholder="soc_cr_title_ph" style="font-size:11px; padding:5px 8px;">
+        </div>
+        <div style="display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap;">
+          <select class="form-control" id="soc-cr-platform" style="width:96px; font-size:11px; padding:5px 6px;" data-i18n-title="soc_cr_platform">
+            <option value="facebook">Facebook</option>
+            <option value="instagram">Instagram</option>
+            <option value="tiktok">TikTok</option>
+            <option value="youtube">YouTube</option>
+            <option value="zalo">Zalo</option>
+            <option value="x">X</option>
+            <option value="discord">Discord</option>
+          </select>
+          <input type="date" class="form-control" id="soc-cr-date-in" style="width:124px; font-size:11px; padding:4px 6px;" data-i18n-title="soc_cr_date">
+          <select class="form-control" id="soc-cr-status" style="width:100px; font-size:11px; padding:5px 6px;" data-i18n-title="soc_cr_status">
+            <option value="idea" data-i18n="soc_cr_status_idea">Ý tưởng</option>
+            <option value="scheduled" data-i18n="soc_cr_status_scheduled">Đã hẹn lịch</option>
+            <option value="posted" data-i18n="soc_cr_status_posted">Đã đăng</option>
+          </select>
+          <button id="btn-soc-cr-add" class="btn-text-small" style="background:rgba(244,114,182,0.1); border-color:rgba(244,114,182,0.3); color:#f472b6;" data-i18n="soc_cr_add">＋ Thêm</button>
+        </div>
+        <div style="display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap;">
+          <select class="form-control" id="soc-cr-f-platform" style="width:96px; font-size:10.5px; padding:4px 6px;">
+            <option value="" data-i18n="soc_cr_filter_all">Tất cả nền tảng</option>
+            <option value="facebook">Facebook</option>
+            <option value="instagram">Instagram</option>
+            <option value="tiktok">TikTok</option>
+            <option value="youtube">YouTube</option>
+            <option value="zalo">Zalo</option>
+            <option value="x">X</option>
+            <option value="discord">Discord</option>
+          </select>
+          <select class="form-control" id="soc-cr-f-status" style="width:100px; font-size:10.5px; padding:4px 6px;">
+            <option value="" data-i18n="soc_cr_filter_all2">Mọi trạng thái</option>
+            <option value="idea" data-i18n="soc_cr_status_idea">Ý tưởng</option>
+            <option value="scheduled" data-i18n="soc_cr_status_scheduled">Đã hẹn lịch</option>
+            <option value="posted" data-i18n="soc_cr_status_posted">Đã đăng</option>
+          </select>
+          <input type="text" class="form-control" id="soc-cr-q" placeholder="Tìm bài..." data-i18n-placeholder="soc_cr_search_ph" style="flex:1; min-width:70px; font-size:10.5px; padding:4px 6px;">
+          <button id="btn-soc-cr-csv" class="btn-text-small" data-i18n="soc_cr_export_csv">Xuất CSV</button>
+        </div>
+        <div id="soc-cr-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+      </div>
+      <div class="feature-card" style="padding:10px 12px; border-left:3px solid #22d3ee;">
+        <div class="feature-title" style="margin-bottom:6px;" data-i18n="soc_cr_groups_title">Quản lý Group / Kênh</div>
+        <div style="display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
+          <input type="text" class="form-control" id="soc-cr-gname-in" placeholder="Tên nhóm..." data-i18n-placeholder="soc_cr_gname_ph" style="flex:1; min-width:90px; font-size:11px; padding:5px 8px;">
+          <input type="text" class="form-control" id="soc-cr-gniche-in" placeholder="Ngách" data-i18n-placeholder="soc_cr_gniche_ph" style="width:70px; font-size:11px; padding:5px 8px;">
+        </div>
+        <div style="display:flex; gap:6px; margin-bottom:8px;">
+          <input type="text" class="form-control" id="soc-cr-gurl-in" placeholder="https://nhom..." data-i18n-placeholder="soc_cr_gurl_ph" style="flex:1; font-size:11px; padding:5px 8px;">
+          <button id="btn-soc-cr-gadd" class="btn-text-small" style="background:rgba(34,211,238,0.1); border-color:rgba(34,211,238,0.3); color:#22d3ee;" data-i18n="soc_cr_gadd">＋ Nhóm</button>
+        </div>
+        <button id="btn-soc-cr-gopenall" class="btn-text-small" style="margin-bottom:8px;" data-i18n="soc_cr_gopen_all">Mở tất cả nhóm</button>
+        <div id="soc-cr-glist" style="display:flex; flex-direction:column; gap:6px;"></div>
+      </div>
+    </div>
+
+    <div id="soc-sub-tools" class="soc-subpanel">
+      <div class="feature-card" style="padding:10px 12px; margin-bottom:8px; border-left:3px solid #f59e0b;">
+        <div class="feature-title" style="margin-bottom:6px;" data-i18n="soc_tl_phish">Kiểm tra link lừa đảo</div>
+        <div style="display:flex; gap:6px; margin-bottom:6px;">
+          <input type="text" class="form-control" id="soc-ph-url" placeholder="https://..." data-i18n-placeholder="soc_tl_phish_ph" style="flex:1; font-size:11px; padding:5px 8px;">
+          <button id="btn-soc-ph-check" class="cal-tool-btn" title="Check" data-i18n-title="soc_tl_phish_btn">→</button>
+        </div>
+        <div id="soc-ph-out" style="background:rgba(15,23,42,0.5); border:1px solid var(--card-border); border-radius:8px; padding:8px; min-height:32px; font-size:11px; color:#94a3b8;"></div>
+      </div>
+      <div class="feature-card" style="padding:10px 12px; margin-bottom:8px; border-left:3px solid #22d3ee;">
+        <div class="feature-title" style="margin-bottom:6px;" data-i18n="soc_ss_title">Phiên đăng nhập của trình duyệt</div>
+        <p style="color:var(--text-muted); font-size:10.5px; margin-bottom:6px; line-height:1.4;" data-i18n="soc_ss_desc">Kiểm tra bạn còn đang đăng nhập nền tảng nào trên trình duyệt này → thiết bị này là 'phao cứu sinh' khi bị hack.</p>
+        <div style="display:flex; gap:6px; margin-bottom:6px;">
+          <button id="btn-soc-ss-check" class="btn-text-small" style="background:rgba(34,211,238,0.1); border-color:rgba(34,211,238,0.3); color:#22d3ee;" data-i18n="soc_ss_btn">Kiểm tra ngay</button>
+        </div>
+        <div id="soc-ss-out" style="background:rgba(15,23,42,0.5); border:1px solid var(--card-border); border-radius:8px; padding:8px; min-height:32px; font-size:11px; color:#94a3b8;"></div>
+      </div>
+      <div class="feature-card" style="padding:10px 12px; margin-bottom:8px; border-left:3px solid #10b981;">
+        <div class="feature-title" style="margin-bottom:6px;" data-i18n="soc_tl_unread">Hộp thư chưa đọc (mở đúng chỗ)</div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button id="btn-soc-un-fb" class="btn-text-small">FB</button>
+          <button id="btn-soc-un-ig" class="btn-text-small">IG</button>
+          <button id="btn-soc-un-zalo" class="btn-text-small">Zalo</button>
+          <button id="btn-soc-un-x" class="btn-text-small">X</button>
+          <button id="btn-soc-un-tt" class="btn-text-small">TikTok</button>
+          <button id="btn-soc-un-dc" class="btn-text-small">Discord</button>
+          <button id="btn-soc-un-tg" class="btn-text-small" style="margin-bottom:0;">Telegram</button>
+        </div>
+      </div>
+      <div class="feature-card" style="padding:10px 12px; border-left:3px solid #8b5cf6;">
+        <div class="feature-title" style="margin-bottom:6px;" data-i18n="soc_tools_title">Công cụ quét & dọn</div>
+        <div style="display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap;">
+          <button id="btn-soc-scan-trackers" class="btn-text-small" style="background:rgba(139,92,246,0.1); border-color:rgba(139,92,246,0.3); color:#a78bfa;" data-i18n="soc_scan_trackers">Quét tracker</button>
+          <button id="btn-soc-clean-cookies" class="btn-text-small" style="background:rgba(249,115,22,0.1); border-color:rgba(249,115,22,0.3); color:#fb923c;" data-i18n="soc_clean_cookies">Dọn cookie xã hội</button>
+          <button id="btn-soc-unlock-mk" class="btn-text-small" data-i18n="soc_unlock_session">Mở trang bảo mật</button>
+        </div>
+        <div id="soc-tools-out" style="background:rgba(15,23,42,0.5); border:1px solid var(--card-border); border-radius:8px; padding:8px; min-height:36px; font-size:11px; color:#94a3b8;"></div>
+      </div>
+    </div>
+  </div>
+
