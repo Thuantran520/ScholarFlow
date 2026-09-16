@@ -327,14 +327,16 @@ body.is-popup .ai-msg-assistant .ai-bubble {
 }
 
 body.is-popup .ai-quick-chips {
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  scrollbar-width: none;
-  padding: 2px 0 4px;
+  padding: 5px 8px 7px;
+  scrollbar-color: rgba(139, 92, 246, 0.55) transparent;
 }
 
-body.is-popup .ai-quick-chips::-webkit-scrollbar {
-  display: none;
+body.is-popup .ai-quick-chips::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.45);
+}
+
+body.is-popup .ai-quick-chips::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.7);
 }
 
 body.is-popup .ai-chip {

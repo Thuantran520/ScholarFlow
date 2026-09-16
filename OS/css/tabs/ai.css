@@ -136,15 +136,32 @@ body.is-popup .ai-chat-wrapper {
   display: flex;
   gap: 6px;
   flex-wrap: nowrap;
-  padding: 4px 0;
+  padding: 5px 8px 7px;
   margin-top: auto;
   overflow-x: auto;
   overflow-y: hidden;
-  scrollbar-width: none;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(56, 189, 248, 0.45) transparent;
 }
 
 .ai-quick-chips::-webkit-scrollbar {
-  display: none;
+  height: 4px;
+}
+
+.ai-quick-chips::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ai-quick-chips::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.4);
+  border-radius: 999px;
+}
+
+.ai-quick-chips::-webkit-scrollbar-thumb:hover {
+  background: rgba(56, 189, 248, 0.65);
 }
 
 .ai-quick-chips .ai-chip {
