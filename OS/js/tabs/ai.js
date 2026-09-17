@@ -131,7 +131,7 @@ function aiDetectPageIntent(raw){
   return AI_PAGE_INTENT_RE.test(q)||AI_PAGE_TOOL_RE.test(q);
 }
 function aiSourcesLabel(){
-  const L={vi:"Nguồn web (Google Search):",en:"Web sources (Google Search):",zh:"网络来源（Google 搜索）:",ru:"Веб-источники (поиск Google):",ja:"ウェブ出典（Google検索）:"};
+  const L={vi:"Nguồn web (Google Search & Đa nguồn):",en:"Web sources (Google Search & Multi-source):",zh:"网络来源（Google 搜索与多源）:",ru:"Веб-источники (поиск Google и мульти-источники):",ja:"ウェブ出典（Google検索・複数ソース）:"};
   const lang=(typeof currentAppLanguage!=="undefined"&&currentAppLanguage)||"vi";
   return L[lang]||"Web sources:";
 }
@@ -736,7 +736,7 @@ function aiBuildSystemInstruction(isPageQuery){
     sysBody="BẠN LÀ ScholarFlow AI — trợ lý thông minh và đa năng. Trả lời bằng "+langName+". Tự do và linh hoạt hỗ trợ mọi yêu cầu: trả lời câu hỏi, lập trình/viết code, phân tích, dịch thuật, sáng tạo. Sử dụng Google Search khi cần thông tin thực tế mới nhất.";
   }
   if(sysBody.indexOf("{0}")!==-1) sysBody=sysBody.split("{0}").join(langName);
-  const factRule="\n\nQUY TẮC SỰ THẬT: Khi câu hỏi hỏi về streamer, game thủ, KOL, người nổi tiếng hoặc sự kiện (ví dụ Rambo, Snake, Dev Nguyễn...): hãy dùng Google Search để tra cứu tên thật, ngày/năm sinh, quê quán và trích xuất đúng từ kết quả tìm kiếm Google Search (grounding) kèm link nguồn. Trả lời rõ ràng, chính xác. Phân biệt rõ ràng từng cá nhân, không nhầm lẫn hay ghép nối thông tin.";
+  const factRule="\n\nQUY TẮC SỰ THẬT (GOOGLE SEARCH & ĐA NGUỒN): Khi câu hỏi hỏi về streamer, game thủ, KOL, người nổi tiếng hoặc sự kiện (ví dụ Rambo, Snake, Dev Nguyễn, DjChip...): hãy kết hợp cả công cụ Google Search (grounding) và khối dữ liệu đối chiếu đa nguồn từ web thực tế. Đọc kỹ các nguồn, tìm điểm trùng khớp nhất (sự đồng thuận giữa đa số nguồn) về tên thật, ngày/tháng/năm sinh, quê quán để khẳng định thông tin chính xác 100%. Phân biệt rõ ràng từng cá nhân, không nhầm lẫn hay ghép nối thông tin.";
   return sysBody+factRule;
 }
 function aiBuildPrompt(userText, pageText, selectionText, imageNote, pinnedNote, pageLink, memNote, webNote, isPageQuery){
@@ -763,7 +763,7 @@ function aiBuildPrompt(userText, pageText, selectionText, imageNote, pinnedNote,
     sysBody="BẠN LÀ ScholarFlow AI — trợ lý thông minh và đa năng. HƯỚNG DẪN:\n1) Trả lời bằng "+langName+" tự nhiên, hữu ích. Linh hoạt hỗ trợ mọi yêu cầu: trả lời câu hỏi, lập trình/viết code, phân tích, dịch thuật, sáng tạo.\n2) Trả lời từ kiến thức của bạn kết hợp Google Search khi cần dữ liệu cập nhật. Không tự suy đoán hoặc bịa đặt thông tin khi không có căn cứ.\n3) Trình bày Markdown gọn gàng: ## tiêu đề, bullet, bảng so sánh | cột |, khối `code` cho mã nguồn.\n4) Kết thúc bằng khối:\nGỢI Ý:\n- <câu hỏi 1>\n- <câu hỏi 2>\n- <câu hỏi 3>";
   }
   if(sysBody.indexOf("{0}")!==-1) sysBody=sysBody.split("{0}").join(langName);
-  const FACT_RULE="\n\nQUY TẮC SỰ THẬT: Khi câu hỏi hỏi về streamer, KOL, tác giả hoặc nhân vật thực tế (như Rambo, Snake, Dev Nguyễn...): hãy sử dụng Google Search (grounding) để lấy tên thật, ngày/năm sinh chính xác từ nguồn và trích dẫn kèm URL nguồn. Trả lời chuẩn xác theo nguồn; chỉ khi hoàn toàn không tìm thấy thông tin mới nói chưa rõ. Phân biệt rõ ràng từng người, không nhầm lẫn giữa các cá nhân.";
+  const FACT_RULE="\n\nQUY TẮC SỰ THẬT: Khi câu hỏi hỏi về streamer, KOL, tác giả hoặc nhân vật thực tế (như Rambo, Snake, Dev Nguyễn, DjChip...): hãy kết hợp sử dụng Google Search (grounding) và dữ liệu web thực tế để lấy tên thật, ngày/năm sinh chính xác từ nguồn và trích dẫn kèm URL nguồn. Trả lời chuẩn xác theo các nguồn có sự đồng thuận; chỉ khi hoàn toàn không tìm thấy thông tin mới nói chưa rõ. Phân biệt rõ ràng từng người, không nhầm lẫn giữa các cá nhân.";
   const sys=sysBody+FACT_RULE+"\n\n";
   let scopeNote="";
   if(isPageQuery) {
