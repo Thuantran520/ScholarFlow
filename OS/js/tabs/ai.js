@@ -120,9 +120,9 @@ function aiHideSessions(){ const m=document.getElementById("ai-sessions-modal");
 function aiMemKey(url){ return String(url||"").replace(/^https?:\/\//,"").replace(/^www\./,"").split("#")[0].slice(0,140); }
 function aiMemPersist(){ try{ const keys=Object.keys(aiMem); while(keys.length>60){ delete aiMem[keys.shift()]; } storSet({[AI_STORAGE_KEYS.mem]:aiMem}); }catch(e){} }
 function aiMemRemember(url, question){ if(!url||url==="—"||/^(about|chrome|moz-extension|file):/i.test(url)) return; const k=aiMemKey(url); const e=aiMem[k]||{q:[],ts:0,hits:0}; const q=String(question).slice(0,180); const arr=(Array.isArray(e.q)?e.q:[]).filter(x=>x!==q); arr.unshift(q); aiMem[k]={q:arr.slice(0,3),ts:Date.now(),hits:(e.hits||0)+1}; aiMemPersist(); }
-function aiMemFor(url){ const k=aiMemKey(url); const e=aiMem[k]; if(!e||!Array.isArray(e.q)||!e.q.length) return ""; if(Date.now()-(e.ts||0)>30*864e5) return ""; return "[Kỷ niệm AI về trang này] Lan truoc day ban da hoi:\n- "+e.q.join("\n- ")+"\n(Can nhac lai neu cau hoi hom nay lien quan.)"; }
+function aiMemFor(url){ const k=aiMemKey(url); const e=aiMem[k]; if(!e||!Array.isArray(e.q)||!e.q.length) return ""; if(Date.now()-(e.ts||0)>30*864e5) return ""; return "[Kỷ niệm AI về trang này] Câu hỏi trước:\n- "+e.q.join("\n- ")+"\n(LƯU Ý: Chỉ dùng ngữ cảnh này khi người dùng trực tiếp hỏi về lịch sử trước đó, TUYỆT ĐỐI không tự ý đề cập hay chèn vào câu trả lời hiện tại.)"; }
 /* ── Auto page-intent (Copilot-style: no +/@ prefix needed) ── */
-const AI_PAGE_INTENT_RE = /(trang\s+(này|hiện tại|của tôi|đang xem)|(web|website)\s+này|bài\s+(này|viết này|báo này|bài báo này)|video\s+này|clip\s+này|mv\s+này|nội dung\s+này|đoạn\s+này|(trên|ở)\s+trang(\s+này)?|trang hiện tại|trang\s+đang\s+(mở|xem)|tác giả\s+(của\s+)?(trang|bài|video|bài hát|mv)\s+này|người\s+viết\s+bài\s+này|this\s+(page|article|video|website|post|document)|current\s+(page|tab|url))/i;
+const AI_PAGE_INTENT_RE = /(trang\s+(này|hiện tại|của tôi|đang xem)|(web|website)\s+này|bài\s+(này|viết này|báo này|bài báo này)|video\s+(này|nói\s+gì|về\s+gì|có\s+gì)|clip\s+(này|nói\s+gì)|mv\s+này|nội dung\s+(này|chính|trong\s+(?:video|trang|bài|clip)|của\s+(?:video|trang|bài|clip))|đang\s+nói\s+gì|nói\s+về\s+cái?\s*gì|đoạn\s+này|(trên|ở)\s+trang(\s+này)?|trang hiện tại|trang\s+đang\s+(mở|xem)|tác giả\s+(của\s+)?(trang|bài|video|bài hát|mv)\s+này|người\s+viết\s+bài\s+này|người\s+trong\s+video|ai\s+đang\s+nói|this\s+(page|article|video|website|post|document)|current\s+(page|tab|url))/i;
 const AI_PAGE_TOOL_RE = /(tóm tắt\s+(trang|trang web|video|clip|nội dung|bài viết|video này|bài này)|dịch\s+(trang|bài|video|đoạn|nội dung)(\s+sang)?|giải\s+các\s+câu\s+trắc\s+nghiệm|trắc\s+nghiệm\s+(trong|ở)\s+trang|đáp\s+án\s+(câu|bài|đề)|tạo\s+outline|outline\s+(this|the)|bôi\s+đen|tóm\s+tắt\s+các\s+tab|so\s+sánh\s+các\s+tab|tài\s+liệu\s+liên\s+quan|trích\s+dẫn\s+APA|định\s+dạng\s+APA|gợi\s+ý\s+câu\s+hỏi\s+nghiên\s+cứu|translate\s+this)/i;
 function aiDetectPageIntent(raw){
   const q=String(raw||"").trim();
@@ -478,11 +478,20 @@ async function aiSearchMultiSources(query){
       }
     }
     if(!items.length) return { text:"", sources:[] };
-    const header="[KẾT QUẢ TÌM KIẾM ĐA NGUỒN TỪ WEB THỰC TẾ (ĐỐI CHIẾU CHÉO)]:\nQUY TẮC ĐỐI CHIẾU: Hãy đọc kỹ các nguồn bên dưới, tìm thông tin trùng khớp nhất giữa các nguồn (tên thật, ngày/tháng/năm sinh, quê quán, danh tính) để trả lời. Khi các nguồn cùng nhắc đến một thông tin (đồng thuận), hãy khẳng định thông tin đó là đúng. Trích dẫn đầy đủ URL nguồn ở cuối.\n\n";
+    const header="[KẾT QUẢ TÌM KIẾM ĐA NGUỒN TỪ WEB THỰC TẾ (ĐỐI CHIẾU CHÉO)]:\nQUY TẮC ĐỐI CHIẾU: Hãy đọc kỹ các nguồn bên dưới, tìm thông tin trùng khớp nhất giữa các nguồn (tên thật, ngày/tháng/năm sinh, quê quán, danh tính) để trả lời. Khi các nguồn cùng nhắc đến một thông tin (đồng thuận), hãy khẳng định thông tin đó là đúng. TUYỆT ĐỐI KHÔNG chèn nhãn [Nguồn:...], [Source:...] hay đường link URL vào giữa câu trả lời; trình bày thông tin trực tiếp, tự nhiên và đẹp mắt.\n\n";
     return { text: header+items.join("\n\n"), sources: sources };
   }catch(e){
     return { text:"", sources:[] };
   }
+}
+function aiCleanFormatting(text){
+  if(!text) return "";
+  let s=String(text);
+  s=s.replace(/\[\s*(?:Nguồn|Source|Tham khảo|Theo)[^\]]*\]/gi, "");
+  s=s.replace(/\*?\(\s*(?:Nguồn|Source|Tham khảo|Theo)[:\s][^\)]*\)\*?/gi, "");
+  s=s.replace(/\*?\(\s*(?:Lưu ý:\s*)?Trong các phiên (?:trò chuyện|chat) trước[^\)]*\)\*?/gi, "");
+  s=s.replace(/[ \t]{2,}/g, " ");
+  return s.trim();
 }
 function aiIsYouTubeUrl(u){
   try{ const hn=String(u||""); const m=/^[a-z][a-z0-9+.-]*:\/\/([^/?#]+)/i.exec(hn); const host=(m?m[1]:hn.split("/")[0]).toLowerCase().replace(/^www\./,""); return /(^|\.)youtube\.com$/.test(host)||host==="youtu.be"; }catch(e){ return false; }
@@ -637,15 +646,15 @@ function aiRenderFormattedText(bubble, text){
     if(trimmed.startsWith("```")){ if(inCode) flush(); inCode=!inCode; return; }
     if(inCode){ buf.push(raw); return; }
     const sugHead=trimmed.replace(/^[#>\*\s]+/,"").replace(/[\*\s]+$/,"");
-    if(/^(GỢI Ý|GỢI\s*Ý|Gợi ý câu hỏi|SUGGESTED(?:\s*QUESTIONS)?|SUGGESTIONS|建议问题|次の質問|Идеи вопросов)[:：]?$/i.test(sugHead)){ sugMode=true; const lab=document.createElement("div"); lab.className="ai-suggest-title"; lab.textContent="💡 "+aiT("ai_suggest_title",null,"Câu hỏi gợi ý tiếp theo"); bubble.appendChild(lab); return; }
+    if(/^(GỢI Ý|GỢI\s*Ý|Gợi ý câu hỏi|SUGGESTED(?:\s*QUESTIONS)?|SUGGESTIONS|建议问题|次の質問|Идеи вопросов)[:：]?$/i.test(sugHead)){ sugMode=true; const lab=document.createElement("div"); lab.className="ai-suggest-title"; lab.textContent="✦ "+aiT("ai_suggest_title",null,"Câu hỏi gợi ý tiếp theo"); bubble.appendChild(lab); return; }
     if(trimmed.startsWith("---")||trimmed.startsWith("***")){ sugMode=false; if(trimmed.length<5){ const hr=document.createElement("hr"); hr.style.border="none"; hr.style.borderTop="1px solid rgba(255,255,255,0.08)"; hr.style.margin="8px 0"; bubble.appendChild(hr); return; } }
     const indent=raw.match(/^(\s*)/)[1].length, t=raw.trimStart();
     const numM=t.match(/^([0-9]{1,2})[.)]\s+(.+)/);
-    if(numM){ if(sugMode&&numM[2]){ const chip=document.createElement("button"); chip.type="button"; chip.className="ai-suggest"; const cText=numM[2].replace(/[*`]/g,"").trim(); chip.textContent=cText.slice(0,160); chip.addEventListener("click",()=>{ const inp=document.getElementById("ai-input"); if(inp){ inp.value=cText.slice(0,800); inp.focus(); aiGrowInput(inp); } }); bubble.appendChild(chip); return; } const row=document.createElement("div"); row.style.display="flex"; row.style.gap="6px"; row.style.marginLeft=indent>=2?"16px":"0"; row.style.marginTop="2px"; const nb=document.createElement("span"); nb.textContent=numM[1]+"."; nb.style.color="#38bdf8"; nb.style.fontWeight="700"; nb.style.flexShrink="0"; row.appendChild(nb); const sp=document.createElement("span"); sp.style.flex="1"; sp.appendChild(aiFormatInline(numM[2])); row.appendChild(sp); bubble.appendChild(row); return; }
+    if(numM){ if(sugMode&&numM[2]){ const chip=document.createElement("button"); chip.type="button"; chip.className="ai-suggest"; const cText=numM[2].replace(/[*`]/g,"").trim(); chip.textContent="✦ "+cText.slice(0,160); chip.addEventListener("click",()=>{ const inp=document.getElementById("ai-input"); if(inp){ inp.value=cText.slice(0,800); inp.focus(); aiGrowInput(inp); } }); bubble.appendChild(chip); return; } const row=document.createElement("div"); row.style.display="flex"; row.style.gap="6px"; row.style.marginLeft=indent>=2?"16px":"0"; row.style.marginTop="2px"; const nb=document.createElement("span"); nb.textContent=numM[1]+"."; nb.style.color="#38bdf8"; nb.style.fontWeight="700"; nb.style.flexShrink="0"; row.appendChild(nb); const sp=document.createElement("span"); sp.style.flex="1"; sp.appendChild(aiFormatInline(numM[2])); row.appendChild(sp); bubble.appendChild(row); return; }
     if(t.startsWith("- ")||t.startsWith("* ")||t.startsWith("• ")){
       const itemText=t.slice(2).replace(/[*`]/g,"").trim();
       if(sugMode&&itemText){
-        const chip=document.createElement("button"); chip.type="button"; chip.className="ai-suggest"; chip.textContent=itemText.slice(0,160);
+        const chip=document.createElement("button"); chip.type="button"; chip.className="ai-suggest"; chip.textContent="✦ "+itemText.slice(0,160);
         chip.addEventListener("click",()=>{ const inp=document.getElementById("ai-input"); if(inp){ inp.value=itemText.slice(0,800); inp.focus(); aiGrowInput(inp); } });
         bubble.appendChild(chip); return;
       }
@@ -657,15 +666,28 @@ function aiRenderFormattedText(bubble, text){
     }
     if(trimmed===""){ if(sugMode) return; bubble.appendChild(document.createElement("br")); return; }
     if(sugMode&&/^[^\-\*•|]{3,}$/.test(trimmed)&&!/^\d+[).]/.test(trimmed)){
-      const chip=document.createElement("button"); chip.type="button"; chip.className="ai-suggest"; chip.textContent=trimmed.slice(0,160);
+      const chip=document.createElement("button"); chip.type="button"; chip.className="ai-suggest"; chip.textContent="✦ "+trimmed.slice(0,160);
       chip.addEventListener("click",()=>{ const inp=document.getElementById("ai-input"); if(inp){ inp.value=trimmed.slice(0,800); inp.focus(); aiGrowInput(inp); } });
       bubble.appendChild(chip); return;
     }
     sugMode=false;
     if(trimmed.startsWith(">")){ sugMode=false; const bq=document.createElement("div"); bq.className="ai-quote"; bq.style.borderLeft="3px solid rgba(124,58,237,0.55)"; bq.style.background="rgba(124,58,237,0.08)"; bq.style.padding="5px 10px"; bq.style.margin="3px 0"; bq.style.borderRadius="0 8px 8px 0"; bq.style.color="#c4b5fd"; bq.appendChild(aiFormatInline(trimmed.replace(/^>\s?/,""))); bubble.appendChild(bq); return; }
-    if(/^#{1,6} /.test(trimmed)){ const hashes=trimmed.match(/^#+/)[0].length; const h=document.createElement("div"); h.style.fontWeight="800"; h.style.fontSize=hashes===1?"14px":(hashes<=3?"12px":"11.5px"); h.style.color=hashes===1?"#f8fafc":"#e2e8f0"; h.style.margin=(hashes===1?"10px":"8px")+" 0 4px"; h.appendChild(aiFormatInline(trimmed.replace(/^#+\s+/,""))); bubble.appendChild(h); return; }
-    if(trimmed.startsWith("### ")){ const h=document.createElement("div"); h.style.fontWeight="800"; h.style.fontSize="12px"; h.style.color="#e2e8f0"; h.style.margin="8px 0 4px"; h.appendChild(aiFormatInline(trimmed.slice(4))); bubble.appendChild(h); return; }
-    if(trimmed.startsWith("## ")){ const h=document.createElement("div"); h.style.fontWeight="800"; h.style.fontSize="12.5px"; h.style.color="#f1f5f9"; h.style.margin="8px 0 4px"; h.appendChild(aiFormatInline(trimmed.slice(3))); bubble.appendChild(h); return; }
+    if(/^#{1,6} /.test(trimmed)){
+      const hashes=trimmed.match(/^#+/)[0].length;
+      const h=document.createElement("div");
+      h.style.fontWeight="700";
+      h.style.margin=(hashes===1?"12px 0 6px":(hashes===2?"10px 0 4px":"8px 0 3px"));
+      if(hashes===1){
+        h.style.fontSize="14px"; h.style.color="#38bdf8"; h.style.borderBottom="1px solid rgba(56,189,248,0.2)"; h.style.paddingBottom="3px";
+      } else if(hashes===2){
+        h.style.fontSize="12.5px"; h.style.color="#7dd3fc";
+      } else {
+        h.style.fontSize=hashes<=3?"12px":"11.5px"; h.style.color="#c4b5fd";
+      }
+      h.appendChild(aiFormatInline(trimmed.replace(/^#+\s+/,"")));
+      bubble.appendChild(h);
+      return;
+    }
     const div=document.createElement("div"); div.style.margin="2px 0"; if(trimmed.startsWith("💡")){ div.style.background="rgba(56,189,248,0.08)"; div.style.border="1px solid rgba(56,189,248,0.15)"; div.style.borderRadius="6px"; div.style.padding="6px 8px"; } div.appendChild(aiFormatInline(raw)); bubble.appendChild(div);
   }); flushTable(); flush();
 }
@@ -736,7 +758,7 @@ function aiBuildSystemInstruction(isPageQuery){
     sysBody="BẠN LÀ ScholarFlow AI — trợ lý thông minh và đa năng. Trả lời bằng "+langName+". Tự do và linh hoạt hỗ trợ mọi yêu cầu: trả lời câu hỏi, lập trình/viết code, phân tích, dịch thuật, sáng tạo. Sử dụng Google Search khi cần thông tin thực tế mới nhất.";
   }
   if(sysBody.indexOf("{0}")!==-1) sysBody=sysBody.split("{0}").join(langName);
-  const factRule="\n\nQUY TẮC SỰ THẬT (GOOGLE SEARCH & ĐA NGUỒN): Khi câu hỏi hỏi về streamer, game thủ, KOL, người nổi tiếng hoặc sự kiện (ví dụ Rambo, Snake, Dev Nguyễn, DjChip...): hãy kết hợp cả công cụ Google Search (grounding) và khối dữ liệu đối chiếu đa nguồn từ web thực tế. Đọc kỹ các nguồn, tìm điểm trùng khớp nhất (sự đồng thuận giữa đa số nguồn) về tên thật, ngày/tháng/năm sinh, quê quán để khẳng định thông tin chính xác 100%. Phân biệt rõ ràng từng cá nhân, không nhầm lẫn hay ghép nối thông tin.";
+  const factRule="\n\nQUY TẮC SỰ THẬT (GOOGLE SEARCH & ĐA NGUỒN): Khi câu hỏi hỏi về streamer, game thủ, KOL, người nổi tiếng hoặc sự kiện (ví dụ Rambo, Snake, Dev Nguyễn, DjChip...): hãy kết hợp cả công cụ Google Search (grounding) và khối dữ liệu đối chiếu đa nguồn từ web thực tế. Đọc kỹ các nguồn, tìm điểm trùng khớp nhất (sự đồng thuận giữa đa số nguồn) về tên thật, ngày/tháng/năm sinh, quê quán để khẳng định thông tin chính xác 100%. Phân biệt rõ ràng từng cá nhân, không nhầm lẫn hay ghép nối thông tin. Trình bày nội dung trực tiếp, tự nhiên; TUYỆT ĐỐI KHÔNG chèn nhãn [Nguồn:...] hay link URL vào câu trả lời.";
   return sysBody+factRule;
 }
 function aiBuildPrompt(userText, pageText, selectionText, imageNote, pinnedNote, pageLink, memNote, webNote, isPageQuery){
@@ -757,13 +779,13 @@ function aiBuildPrompt(userText, pageText, selectionText, imageNote, pinnedNote,
   if(isPageQuery) {
     /* Page query mode: answer from page context */
     try{ if(typeof getI18nText==="function"){ const v=getI18nText("ai_sys_preamble",[langName]); if(v&&v!=="ai_sys_preamble") sysBody=v; } }catch(e){}
-    if(!sysBody) sysBody="BẠN LÀ ScholarFlow AI — trợ lý thông minh và đa năng. HƯỚNG DẪN:\n1) Trả lời bằng "+langName+" tự nhiên, hữu ích. Sẵn sàng giải đáp mọi yêu cầu, viết code, phân tích, tóm tắt.\n2) Ưu tiên dữ liệu trong các khối ngữ cảnh trang; khi thiếu, hãy kết hợp kiến thức và Google Search. Thiếu dữ liệu hoàn toàn → nói tự nhiên 'KHÔNG CÓ THÔNG TIN ĐỦ'.\n3) Trình bày Markdown gọn gàng: ## tiêu đề, bullet, bảng so sánh | cột |, khối `code` cho mã nguồn.\n4) Kết thúc bằng khối:\nGỢI Ý:\n- <câu hỏi 1>\n- <câu hỏi 2>\n- <câu hỏi 3>";
+    if(!sysBody) sysBody="BẠN LÀ ScholarFlow AI — trợ lý thông minh và đa năng. HƯỚNG DẪN:\n1) Trả lời bằng "+langName+" tự nhiên, hữu ích. Sẵn sàng giải đáp mọi yêu cầu, viết code, phân tích, tóm tắt.\n2) Ưu tiên dữ liệu trong các khối ngữ cảnh trang; khi thiếu, hãy kết hợp kiến thức và Google Search. Thiếu dữ liệu hoàn toàn → nói tự nhiên 'KHÔNG CÓ THÔNG TIN ĐỦ'.\n3) Trình bày Markdown gọn gàng: ## tiêu đề, bullet, bảng so sánh | cột |, khối `code` cho mã nguồn. Tuyệt đối không chèn nhãn [Nguồn:...] hay link URL vào câu trả lời.\n4) Kết thúc bằng khối:\nGỢI Ý:\n- <câu hỏi 1>\n- <câu hỏi 2>\n- <câu hỏi 3>";
   } else {
     /* General chat mode: answer from knowledge + web search */
-    sysBody="BẠN LÀ ScholarFlow AI — trợ lý thông minh và đa năng. HƯỚNG DẪN:\n1) Trả lời bằng "+langName+" tự nhiên, hữu ích. Linh hoạt hỗ trợ mọi yêu cầu: trả lời câu hỏi, lập trình/viết code, phân tích, dịch thuật, sáng tạo.\n2) Trả lời từ kiến thức của bạn kết hợp Google Search khi cần dữ liệu cập nhật. Không tự suy đoán hoặc bịa đặt thông tin khi không có căn cứ.\n3) Trình bày Markdown gọn gàng: ## tiêu đề, bullet, bảng so sánh | cột |, khối `code` cho mã nguồn.\n4) Kết thúc bằng khối:\nGỢI Ý:\n- <câu hỏi 1>\n- <câu hỏi 2>\n- <câu hỏi 3>";
+    sysBody="BẠN LÀ ScholarFlow AI — trợ lý thông minh và đa năng. HƯỚNG DẪN:\n1) Trả lời bằng "+langName+" tự nhiên, hữu ích. Linh hoạt hỗ trợ mọi yêu cầu: trả lời câu hỏi, lập trình/viết code, phân tích, dịch thuật, sáng tạo.\n2) Trả lời từ kiến thức của bạn kết hợp Google Search khi cần dữ liệu cập nhật. Không tự suy đoán hoặc bịa đặt thông tin khi không có căn cứ. Tuyệt đối không chèn nhãn [Nguồn:...] hay link URL vào câu trả lời.\n3) Trình bày Markdown gọn gàng: ## tiêu đề, bullet, bảng so sánh | cột |, khối `code` cho mã nguồn.\n4) Kết thúc bằng khối:\nGỢI Ý:\n- <câu hỏi 1>\n- <câu hỏi 2>\n- <câu hỏi 3>";
   }
   if(sysBody.indexOf("{0}")!==-1) sysBody=sysBody.split("{0}").join(langName);
-  const FACT_RULE="\n\nQUY TẮC SỰ THẬT: Khi câu hỏi hỏi về streamer, KOL, tác giả hoặc nhân vật thực tế (như Rambo, Snake, Dev Nguyễn, DjChip...): hãy kết hợp sử dụng Google Search (grounding) và dữ liệu web thực tế để lấy tên thật, ngày/năm sinh chính xác từ nguồn và trích dẫn kèm URL nguồn. Trả lời chuẩn xác theo các nguồn có sự đồng thuận; chỉ khi hoàn toàn không tìm thấy thông tin mới nói chưa rõ. Phân biệt rõ ràng từng người, không nhầm lẫn giữa các cá nhân.";
+  const FACT_RULE="\n\nQUY TẮC SỰ THẬT: Khi câu hỏi hỏi về streamer, KOL, tác giả hoặc nhân vật thực tế (như Rambo, Snake, Dev Nguyễn, DjChip...): hãy kết hợp sử dụng Google Search (grounding) và dữ liệu web thực tế để lấy tên thật, ngày/năm sinh chính xác từ nguồn uy tín nhất (người dùng không cần trích dẫn URL nguồn, chỉ cần thông tin chính xác 100%). Trả lời chuẩn xác theo các nguồn có sự đồng thuận; chỉ khi hoàn toàn không tìm thấy thông tin mới nói chưa rõ. Phân biệt rõ ràng từng người, không nhầm lẫn giữa các cá nhân. TUYỆT ĐỐI KHÔNG chèn nhãn [Nguồn:...] hay link URL vào nội dung câu trả lời.";
   const sys=sysBody+FACT_RULE+"\n\n";
   let scopeNote="";
   if(isPageQuery) {
@@ -817,7 +839,7 @@ function aiGetYtLengthSec(){
 }
 function _aiFoldAscii(s){ return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/Đ/g,"D").toLowerCase(); }
 const AI_TRANSCRIPT_RE=/(chep\s*loi|bang\s*chep|transcript|phu\s*de|subtitle|lyric|loi\s*(?:bai\s*hat|dan|thoai|ca)|文字起こし|字幕|歌词|转录|транскрипт|субтитр|расшифровк)/i;
-const AI_VIDEO_REF_RE=/(video|clip|phim|doan\s*(?:vua|nay|do|tren)|vua\s*(?:xem|nghe)|trong\s*(?:video|clip|phim)|chep\s*loi|phu\s*de|transcript|subtitle)/i;
+const AI_VIDEO_REF_RE=/(video|clip|phim|mv|doan\s*(?:vua|nay|do|tren)|vua\s*(?:xem|nghe)|trong\s*(?:video|clip|phim)|chep\s*loi|phu\s*de|transcript|subtitle|dang\s*noi|noi\s*ve|ai\s*noi)/i;
 function aiIsTranscriptRequest(text){ return AI_TRANSCRIPT_RE.test(_aiFoldAscii(text)); }
 function aiQueryRefersToVideo(text){ return AI_VIDEO_REF_RE.test(_aiFoldAscii(text)); }
 function _aiMMSS(sec){ sec=Math.max(0,Math.floor(sec)||0); const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=sec%60,p=function(n){return (n<10?"0":"")+n;}; return (h?h+":":"")+p(m)+":"+p(s); }
@@ -1093,23 +1115,9 @@ async function aiSendCurrent(){
       }
     }
   }
-  /* Citation footer: surface multi-source web search & Gemini grounding as clickable URLs */
-  if(!usedFallback&&callOpts&&String(answer||"").trim()){
-    const gSrc=Array.isArray(callOpts.__groundingSources)?callOpts.__groundingSources.slice(0,8).filter(s=>s&&s.u&&/^https?:\/\//i.test(s.u)):[];
-    const gQ=Array.isArray(callOpts.__groundingQueries)?callOpts.__groundingQueries.slice(0,5):[];
-    let footer="";
-    if(gQ.length){
-      footer+="\n\n"+aiSearchQueriesLabel()+" "+gQ.map(q=>"`"+q+"`").join(", ");
-    }
-    if(gSrc.length){
-      const seen=new Set();
-      const uniq=[];
-      for(const s of gSrc){
-        if(!seen.has(s.u)){ seen.add(s.u); uniq.push(s); }
-      }
-      footer+="\n\n"+aiSourcesLabel()+"\n- "+uniq.map(s=>((s.t?"["+s.t+"] ":"")+s.u)).join("\n- ");
-    }
-    if(footer) answer=String(answer).replace(/\s+$/,"")+footer;
+  /* Clean answer: strip any inline citation tags, URLs or memory notes */
+  if(!usedFallback&&String(answer||"").trim()){
+    answer=aiCleanFormatting(answer);
   }
   aiHideTyping();
   if(streaming){ const last=aiHistory[aiHistory.length-1]; if(streamRow&&last&&last.role==="assistant"){ last.content=String(answer).slice(0,16000); aiSaveHistorySoon(); aiRenderHistory(); } else if(answer){ aiAppendMessage("assistant", answer, provider); } }
