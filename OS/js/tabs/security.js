@@ -30,13 +30,27 @@ function secSaveSettings() {
     secPushToActiveTab();
   });
 }
+let _secCurrentProto = "";
+
 function secUpdateActiveHost(cb) {
   try {
     ensureActiveTab().then(function (tab) {
-      try { _secCurrentHost = tab && tab.url ? new URL(tab.url).hostname.toLowerCase() : ""; } catch (e) { _secCurrentHost = ""; }
+      try {
+        if (tab && tab.url) {
+          const u = new URL(tab.url);
+          _secCurrentHost = u.hostname.toLowerCase();
+          _secCurrentProto = u.protocol.toLowerCase();
+        } else {
+          _secCurrentHost = "";
+          _secCurrentProto = "";
+        }
+      } catch (e) {
+        _secCurrentHost = "";
+        _secCurrentProto = "";
+      }
       if (cb) cb();
-    }).catch(function () { _secCurrentHost = ""; if (cb) cb(); });
-  } catch (e) { _secCurrentHost = ""; if (cb) cb(); }
+    }).catch(function () { _secCurrentHost = ""; _secCurrentProto = ""; if (cb) cb(); });
+  } catch (e) { _secCurrentHost = ""; _secCurrentProto = ""; if (cb) cb(); }
 }
 function secUpdateUI() {
   const p = document.getElementById("sec-toggle-phishing");
@@ -55,14 +69,29 @@ function secUpdateUI() {
   if (u) u.checked = unlockOn;
   const label = document.getElementById("sec-unlock-label");
   if (label) label.textContent = host ? t("sec_toggle_unlock") + " (" + host + ")" : t("sec_toggle_unlock");
+  const hostBadge = document.getElementById("sec-host-badge");
+  if (hostBadge) hostBadge.textContent = host || t("dm_host_none");
+  const protoBadge = document.getElementById("sec-proto-badge");
+  if (protoBadge) {
+    if (_secCurrentProto === "https:") {
+      protoBadge.textContent = "🔒 HTTPS";
+      protoBadge.className = "sec-pill sec-pill-safe";
+      protoBadge.style.color = "";
+    } else if (_secCurrentProto === "http:") {
+      protoBadge.textContent = "⚠️ HTTP";
+      protoBadge.className = "sec-pill";
+      protoBadge.style.color = "#f87171";
+    } else {
+      protoBadge.textContent = "—";
+      protoBadge.className = "sec-pill";
+      protoBadge.style.color = "";
+    }
+  }
   const st = document.getElementById("sec-status");
   if (st) {
-    const parts = [];
-    parts.push((secState.phishing ? "● " : "○ ") + t("sec_status_phishing") + (secState.phishing ? " ON" : " OFF"));
-    parts.push((secState.clickjack ? "● " : "○ ") + t("sec_status_clickjack") + (secState.clickjack ? " ON" : " OFF"));
-    parts.push((secState.autoBlock ? "● " : "○ ") + t("sec_status_autoblock") + (secState.autoBlock ? " ON" : " OFF"));
-    parts.push((unlockOn ? "● " : "○ ") + t("sec_status_unlock") + (unlockOn ? " ON" : " OFF"));
-    st.textContent = parts.join(" • ");
+    const activeCount = (secState.phishing ? 1 : 0) + (secState.clickjack ? 1 : 0) + (secState.autoBlock ? 1 : 0) + (secState.cookieReject ? 1 : 0) + (secState.pasteGuard ? 1 : 0);
+    st.textContent = activeCount > 0 ? (activeCount + "/5 Active") : "Protected";
+    st.className = activeCount > 0 ? "sec-pill sec-pill-safe" : "sec-pill";
   }
 }
 function secPushToActiveTab() {
@@ -173,6 +202,41 @@ function _secPwStep(delta) {
   if (secPwLen > 64) secPwLen = 64;
   _secPwShowLen();
 }
+function secEvalPassword(pw) {
+  const bar = document.getElementById("sec-pw-meter-bar");
+  const strLbl = document.getElementById("sec-pw-strength-label");
+  const entLbl = document.getElementById("sec-pw-entropy-label");
+  if (!pw) {
+    if (bar) { bar.style.width = "0%"; bar.style.background = "#64748b"; }
+    if (strLbl) strLbl.textContent = "—";
+    if (entLbl) entLbl.textContent = "Entropy: ~0 bit";
+    return;
+  }
+  let pool = 0;
+  if (/[A-Z]/.test(pw)) pool += 26;
+  if (/[a-z]/.test(pw)) pool += 26;
+  if (/[0-9]/.test(pw)) pool += 10;
+  if (/[^A-Za-z0-9]/.test(pw)) pool += 32;
+  const entropy = Math.round(pw.length * Math.log2(Math.max(2, pool)));
+  if (entLbl) entLbl.textContent = "Entropy: ~" + entropy + " bit";
+  let pct = 0, color = "#64748b", text = "";
+  if (entropy < 45) {
+    pct = 33;
+    color = "#f87171";
+    text = t("sec_pw_strength_weak");
+  } else if (entropy < 75) {
+    pct = 66;
+    color = "#fbbf24";
+    text = t("sec_pw_strength_medium");
+  } else {
+    pct = 100;
+    color = "#34d399";
+    text = t("sec_pw_strength_strong");
+  }
+  if (bar) { bar.style.width = pct + "%"; bar.style.background = color; }
+  if (strLbl) { strLbl.textContent = text; strLbl.style.color = color; }
+}
+
 function secGenPassword() {
   const useU = (document.getElementById("sec-pw-upper") || {}).checked;
   const useL = (document.getElementById("sec-pw-lower") || {}).checked;
@@ -190,7 +254,10 @@ function secGenPassword() {
   let pw = "";
   for (let i = 0; i < len; i++) pw += pool[rnd[i] % pool.length];
   const outEl = document.getElementById("sec-pw-out");
-  if (outEl) outEl.value = pw;
+  if (outEl) {
+    outEl.value = pw;
+    secEvalPassword(pw);
+  }
 }
 function secCopyPassword() {
   const outEl = document.getElementById("sec-pw-out");
@@ -204,6 +271,71 @@ function secClearUnlockSites() {
   secState.unlockSites = {};
   secSaveSettings();
   showToast(t("sec_breach_cleared"));
+}
+
+function secQuickScan() {
+  const out = document.getElementById("sec-scan-out");
+  if (!out) return;
+  out.style.display = "block";
+  while (out.firstChild) out.removeChild(out.firstChild);
+  out.appendChild(_secRow(t("sec_quick_scanning"), "#94a3b8"));
+
+  let phishRes = null, clickRes = null, trustRes = null;
+  let done = 0;
+  function checkDone() {
+    done++;
+    if (done < 3) return;
+    while (out.firstChild) out.removeChild(out.firstChild);
+
+    // 1. Protocol
+    if (_secCurrentProto === "http:") {
+      out.appendChild(_secRow("⚠️ " + t("sec_trust_http"), "#fbbf24"));
+    } else if (_secCurrentProto === "https:") {
+      out.appendChild(_secRow("🔒 HTTPS Encrypted", "#34d399"));
+    }
+
+    // 2. Phishing verdict
+    if (phishRes && phishRes.phishing) {
+      let msg = t("sec_result_phishing_yes");
+      if (phishRes.info && phishRes.info.type === "typo") {
+        msg = t("sec_result_typo_yes").replace("{0}", phishRes.info.host).replace("{1}", phishRes.info.typo);
+      } else if (phishRes.info && phishRes.info.type === "punycode") {
+        msg = t("sec_result_punycode_yes").replace("{0}", phishRes.info.host);
+      }
+      out.appendChild(_secRow("❌ " + msg, "#f87171"));
+    } else if (phishRes) {
+      out.appendChild(_secRow("✓ " + t("sec_result_phishing_no"), "#34d399"));
+    }
+
+    // 3. Clickjacking verdict
+    if (clickRes && typeof clickRes.count === "number") {
+      if (clickRes.count > 0) {
+        const msg = (secState.autoBlock ? t("sec_result_clickjack_blocked") : t("sec_result_clickjack_yes")).replace("{0}", String(clickRes.count));
+        out.appendChild(_secRow("❌ " + msg, "#f87171"));
+      } else {
+        out.appendChild(_secRow("✓ " + t("sec_result_clickjack_no"), "#34d399"));
+      }
+    }
+
+    // 4. Trust score & reasons
+    if (trustRes && trustRes.ok) {
+      if (trustRes.official) {
+        out.appendChild(_secRow("✓ " + t("sec_trust_official").replace("{0}", trustRes.official), "#34d399"));
+      } else {
+        const score = Math.min(10, Math.max(0, trustRes.score || 0));
+        const col = score >= 4 ? "#f87171" : score >= 1 ? "#fbbf24" : "#34d399";
+        out.appendChild(_secRow("• " + t("sec_trust_score").replace("{0}", String(score)), col));
+        (trustRes.reasons || []).slice(0, 2).forEach(function (r) {
+          const txt = t(r.k);
+          out.appendChild(_secRow("  - " + (r.p ? txt.replace("{0}", r.p) : txt), "#fbbf24"));
+        });
+      }
+    }
+  }
+
+  secSendToActive({ action: "SEC_SCAN_PHISHING" }, function (r) { phishRes = r; checkDone(); });
+  secSendToActive({ action: "SEC_SCAN_CLICKJACK", autoBlock: !!secState.autoBlock }, function (r) { clickRes = r; checkDone(); });
+  secSendToActive({ action: "SEC_TRUST_REPORT" }, function (r) { trustRes = r; checkDone(); });
 }
 
 // ── Site trust report (deep heuristics run in content script) ─────────────
@@ -345,10 +477,16 @@ onReady(function () {
   const c = document.getElementById("sec-toggle-clickjack");
   const a = document.getElementById("sec-toggle-autoblock");
   const u = document.getElementById("sec-toggle-unlock");
-  if (p) p.addEventListener("change", function () { secState.phishing = !!p.checked; secSaveSettings(); });
+  if (p) p.addEventListener("change", function () {
+    secState.phishing = !!p.checked;
+    secSaveSettings();
+    if (secState.phishing) secScanPhishing();
+  });
   if (c) c.addEventListener("change", function () { secState.clickjack = !!c.checked; secSaveSettings(); });
   if (a) a.addEventListener("change", function () { secState.autoBlock = !!a.checked; secSaveSettings(); });
   if (u) u.addEventListener("change", secToggleUnlockPerSite);
+  const btnQuick = document.getElementById("btn-sec-quick-scan");
+  if (btnQuick) btnQuick.addEventListener("click", secQuickScan);
   const btnPhish = document.getElementById("btn-sec-scan-phishing");
   if (btnPhish) btnPhish.addEventListener("click", secScanPhishing);
   const btnJack = document.getElementById("btn-sec-scan-clickjack");
@@ -369,6 +507,11 @@ onReady(function () {
   if (btnPwGen) btnPwGen.addEventListener("click", secGenPassword);
   const btnPwCopy = document.getElementById("btn-sec-pw-copy");
   if (btnPwCopy) btnPwCopy.addEventListener("click", secCopyPassword);
+  const pwOut = document.getElementById("sec-pw-out");
+  if (pwOut) {
+    pwOut.removeAttribute("readonly");
+    pwOut.addEventListener("input", function () { secEvalPassword(pwOut.value); });
+  }
   const btnHibp = document.getElementById("btn-sec-hibp");
   if (btnHibp) btnHibp.addEventListener("click", function () { _secOpenExt("https://haveibeenpwned.com/"); });
   const btnWrtc = document.getElementById("btn-sec-webrtc");

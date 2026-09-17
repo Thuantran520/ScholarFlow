@@ -52,6 +52,10 @@
       snip_click_to_pick: "🎯 Click để chọn thẻ",
       snip_btn_capture: "📸 Chụp ngay",
       snip_btn_cancel: "✕ Hủy",
+      companion_explain: "Giải thích",
+      companion_translate: "Dịch",
+      companion_summary: "Tóm tắt",
+      companion_ask: "Hỏi sâu",
     },
     en: {
       img_prefix: "Image",
@@ -79,6 +83,10 @@
       snip_click_to_pick: "🎯 Click to select element",
       snip_btn_capture: "📸 Capture Now",
       snip_btn_cancel: "✕ Cancel",
+      companion_explain: "Explain",
+      companion_translate: "Translate",
+      companion_summary: "Summarize",
+      companion_ask: "Ask AI",
     },
     zh: {
       img_prefix: "图片",
@@ -106,6 +114,10 @@
       snip_click_to_pick: "🎯 点击选择此元素",
       snip_btn_capture: "📸 立即截图",
       snip_btn_cancel: "✕ 取消",
+      companion_explain: "解释",
+      companion_translate: "翻译",
+      companion_summary: "总结",
+      companion_ask: "追问",
     },
     ru: {
       img_prefix: "Изображение",
@@ -133,6 +145,10 @@
       snip_click_to_pick: "🎯 Кликните для выбора элемента",
       snip_btn_capture: "📸 Сделать снимок",
       snip_btn_cancel: "✕ Отмена",
+      companion_explain: "Объяснить",
+      companion_translate: "Перевести",
+      companion_summary: "Кратко",
+      companion_ask: "Спросить",
     },
     ja: {
       img_prefix: "画像",
@@ -160,6 +176,10 @@
       snip_click_to_pick: "🎯 クリックして要素を選択",
       snip_btn_capture: "📸 キャプチャ",
       snip_btn_cancel: "✕ キャンセル",
+      companion_explain: "解説",
+      companion_translate: "翻訳",
+      companion_summary: "要約",
+      companion_ask: "質問",
     },
   };
 

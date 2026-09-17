@@ -2086,6 +2086,10 @@ document.getElementById("btn-quick-swap-tabs")?.addEventListener("click", swapDu
       updateRedactionVisibilityUI();
       renderRedactedList(status.list || []);
     }
+
+    if (typeof aiUpdateCurrentPageDisplay === "function") {
+      try { aiUpdateCurrentPageDisplay(); } catch (e) {}
+    }
   }
 
   // Auto-sync when switching tabs or refreshing page (critical for persistent Firefox sidebar & YouTube SPA navigation)
@@ -2195,6 +2199,39 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // Switch to tab 1
     const tCite = document.querySelector('[data-target="tab-cite"]');
     if (tCite) tCite.click();
+  } else if (request.action === "COMPANION_QUERY" && request.selectedText) {
+    const text = request.selectedText;
+    const qType = request.queryType || "explain";
+    const tAi = document.querySelector('[data-target="tab-ai"]');
+    if (tAi) tAi.click();
+
+    let queryPrompt = "";
+    if (qType === "explain") {
+      queryPrompt = "Giải thích chi tiết đoạn văn bản sau bằng tiếng Việt dễ hiểu:\n\n\"" + text + "\"";
+    } else if (qType === "translate") {
+      queryPrompt = "Dịch đoạn văn bản sau sang tiếng Việt chuẩn xác và tự nhiên:\n\n\"" + text + "\"";
+    } else if (qType === "summary") {
+      queryPrompt = "Tóm tắt các ý chính trong đoạn văn bản sau một cách ngắn gọn, súc tích:\n\n\"" + text + "\"";
+    } else if (qType === "ask") {
+      queryPrompt = "Phân tích và cho tôi biết các luận điểm chính, câu hỏi phản biện liên quan đến đoạn trích sau:\n\n\"" + text + "\"";
+    } else {
+      queryPrompt = "Hãy phân tích nội dung sau:\n\n\"" + text + "\"";
+    }
+
+    const aiInput = document.getElementById("ai-input");
+    if (aiInput) {
+      aiInput.value = queryPrompt;
+      aiInput.focus();
+      if (typeof aiGrowInput === "function") aiGrowInput(aiInput);
+    }
+    if (typeof aiSendCurrent === "function") {
+      setTimeout(() => {
+        aiSendCurrent();
+      }, 120);
+    }
+    if (typeof showToast === "function") {
+      showToast("🤖 ScholarFlow AI đang phân tích...", "info");
+    }
   }
 });
   const navWrapper = document.getElementById("nav-wrapper");

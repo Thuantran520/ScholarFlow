@@ -265,8 +265,8 @@ async function main() {
     const viCount = w.Object.keys(w.I18N_DATA.vi).filter(k => k.startsWith("content_")).length;
     const enCount = w.Object.keys(w.I18N_DATA.en).filter(k => k.startsWith("content_")).length;
     const prCount = w.Object.keys(w.I18N_DATA.vi).filter(k => k.startsWith("privacy_")).length;
-    check(viCount === 25 && enCount === 25 && prCount === 43,
-      `namespace keys present in locale dumps (content_*=25, privacy_*=43; got ${viCount}/${enCount}/${prCount})`);
+    check(viCount === 29 && enCount === 29 && prCount === 43,
+      `namespace keys present in locale dumps (content_*=29, privacy_*=43; got ${viCount}/${enCount}/${prCount})`);
   }
 
   // 3. privacy.html standalone page uses the unified i18n engine
@@ -965,18 +965,22 @@ async function main() {
     check(!!w.document.getElementById("tab-ai") && !!w.document.querySelector("#tab-ai .ai-chat-wrapper") &&
       !!w.document.getElementById("ai-chat-history") && !!w.document.getElementById("ai-input") &&
       !!w.document.getElementById("ai-btn-send") &&
-      w.document.querySelectorAll("#tab-ai [data-ai-quick]").length === 9 &&
+      w.document.querySelectorAll("#tab-ai [data-ai-quick]").length === 11 &&
       !!w.document.querySelector('#tab-ai [data-ai-quick="answer"]') &&
       !!w.document.querySelector('#tab-ai [data-ai-quick="tabs"]') &&
       !!w.document.querySelector('#tab-ai [data-ai-quick="papers"]') &&
+      !!w.document.querySelector('#tab-ai [data-ai-quick="timeline"]') &&
+      !!w.document.querySelector('#tab-ai [data-ai-quick="flashcard"]') &&
       !!w.document.querySelector('#tab-ai [data-ai-quick="summary"]') &&
       !!w.document.getElementById("ai-prompt-answer") && !!w.document.getElementById("ai-prompt-tabs") && !!w.document.getElementById("ai-prompt-papers") && !!w.document.getElementById("ai-prompt-summary") &&
-      !!w.document.querySelector("#tab-ai .ai-top-actions #ai-btn-sessions") && !!w.document.querySelector("#tab-ai .ai-top-actions #ai-btn-open-settings"),
-      `${htmlFile}: tab-ai markup + 9 quick chips (answer/tabs/papers/summary...) present`);
+      !!w.document.querySelector("#tab-ai .ai-top-actions #ai-btn-sessions") && !!w.document.querySelector("#tab-ai .ai-top-actions #ai-btn-open-settings") &&
+      !!w.document.getElementById("ai-btn-export"),
+      `${htmlFile}: tab-ai markup + 11 quick chips (timeline/flashcard/tabs...) + export present`);
     check(!!w.document.getElementById("ai-settings-modal") && !!w.document.getElementById("ai-key-gemini") &&
       !!w.document.getElementById("ai-key-openai") && !!w.document.getElementById("ai-key-claude") &&
       !!w.document.getElementById("ai-btn-save-key") && !!w.document.getElementById("ai-btn-toggle-key") &&
       !!w.document.getElementById("ai-opt-images") && !!w.document.getElementById("ai-opt-source") && !!w.document.getElementById("ai-opt-stream") &&
+      !!w.document.getElementById("ai-opt-companion") &&
       !!w.document.getElementById("ai-sessions-modal") && !!w.document.getElementById("ai-btn-sessions") && !!w.document.getElementById("ai-current-page"),
       `${htmlFile}: AI settings modal + key inputs + save/toggle + context checkboxes wired`);
     check(!w.document.getElementById("ai-memory-hint"), `${htmlFile}: memory-hint banner removed (chat no longer pushed down)`);

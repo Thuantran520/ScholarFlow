@@ -1,26 +1,269 @@
-/* ScholarFlow — Security tab: result row */
+/* ScholarFlow — Security tab (Monochrome & Polished UI) */
 
-/* Security — monochrome + app blue */
-.sec-result-row {
-  padding: 6px 0;
-  line-height: 1.5;
-  font-weight: 600;
+/* ── Hero section ── */
+#tab-security .sec-hero {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.sec-hero-shield {
+  color: #64748b;
+  flex-shrink: 0;
+}
+.sec-hero-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #e2e8f0;
+  letter-spacing: 0.02em;
+}
+.sec-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--card-border);
+  color: #64748b;
+  background: rgba(15,23,42,0.5);
+  white-space: nowrap;
+  margin-left: auto;
+}
+.sec-pill-safe {
+  color: #94a3b8;
+  border-color: rgba(148,163,184,0.4);
+  background: rgba(148,163,184,0.1);
+}
+.sec-page-desc {
+  color: var(--text-muted);
+  font-size: 10.5px;
+  margin-bottom: 8px;
+  line-height: 1.4;
 }
 
-/* Cookie audit rows (v2.4.5) */
-.sec-ck-row { display:flex; align-items:center; gap:6px; background:rgba(15,23,42,0.5); border:1px solid var(--card-border); border-radius:6px; padding:5px 8px; font-size:10.5px; flex-wrap:wrap; }
-.sec-ck-name { font-family:ui-monospace,monospace; color:#e2e8f0; max-width:130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:700; }
-.sec-ck-cat { font-weight:700; font-size:9.5px; }
-.sec-ck-risk { color:#fbbf24; font-size:9.5px; }
-.sec-ck-del { margin-left:auto; font-size:9.5px; padding:2px 8px; }
-.sec-pw-chip { display:inline-flex; align-items:center; gap:3px; font-size:10px; color:#94a3b8; background:rgba(15,23,42,0.5); border:1px solid var(--card-border); border-radius:6px; padding:3px 6px; cursor:pointer; }
-.sec-pw-chip input { margin:0; accent-color:#10b981; }
+/* ── Section headers (Monochrome) ── */
+.sec-section-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 7px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.sec-section-icon {
+  color: #64748b;
+  flex-shrink: 0;
+}
+.sec-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #64748b;
+}
 
-/* Trust meter + password stepper (v2.4.5) */
-.sec-trust-meter { height: 6px; border-radius: 4px; background: rgba(148,163,184,0.15); overflow: hidden; margin: 2px 0 4px; }
-.sec-trust-meter span { display: block; height: 100%; border-radius: 4px; transition: width 0.25s ease; }
-.sec-pw-stepper { display: inline-flex; align-items: center; gap: 2px; background: rgba(15,23,42,0.65); border: 1px solid var(--card-border); border-radius: 999px; padding: 2px; }
-.sec-pw-step { width: 22px; height: 22px; border-radius: 50%; border: none; background: rgba(56,189,248,0.12); color: #38bdf8; font-size: 13px; font-weight: 700; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s ease, transform 0.1s ease; }
-.sec-pw-step:hover { background: rgba(56,189,248,0.28); }
-.sec-pw-step:active { transform: scale(0.9); }
-.sec-pw-lenval { min-width: 30px; text-align: center; font-size: 11.5px; font-weight: 700; color: #e2e8f0; font-family: ui-monospace, monospace; }
+/* ── Quick scan card & button ── */
+.sec-quick-card {
+  background: rgba(15,23,42,0.4);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+.sec-quick-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.sec-host-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #cbd5e1;
+  font-family: ui-monospace, monospace;
+  background: rgba(15,23,42,0.6);
+  border: 1px solid var(--card-border);
+  border-radius: 6px;
+  padding: 2px 8px;
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sec-quick-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #e2e8f0;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.sec-quick-btn:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.22);
+}
+.sec-quick-btn svg {
+  flex-shrink: 0;
+}
+
+/* ── Result card / Output container ── */
+.sec-scan-box {
+  background: rgba(15,23,42,0.5);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 8px;
+  min-height: 32px;
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 6px;
+}
+.sec-result-row {
+  padding: 4px 0;
+  line-height: 1.45;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── Cookie audit rows ── */
+.sec-ck-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(15,23,42,0.5);
+  border: 1px solid var(--card-border);
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 10.5px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.sec-ck-name {
+  font-family: ui-monospace, monospace;
+  color: #e2e8f0;
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+}
+.sec-ck-cat {
+  font-weight: 700;
+  font-size: 9.5px;
+  color: #94a3b8;
+}
+.sec-ck-risk {
+  color: #cbd5e1;
+  font-size: 9.5px;
+}
+.sec-ck-del {
+  margin-left: auto;
+  font-size: 9.5px;
+  padding: 2px 8px;
+}
+
+/* ── Password Generator & Strength Meter ── */
+.sec-pw-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: #94a3b8;
+  background: rgba(15,23,42,0.5);
+  border: 1px solid var(--card-border);
+  border-radius: 6px;
+  padding: 3px 6px;
+  cursor: pointer;
+}
+.sec-pw-chip input {
+  margin: 0;
+  accent-color: #94a3b8;
+}
+.sec-pw-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(15,23,42,0.65);
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  padding: 2px;
+}
+.sec-pw-step {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(148,163,184,0.12);
+  color: #cbd5e1;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.sec-pw-step:hover {
+  background: rgba(148,163,184,0.25);
+  color: #fff;
+}
+.sec-pw-step:active {
+  transform: scale(0.9);
+}
+.sec-pw-lenval {
+  min-width: 28px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #e2e8f0;
+  font-family: ui-monospace, monospace;
+}
+.sec-pw-meter {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.06);
+  overflow: hidden;
+  margin: 6px 0 2px;
+  display: flex;
+}
+.sec-pw-meter-bar {
+  height: 100%;
+  width: 0%;
+  background: #64748b;
+  border-radius: 999px;
+  transition: width 0.2s ease, background-color 0.2s ease;
+}
+.sec-pw-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #64748b;
+  margin-top: 3px;
+}
+
+/* ── Trust meter ── */
+.sec-trust-meter {
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.06);
+  overflow: hidden;
+  margin: 3px 0 5px;
+}
+.sec-trust-meter span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: #94a3b8;
+  transition: width 0.25s ease;
+}

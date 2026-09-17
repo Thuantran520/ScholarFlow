@@ -1,11 +1,16 @@
     <div class="dm-hero">
-      <svg class="dm-hero-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      <svg class="dm-hero-moon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
       <span class="dm-hero-title" data-i18n="dm_hero_title">Dark Mode Studio</span>
       <span id="dm-status-pill" class="dm-pill">—</span>
     </div>
-    <p class="dm-page-desc" data-i18n="dm_page_desc">Tối mọi trang web như extension darkmode chuyên nghiệp: tự nhận diện trang đã tối để bỏ qua, ⚡ ép tối trang không hỗ trợ, chỉnh độ sáng & gam màu. 100% cục bộ.</p>
+    <p class="dm-page-desc" data-i18n="dm_page_desc">Tối mọi trang web như extension darkmode chuyên nghiệp: tự nhận diện trang đã tối để bỏ qua, ép tối trang không hỗ trợ, chỉnh độ sáng &amp; gam màu. 100% cục bộ.</p>
 
+    <!-- Master switches -->
     <div class="feature-card dm-card dm-tight">
+      <div class="dm-section-head">
+        <svg class="dm-section-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path></svg>
+        <span class="dm-section-label" data-i18n="dm_master_title">Bật Dark Mode</span>
+      </div>
       <label class="switch-row" for="sec-dm-toggle">
         <div class="switch-row-left">
           <span class="switch-row-title" data-i18n="dm_master_title">Bật Dark Mode</span>
@@ -22,7 +27,12 @@
       </label>
     </div>
 
+    <!-- Tone & scope -->
     <div class="feature-card dm-card dm-tight">
+      <div class="dm-section-head">
+        <svg class="dm-section-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v4l2 2"></path></svg>
+        <span class="dm-section-label" data-i18n="dm_appearance">Gam màu &amp; phạm vi</span>
+      </div>
       <div class="dm-grid">
         <div class="dm-cell">
           <label class="dm-lbl" for="sec-dm-mode" data-i18n="dm_scope_title">Phạm vi</label>
@@ -41,43 +51,56 @@
           </select>
         </div>
       </div>
-      <div class="dm-slider" style="--dm-acc:#f59e0b;">
+      <div class="dm-slider" style="--dm-acc:#94a3b8;">
         <span class="dm-sl-l" data-i18n="dm_bright">Độ sáng</span>
         <input type="range" id="sec-dm-bright" min="60" max="140" value="100">
         <span id="dm-bright-val" class="dm-sl-v">100%</span>
       </div>
     </div>
 
+    <!-- Per-site tuning -->
     <div class="feature-card dm-card dm-tight">
-      <div class="dm-site-row">
-        <span id="sec-dm-status" class="dm-host">—</span>
-        <span class="dm-host-btns">
-          <button id="btn-sec-dm-site" class="btn-text-small dm-btn" data-i18n="dm_this_on">🌙 Tối trang này</button>
-          <button id="btn-sec-dm-force" class="btn-text-small dm-btn" data-i18n="dm_force_on">⚡ Ép tối</button>
-        </span>
+      <div class="dm-section-head">
+        <svg class="dm-section-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+        <span class="dm-section-label" data-i18n="dm_tune_title">Tinh chỉnh theo trang</span>
       </div>
-      <div class="dm-slider" style="--dm-acc:#f59e0b;">
-        <span class="dm-sl-l" data-i18n="dm_bright">Sáng</span>
-        <input type="range" id="dm-tune-bright" min="60" max="140" value="100">
-        <span id="dm-tune-bright-val" class="dm-sl-v">100%</span>
-      </div>
-      <div class="dm-slider" style="--dm-acc:#38bdf8;">
-        <span class="dm-sl-l" data-i18n="dm_tune_contrast">Tương phản</span>
-        <input type="range" id="dm-tune-contrast" min="60" max="160" value="100">
-        <span id="dm-tune-contrast-val" class="dm-sl-v">100%</span>
-      </div>
-      <div class="dm-slider" style="--dm-acc:#f472b6;">
-        <span class="dm-sl-l" data-i18n="dm_tune_color">Độ màu</span>
-        <input type="range" id="dm-tune-color" min="0" max="160" value="100">
-        <span id="dm-tune-color-val" class="dm-sl-v">100%</span>
+      <div class="dm-site-panel">
+        <div class="dm-site-row">
+          <span id="sec-dm-status" class="dm-host">—</span>
+          <span class="dm-host-btns">
+            <button id="btn-sec-dm-site" class="btn-text-small dm-btn" data-i18n="dm_this_on">Tối trang này</button>
+            <button id="btn-sec-dm-force" class="btn-text-small dm-btn" data-i18n="dm_force_on">Ép tối</button>
+          </span>
+        </div>
+        <div class="dm-tune-group">
+          <div class="dm-slider" style="--dm-acc:#94a3b8;">
+            <span class="dm-sl-l" data-i18n="dm_bright">Sáng</span>
+            <input type="range" id="dm-tune-bright" min="60" max="140" value="100">
+            <span id="dm-tune-bright-val" class="dm-sl-v">100%</span>
+          </div>
+          <div class="dm-slider" style="--dm-acc:#94a3b8;">
+            <span class="dm-sl-l" data-i18n="dm_tune_contrast">Tương phản</span>
+            <input type="range" id="dm-tune-contrast" min="60" max="160" value="100">
+            <span id="dm-tune-contrast-val" class="dm-sl-v">100%</span>
+          </div>
+          <div class="dm-slider" style="--dm-acc:#94a3b8;">
+            <span class="dm-sl-l" data-i18n="dm_tune_color">Độ màu</span>
+            <input type="range" id="dm-tune-color" min="0" max="160" value="100">
+            <span id="dm-tune-color-val" class="dm-sl-v">100%</span>
+          </div>
+        </div>
       </div>
       <button id="btn-dm-tune-reset" class="dm-mini" data-i18n="dm_tune_reset">↺ Mặc định</button>
     </div>
 
+    <!-- Paper tint palette -->
     <div class="feature-card dm-card dm-tight">
-      <div class="dm-lbl" data-i18n="dm_paper_title">Chế độ đọc dịu mắt (màu nền)</div>
+      <div class="dm-section-head">
+        <svg class="dm-section-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"></path><path d="M12 6v6l4 2"></path></svg>
+        <span class="dm-section-label" data-i18n="dm_paper_title">Màu nền dịu mắt</span>
+      </div>
       <div id="dm-paper-chips" class="dm-paper-chips"></div>
-      <div class="dm-slider" style="--dm-acc:#fbbf24; margin-top:8px;">
+      <div class="dm-slider" style="--dm-acc:#94a3b8; margin-top:10px;">
         <input type="color" id="dm-paper-custom" value="#f6ecd9" aria-label="custom">
         <span class="dm-sl-l" data-i18n="dm_paper_alpha">Cường độ</span>
         <input type="range" id="dm-paper-alpha" min="4" max="60" value="18">
@@ -86,7 +109,12 @@
       <p class="dm-hint" data-i18n="dm_paper_hint">Phủ màu giấy lên nền trang — chữ &amp; ảnh giữ nguyên, không phá giao diện.</p>
     </div>
 
+    <!-- Typography -->
     <div class="feature-card dm-card dm-tight">
+      <div class="dm-section-head">
+        <svg class="dm-section-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg>
+        <span class="dm-section-label" data-i18n="dm_typo_title">Font &amp; giãn dòng</span>
+      </div>
       <label class="switch-row" for="sec-dm-typo">
         <div class="switch-row-left">
           <span class="switch-row-title" data-i18n="dm_typo_title">Chỉnh font &amp; giãn dòng</span>
@@ -94,41 +122,48 @@
         </div>
         <span class="custom-switch"><input type="checkbox" id="sec-dm-typo"><span class="switch-slider"></span></span>
       </label>
-      <div class="dm-grid" style="margin-top:6px;">
-        <div class="dm-cell dm-cell-wide">
-          <label class="dm-lbl" for="dm-font-family" data-i18n="dm_font">Font chữ</label>
-          <select class="form-control dm-sel" id="dm-font-family"></select>
-        </div>
-        <div class="dm-cell" style="grid-column:1/-1;">
-          <div class="dm-slider" style="--dm-acc:#22d3ee;">
-            <span class="dm-sl-l" data-i18n="dm_font_size">Cỡ chữ</span>
-            <input type="range" id="dm-font-size" min="85" max="150" value="100">
-            <span id="dm-font-size-val" class="dm-sl-v">100%</span>
+      <div class="dm-typo-panel" id="dm-typo-panel">
+        <div class="dm-grid" style="margin-top:6px;">
+          <div class="dm-cell dm-cell-wide">
+            <label class="dm-lbl" for="dm-font-family" data-i18n="dm_font">Font chữ</label>
+            <select class="form-control dm-sel" id="dm-font-family"></select>
           </div>
-          <div class="dm-slider" style="--dm-acc:#a78bfa;">
-            <span class="dm-sl-l" data-i18n="dm_line">Giãn dòng</span>
-            <input type="range" id="dm-font-line" min="110" max="240" value="160">
-            <span id="dm-font-line-val" class="dm-sl-v">1.6×</span>
-          </div>
-          <div class="dm-slider" style="--dm-acc:#f472b6;">
-            <span class="dm-sl-l" data-i18n="dm_ls">Khoảng chữ</span>
-            <input type="range" id="dm-font-ls" min="-100" max="300" value="0">
-            <span id="dm-font-ls-val" class="dm-sl-v">0.00px</span>
-          </div>
-          <div class="dm-slider" style="--dm-acc:#10b981;">
-            <span class="dm-sl-l" data-i18n="dm_ws">Từ cách</span>
-            <input type="range" id="dm-font-ws" min="-50" max="150" value="0">
-            <span id="dm-font-ws-val" class="dm-sl-v">0.00px</span>
+          <div class="dm-cell" style="grid-column:1/-1;">
+            <div class="dm-slider" style="--dm-acc:#94a3b8;">
+              <span class="dm-sl-l" data-i18n="dm_font_size">Cỡ chữ</span>
+              <input type="range" id="dm-font-size" min="85" max="150" value="100">
+              <span id="dm-font-size-val" class="dm-sl-v">100%</span>
+            </div>
+            <div class="dm-slider" style="--dm-acc:#94a3b8;">
+              <span class="dm-sl-l" data-i18n="dm_line">Giãn dòng</span>
+              <input type="range" id="dm-font-line" min="110" max="240" value="160">
+              <span id="dm-font-line-val" class="dm-sl-v">1.6×</span>
+            </div>
+            <div class="dm-slider" style="--dm-acc:#94a3b8;">
+              <span class="dm-sl-l" data-i18n="dm_ls">Khoảng chữ</span>
+              <input type="range" id="dm-font-ls" min="-100" max="300" value="0">
+              <span id="dm-font-ls-val" class="dm-sl-v">0.00px</span>
+            </div>
+            <div class="dm-slider" style="--dm-acc:#94a3b8;">
+              <span class="dm-sl-l" data-i18n="dm_ws">Từ cách</span>
+              <input type="range" id="dm-font-ws" min="-50" max="150" value="0">
+              <span id="dm-font-ws-val" class="dm-sl-v">0.00px</span>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
+    <!-- Exclusions -->
     <div class="feature-card dm-card dm-tight">
+      <div class="dm-section-head">
+        <svg class="dm-section-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+        <span class="dm-section-label" data-i18n="dm_excl_title">Danh sách loại trừ / đã chọn</span>
+      </div>
       <div class="dm-row-between">
         <span class="dm-lbl" data-i18n="dm_excl_title">Danh sách loại trừ / đã chọn</span>
         <button id="btn-dm-clear-excl" class="dm-mini" data-i18n="dm_clear">Xóa</button>
       </div>
       <div id="dm-excl-list" class="dm-excl-list"></div>
-      <p class="dm-hint" data-i18n="dm_hint">Trang nào bị lệch màu sau khi invert? Bấm ☀️ để loại trừ — lưu cục bộ theo hostname.</p>
+      <p class="dm-hint" data-i18n="dm_hint">Trang nào bị lệch màu sau khi invert? Bấm để loại trừ — lưu cục bộ theo hostname.</p>
     </div>

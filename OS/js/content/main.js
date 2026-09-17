@@ -480,8 +480,34 @@
               const t = el.textContent;
               if (t && t.trim()) out += t + " ";
             };
+            let ytPrefix = "";
+            if (sfYtIsVideoPage()) {
+              try {
+                const gm0 = (sel, attr) => { try { const el = document.querySelector(sel); return el ? String(el.getAttribute(attr || "content") || "") : ""; } catch (e) { return ""; } };
+                const txt0 = (sel) => { try { const el = document.querySelector(sel); return el ? String(el.textContent || "").replace(/\s+/g, " ").trim() : ""; } catch (e) { return ""; } };
+                const curVid = sfYtCurrentVideoId();
+                const cleanTitle = (t0) => String(t0 || "").replace(/ - YouTube$/i, "");
+                const yTitle = cleanTitle(txt0("#title h1") || txt0("ytd-watch-metadata #title yt-formatted-string") || txt0("h1.ytd-video-primary-info-renderer") || txt0("ytd-watch-metadata h1") || document.title);
+                const yAuthor = txt0("ytd-video-owner-renderer #channel-name a") || txt0("#owner #channel-name a") || txt0("ytd-channel-name a") || gm0('link[itemprop="name"]');
+                const ySubs = txt0("#owner-sub-count") || txt0("#subscriber-count");
+                const yInfo = txt0("ytd-watch-info-text") || txt0("#info-container") || txt0("#view-count");
+                const yDesc = txt0("#description-inline-expander") || txt0("#description-inner") || txt0("#description") || gm0('meta[name="description"]');
+                const isLiveNow = !!(
+                  document.querySelector(".ytp-live-badge:not([hidden])") ||
+                  document.querySelector(".badge-style-type-live-now") ||
+                  /trực tiếp|live/i.test(yInfo)
+                );
+                ytPrefix = "[YouTube " + (isLiveNow ? "Livestream Trực Tiếp" : "Video") + "]\n";
+                if (curVid) ytPrefix += "Video ID: " + curVid + "\n";
+                if (yTitle) ytPrefix += "Tiêu đề: " + yTitle + "\n";
+                if (yAuthor) ytPrefix += "Kênh: " + yAuthor + (ySubs ? " (" + ySubs + ")" : "") + "\n";
+                if (yInfo) ytPrefix += "Thông tin / Lượt xem: " + yInfo + "\n";
+                if (yDesc) ytPrefix += "Mô tả:\n" + yDesc.slice(0, 3000) + "\n";
+                ytPrefix += "\n---\n\n";
+              } catch (e) {}
+            }
             walk(rootSel);
-            txt2 = out.replace(/[ \t]+/g, " ").replace(/\n ?/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+            txt2 = (ytPrefix + out).replace(/[ \t]+/g, " ").replace(/\n ?/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
             if (imgNotes.length) txt2 += "\n\n[Danh sách ảnh trên trang]\n" + imgNotes.slice(0, 20).join("\n");
             const max = typeof msg.maxChars === "number" ? Math.min(16000, Math.max(4000, msg.maxChars * 4)) : 12000;
             if (txt2.length > max) txt2 = txt2.slice(0, max);
@@ -556,11 +582,21 @@ case "GET_YT_META": {
             const fAuthor = (microFresh ? (gm("[itemprop='author'] [itemprop='name']") || gm("[itemprop='author'] meta[itemprop='name']") || gm("[itemprop='author'] link[itemprop='name']") || gm('link[itemprop="name"]')) : "")
               || txt("ytd-video-owner-renderer #channel-name a") || txt("#owner #channel-name a") || txt("ytd-channel-name a") || txt("ytd-watch-metadata #owner a");
             const fDate = microFresh ? (gm('meta[itemprop="datePublished"]') || gm('meta[itemprop="uploadDate"]') || gm('meta[itemprop="startDate"]')) : "";
+            const isLive = !!(
+              document.querySelector(".ytp-live-badge:not([hidden])") ||
+              document.querySelector(".badge-style-type-live-now") ||
+              (function(){ try { var v=document.querySelector("video"); return v && !isFinite(v.duration); }catch(e){ return false; } })() ||
+              (function(){ try { var pr=window.ytInitialPlayerResponse; return pr && pr.videoDetails && (pr.videoDetails.isLive || pr.videoDetails.isLiveContent); }catch(e){ return false; } })()
+            );
             if (fAuthor && fDate) {
-              sendResponse({ success: true, ok: true, fast: true, title: fTitle, author: fAuthor, publishDate: fDate, publisher: "YouTube", platform: "YouTube", videoId: curVid, lengthSeconds: (function(){try{var v=document.querySelector("video");var d=v&&v.duration;if(d&&isFinite(d))return String(Math.round(d));var pr=window.ytInitialPlayerResponse;var ls=pr&&pr.videoDetails&&pr.videoDetails.lengthSeconds;return ls?String(ls):"";}catch(e){return "";}})() });
+              sendResponse({ success: true, ok: true, fast: true, isLive: isLive, title: fTitle, author: fAuthor, publishDate: fDate, publisher: "YouTube", platform: "YouTube", videoId: curVid, lengthSeconds: (function(){try{var v=document.querySelector("video");var d=v&&v.duration;if(d&&isFinite(d))return String(Math.round(d));var pr=window.ytInitialPlayerResponse;var ls=pr&&pr.videoDetails&&pr.videoDetails.lengthSeconds;return ls?String(ls):"";}catch(e){return "";}})() });
               break;
             }
             const obj = sfYtReadPlayerResponse();
+            const isLive2 = isLive || !!(
+              (obj && obj.videoDetails && (obj.videoDetails.isLive || obj.videoDetails.isLiveContent)) ||
+              (obj && obj.microformat && obj.microformat.playerMicroformatRenderer && (obj.microformat.playerMicroformatRenderer.isLiveBroadcast || obj.microformat.playerMicroformatRenderer.liveBroadcastDetails))
+            );
             if (!obj) {
               let uiDate = fDate;
               if (!uiDate) {
@@ -569,7 +605,7 @@ case "GET_YT_META": {
                   if (box) uiDate = sfYtParseUiDate(String(box.textContent || "").slice(0, 3000));
                 } catch (e) { uiDate = ""; }
               }
-              sendResponse({ success: true, ok: !!(fTitle && fAuthor && uiDate), domOnly: true, title: fTitle, author: fAuthor, publishDate: uiDate, publisher: "YouTube", platform: "YouTube", videoId: curVid, lengthSeconds: (function(){try{var v=document.querySelector("video");var d=v&&v.duration;if(d&&isFinite(d))return String(Math.round(d));var pr=window.ytInitialPlayerResponse;var ls=pr&&pr.videoDetails&&pr.videoDetails.lengthSeconds;return ls?String(ls):"";}catch(e){return "";}})() });
+              sendResponse({ success: true, ok: !!(fTitle && fAuthor && uiDate), domOnly: true, isLive: isLive2, title: fTitle, author: fAuthor, publishDate: uiDate, publisher: "YouTube", platform: "YouTube", videoId: curVid, lengthSeconds: (function(){try{var v=document.querySelector("video");var d=v&&v.duration;if(d&&isFinite(d))return String(Math.round(d));var pr=window.ytInitialPlayerResponse;var ls=pr&&pr.videoDetails&&pr.videoDetails.lengthSeconds;return ls?String(ls):"";}catch(e){return "";}})() });
               break;
             }
             const mf = obj && obj.microformat && obj.microformat.playerMicroformatRenderer;
@@ -578,6 +614,7 @@ case "GET_YT_META": {
             const publishDate = (mf && mf.publishDate) || (mf && mf.uploadDate) || fDate || "";
             sendResponse({
               success: true, ok: !!(title || author || publishDate),
+              isLive: isLive2,
               title: title, author: author, publishDate: publishDate,
               publisher: "YouTube", platform: "YouTube",
               videoId: (obj && obj.videoDetails && obj.videoDetails.videoId) || curVid,
@@ -603,3 +640,129 @@ case "GET_YT_META": {
       return true;
     });
   }
+
+  /* ── Smart Reading Companion (Floating In-line Explainer on selection) ── */
+  let _sfCompanionEl = null;
+  let _sfCompanionEnabled = true;
+
+  try {
+    const stor = (typeof browser !== "undefined" && browser.storage) ? browser.storage : (typeof chrome !== "undefined" ? chrome.storage : null);
+    if (stor && stor.local) {
+      stor.local.get("reading_companion_enabled", r => {
+        if (r && typeof r.reading_companion_enabled === "boolean") _sfCompanionEnabled = r.reading_companion_enabled;
+      });
+      if (stor.onChanged) {
+        stor.onChanged.addListener((ch, area) => {
+          if (area === "local" && ch.reading_companion_enabled) {
+            _sfCompanionEnabled = ch.reading_companion_enabled.newValue !== false;
+            if (!_sfCompanionEnabled && _sfCompanionEl) _sfHideCompanion();
+          }
+        });
+      }
+    }
+  } catch(e) {}
+
+  function _sfHideCompanion() {
+    if (_sfCompanionEl && _sfCompanionEl.parentNode) {
+      _sfCompanionEl.parentNode.removeChild(_sfCompanionEl);
+    }
+    _sfCompanionEl = null;
+  }
+
+  function _sfCreateCompanion(selText, rect) {
+    if (!_sfCompanionEnabled || !selText || selText.length < 3) return;
+    _sfHideCompanion();
+
+    const el = document.createElement("div");
+    el.id = "sf-reading-companion";
+
+    const logo = document.createElement("span");
+    logo.className = "sf-companion-logo";
+    logo.textContent = "✦ AI";
+    el.appendChild(logo);
+
+    const actions = [
+      { id: "explain", icon: "🧠", label: (typeof tContent === "function" ? tContent("companion_explain") : "Giải thích") },
+      { id: "translate", icon: "🌐", label: (typeof tContent === "function" ? tContent("companion_translate") : "Dịch") },
+      { id: "summary", icon: "⚡", label: (typeof tContent === "function" ? tContent("companion_summary") : "Tóm tắt") },
+      { id: "ask", icon: "💬", label: (typeof tContent === "function" ? tContent("companion_ask") : "Hỏi sâu") }
+    ];
+
+    actions.forEach(act => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "sf-companion-btn";
+      btn.textContent = act.icon + " " + act.label;
+      btn.addEventListener("mousedown", e => { e.preventDefault(); e.stopPropagation(); });
+      btn.addEventListener("click", e => {
+        e.preventDefault(); e.stopPropagation();
+        notifySidebar({
+          action: "COMPANION_QUERY",
+          mode: act.id,
+          text: selText.slice(0, 3000),
+          title: document.title || "",
+          url: location.href || ""
+        });
+        _sfHideCompanion();
+      });
+      el.appendChild(btn);
+    });
+
+    const scrollX = window.scrollX || window.pageXOffset || document.documentElement.scrollLeft || 0;
+    const scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
+
+    let top = rect.top + scrollY - 38;
+    if (top < scrollY + 10) top = rect.bottom + scrollY + 8;
+    let left = rect.left + scrollX + (rect.width / 2) - 140;
+    if (left < 10) left = 10;
+    if (left + 300 > window.innerWidth) left = Math.max(10, window.innerWidth - 310);
+
+    el.style.top = Math.round(top) + "px";
+    el.style.left = Math.round(left) + "px";
+
+    document.documentElement.appendChild(el);
+    _sfCompanionEl = el;
+  }
+
+  document.addEventListener("mouseup", e => {
+    if (!_sfCompanionEnabled) return;
+    if (typeof isInspectActive !== "undefined" && isInspectActive) return;
+    if (typeof isElementCaptureMode !== "undefined" && isElementCaptureMode) return;
+    if (_sfCompanionEl && _sfCompanionEl.contains(e.target)) return;
+
+    setTimeout(() => {
+      try {
+        const sel = window.getSelection();
+        if (!sel || sel.isCollapsed || !sel.rangeCount) {
+          _sfHideCompanion();
+          return;
+        }
+        const str = sel.toString().trim();
+        if (str.length < 3) {
+          _sfHideCompanion();
+          return;
+        }
+        const active = document.activeElement;
+        if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.isContentEditable)) {
+          _sfHideCompanion();
+          return;
+        }
+        const range = sel.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        if (!rect || (rect.width === 0 && rect.height === 0)) {
+          _sfHideCompanion();
+          return;
+        }
+        _sfCreateCompanion(str, rect);
+      } catch (err) {
+        _sfHideCompanion();
+      }
+    }, 25);
+  });
+
+  document.addEventListener("mousedown", e => {
+    if (_sfCompanionEl && !_sfCompanionEl.contains(e.target)) {
+      _sfHideCompanion();
+    }
+  });
+

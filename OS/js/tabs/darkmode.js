@@ -8,13 +8,18 @@ let dmState = { enabled: false, mode: "all", auto: true, bright: 100, theme: "st
   paper: { mode: "none", custom: "#f6ecd9", alpha: 18 },
   typo: { on: false, family: "", size: 100, line: 1.6, ls: 0, ws: 0 }, darkKnown: {} };
 const DM_PAPERS = [
-  { id: "none", color: "transparent", key: "dm_paper_none" },
-  { id: "paper", color: "#f6ecd9", key: "dm_paper_paper" },
-  { id: "mint", color: "#e4f2e7", key: "dm_paper_mint" },
-  { id: "sky", color: "#e4edf9", key: "dm_paper_sky" },
-  { id: "amber", color: "#f9e6c8", key: "dm_paper_amber" },
-  { id: "rose", color: "#fbe9ee", key: "dm_paper_rose" },
-  { id: "custom", color: "custom", key: "dm_paper_custom" }
+  { id: "none",     color: "transparent", key: "dm_paper_none" },
+  { id: "paper",    color: "#f6ecd9",     key: "dm_paper_paper" },
+  { id: "cream",    color: "#faf6ee",     key: "dm_paper_cream" },
+  { id: "amber",    color: "#f9e6c8",     key: "dm_paper_amber" },
+  { id: "peach",    color: "#fde8d8",     key: "dm_paper_peach" },
+  { id: "rose",     color: "#fbe9ee",     key: "dm_paper_rose" },
+  { id: "lavender", color: "#ece8f7",     key: "dm_paper_lavender" },
+  { id: "sky",      color: "#e4edf9",     key: "dm_paper_sky" },
+  { id: "mint",     color: "#e4f2e7",     key: "dm_paper_mint" },
+  { id: "sage",     color: "#e5ede9",     key: "dm_paper_sage" },
+  { id: "slate",    color: "#e8ecf1",     key: "dm_paper_slate" },
+  { id: "custom",   color: "custom",      key: "dm_paper_custom" }
 ];
 const DM_FONTS = [
   { v: "", key: "dm_font_default" },
@@ -79,7 +84,7 @@ function _dmChip(host, label, onClick, color) {
   const act = document.createElement("i");
   act.textContent = " " + label;
   act.style.fontStyle = "normal";
-  act.style.color = color || "#f87171";
+  act.style.color = color || "#94a3b8";
   act.style.marginLeft = "4px";
   chip.appendChild(name); chip.appendChild(act);
   chip.addEventListener("click", function () { onClick(host); });
@@ -152,6 +157,8 @@ function dmRender() {
   if (pavEl) pavEl.textContent = dmState.paper.alpha + "%";
   const tglT = document.getElementById("sec-dm-typo");
   if (tglT) tglT.checked = !!dmState.typo.on;
+  const typoPanel = document.getElementById("dm-typo-panel");
+  if (typoPanel) typoPanel.classList.toggle("is-open", !!dmState.typo.on);
   const famEl = document.getElementById("dm-font-family");
   if (famEl) {
     _socClearBox(famEl);
@@ -178,11 +185,11 @@ function dmRender() {
       hostsOf(o).forEach(function (h) { any = true; list.appendChild(_dmChip(h, label, onClick, color)); });
     };
     if (dmState.mode === "selected") {
-      addAll(dmState.onSites, "☀️", function (h) { delete dmState.onSites[h]; dmSave(); });
+      addAll(dmState.onSites, "✕", function (h) { delete dmState.onSites[h]; dmSave(); });
     } else {
       addAll(dmState.offSites, "✕", function (h) { delete dmState.offSites[h]; dmSave(); });
     }
-    addAll(dmState.forceSites, "⚡✕", function (h) { delete dmState.forceSites[h]; dmSave(); }, "#f59e0b");
+    addAll(dmState.forceSites, "✕", function (h) { delete dmState.forceSites[h]; dmSave(); }, "#94a3b8");
     if (!any) list.appendChild(_socDiv("dm-excl-empty", t("dm_excl_empty"), "#64748b"));
   }
 }
@@ -262,7 +269,12 @@ onReady(function () {
   if (pa) pa.addEventListener("input", function () { const v = document.getElementById("dm-paper-alpha-val"); if (v) v.textContent = pa.value + "%"; });
   if (pa) pa.addEventListener("change", function () { dmState.paper.alpha = parseInt(pa.value, 10) || 18; dmSave(); });
   const tglT = document.getElementById("sec-dm-typo");
-  if (tglT) tglT.addEventListener("change", function () { dmState.typo.on = !!tglT.checked; dmSave(); });
+  if (tglT) tglT.addEventListener("change", function () {
+    dmState.typo.on = !!tglT.checked;
+    const typoPanel = document.getElementById("dm-typo-panel");
+    if (typoPanel) typoPanel.classList.toggle("is-open", !!dmState.typo.on);
+    dmSave();
+  });
   const fam = document.getElementById("dm-font-family");
   if (fam) fam.addEventListener("change", function () { dmState.typo.family = fam.value; dmSave(); });
   [["dm-font-size", "size"], ["dm-font-line", "line"], ["dm-font-ls", "ls"], ["dm-font-ws", "ws"]].forEach(function (row) {
