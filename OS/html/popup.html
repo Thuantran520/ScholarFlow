@@ -725,18 +725,18 @@
     <div class="feature-card">
       <div class="feature-title" data-i18n="redact_heading">Che mờ &amp; Bảo mật thông tin trên trang</div>
       <div style="background:rgba(15,23,42,0.6); border:1px solid var(--card-border); border-radius:6px; padding:8px 10px; margin-bottom:10px; font-size:11.5px; line-height:1.5;">
-        <div style="color:var(--primary); font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:5px;">
+        <div style="color:var(--text-primary, #f1f5f9); font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:5px;">
           <span data-i18n="redact_guide_title">Hướng dẫn thao tác:</span>
         </div>
         <div style="color:var(--text); margin-bottom:4px;" data-i18n="redact_guide_desc_html" data-i18n-html="true">
           • Bấm <b>Bật chọn che</b> → Rê chuột vào phần tử → <b>Click chuột trái</b> để che mờ / hộp đen.<br>
           • Để gỡ bỏ che một phần tử, nhấp vào nút xóa tương ứng trong <b>Danh sách phần tử đã che</b> bên dưới.
         </div>
-        <div style="color:#fbbf24; font-size:11px; margin-top:4px; border-top:1px dashed var(--card-border); padding-top:4px;" data-i18n="redact_shortcut_hint_html" data-i18n-html="true">
+        <div style="color:#cbd5e1; font-size:11px; margin-top:4px; border-top:1px dashed var(--card-border); padding-top:4px;" data-i18n="redact_shortcut_hint_html" data-i18n-html="true">
           Phím tắt: Nhấn <b>[ESC]</b> trên bàn phím hoặc nút <b>Dừng chọn</b> để thoát bất kỳ lúc nào.
         </div>
-        <div style="color:#0ea5e9; font-size:11px; margin-top:4px; border-top:1px dashed var(--card-border); padding-top:4px;">
-          💡 Để che <b>chính xác 1 vùng / đoạn văn bản</b>: giữ chuột trái và <b>kéo thành khung</b> ngay trên trang trong lúc đang ở chế độ chọn che.
+        <div style="color:#94a3b8; font-size:11px; margin-top:4px; border-top:1px dashed var(--card-border); padding-top:4px;">
+          Để che <b>chính xác 1 vùng / đoạn văn bản</b>: giữ chuột trái và <b>kéo thành khung</b> ngay trên trang trong lúc đang ở chế độ chọn che.
         </div>
       </div>
 
@@ -777,7 +777,7 @@
     <!-- Redaction Management -->
     <div class="feature-card">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-        <span style="font-weight:600; font-size:12px;"><span data-i18n="lbl_redacted_count">Đã che:</span> <strong id="redact-count" style="color:var(--primary);">0</strong> <span data-i18n="lbl_elements">phần tử</span></span>
+        <span style="font-weight:600; font-size:12px;"><span data-i18n="lbl_redacted_count">Đã che:</span> <strong id="redact-count" style="color:var(--text-primary, #f1f5f9);">0</strong> <span data-i18n="lbl_elements">phần tử</span></span>
         <button class="btn btn-secondary" id="btn-undo-redact" style="padding:4px 8px; font-size:11px;" data-i18n="btn_undo">Hoàn tác</button>
       </div>
 
@@ -785,7 +785,7 @@
       <div style="margin-bottom:8px;">
         <div style="font-size:11px; color:var(--text-muted); font-weight:600; margin-bottom:4px;" data-i18n="lbl_display_redact">Hiển thị che trên trang:</div>
         <div class="actions-row" style="margin-bottom:0;">
-          <button class="btn btn-success" id="btn-enable-redactions" style="flex:1; padding:7px 4px; font-size:11.5px; font-weight:700;" title="Bật lại hiệu ứng che mờ / hộp đen cho các phần tử" data-i18n-title="tip_enable_redact">
+          <button class="btn btn-primary" id="btn-enable-redactions" style="flex:1; padding:7px 4px; font-size:11.5px; font-weight:700;" title="Bật lại hiệu ứng che mờ / hộp đen cho các phần tử" data-i18n-title="tip_enable_redact">
             <span data-i18n="btn_enable_redact">Bật che</span>
           </button>
           <button class="btn btn-secondary" id="btn-disable-redactions" style="flex:1; padding:7px 4px; font-size:11.5px; font-weight:600; opacity:0.75;" title="Tạm thời tắt che để xem nội dung trang gốc" data-i18n-title="tip_disable_redact">
@@ -821,9 +821,13 @@
 
     <!-- Auto-detect sensitive data + keyword masking (Group B) -->
     <div class="feature-card">
-      <div class="feature-title" style="font-size:12px;">🛡️ Tự động quét & che dữ liệu nhạy cảm</div>
-      <button class="btn btn-primary" id="btn-detect-sensitive" style="width:100%; padding:8px; font-size:11.5px; margin-bottom:8px;">
-        🔍 Quét & che dữ liệu nhạy cảm (Email, SĐT, CCCD...)
+      <div class="feature-title" style="font-size:12px; display:flex; align-items:center; gap:6px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+        <span>Tự động quét & che dữ liệu nhạy cảm</span>
+      </div>
+      <button class="btn btn-primary" id="btn-detect-sensitive" style="width:100%; padding:8px; font-size:11.5px; margin-bottom:8px; display:flex; align-items:center; justify-content:center; gap:6px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <span>Quét & che dữ liệu nhạy cảm (Email, SĐT, CCCD...)</span>
       </button>
       <div style="display:flex; gap:6px; align-items:center;">
         <input type="text" id="redact-keyword-input" class="form-control" style="flex:1; font-size:11px; padding:6px;" placeholder="Từ khóa cần che, VD: tên riêng" autocomplete="off">
@@ -833,7 +837,10 @@
 
     <!-- PIN lock for "Xem bản gốc" (reveal original) -->
     <div class="feature-card">
-      <div class="feature-title" style="font-size:12px;">🔒 Bảo vệ nút "Xem bản gốc" bằng mã PIN</div>
+      <div class="feature-title" style="font-size:12px; display:flex; align-items:center; gap:6px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+        <span>Bảo vệ nút "Xem bản gốc" bằng mã PIN</span>
+      </div>
       <div style="display:flex; gap:6px; align-items:center; margin-bottom:8px;">
         <input type="password" id="redact-pin-input" class="form-control" style="flex:1; font-size:11px; padding:6px;" placeholder="Nhập mã PIN 4-6 ký số" maxlength="6" autocomplete="off" inputmode="numeric">
         <button class="btn btn-primary" id="btn-set-redact-pin" style="padding:6px 10px; font-size:11px;">Đặt mã</button>
@@ -844,13 +851,16 @@
   </div>
 
   <!-- PIN reveal modal -->
-  <div id="redact-pin-modal" style="display:none; position:fixed; inset:0; z-index:2147483646; background:rgba(2,6,23,0.78); align-items:center; justify-content:center;">
-    <div style="background:#0f172a; border:1px solid #f59e0b; border-radius:12px; padding:18px; width:300px; max-width:90%; box-shadow:0 12px 40px rgba(0,0,0,0.8);">
-      <div style="font-size:13px; font-weight:700; color:var(--text); margin-bottom:4px;">🔒 Nhập mã PIN để xem bản gốc</div>
+  <div id="redact-pin-modal" style="display:none; position:fixed; inset:0; z-index:2147483646; background:rgba(2,6,23,0.85); align-items:center; justify-content:center;">
+    <div style="background:#0f172a; border:1px solid rgba(255,255,255,0.14); border-radius:12px; padding:18px; width:300px; max-width:90%; box-shadow:0 12px 40px rgba(0,0,0,0.85);">
+      <div style="font-size:13px; font-weight:700; color:var(--text-primary, #f1f5f9); margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+        <span>Nhập mã PIN để xem bản gốc</span>
+      </div>
       <div style="font-size:10.5px; color:#94a3b8; margin-bottom:12px;">Trang đang được bảo vệ bằng mã PIN — nhập đúng mã để tạm hiện nội dung gốc.</div>
       <input type="password" id="redact-pin-modal-input" class="form-control" style="font-size:14px; padding:9px; margin-bottom:12px; letter-spacing:4px; text-align:center;" placeholder="••••" maxlength="6" autocomplete="off" inputmode="numeric">
       <div style="display:flex; gap:8px;">
-        <button class="btn btn-warning" id="btn-redact-pin-confirm" style="flex:1; padding:8px; font-weight:700;">Mở khoá</button>
+        <button class="btn btn-primary" id="btn-redact-pin-confirm" style="flex:1; padding:8px; font-weight:700;">Mở khoá</button>
         <button class="btn btn-secondary" id="btn-redact-pin-cancel" style="flex:1; padding:8px;">Huỷ</button>
       </div>
     </div>
@@ -899,10 +909,10 @@
       <!-- Screenshot Settings Box -->
       <div style="background:rgba(15,23,42,0.65); border:1px solid var(--card-border); border-radius:8px; padding:10px; margin-bottom:10px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <span style="font-size:11.5px; font-weight:700; color:var(--primary); display:flex; align-items:center; gap:5px;">
+          <span style="font-size:11.5px; font-weight:700; color:var(--text-primary, #f1f5f9); display:flex; align-items:center; gap:5px;">
             <span data-i18n="cap_settings_title">Cài đặt chụp ảnh</span>
           </span>
-          <span style="font-size:10px; color:#10b981; font-weight:600;" id="cap-settings-status" data-i18n="pref_autosave">Tự động lưu</span>
+          <span style="font-size:10px; color:#cbd5e1; font-weight:600;" id="cap-settings-status" data-i18n="pref_autosave">Tự động lưu</span>
         </div>
 
         <!-- Auto Copy Switch -->
@@ -928,9 +938,9 @@
             </select>
           </div>
           <div class="col form-group" style="margin-bottom:0;">
-            <label style="font-size:10.5px; font-weight:600; color:var(--text-muted);" data-i18n="lbl_cap_delay">Hẹn giờ chụp:</label>
+            <label style="font-size:10.5px; font-weight:600; color:var(--text-muted);" data-i18n="lbl_cap_delay">Hẹn giờ:</label>
             <select class="form-control" id="cap-pref-delay" style="font-size:11px; padding:4px 6px;">
-              <option value="0" data-i18n="opt_delay_0">Chụp ngay (0s)</option>
+              <option value="0" data-i18n="opt_delay_0">Ngay lập tức (0s)</option>
               <option value="2" data-i18n="opt_delay_2">Hẹn giờ 2 giây</option>
               <option value="5" data-i18n="opt_delay_5">Hẹn giờ 5 giây</option>
             </select>
@@ -947,15 +957,15 @@
       </div>
 
       <!-- Element & Table Capture Button -->
-      <button class="btn btn-primary" id="btn-cap-element" style="width:100%; margin-bottom:8px; padding:9px; background:linear-gradient(135deg, #06b6d4 0%, #0284c7 100%); color:#ffffff; border-color:rgba(6,182,212,0.4);" title="Click chọn thẻ/khung đối tượng hoặc kéo chuột tùy ý, có 8 góc tinh chỉnh kích thước trước khi bấm chụp!" data-i18n-title="tip_cap_element">
+      <button class="btn btn-primary" id="btn-cap-element" style="width:100%; margin-bottom:8px; padding:9px;" title="Click chọn thẻ/khung đối tượng hoặc kéo chuột tùy ý, có 8 góc tinh chỉnh kích thước trước khi bấm chụp!" data-i18n-title="tip_cap_element">
         <span data-i18n="btn_cap_element">Chọn khung đối tượng / Kéo vùng chụp</span>
       </button>
 
       <!-- Active Element Picking Notification Banner -->
-      <div id="element-cap-active-banner" style="display:none; background:rgba(14,165,233,0.15); border:1px solid rgba(14,165,233,0.4); border-radius:8px; padding:8px 10px; margin-bottom:8px; font-size:11.5px;">
-        <div style="color:#38bdf8; font-weight:700; display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+      <div id="element-cap-active-banner" style="display:none; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.18); border-radius:8px; padding:8px 10px; margin-bottom:8px; font-size:11.5px;">
+        <div style="color:var(--text-primary, #f1f5f9); font-weight:700; display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
           <span data-i18n="banner_cap_element_title">Chế độ chọn khung &amp; Kéo vùng chụp</span>
-          <button id="btn-cancel-cap-element" class="btn-text" style="color:#f87171; font-size:11px;" data-i18n="btn_cancel">[ESC] Hủy</button>
+          <button id="btn-cancel-cap-element" class="btn-text" style="color:#cbd5e1; font-size:11px;" data-i18n="btn_cancel">[ESC] Hủy</button>
         </div>
         <div style="color:#cbd5e1; font-size:11px; line-height:1.4;" data-i18n="banner_cap_element_guide_html" data-i18n-html="true">
           • <b>Click vào thẻ/khung</b> hoặc <b>kéo chuột</b> để chọn vùng.<br>
@@ -982,7 +992,7 @@
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
           <span data-i18n="btn_copy_screenshot">Sao chép ảnh</span>
         </button>
-        <button class="btn btn-success" id="btn-download-screenshot" style="flex:1;">
+        <button class="btn btn-primary" id="btn-download-screenshot" style="flex:1;">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
           <span data-i18n="btn_download_screenshot">Tải về máy</span>
         </button>
@@ -997,15 +1007,15 @@
       <!-- Video Recording Settings Box -->
       <div style="background:rgba(15,23,42,0.65); border:1px solid var(--card-border); border-radius:8px; padding:10px; margin-bottom:10px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <span style="font-size:11.5px; font-weight:700; color:var(--primary); display:flex; align-items:center; gap:5px;">
+          <span style="font-size:11.5px; font-weight:700; color:var(--text-primary, #f1f5f9); display:flex; align-items:center; gap:5px;">
             <span data-i18n="video_settings_title">Cài đặt quay video</span>
           </span>
-          <span style="font-size:10px; color:#10b981; font-weight:600;" id="video-settings-status" data-i18n="pref_autosave">Tự động lưu</span>
+          <span style="font-size:10px; color:#cbd5e1; font-weight:600;" id="video-settings-status" data-i18n="pref_autosave">Tự động lưu</span>
         </div>
 
         <!-- Multi-Web Guidance Notice -->
-        <div style="background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.25); border-radius:6px; padding:7px 9px; margin-bottom:10px; font-size:11px; line-height:1.45; color:#cbd5e1;">
-          <div style="font-weight:700; color:#38bdf8; margin-bottom:2px; display:flex; align-items:center; gap:4px;">
+        <div style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); border-radius:6px; padding:7px 9px; margin-bottom:10px; font-size:11px; line-height:1.45; color:#cbd5e1;">
+          <div style="font-weight:700; color:var(--text-primary, #f1f5f9); margin-bottom:2px; display:flex; align-items:center; gap:4px;">
             <span data-i18n="video_multitab_hint_title">Gợi ý quay đa tab:</span>
           </div>
           <div data-i18n="video_multitab_hint_desc_html" data-i18n-html="true">
@@ -1058,42 +1068,42 @@
           </div>
           <div class="col form-group" style="margin-bottom:0;">
             <label style="font-size:10.5px; font-weight:600; color:var(--text-muted);" data-i18n="lbl_video_countdown">Đếm ngược:</label>
-            <select class="form-control" id="video-pref-countdown" style="font-size:11px; padding:4px 6px;">
-              <option value="0" data-i18n="opt_video_delay_0">Quay ngay (0s)</option>
-              <option value="3" data-i18n="opt_video_delay_3" selected>Đếm ngược 3s</option>
-              <option value="5" data-i18n="opt_video_delay_5">Đếm ngược 5s</option>
-            </select>
+              <select class="form-control" id="video-pref-countdown" style="font-size:11px; padding:4px 6px;">
+                <option value="0" data-i18n="opt_video_delay_0">Quay ngay (0s)</option>
+                <option value="3" data-i18n="opt_video_delay_3" selected>Đếm ngược 3s</option>
+                <option value="5" data-i18n="opt_video_delay_5">Đếm ngược 5s</option>
+              </select>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Teleprompter / Script Box -->
-      <div style="background:rgba(15,23,42,0.65); border:1px solid var(--card-border); border-radius:8px; padding:10px; margin-bottom:10px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <div style="font-size:11.5px; font-weight:700; color:var(--primary);" data-i18n="script_heading">Kịch bản quay (Teleprompter)</div>
-          <div style="display:flex; gap:6px;">
-            <button id="btn-save-prompter" class="btn-text-small" title="Lưu kịch bản" style="padding:2px 6px; font-size:10.5px; color:#10b981; background:rgba(16,185,129,0.1); border-radius:4px; cursor:pointer; border:1px solid rgba(16,185,129,0.2);">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:2px; vertical-align:middle; position:relative; top:-1px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-              <span data-i18n="script_save">Lưu</span>
-            </button>
-            <button id="btn-popout-prompter" class="btn-text-small" title="Mở thành cửa sổ nổi độc lập để tàng hình khi quay Window" style="padding:2px 6px; font-size:10.5px; color:#38bdf8; background:rgba(56,189,248,0.1); border-radius:4px; cursor:pointer; border:1px solid rgba(56,189,248,0.2);">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:3px; vertical-align:middle; position:relative; top:-1px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-              <span data-i18n="script_popout">Cửa sổ nổi</span>
-            </button>
+        <!-- Teleprompter / Script Box -->
+        <div style="background:rgba(15,23,42,0.65); border:1px solid var(--card-border); border-radius:8px; padding:10px; margin-bottom:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div style="font-size:11.5px; font-weight:700; color:var(--text-primary, #f1f5f9);" data-i18n="script_heading">Kịch bản quay (Teleprompter)</div>
+            <div style="display:flex; gap:6px;">
+              <button id="btn-save-prompter" class="btn-text-small" title="Lưu kịch bản" data-i18n-title="tip_save_prompter" style="padding:2px 6px; font-size:10.5px; color:#cbd5e1; background:rgba(255,255,255,0.08); border-radius:4px; cursor:pointer; border:1px solid rgba(255,255,255,0.16);">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:2px; vertical-align:middle; position:relative; top:-1px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                <span data-i18n="script_save">Lưu</span>
+              </button>
+              <button id="btn-popout-prompter" class="btn-text-small" title="Mở thành cửa sổ nổi độc lập để tàng hình khi quay Window" data-i18n-title="tip_popout_prompter" style="padding:2px 6px; font-size:10.5px; color:#cbd5e1; background:rgba(255,255,255,0.08); border-radius:4px; cursor:pointer; border:1px solid rgba(255,255,255,0.16);">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:3px; vertical-align:middle; position:relative; top:-1px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                <span data-i18n="script_popout">Cửa sổ nổi</span>
+              </button>
+            </div>
           </div>
+          <textarea id="video-script-text" class="form-control" style="font-size:11.5px; line-height:1.5; min-height:80px; resize:vertical; background:rgba(0,0,0,0.3); border-color:rgba(255,255,255,0.1);" placeholder="Nhập hoặc dán kịch bản thuyết minh vào đây để đọc trong lúc quay video..." data-i18n-placeholder="script_placeholder"></textarea>
         </div>
-        <textarea id="video-script-text" class="form-control" style="font-size:11.5px; line-height:1.5; min-height:80px; resize:vertical; background:rgba(0,0,0,0.3); border-color:rgba(255,255,255,0.1);" placeholder="Nhập hoặc dán kịch bản thuyết minh vào đây để đọc trong lúc quay video..." data-i18n-placeholder="script_placeholder"></textarea>
-      </div>
 
-      <!-- Start recording button -->
+        <!-- Start recording button -->
       <button class="btn btn-primary" id="btn-start-record" style="width:100%; padding:9px;">
         <span data-i18n="btn_start_record">Bắt đầu quay video</span>
       </button>
 
       <!-- Active recording status bar -->
-      <div id="recording-active-bar" style="display:none; margin-top:8px; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.35); border-radius:8px; padding:10px;">
+      <div id="recording-active-bar" style="display:none; margin-top:8px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.2); border-radius:8px; padding:10px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <div style="display:flex; align-items:center; gap:6px; font-weight:700; color:#f87171; font-size:12px;">
+          <div style="display:flex; align-items:center; gap:6px; font-weight:700; color:var(--text-primary, #f1f5f9); font-size:12px;">
             <span class="record-pulse-dot"></span>
             <span data-i18n="lbl_recording_active">ĐANG QUAY:</span>
             <span id="record-timer" style="font-family:ui-monospace, monospace; color:#ffffff; font-size:13px;">00:00</span>
@@ -1101,10 +1111,10 @@
           <span id="record-audio-status" style="font-size:10.5px; color:#cbd5e1;" data-i18n="lbl_no_audio">(Không âm thanh)</span>
         </div>
         <div class="actions-row" style="margin-bottom:0;">
-          <button class="btn btn-success" id="btn-stop-record" style="flex:2; padding:7px;">
+          <button class="btn btn-primary" id="btn-stop-record" style="flex:2; padding:7px;">
             <span data-i18n="btn_stop_record">Dừng &amp; Lưu video</span>
           </button>
-          <button class="btn btn-danger" id="btn-cancel-record" style="flex:1; padding:7px;">
+          <button class="btn btn-secondary" id="btn-cancel-record" style="flex:1; padding:7px;">
             <span data-i18n="btn_cancel_record">✕ Hủy</span>
           </button>
         </div>
@@ -1118,7 +1128,7 @@
           Thời lượng: 00:00 • Dung lượng: 0 MB
         </div>
         <div class="actions-row" style="margin-bottom:0;">
-          <button class="btn btn-success" id="btn-download-video" style="flex:2; padding:8px;">
+          <button class="btn btn-primary" id="btn-download-video" style="flex:2; padding:8px;">
             <span data-i18n="btn_download_video">Tải Video (.webm)</span>
           </button>
           <button class="btn btn-secondary" id="btn-discard-video" style="flex:1; padding:8px;">
@@ -1131,14 +1141,14 @@
 
   <!-- High Visibility Animated Countdown Modal Overlay for Video Recording -->
   <div id="video-countdown-overlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(15,23,42,0.96); backdrop-filter:blur(10px); z-index:9999; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px; box-sizing:border-box;">
-    <div style="font-size:12px; font-weight:700; color:#38bdf8; text-transform:uppercase; letter-spacing:1.5px; margin-bottom:12px;">
+    <div style="font-size:12px; font-weight:700; color:var(--text-primary, #f1f5f9); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:12px;">
       <span data-i18n="overlay_countdown_title">Chuẩn bị quay video</span>
     </div>
-    <div id="sidebar-countdown-number" style="font-size:76px; font-weight:900; line-height:1; color:#38bdf8; text-shadow:0 0 35px rgba(56,189,248,0.85); margin-bottom:14px; animation:countdownZoom 1s infinite alternate ease-in-out; font-family:ui-monospace, monospace;">
+    <div id="sidebar-countdown-number" style="font-size:76px; font-weight:900; line-height:1; color:#ffffff; text-shadow:0 0 35px rgba(255,255,255,0.7); margin-bottom:14px; animation:countdownZoom 1s infinite alternate ease-in-out; font-family:ui-monospace, monospace;">
       3
     </div>
     <div id="sidebar-countdown-sub" style="font-size:11.5px; color:#cbd5e1; margin-bottom:18px; max-width:240px; line-height:1.45;" data-i18n="overlay_countdown_desc">Đã nhận luồng quay! Bạn có thể chuyển sang tab hoặc trang web cần thao tác ngay bây giờ.</div>
-    <button class="btn btn-danger" id="btn-cancel-countdown" style="padding:6px 16px; font-size:11.5px;">
+    <button class="btn btn-secondary" id="btn-cancel-countdown" style="padding:6px 16px; font-size:11.5px;">
       <span data-i18n="btn_cancel_countdown">✕ Hủy quay</span>
     </button>
   </div>
@@ -1167,7 +1177,7 @@
     </div>
 
     <!-- Modal Style Switch Tabs -->
-    <div class="sub-tabs" style="margin-bottom:8px;">
+    <div class="sub-tabs" data-scroll="horizontal" style="margin-bottom:8px;">
       <button class="sub-tab-btn active" id="modal-tab-ieee" data-modaltab="ieee">IEEE</button>
       <button class="sub-tab-btn" id="modal-tab-apa" data-modaltab="apa">APA 7th</button>
       <button class="sub-tab-btn" id="modal-tab-harvard" data-modaltab="harvard">Harvard</button>
@@ -1357,7 +1367,7 @@
       <div class="rule-card" style="border-color:rgba(245,158,11,0.35); background:rgba(245,158,11,0.06);">
         <div class="rule-card-title" style="color:#f59e0b;" data-i18n="trust_card4_title">⚖️ 4. Thông Tin Bản Quyền &amp; Kỹ Thuật</div>
         <div class="rule-card-body" data-i18n="trust_card4_body_html" data-i18n-html="true">
-          • <b>Phiên bản:</b> ScholarFlow v2.4.5_beta<br>
+          • <b>Phiên bản:</b> ScholarFlow v2.5.0_beta<br>
           • <b>Kiến trúc:</b> Manifest V3 (Chromium 114+ &amp; Firefox 109+ Native Gecko)<br>
           • <b>Bản quyền:</b> Bản quyền phần mềm thuộc về Minh Thuận<br>
           • <b>Chính sách bảo mật:</b> <a href="privacy.html" target="_blank" style="color:#38bdf8; text-decoration:underline;">Xem toàn văn Chính Sách Quyền Riêng Tư (Privacy Policy)</a>
@@ -1367,63 +1377,76 @@
   </div>
   <!-- ══════════════════════ TAB 4: COOKIE MANAGER ══════════════════════ -->
   <div id="tab-cookie" class="tab-section">
-    <div class="feature-card">
-      <div class="feature-title" data-i18n="cookie_heading">Quản lý Phiên đăng nhập (Cookies)</div>
-      <div class="feature-desc" style="margin-bottom:10px;" data-i18n="cookie_desc">Xuất toàn bộ cookie của trang hiện tại để sử dụng trên máy khác, hoặc nạp cookie có sẵn để vượt qua tường lửa và màn hình đăng nhập.</div>
-      
-      <textarea id="cookie-raw-text" class="cookie-textarea" style="width:100%;height:72px;margin-bottom:10px;font-family:ui-monospace,Consolas,monospace;font-size:10.5px;resize:vertical;background:rgba(15,23,42,0.7);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);border-radius:8px;padding:8px 10px;outline:none;line-height:1.4;box-shadow:inset 0 2px 4px rgba(0,0,0,0.25);" placeholder="Dán chuỗi Cookie (key=value;...) vào đây để nạp, hoặc bấm Copy để lấy Cookie trang hiện tại..." data-i18n-placeholder="cookie_raw_placeholder"></textarea>
-      
-      <div style="display:flex; gap:8px; margin-bottom:8px;">
-        <button class="btn btn-secondary" id="btn-copy-raw-cookie" style="flex:1; padding:8px 4px; font-size:11px;" title="Copy toàn bộ Cookie dưới dạng chuỗi Text" data-i18n-title="tip_copy_raw_cookie">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-          <span data-i18n="btn_copy_raw_cookie">Copy dạng Chuỗi</span>
-        </button>
-        <button class="btn btn-primary" id="btn-import-raw-cookie" style="flex:1; padding:8px 4px; font-size:11px;" title="Nhập Cookie từ chuỗi Text bên trên" data-i18n-title="tip_import_raw_cookie">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-          <span data-i18n="btn_import_raw_cookie">Nhập từ Chuỗi</span>
-        </button>
+    <!-- Current Page Domain Tracking Hero Card -->
+    <div class="cookie-hero">
+      <div class="cookie-hero-domain">
+        <span class="cookie-hero-domain-lbl" data-i18n="cookie_lbl_current_domain">Trang web đang đứng:</span>
+        <span id="cookie-current-domain" class="cookie-hero-domain-val">Đang xác định...</span>
       </div>
+      <div class="cookie-hero-count">
+        <span class="cookie-hero-count-lbl" data-i18n="cookie_lbl_total">Số Cookies:</span>
+        <span id="cookie-total-count" class="cookie-hero-count-val">0</span>
+      </div>
+    </div>
 
-      <div style="display:flex; gap:8px;">
-        <button class="btn btn-secondary" id="btn-export-cookie" style="flex:1; padding:8px 4px; font-size:11px; opacity:0.8;" title="Xuất toàn bộ Cookie của trang hiện tại (JSON)" data-i18n-title="tip_export_cookie">
-          <span data-i18n="btn_export_cookie">Xuất (.json)</span>
-        </button>
-        <button class="btn btn-secondary" id="btn-import-cookie" style="flex:1; padding:8px 4px; font-size:11px; opacity:0.8;" title="Nhập Cookie cho trang hiện tại (JSON)" data-i18n-title="tip_import_cookie">
-          <span data-i18n="btn_import_cookie">Nhập (.json)</span>
-        </button>
-      </div>
+    <!-- Raw Cookie String Textarea -->
+    <textarea id="cookie-raw-text" class="cookie-textarea" placeholder="Dán chuỗi Cookie (key=value;...) vào đây để nạp, hoặc bấm Copy để lấy Cookie trang hiện tại..." data-i18n-placeholder="cookie_raw_placeholder"></textarea>
 
-      <div style="display:flex; gap:8px; margin-bottom:8px;">
-        <button class="btn btn-secondary" id="btn-export-netscape" style="flex:1; padding:8px 4px; font-size:11px; opacity:0.8;" title="Xuất Cookie dạng Netscape cookies.txt (dùng cho curl/wget)" data-i18n-title="tip_export_netscape">
-          <span data-i18n="btn_export_netscape">Xuất Netscape</span>
-        </button>
-        <button class="btn btn-secondary" id="btn-refresh-cookie-list" style="flex:1; padding:8px 4px; font-size:11px; opacity:0.8;" title="Tải lại danh sách cookie" data-i18n-title="tip_refresh_cookie_list">
-          <span data-i18n="btn_refresh_cookie_list">🔄 Làm mới</span>
-        </button>
-      </div>
+    <!-- Quick Actions -->
+    <div class="cookie-actions-grid">
+      <button class="cookie-action-btn" id="btn-copy-raw-cookie" title="Copy toàn bộ Cookie dưới dạng chuỗi Text" data-i18n-title="tip_copy_raw_cookie">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        <span data-i18n="btn_copy_raw_cookie">Copy dạng Chuỗi</span>
+      </button>
+      <button class="cookie-action-btn is-primary" id="btn-import-raw-cookie" title="Nhập Cookie từ chuỗi Text bên trên" data-i18n-title="tip_import_raw_cookie">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+        <span data-i18n="btn_import_raw_cookie">Nhập từ Chuỗi</span>
+      </button>
+      <button class="cookie-action-btn" id="btn-export-cookie" title="Xuất toàn bộ Cookie của trang hiện tại (JSON)" data-i18n-title="tip_export_cookie">
+        <span data-i18n="btn_export_cookie">Xuất (.json)</span>
+      </button>
+      <button class="cookie-action-btn" id="btn-import-cookie" title="Nhập Cookie cho trang hiện tại (JSON)" data-i18n-title="tip_import_cookie">
+        <span data-i18n="btn_import_cookie">Nhập (.json)</span>
+      </button>
+      <button class="cookie-action-btn" id="btn-export-netscape" title="Xuất Cookie dạng Netscape cookies.txt (dùng cho curl/wget)" data-i18n-title="tip_export_netscape">
+        <span data-i18n="btn_export_netscape">Xuất Netscape</span>
+      </button>
+      <button class="cookie-action-btn" id="btn-refresh-cookie-list" title="Tải lại danh sách cookie" data-i18n-title="tip_refresh_cookie_list">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+        <span data-i18n="btn_refresh_cookie_list">Làm mới</span>
+      </button>
+    </div>
 
-      <div style="margin-top:10px; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
-        <div class="feature-title" style="font-size:12px; margin-bottom:6px;" data-i18n="cookie_list_title">Danh sách cookie chi tiết</div>
-        <div id="cookie-list" style="max-height:220px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;"></div>
-      </div>
+    <!-- Cookie Detail List Section -->
+    <div class="cookie-section-head">
+      <span class="cookie-section-icon">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+      </span>
+      <span class="cookie-section-title" data-i18n="cookie_list_title">Danh sách cookie chi tiết</span>
+    </div>
+    <div id="cookie-list"></div>
 
-      <div style="margin-top:10px; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
-        <div class="feature-title" style="font-size:12px; margin-bottom:6px;" data-i18n="cookie_profile_title">Hồ sơ cookie (Profile)</div>
-        <div style="display:flex; gap:6px; margin-bottom:6px;">
-          <input type="text" id="cookie-profile-name" class="form-control" style="flex:1; font-size:11px; padding:6px;" placeholder="Tên hồ sơ..." data-i18n-placeholder="cookie_profile_placeholder" autocomplete="off">
-          <button class="btn btn-primary" id="btn-save-cookie-profile" style="padding:6px 10px; font-size:11px;" data-i18n="btn_save_profile">Lưu</button>
-        </div>
-        <div id="cookie-profile-list" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
-      </div>
+    <!-- Cookie Profiles Section -->
+    <div class="cookie-section-head">
+      <span class="cookie-section-icon">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+      </span>
+      <span class="cookie-section-title" data-i18n="cookie_profile_title">Hồ sơ cookie (Profile)</span>
+    </div>
+    <div style="display:flex; gap:6px; margin-bottom:8px;">
+      <input type="text" id="cookie-profile-name" class="tabmgr-search-input" style="flex:1;" placeholder="Tên hồ sơ..." data-i18n-placeholder="cookie_profile_placeholder" autocomplete="off">
+      <button class="cookie-action-btn is-primary" id="btn-save-cookie-profile" data-i18n="btn_save_profile">Lưu</button>
+    </div>
+    <div id="cookie-profile-list" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
 
-      <div style="margin-top:12px; border-top:1px solid rgba(255,255,255,0.1); padding-top:12px;">
-        <div class="feature-title" style="color:#ef4444;" data-i18n="cookie_clear_heading">Vượt Tường Lửa (Bypass Paywall)</div>
-        <div class="feature-desc" style="margin-bottom:10px;" data-i18n="cookie_clear_desc">Xóa sạch toàn bộ Cookie, Cache và bộ nhớ cục bộ của trang web này để khởi tạo lại phiên truy cập mới.</div>
-        <button class="btn btn-danger" id="btn-clear-site-data" style="width:100%; padding:8px 4px; font-size:11px;" title="Xóa Cookie, Cache, LocalStorage và Tải lại trang">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-          <span data-i18n="btn_clear_site_data">Xóa Dấu Vết & Tải Lại Trang</span>
-        </button>
-      </div>
+    <!-- Bypass Paywall / Clear Site Data -->
+    <div class="cookie-danger-card">
+      <div class="cookie-danger-title" data-i18n="cookie_clear_heading">Vượt Tường Lửa (Bypass Paywall)</div>
+      <div class="cookie-danger-desc" data-i18n="cookie_clear_desc">Xóa sạch toàn bộ Cookie, Cache và bộ nhớ cục bộ của trang web này để khởi tạo lại phiên truy cập mới.</div>
+      <button class="btn btn-danger" id="btn-clear-site-data" style="width:100%; padding:7px 10px; font-size:11px;" title="Xóa Cookie, Cache, LocalStorage và Tải lại trang">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+        <span data-i18n="btn_clear_site_data">Xóa Dấu Vết & Tải Lại Trang</span>
+      </button>
     </div>
   </div>
 
@@ -1453,23 +1476,23 @@
   <div id="tab-todo" class="tab-section">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
       <div class="feature-title" style="margin-bottom:0;" data-i18n="todo_title">Todo List</div>
-      <span id="todo-badge-stats" style="font-size:11px; font-weight:700; color:#38bdf8; background:rgba(56,189,248,0.12); padding:2px 8px; border-radius:12px; border:1px solid rgba(56,189,248,0.25);">0/0</span>
+      <span id="todo-badge-stats" style="font-size:11px; font-weight:600; color:var(--text-primary, #f1f5f9); background:rgba(255,255,255,0.06); padding:2px 8px; border-radius:12px; border:1px solid rgba(255,255,255,0.12);">0/0</span>
     </div>
     <p style="color:var(--text-muted); font-size:11.5px; margin-bottom:8px; line-height:1.4;" data-i18n="todo_desc">Ghi chú nhanh các công việc cần làm.</p>
 
     <!-- Progress Bar -->
-    <div style="background:rgba(15,23,42,0.6); border-radius:6px; height:6px; overflow:hidden; margin-bottom:12px; border:1px solid rgba(255,255,255,0.06);">
-      <div id="todo-progress-bar" style="background:linear-gradient(90deg, #0ea5e9, #10b981); height:100%; width:0%; transition:width 0.3s ease;"></div>
+    <div style="background:rgba(15,23,42,0.6); border-radius:6px; height:6px; overflow:hidden; margin-bottom:12px; border:1px solid rgba(255,255,255,0.08);">
+      <div id="todo-progress-bar" style="background:rgba(255,255,255,0.85); height:100%; width:0%; transition:width 0.3s ease;"></div>
     </div>
 
     <!-- Add Task Card -->
-    <div class="feature-card" style="padding:10px 12px; margin-bottom:12px; background:rgba(15,23,42,0.5); border:1px solid rgba(56,189,248,0.2); border-radius:10px;">
+    <div class="feature-card" style="padding:10px 12px; margin-bottom:12px; background:rgba(15,23,42,0.5); border:1px solid rgba(255,255,255,0.12); border-radius:10px;">
       <div style="display:flex; gap:6px; margin-bottom:8px;">
         <input type="text" id="todo-input" class="form-control" placeholder="Thêm việc mới..." data-i18n-placeholder="todo_placeholder" style="flex:1; font-size:13px; padding:7px 10px;">
-        <select id="todo-priority-select" class="form-control" style="width:110px; font-size:11.5px; padding:6px 6px; cursor:pointer;">
-          <option value="normal" data-i18n="todo_priority_normal">🟡 Vừa</option>
-          <option value="urgent" data-i18n="todo_priority_urgent">🔴 Gấp</option>
-          <option value="low" data-i18n="todo_priority_low">🟢 Thấp</option>
+        <select id="todo-priority-select" class="form-control" style="width:105px; font-size:11.5px; padding:6px 6px; cursor:pointer;">
+          <option value="normal" data-i18n="todo_priority_normal">Vừa</option>
+          <option value="urgent" data-i18n="todo_priority_urgent">Gấp</option>
+          <option value="low" data-i18n="todo_priority_low">Thấp</option>
         </select>
         <button id="btn-todo-add" class="btn btn-primary" style="padding:7px 12px; font-size:12px; font-weight:700;" data-i18n="todo_btn_add">Thêm</button>
       </div>
@@ -1486,9 +1509,18 @@
         <button type="button" class="btn-text-small todo-filter-btn" data-filter="done" id="filter-done" data-i18n="todo_filter_done">Đã xong</button>
       </div>
       <div style="display:flex; gap:6px;">
-        <button type="button" class="todo-tool-btn" id="btn-todo-copy-all" title="Sao chép toàn bộ danh sách" data-i18n="todo_btn_copy_all">📋 Copy</button>
-        <button type="button" class="todo-tool-btn" id="btn-todo-export" title="Xuất file văn bản" data-i18n="todo_btn_export">📥 Xuất TXT</button>
-        <button type="button" class="todo-tool-btn todo-tool-btn-danger" id="btn-todo-clear-done" title="Dọn dẹp các mục đã hoàn thành" data-i18n="todo_btn_clear_done">🧹 Dọn việc xong</button>
+        <button type="button" class="todo-tool-btn" id="btn-todo-copy-all" title="Sao chép toàn bộ danh sách">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+          <span data-i18n="todo_btn_copy_all">Copy</span>
+        </button>
+        <button type="button" class="todo-tool-btn" id="btn-todo-export" title="Xuất file văn bản">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          <span data-i18n="todo_btn_export">Xuất TXT</span>
+        </button>
+        <button type="button" class="todo-tool-btn todo-tool-btn-danger" id="btn-todo-clear-done" title="Dọn dẹp các mục đã hoàn thành">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          <span data-i18n="todo_btn_clear_done">Dọn việc xong</span>
+        </button>
       </div>
     </div>
 
@@ -1501,17 +1533,20 @@
   <!-- ══════════════════════ TAB 7: POMODORO RESEARCH ══════════════════════ -->
   <div id="tab-pomo" class="tab-section">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
-      <div class="feature-title" style="margin-bottom:0;">🍅 <span data-i18n="pm_heading">Pomodoro nghiên cứu</span></div>
-      <span id="pm-today-stats" style="font-size:11px; font-weight:700; color:#10b981; background:rgba(16,185,129,0.12); padding:2px 8px; border-radius:12px; border:1px solid rgba(16,185,129,0.25);"></span>
+      <div class="feature-title" style="margin-bottom:0; display:flex; align-items:center; gap:6px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#94a3b8;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        <span data-i18n="pm_heading">Pomodoro nghiên cứu</span>
+      </div>
+      <span id="pm-today-stats" style="font-size:11px; font-weight:700; color:#cbd5e1; background:rgba(255,255,255,0.08); padding:2px 8px; border-radius:12px; border:1px solid rgba(255,255,255,0.15);"></span>
     </div>
     <p style="color:var(--text-muted); font-size:11.5px; margin-bottom:10px; line-height:1.5;" data-i18n="pm_desc">Tập trung sâu 25-50 phút, nghỉ ngắn 5 phút và nghỉ dài sau mỗi 4 lượt. Hoàn thành phiên được tự ghi nhật ký vào to-do.</p>
 
     <!-- Timer -->
-    <div class="feature-card" style="padding:14px; margin-bottom:12px; background:linear-gradient(150deg, rgba(249,115,22,0.14), rgba(15,23,42,0.5) 55%); border:1px solid rgba(249,115,22,0.35); border-radius:14px;">
+    <div class="feature-card" style="padding:14px; margin-bottom:12px; background:rgba(15,23,42,0.5); border:1px solid var(--card-border); border-radius:14px;">
       <div style="display:flex; align-items:center; gap:14px;">
         <svg id="pm-ring" width="112" height="112" viewBox="0 0 112 112" style="flex-shrink:0;">
           <circle cx="56" cy="56" r="49" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="8"/>
-          <circle id="pm-ring-fg" cx="56" cy="56" r="49" fill="none" stroke="#f97316" stroke-width="8" stroke-linecap="round" stroke-dasharray="307.9" stroke-dashoffset="0" transform="rotate(-90 56 56)"/>
+          <circle id="pm-ring-fg" cx="56" cy="56" r="49" fill="none" stroke="#94a3b8" stroke-width="8" stroke-linecap="round" stroke-dasharray="307.9" stroke-dashoffset="0" transform="rotate(-90 56 56)"/>
         </svg>
         <div style="flex:1; text-align:center;">
           <div id="pm-time" style="font-size:35px; font-weight:800; color:#f8fafc; font-variant-numeric:tabular-nums; letter-spacing:0.03em;">25:00</div>
@@ -1520,22 +1555,22 @@
         </div>
       </div>
       <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:center; align-items:center; margin-top:12px;">
-        <button id="pm-preset-focus" class="btn-text-small" data-i18n="pm_focus" style="padding:4px 10px; font-size:11px; color:#f97316; background:rgba(249,115,22,0.12); border-radius:6px; cursor:pointer; border:1px solid rgba(249,115,22,0.35);">25 phút</button>
-        <button id="pm-preset-long" class="btn-text-small" data-i18n="pm_long" style="padding:4px 10px; font-size:11px; color:#8b5cf6; background:rgba(139,92,246,0.12); border-radius:6px; cursor:pointer; border:1px solid rgba(139,92,246,0.35);">50 phút</button>
-        <button id="pm-preset-short" class="btn-text-small" data-i18n="pm_short" style="padding:4px 10px; font-size:11px; color:#10b981; background:rgba(16,185,129,0.12); border-radius:6px; cursor:pointer; border:1px solid rgba(16,185,129,0.35);">5 phút</button>
+        <button id="pm-preset-focus" class="btn-text-small" data-i18n="pm_focus" style="padding:4px 10px; font-size:11px; color:#f1f5f9; background:rgba(255,255,255,0.08); border-radius:6px; cursor:pointer; border:1px solid rgba(255,255,255,0.16);">25 phút</button>
+        <button id="pm-preset-long" class="btn-text-small" data-i18n="pm_long" style="padding:4px 10px; font-size:11px; color:#cbd5e1; background:rgba(255,255,255,0.05); border-radius:6px; cursor:pointer; border:1px solid rgba(255,255,255,0.12);">50 phút</button>
+        <button id="pm-preset-short" class="btn-text-small" data-i18n="pm_short" style="padding:4px 10px; font-size:11px; color:#cbd5e1; background:rgba(255,255,255,0.05); border-radius:6px; cursor:pointer; border:1px solid rgba(255,255,255,0.12);">5 phút</button>
         <div class="pm-stepper">
           <button type="button" data-step-for="pm-focus-custom" data-step-delta="-5" data-i18n-aria="pm_step_dec" aria-label="Giảm">−</button>
           <input type="number" id="pm-focus-custom" min="1" max="180" value="25">
           <button type="button" data-step-for="pm-focus-custom" data-step-delta="5" data-i18n-aria="pm_step_inc" aria-label="Tăng">+</button>
         </div>
-        <button id="btn-pm-apply-custom" class="btn-text-small" data-i18n="pm_btn_apply" style="padding:4px 10px; font-size:11px; color:#fbbf24; background:rgba(245,158,11,0.12); border-radius:6px; cursor:pointer; border:1px solid rgba(245,158,11,0.35);">Áp dụng</button>
+        <button id="btn-pm-apply-custom" class="btn-text-small" data-i18n="pm_btn_apply" style="padding:4px 10px; font-size:11px; color:#cbd5e1; background:rgba(255,255,255,0.05); border-radius:6px; cursor:pointer; border:1px solid rgba(255,255,255,0.12);">Áp dụng</button>
       </div>
       <div style="display:flex; gap:6px; margin-top:10px;">
-        <button id="btn-pm-toggle" class="btn btn-primary" style="flex:1; padding:9px; font-size:13px; font-weight:700;">▶ <span data-i18n="pm_start">Bắt đầu</span></button>
-        <button id="btn-pm-reset" class="btn btn-secondary" style="flex:1; padding:9px; font-size:13px;">↺ <span data-i18n="pm_reset">Đặt lại</span></button>
-        <button id="btn-pm-popout" class="btn btn-secondary" style="flex:1; padding:9px; font-size:13px;">⛶ <span data-i18n="pm_popout">Cửa sổ nổi</span></button>
+        <button id="btn-pm-toggle" class="btn btn-primary" style="flex:1; padding:9px; font-size:13px; font-weight:700;"><span data-i18n="pm_start">Bắt đầu</span></button>
+        <button id="btn-pm-reset" class="btn btn-secondary" style="flex:1; padding:9px; font-size:13px;"><span data-i18n="pm_reset">Đặt lại</span></button>
+        <button id="btn-pm-popout" class="btn btn-secondary" style="flex:1; padding:9px; font-size:13px;"><span data-i18n="pm_popout">Cửa sổ nổi</span></button>
       </div>
-      <div id="pm-note" style="display:none; margin-top:10px; background:rgba(0,0,0,0.25); border:1px solid rgba(74,222,128,0.4); border-radius:10px; padding:9px; font-size:12.5px; line-height:1.5;"></div>
+      <div id="pm-note" style="display:none; margin-top:10px; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:9px; font-size:12.5px; line-height:1.5;"></div>
       <div class="pm-popout-row pm-music-row" style="margin-top:10px;">
         <select id="pm-music-scene" class="pm-select" style="font-size:11px; padding:4px 24px 4px 6px; background-color:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8fafc; cursor:pointer;">
           <option value="lofi" data-i18n="pm_music_lofi">Lofi nhẹ nhàng</option>
@@ -1543,24 +1578,24 @@
           <option value="chill" data-i18n="pm_music_chill">Chill / thư giãn</option>
           <option value="piano" data-i18n="pm_music_piano">Piano</option>
         </select>
-        <button id="btn-pm-music-open" type="button" data-i18n="pm_music_open">▶ Phát nhạc</button>
-        <button id="btn-pm-music-stop" type="button" data-i18n="pm_music_stop">■ Dừng nhạc</button>
-        <span class="pm-music-auto-note" data-i18n="pm_music_auto">🎵 Tự dừng khi hết giờ nghỉ</span>
+        <button id="btn-pm-music-open" type="button" data-i18n="pm_music_open">Phát nhạc</button>
+        <button id="btn-pm-music-stop" type="button" data-i18n="pm_music_stop">Dừng nhạc</button>
+        <span class="pm-music-auto-note" data-i18n="pm_music_auto">Tự dừng khi hết giờ nghỉ</span>
       </div>
     </div>
 
     <!-- Break plan calculator -->
-    <div class="feature-card" style="padding:12px 14px; margin-bottom:12px; background:rgba(15,23,42,0.5); border:1px solid rgba(56,189,248,0.25); border-radius:12px;">
-      <div style="font-size:12px; font-weight:700; color:#38bdf8; margin-bottom:3px; display:flex; align-items:center; gap:5px;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><path d="M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"></path></svg>
+    <div class="feature-card" style="padding:12px 14px; margin-bottom:12px; background:rgba(15,23,42,0.5); border:1px solid var(--card-border); border-radius:12px;">
+      <div style="font-size:12px; font-weight:700; color:#f1f5f9; margin-bottom:3px; display:flex; align-items:center; gap:5px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#94a3b8;"><rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><path d="M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"></path></svg>
         <span data-i18n="pm_plan_title">Kế hoạch ngắt nghỉ thông minh</span>
       </div>
       <p style="color:var(--text-muted); font-size:11px; margin-bottom:8px; line-height:1.5;" data-i18n="pm_plan_hint">Nhập tổng thời gian bạn có — công cụ sẽ tự phân bổ các lượt tập trung và thời gian nghỉ hợp lý.</p>
       <div class="pm-preset-row">
-        <button type="button" class="pm-preset-chip" id="pm-preset-deep" data-w="90" data-f="50" data-s="10" data-l="20" data-e="2" data-i18n="pm_preset_deep">🔥 Deep 90' · 50/10</button>
-        <button type="button" class="pm-preset-chip" id="pm-preset-sprint" data-w="120" data-f="25" data-s="5" data-l="15" data-e="4" data-i18n="pm_preset_sprint">⚡ Sprint 2H · 25/5</button>
-        <button type="button" class="pm-preset-chip" id="pm-preset-reading" data-w="60" data-f="45" data-s="8" data-l="15" data-e="4" data-i18n="pm_preset_reading">📖 Đọc 60' · 45/8</button>
-        <button type="button" class="pm-preset-chip" id="pm-preset-light" data-w="45" data-f="25" data-s="5" data-l="15" data-e="4" data-i18n="pm_preset_light">🌱 Nhẹ 45' · 25/5</button>
+        <button type="button" class="pm-preset-chip" id="pm-preset-deep" data-w="90" data-f="50" data-s="10" data-l="20" data-e="2" data-i18n="pm_preset_deep">Deep 90' · 50/10</button>
+        <button type="button" class="pm-preset-chip" id="pm-preset-sprint" data-w="120" data-f="25" data-s="5" data-l="15" data-e="4" data-i18n="pm_preset_sprint">Sprint 2H · 25/5</button>
+        <button type="button" class="pm-preset-chip" id="pm-preset-reading" data-w="60" data-f="45" data-s="8" data-l="15" data-e="4" data-i18n="pm_preset_reading">Đọc 60' · 45/8</button>
+        <button type="button" class="pm-preset-chip" id="pm-preset-light" data-w="45" data-f="25" data-s="5" data-l="15" data-e="4" data-i18n="pm_preset_light">Nhẹ 45' · 25/5</button>
       </div>
       <div class="pm-plan-grid">
         <div class="pm-plan-field">
@@ -1613,21 +1648,21 @@
         </div>
       </div>
       <div style="display:flex; justify-content:center;">
-        <button id="btn-pm-plan-calc" class="btn btn-primary" style="padding:6px 16px; font-size:11.5px; font-weight:700;" data-i18n="pm_plan_btn">🧮 Tính kế hoạch</button>
+        <button id="btn-pm-plan-calc" class="btn btn-primary" style="padding:6px 16px; font-size:11.5px; font-weight:700;" data-i18n="pm_plan_btn">Tính kế hoạch</button>
       </div>
-      <div id="pm-plan-result" style="display:none; margin-top:10px; background:rgba(0,0,0,0.25); border:1px solid rgba(56,189,248,0.3); border-radius:10px; padding:10px;">
+      <div id="pm-plan-result" style="display:none; margin-top:10px; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:10px;">
         <div id="pm-plan-summary" style="font-size:12px; font-weight:700; color:#f8fafc; line-height:1.5; margin-bottom:8px;"></div>
         <div id="pm-plan-timeline" style="display:flex; gap:5px; flex-wrap:wrap; margin-bottom:8px;"></div>
         <div id="pm-plan-leftover" style="font-size:11px; color:#94a3b8; margin-bottom:8px;"></div>
-        <div id="pm-plan-endclock" style="font-size:11px; color:#fbbf24; margin-bottom:8px; display:none;"></div>
-        <button id="btn-pm-plan-apply" class="btn-text-small" data-i18n="pm_plan_apply" style="padding:4px 12px; font-size:11.5px; color:#0f172a; background:#38bdf8; border-radius:6px; cursor:pointer; border:none; font-weight:700;">▶ Dùng kế hoạch này</button>
+        <div id="pm-plan-endclock" style="font-size:11px; color:#cbd5e1; margin-bottom:8px; display:none;"></div>
+        <button id="btn-pm-plan-apply" class="btn-text-small" data-i18n="pm_plan_apply" style="padding:4px 12px; font-size:11.5px; color:#0b1220; background:#f1f5f9; border-radius:6px; cursor:pointer; border:none; font-weight:700;">Dùng kế hoạch này</button>
       </div>
     </div>
 
     <!-- 7-day stats -->
     <div class="feature-card" style="padding:12px 14px; background:rgba(15,23,42,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:12px;">
-      <div style="font-size:12px; font-weight:700; color:#fbbf24; margin-bottom:10px; display:flex; align-items:center; gap:5px;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+      <div style="font-size:12px; font-weight:700; color:#f1f5f9; margin-bottom:10px; display:flex; align-items:center; gap:5px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#94a3b8;"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
         <span data-i18n="pm_week_title">Tổng kết 7 ngày gần nhất</span>
       </div>
       <div id="pm-week-bars" style="display:flex; align-items:flex-end; gap:8px; height:86px;"></div>
@@ -1754,63 +1789,101 @@
   </div>
 
   <div id="tab-tabmgr" class="tab-section">
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
-      <div class="feature-title" style="margin-bottom:0;" data-i18n="tabmgr_title">Tab Manager</div>
-      <span id="tabmgr-count-badge" style="font-size:11px; font-weight:700; color:#38bdf8; background:rgba(56,189,248,0.12); padding:2px 8px; border-radius:12px; border:1px solid rgba(56,189,248,0.25);">0</span>
+    <!-- Tab Manager Hero: RAM Optimizer & Tab Metrics -->
+    <div class="tabmgr-hero">
+      <div class="tabmgr-hero-top">
+        <div class="tabmgr-hero-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect></svg>
+          <span data-i18n="tabmgr_title">Tab Manager</span>
+        </div>
+        <div class="tabmgr-hero-stats">
+          <span class="tabmgr-stat-pill"><span data-i18n="tabmgr_lbl_total_tabs">Tổng tab</span>: <strong id="tabmgr-count-badge">0</strong></span>
+          <span class="tabmgr-stat-pill"><span data-i18n="tabmgr_lbl_hibernated">Đã tạm dừng</span>: <strong id="tabmgr-discard-count">0</strong></span>
+          <span class="tabmgr-stat-pill is-ram" id="tabmgr-ram-saved">~0 MB</span>
+        </div>
+      </div>
+      <div class="tabmgr-hero-actions">
+        <button id="btn-tabmgr-optimize-ram" class="tabmgr-opt-btn" title="Tạm dừng toàn bộ tab không hoạt động để giải phóng bộ nhớ RAM">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg>
+          <span data-i18n="tabmgr_btn_optimize_ram">Tối ưu RAM</span>
+        </button>
+        <button id="btn-tabmgr-close-dup" class="tabmgr-sub-btn" data-i18n="tabmgr_btn_close_dup">Đóng trùng</button>
+        <button id="btn-tabmgr-close-blank" class="tabmgr-sub-btn" data-i18n="tabmgr_btn_close_blank">Đóng tab rỗng</button>
+      </div>
     </div>
-    <p style="color:var(--text-muted); font-size:11.5px; margin-bottom:8px; line-height:1.4;" data-i18n="tabmgr_desc">Quản lý tab trên cả Firefox & Chromium — ghim, bookmark, đóng, nhân đôi.</p>
-    <div id="tabmgr-active-live" style="font-size:10px; color:#38bdf8; background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.15); border-radius:6px; padding:4px 8px; margin-bottom:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">--:--:--</div>
-    <div style="display:flex; gap:6px; margin-bottom:8px;">
-      <input type="text" id="tabmgr-search" class="form-control" placeholder="Tìm tab..." data-i18n-placeholder="tabmgr_search_ph" style="flex:1; font-size:11px; padding:5px 8px;">
-      <button id="btn-tabmgr-refresh" class="cal-tool-btn" title="Làm mới" data-i18n-title="tabmgr_btn_refresh">↻</button>
+
+    <!-- Active Tab Live Tracker Bar -->
+    <div id="tabmgr-active-live" class="tabmgr-card-url" style="font-size:10px; color:#94a3b8; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:4px 8px; margin-bottom:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">--:--:--</div>
+
+    <!-- Search & Filters -->
+    <div class="tabmgr-control-row">
+      <input type="text" id="tabmgr-search" class="tabmgr-search-input" placeholder="Tìm tab..." data-i18n-placeholder="tabmgr_search_ph">
+      <button id="btn-tabmgr-refresh" class="tabmgr-refresh-btn" title="Làm mới" data-i18n-title="tabmgr_btn_refresh">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+      </button>
     </div>
-    <div style="display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap; align-items:center;">
-      <select id="tabmgr-sort" class="form-control" style="width:130px; font-size:11px; padding:5px 6px;">
+    <div class="tabmgr-control-row" style="flex-wrap:wrap;">
+      <select id="tabmgr-sort" class="tabmgr-select" style="flex:1; min-width:110px;">
         <option value="title_asc" data-i18n="tabmgr_sort_title_asc">Tên A→Z</option>
         <option value="title_desc" data-i18n="tabmgr_sort_title_desc">Tên Z→A</option>
         <option value="domain" data-i18n="tabmgr_sort_domain">Theo domain</option>
         <option value="url_asc" data-i18n="tabmgr_sort_url">Theo URL</option>
       </select>
-      <select id="tabmgr-group-mode" class="form-control" style="width:130px; font-size:11px; padding:5px 6px;">
+      <select id="tabmgr-group-mode" class="tabmgr-select" style="flex:1; min-width:110px;">
         <option value="none" data-i18n="tabmgr_group_none">Không nhóm</option>
         <option value="domain" data-i18n="tabmgr_group_domain">Nhóm domain</option>
         <option value="function" data-i18n="tabmgr_group_function">Nhóm chức năng</option>
       </select>
-      <span style="margin-left:auto; font-size:10px; color:var(--text-muted);"><span id="tabmgr-domain-count">0</span> domain</span>
+      <span style="font-size:10.5px; color:#64748b; margin-left:auto;"><span id="tabmgr-domain-count">0</span> domain</span>
     </div>
-    <div style="display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap;">
-      <button id="btn-tabmgr-close-dup" class="btn-text-small" data-i18n="tabmgr_btn_close_dup">Đóng trùng</button>
-      <button id="btn-tabmgr-bookmark-all" class="btn-text-small" data-i18n="tabmgr_btn_bookmark_all">Bookmark tất cả</button>
-      <button id="btn-tabmgr-discard-all" class="btn-text-small" data-i18n="tabmgr_btn_discard_all">Tạm dừng</button>
-      <button id="btn-tabmgr-close-all" class="btn-text-small" style="color:#94a3b8; border-color:rgba(255,255,255,0.08);" data-i18n="tabmgr_btn_close_all">Đóng tất cả</button>
+
+    <!-- Batch Actions Grid -->
+    <div class="tabmgr-section-head">
+      <span class="tabmgr-section-icon">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+      </span>
+      <span class="tabmgr-section-title" data-i18n="tabmgr_group_actions">Tác vụ hàng loạt</span>
     </div>
-    <div style="display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap;">
-      <button id="btn-tabmgr-export-md" class="btn-text-small" data-i18n="tabmgr_btn_export_md">Xuất MD</button>
-      <button id="btn-tabmgr-export-txt" class="btn-text-small" data-i18n="tabmgr_btn_export_txt">Xuất TXT</button>
-      <button id="btn-tabmgr-group-browser" class="btn-text-small" style="background:rgba(56,189,248,0.08); border-color:rgba(56,189,248,0.18); color:#38bdf8;" data-i18n="tabmgr_btn_group_browser">Nhóm ở trình duyệt</button>
+    <div class="tabmgr-actions-grid">
+      <button id="btn-tabmgr-bookmark-all" class="tabmgr-chip-btn" data-i18n="tabmgr_btn_bookmark_all">Bookmark tất cả</button>
+      <button id="btn-tabmgr-discard-all" class="tabmgr-chip-btn" data-i18n="tabmgr_btn_discard_all">Tạm dừng tất cả</button>
+      <button id="btn-tabmgr-close-all" class="tabmgr-chip-btn" data-i18n="tabmgr_btn_close_all">Đóng tất cả</button>
+      <button id="btn-tabmgr-export-md" class="tabmgr-chip-btn" data-i18n="tabmgr_btn_export_md">Xuất MD</button>
+      <button id="btn-tabmgr-export-txt" class="tabmgr-chip-btn" data-i18n="tabmgr_btn_export_txt">Xuất TXT</button>
+      <button id="btn-tabmgr-group-browser" class="tabmgr-chip-btn" data-i18n="tabmgr_btn_group_browser">Nhóm ở trình duyệt</button>
     </div>
-    <div style="background:rgba(15,23,42,0.5); border:1px solid var(--card-border); border-radius:8px; padding:8px; margin-bottom:10px;">
-      <div style="font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:6px;" data-i18n="tabmgr_session_title">Phiên làm việc</div>
+
+    <!-- Sessions Section -->
+    <div class="tabmgr-session-card">
+      <div style="font-size:11px; font-weight:700; color:#94a3b8; margin-bottom:6px;" data-i18n="tabmgr_session_title">Phiên làm việc</div>
       <div style="display:flex; gap:6px; margin-bottom:6px;">
-        <input type="text" id="tabmgr-session-name" class="form-control" placeholder="Tên phiên..." data-i18n-placeholder="tabmgr_session_ph" style="flex:1; font-size:11px; padding:5px 8px;">
-        <button id="btn-tabmgr-save-session" class="btn-text-small" data-i18n="tabmgr_btn_save_session">Lưu</button>
+        <input type="text" id="tabmgr-session-name" class="tabmgr-search-input" placeholder="Tên phiên..." data-i18n-placeholder="tabmgr_session_ph">
+        <button id="btn-tabmgr-save-session" class="tabmgr-sub-btn" data-i18n="tabmgr_btn_save_session">Lưu</button>
       </div>
       <div id="tabmgr-session-list" style="display:flex; flex-direction:column; gap:6px;"></div>
     </div>
-    <div id="tabmgr-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+
+    <!-- Tab List Header & Container -->
+    <div class="tabmgr-section-head">
+      <span class="tabmgr-section-icon">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+      </span>
+      <span class="tabmgr-section-title" data-i18n="tabmgr_group_list">Danh sách tab</span>
+    </div>
+    <div id="tabmgr-list" style="display:flex; flex-direction:column; gap:6px;"></div>
   </div>
 
   <div id="tab-testhelper" class="tab-section">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
       <div class="feature-title" style="margin-bottom:0;" data-i18n="th_title">Test Helper PRO</div>
-      <span id="th-step-count" style="font-size:11px; font-weight:700; color:#38bdf8; background:rgba(56,189,248,0.12); padding:2px 8px; border-radius:12px; border:1px solid rgba(56,189,248,0.25);">0</span>
+      <span id="th-step-count" style="font-size:11px; font-weight:600; color:var(--text-primary, #f1f5f9); background:rgba(255,255,255,0.06); padding:2px 8px; border-radius:12px; border:1px solid rgba(255,255,255,0.12);">0</span>
     </div>
     <p style="color:var(--text-muted); font-size:11.5px; margin-bottom:8px; line-height:1.4;" data-i18n="th_desc">Record/replay, crawl, console, visual diff, link check, fuzz, a11y, perf — gom ảnh vào ZIP.</p>
     <div style="display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap;">
       <button id="btn-th-record" class="btn-text-small" data-i18n="th_btn_start_rec">Ghi</button>
       <button id="btn-th-replay" class="btn-text-small" data-i18n="th_btn_replay">Phát lại</button>
       <button id="btn-th-shot" class="btn-text-small" data-i18n="th_btn_shot">Chụp</button>
-      <button id="btn-th-zip" class="btn-text-small" style="background:rgba(56,189,248,0.08); border-color:rgba(56,189,248,0.18); color:#38bdf8;" data-i18n="th_btn_zip">Tải ZIP</button>
+      <button id="btn-th-zip" class="btn-text-small" style="background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.16); color:#cbd5e1;" data-i18n="th_btn_zip">Tải ZIP</button>
       <span style="margin-left:auto; font-size:10px; color:var(--text-muted);"><span id="th-shot-count">0</span> shots</span>
     </div>
     <div style="display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap;">
@@ -1819,7 +1892,7 @@
       <button id="btn-th-fuzz" class="btn-text-small" data-i18n="th_btn_fuzz">Fuzz</button>
       <button id="btn-th-a11y" class="btn-text-small" data-i18n="th_btn_a11y">A11y</button>
       <button id="btn-th-perf" class="btn-text-small" data-i18n="th_btn_perf">Perf</button>
-      <button id="btn-th-bug" class="btn-text-small" style="background:rgba(56,189,248,0.08); border-color:rgba(56,189,248,0.18); color:#38bdf8;" data-i18n="th_btn_bug">Bug Report</button>
+      <button id="btn-th-bug" class="btn-text-small" style="background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.16); color:#cbd5e1;" data-i18n="th_btn_bug">Bug Report</button>
     </div>
     <div style="display:flex; gap:6px; margin-bottom:8px;">
       <button id="btn-th-refresh-log" class="cal-tool-btn" data-i18n="th_btn_refresh_log">Làm mới log</button>
@@ -1845,7 +1918,7 @@
       </div>
       <div class="sec-quick-head">
         <span id="sec-host-badge" class="sec-host-badge">—</span>
-        <span id="sec-proto-badge" class="sec-pill">🔒 HTTPS</span>
+        <span id="sec-proto-badge" class="sec-pill">HTTPS</span>
       </div>
       <button type="button" id="btn-sec-quick-scan" class="sec-quick-btn">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
@@ -1971,7 +2044,7 @@
 
 
   <div id="tab-social" class="tab-section">
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
       <div class="feature-title" style="margin-bottom:0;" data-i18n="soc_title">Social Protection</div>
       <span style="font-size:10px; color:var(--text-muted);" id="soc-status"></span>
     </div>
@@ -1987,10 +2060,10 @@
     </div>
 
     <div id="soc-sub-protect" class="soc-subpanel active">
-      <div class="feature-card" style="padding:10px 12px; margin-bottom:8px; border-left:3px solid #1877f2;">
+      <div class="feature-card" style="padding:10px 12px; margin-bottom:8px; border-left:3px solid rgba(255,255,255,0.18);">
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="#1877f2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
-          <span class="feature-title" style="margin-bottom:0; color:#1877f2;" data-i18n="soc_fb_title">Facebook</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#94a3b8"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+          <span class="feature-title" style="margin-bottom:0; color:#f1f5f9;" data-i18n="soc_fb_title">Facebook</span>
         </div>
         <label class="switch-row" for="soc-fb-typing">
           <div class="switch-row-left">
@@ -2014,10 +2087,10 @@
           <span class="custom-switch"><input type="checkbox" id="soc-fb-online"><span class="switch-slider"></span></span>
         </label>
       </div>
-      <div class="feature-card" style="padding:10px 12px; margin-bottom:8px; border-left:3px solid #0068ff;">
+      <div class="feature-card" style="padding:10px 12px; margin-bottom:8px; border-left:3px solid rgba(255,255,255,0.18);">
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="#0068ff"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
-          <span class="feature-title" style="margin-bottom:0; color:#0068ff;" data-i18n="soc_zalo_title">Zalo</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#94a3b8"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+          <span class="feature-title" style="margin-bottom:0; color:#f1f5f9;" data-i18n="soc_zalo_title">Zalo</span>
         </div>
         <label class="switch-row" for="soc-zalo-typing">
           <div class="switch-row-left">
@@ -2041,10 +2114,10 @@
           <span class="custom-switch"><input type="checkbox" id="soc-zalo-online"><span class="switch-slider"></span></span>
         </label>
       </div>
-      <div class="feature-card" style="padding:10px 12px; margin-bottom:8px; border-left:3px solid #e4405f;">
+      <div class="feature-card" style="padding:10px 12px; margin-bottom:8px; border-left:3px solid rgba(255,255,255,0.18);">
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="#e4405f"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
-          <span class="feature-title" style="margin-bottom:0; color:#e4405f;" data-i18n="soc_ig_title">Instagram</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#94a3b8"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+          <span class="feature-title" style="margin-bottom:0; color:#f1f5f9;" data-i18n="soc_ig_title">Instagram</span>
         </div>
         <label class="switch-row" for="soc-ig-typing">
           <div class="switch-row-left">
@@ -2068,7 +2141,7 @@
           <span class="custom-switch"><input type="checkbox" id="soc-ig-activity"><span class="switch-slider"></span></span>
         </label>
       </div>
-      <div class="feature-card" style="padding:10px 12px; border-left:3px solid #64748b;">
+      <div class="feature-card" style="padding:10px 12px; border-left:3px solid rgba(255,255,255,0.18);">
         <div class="feature-title" style="margin-bottom:2px;" data-i18n="soc_sh_more">Khiên riêng tư nền tảng khác</div>
         <p style="color:var(--text-muted); font-size:10.5px; margin-bottom:8px; line-height:1.4;" data-i18n="soc_sh_desc">Bật để tự ẩn typing/online trên web app của nền tảng đó (best-effort, tự cập nhật khi load lại trang).</p>
         <label class="switch-row" for="soc-wa-shield">
@@ -2126,7 +2199,7 @@
           </select>
         </div>
         <div style="display:flex; gap:6px; flex-wrap:wrap;">
-          <button id="btn-soc-wz-start" class="btn-text-small" style="background:rgba(239,68,68,0.1); border-color:rgba(239,68,68,0.3); color:#f87171;" data-i18n="soc_wz_btn_start">Bắt đầu hướng dẫn</button>
+          <button id="btn-soc-wz-start" class="btn-text-small" style="background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.18); color:#f1f5f9; font-weight:600;" data-i18n="soc_wz_btn_start">Bắt đầu hướng dẫn</button>
           <button id="btn-soc-wz-export" class="btn-text-small" data-i18n="soc_wz_export">Tải hướng dẫn (.txt)</button>
         </div>
         <div id="soc-wz-out" style="margin-top:8px;"></div>
@@ -2135,7 +2208,7 @@
         <div class="feature-title" style="margin-bottom:6px;" data-i18n="soc_rp_title">Báo cáo hacker / unlock service lừa đảo</div>
         <div style="display:flex; gap:6px; flex-wrap:wrap;">
           <button id="btn-soc-rp-phish" class="btn-text-small" data-i18n="soc_rp_phish">Báo phishing Google</button>
-          <button id="btn-soc-rp-meta" class="btn-text-small" style="background:rgba(24,119,242,0.1); border-color:rgba(24,119,242,0.3); color:#60a5fa;" data-i18n="soc_rp_meta">Báo tài khoản bị chiếm</button>
+          <button id="btn-soc-rp-meta" class="btn-text-small" style="background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.18); color:#f1f5f9;" data-i18n="soc_rp_meta">Báo tài khoản bị chiếm</button>
           <button id="btn-soc-rp-copy" class="btn-text-small" data-i18n="soc_rp_copy">Copy mẫu bằng chứng</button>
         </div>
         <p style="color:var(--text-muted); font-size:10.5px; margin:6px 0 0; line-height:1.45;" data-i18n="soc_rp_hint">Dán mẫu bằng chứng (kèm screenshot) vào đơn trình báo Cảnh sát mạng A05 và form Meta.</p>
@@ -2155,7 +2228,7 @@
           </div>
           <div style="display:flex; gap:6px; flex-wrap:wrap;">
             <button id="btn-soc-vt-create" class="btn-text-small" style="display:none;" data-i18n="soc_vt_create">Tạo két sắt</button>
-            <button id="btn-soc-vt-unlock" class="btn-text-small" style="background:rgba(139,92,246,0.1); border-color:rgba(139,92,246,0.3); color:#a78bfa;" data-i18n="soc_vt_unlock">Mở khóa</button>
+            <button id="btn-soc-vt-unlock" class="btn-text-small" style="background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.18); color:#f1f5f9; font-weight:600;" data-i18n="soc_vt_unlock">Mở khóa</button>
           </div>
           <div id="soc-vt-msg" style="margin-top:6px; font-size:10.5px; min-height:14px;"></div>
         </div>
@@ -2181,7 +2254,7 @@
             <textarea class="form-control" id="soc-vt-notes" rows="2" style="font-size:11px; padding:5px 8px;"></textarea>
           </div>
           <div style="display:flex; gap:6px; flex-wrap:wrap;">
-            <button id="btn-soc-vt-save" class="btn-text-small" style="background:rgba(16,185,129,0.1); border-color:rgba(16,185,129,0.3); color:#34d399;" data-i18n="soc_vt_save">Lưu & khóa</button>
+            <button id="btn-soc-vt-save" class="btn-text-small" style="background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.18); color:#f1f5f9; font-weight:600;" data-i18n="soc_vt_save">Lưu & khóa</button>
             <button id="btn-soc-vt-copy" class="btn-text-small" data-i18n="soc_vt_copy">Copy tất cả</button>
             <button id="btn-soc-vt-lock" class="btn-text-small" data-i18n="soc_vt_lock">Khóa lại</button>
             <button id="btn-soc-vt-clear" class="btn-text-small" style="color:#94a3b8; border-color:rgba(255,255,255,0.08);" data-i18n="soc_vt_clear">Xóa két</button>
@@ -2195,7 +2268,7 @@
       <div class="feature-card" style="padding:10px 12px;">
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
           <span class="feature-title" style="margin-bottom:0;" data-i18n="soc_ck_title">Checklist phòng thủ</span>
-          <span id="soc-ck-progress" style="font-size:10px; color:#34d399; font-weight:700;"></span>
+          <span id="soc-ck-progress" style="font-size:10px; color:#cbd5e1; font-weight:700;"></span>
         </div>
         <p style="color:var(--text-muted); font-size:10.5px; margin-bottom:8px; line-height:1.4;" data-i18n="soc_ck_desc">Làm đủ 10 mục này HÔM NAY, khi còn truy cập được tài khoản. Tiến độ lưu tự động.</p>
         <div id="soc-ck-list" style="display:flex; flex-direction:column; gap:4px; margin-bottom:8px;"></div>
@@ -2207,11 +2280,11 @@
     </div>
 
     <div id="soc-sub-creator" class="soc-subpanel">
-      <div class="feature-card" style="padding:10px 12px; margin-bottom:8px; border-left:3px solid #f472b6;">
+      <div class="feature-card" style="padding:10px 12px; margin-bottom:8px; border-left:3px solid rgba(255,255,255,0.18);">
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
           <div class="feature-title" style="margin-bottom:0;" data-i18n="soc_cr_title">Kế hoạch bài đăng & Số liệu</div>
         </div>
-        <p style="font-size:10px; color:#f472b6; font-weight:600; margin-bottom:6px;" id="soc-cr-summary"></p>
+        <p style="font-size:10px; color:#94a3b8; font-weight:600; margin-bottom:6px;" id="soc-cr-summary"></p>
         <div class="form-group" style="margin-bottom:6px;">
           <input type="text" class="form-control" id="soc-cr-title" placeholder="Tên bài / chiến dịch..." data-i18n-placeholder="soc_cr_title_ph" style="font-size:11px; padding:5px 8px;">
         </div>
@@ -2231,7 +2304,7 @@
             <option value="scheduled" data-i18n="soc_cr_status_scheduled">Đã hẹn lịch</option>
             <option value="posted" data-i18n="soc_cr_status_posted">Đã đăng</option>
           </select>
-          <button id="btn-soc-cr-add" class="btn-text-small" style="background:rgba(244,114,182,0.1); border-color:rgba(244,114,182,0.3); color:#f472b6;" data-i18n="soc_cr_add">＋ Thêm</button>
+          <button id="btn-soc-cr-add" class="btn-text-small" style="background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.18); color:#f1f5f9; font-weight:600;" data-i18n="soc_cr_add">＋ Thêm</button>
         </div>
         <div style="display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap;">
           <select class="form-control" id="soc-cr-f-platform" style="width:96px; font-size:10.5px; padding:4px 6px;">
@@ -2255,7 +2328,7 @@
         </div>
         <div id="soc-cr-list" style="display:flex; flex-direction:column; gap:8px;"></div>
       </div>
-      <div class="feature-card" style="padding:10px 12px; border-left:3px solid #22d3ee;">
+      <div class="feature-card" style="padding:10px 12px; border-left:3px solid rgba(255,255,255,0.18);">
         <div class="feature-title" style="margin-bottom:6px;" data-i18n="soc_cr_groups_title">Quản lý Group / Kênh</div>
         <div style="display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
           <input type="text" class="form-control" id="soc-cr-gname-in" placeholder="Tên nhóm..." data-i18n-placeholder="soc_cr_gname_ph" style="flex:1; min-width:90px; font-size:11px; padding:5px 8px;">
@@ -2263,7 +2336,7 @@
         </div>
         <div style="display:flex; gap:6px; margin-bottom:8px;">
           <input type="text" class="form-control" id="soc-cr-gurl-in" placeholder="https://nhom..." data-i18n-placeholder="soc_cr_gurl_ph" style="flex:1; font-size:11px; padding:5px 8px;">
-          <button id="btn-soc-cr-gadd" class="btn-text-small" style="background:rgba(34,211,238,0.1); border-color:rgba(34,211,238,0.3); color:#22d3ee;" data-i18n="soc_cr_gadd">＋ Nhóm</button>
+          <button id="btn-soc-cr-gadd" class="btn-text-small" style="background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.18); color:#f1f5f9; font-weight:600;" data-i18n="soc_cr_gadd">＋ Nhóm</button>
         </div>
         <button id="btn-soc-cr-gopenall" class="btn-text-small" style="margin-bottom:8px;" data-i18n="soc_cr_gopen_all">Mở tất cả nhóm</button>
         <div id="soc-cr-glist" style="display:flex; flex-direction:column; gap:6px;"></div>
@@ -2271,7 +2344,7 @@
     </div>
 
     <div id="soc-sub-tools" class="soc-subpanel">
-      <div class="feature-card" style="padding:10px 12px; margin-bottom:8px; border-left:3px solid #f59e0b;">
+      <div class="feature-card" style="padding:10px 12px; margin-bottom:8px; border-left:3px solid rgba(255,255,255,0.18);">
         <div class="feature-title" style="margin-bottom:6px;" data-i18n="soc_tl_phish">Kiểm tra link lừa đảo</div>
         <div style="display:flex; gap:6px; margin-bottom:6px;">
           <input type="text" class="form-control" id="soc-ph-url" placeholder="https://..." data-i18n-placeholder="soc_tl_phish_ph" style="flex:1; font-size:11px; padding:5px 8px;">
@@ -2279,15 +2352,15 @@
         </div>
         <div id="soc-ph-out" style="background:rgba(15,23,42,0.5); border:1px solid var(--card-border); border-radius:8px; padding:8px; min-height:32px; font-size:11px; color:#94a3b8;"></div>
       </div>
-      <div class="feature-card" style="padding:10px 12px; margin-bottom:8px; border-left:3px solid #22d3ee;">
+      <div class="feature-card" style="padding:10px 12px; margin-bottom:8px; border-left:3px solid rgba(255,255,255,0.18);">
         <div class="feature-title" style="margin-bottom:6px;" data-i18n="soc_ss_title">Phiên đăng nhập của trình duyệt</div>
         <p style="color:var(--text-muted); font-size:10.5px; margin-bottom:6px; line-height:1.4;" data-i18n="soc_ss_desc">Kiểm tra bạn còn đang đăng nhập nền tảng nào trên trình duyệt này → thiết bị này là 'phao cứu sinh' khi bị hack.</p>
         <div style="display:flex; gap:6px; margin-bottom:6px;">
-          <button id="btn-soc-ss-check" class="btn-text-small" style="background:rgba(34,211,238,0.1); border-color:rgba(34,211,238,0.3); color:#22d3ee;" data-i18n="soc_ss_btn">Kiểm tra ngay</button>
+          <button id="btn-soc-ss-check" class="btn-text-small" style="background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.18); color:#f1f5f9; font-weight:600;" data-i18n="soc_ss_btn">Kiểm tra ngay</button>
         </div>
         <div id="soc-ss-out" style="background:rgba(15,23,42,0.5); border:1px solid var(--card-border); border-radius:8px; padding:8px; min-height:32px; font-size:11px; color:#94a3b8;"></div>
       </div>
-      <div class="feature-card" style="padding:10px 12px; margin-bottom:8px; border-left:3px solid #10b981;">
+      <div class="feature-card" style="padding:10px 12px; margin-bottom:8px; border-left:3px solid rgba(255,255,255,0.18);">
         <div class="feature-title" style="margin-bottom:6px;" data-i18n="soc_tl_unread">Hộp thư chưa đọc (mở đúng chỗ)</div>
         <div style="display:flex; gap:6px; flex-wrap:wrap;">
           <button id="btn-soc-un-fb" class="btn-text-small">FB</button>
@@ -2299,11 +2372,11 @@
           <button id="btn-soc-un-tg" class="btn-text-small" style="margin-bottom:0;">Telegram</button>
         </div>
       </div>
-      <div class="feature-card" style="padding:10px 12px; border-left:3px solid #8b5cf6;">
+      <div class="feature-card" style="padding:10px 12px; border-left:3px solid rgba(255,255,255,0.18);">
         <div class="feature-title" style="margin-bottom:6px;" data-i18n="soc_tools_title">Công cụ quét & dọn</div>
         <div style="display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap;">
-          <button id="btn-soc-scan-trackers" class="btn-text-small" style="background:rgba(139,92,246,0.1); border-color:rgba(139,92,246,0.3); color:#a78bfa;" data-i18n="soc_scan_trackers">Quét tracker</button>
-          <button id="btn-soc-clean-cookies" class="btn-text-small" style="background:rgba(249,115,22,0.1); border-color:rgba(249,115,22,0.3); color:#fb923c;" data-i18n="soc_clean_cookies">Dọn cookie xã hội</button>
+          <button id="btn-soc-scan-trackers" class="btn-text-small" style="background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.18); color:#f1f5f9;" data-i18n="soc_scan_trackers">Quét tracker</button>
+          <button id="btn-soc-clean-cookies" class="btn-text-small" style="background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.18); color:#f1f5f9;" data-i18n="soc_clean_cookies">Dọn cookie xã hội</button>
           <button id="btn-soc-unlock-mk" class="btn-text-small" data-i18n="soc_unlock_session">Mở trang bảo mật</button>
         </div>
         <div id="soc-tools-out" style="background:rgba(15,23,42,0.5); border:1px solid var(--card-border); border-radius:8px; padding:8px; min-height:36px; font-size:11px; color:#94a3b8;"></div>

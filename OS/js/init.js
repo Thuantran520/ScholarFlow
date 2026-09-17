@@ -571,12 +571,12 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
 
   function buildCookieRow(c) {
     const row = document.createElement("div");
-    row.style.cssText = "border:1px solid rgba(56,189,248,0.2);border-radius:6px;padding:6px 8px;background:rgba(15,23,42,0.5);font-size:10.5px;";
+    row.className = "cookie-row-card";
 
     const top = document.createElement("div");
     top.style.cssText = "display:flex;justify-content:space-between;align-items:center;gap:6px;";
     const name = document.createElement("span");
-    name.style.cssText = "font-weight:700;color:#38bdf8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;";
+    name.style.cssText = "font-weight:700;color:#e2e8f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;";
     name.textContent = c.name;
     name.title = c.name;
 
@@ -624,20 +624,26 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
     row.appendChild(top);
 
     const value = document.createElement("div");
-    value.style.cssText = "color:#cbd5e1;word-break:break-all;margin-top:2px;";
+    value.style.cssText = "color:#94a3b8;word-break:break-all;margin-top:2px;font-size:10.5px;font-family:ui-monospace,monospace;";
     value.textContent = c.value || "";
     value.title = c.value || "";
     row.appendChild(value);
 
     const meta = document.createElement("div");
-    meta.style.cssText = "color:#64748b;margin-top:3px;";
+    meta.style.cssText = "display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin-top:4px;";
     const badges = [];
-    if (c.expirationDate) badges.push("⏱ " + new Date(c.expirationDate * 1000).toLocaleString());
-    else badges.push("⏱ Phiên (session)");
-    if (c.httpOnly) badges.push("🔒 httpOnly");
-    if (c.secure) badges.push("🔐 secure");
-    if (c.sameSite && c.sameSite !== "no_restriction") badges.push("🧩 " + c.sameSite);
-    meta.textContent = badges.join(" · ");
+    if (c.expirationDate) badges.push(new Date(c.expirationDate * 1000).toLocaleDateString());
+    else badges.push("Session");
+    if (c.httpOnly) badges.push("HttpOnly");
+    if (c.secure) badges.push("Secure");
+    if (c.sameSite && c.sameSite !== "no_restriction") badges.push(c.sameSite);
+
+    badges.forEach(b => {
+      const chip = document.createElement("span");
+      chip.className = "cookie-badge-chip";
+      chip.textContent = b;
+      meta.appendChild(chip);
+    });
     row.appendChild(meta);
 
     return row;
@@ -734,20 +740,21 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
     }
     for (const p of mine) {
       const chip = document.createElement("div");
-      chip.style.cssText = "display:flex;align-items:center;gap:4px;border:1px solid rgba(56,189,248,0.3);border-radius:14px;padding:3px 8px;background:rgba(15,23,42,0.6);font-size:11px;color:#cbd5e1;";
+      chip.className = "cookie-profile-chip";
       const label = document.createElement("button");
       label.type = "button";
-      label.style.cssText = "background:none;border:none;color:#38bdf8;cursor:pointer;font-size:11px;padding:0;";
+      label.className = "cookie-profile-btn";
       label.textContent = p.name;
       label.title = "Nạp hồ sơ này";
       label.addEventListener("click", () => loadCookieProfile(p));
       const del = makeCookieBtn("✕", "Xóa hồ sơ");
+      del.className = "cookie-profile-del";
       del.addEventListener("click", async () => {
         const all = await getCookieProfiles();
         const next = all.filter(x => !(x.hostname === p.hostname && x.name === p.name));
         storSet({ sf_cookie_profiles: next }, () => {
           renderCookieProfileList();
-          showToast("🗑️ Đã xóa hồ sơ!");
+          showToast("Đã xóa hồ sơ!");
         });
       });
       chip.appendChild(label);
@@ -780,7 +787,7 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
   document.getElementById("btn-save-cookie-profile")?.addEventListener("click", async () => {
     const nameInput = document.getElementById("cookie-profile-name");
     const name = ((nameInput && nameInput.value) || "").trim();
-    if (!name) return showToast("⚠️ Nhập tên hồ sơ!");
+    if (!name) return showToast("Nhập tên hồ sơ!", "warning");
     const host = cookieHostname();
     if (!host) return showToast("toast_cookie_no_url", "warning");
     const api = getCookiesApi();
@@ -794,7 +801,7 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
     storSet({ sf_cookie_profiles: profiles }, () => {
       if (nameInput) nameInput.value = "";
       renderCookieProfileList();
-      showToast(`💾 Đã lưu hồ sơ "${name}" (${cookies.length} cookie)!`);
+      showToast(`Đã lưu hồ sơ "${name}" (${cookies.length} cookie)!`);
     });
   });
 
@@ -2262,9 +2269,39 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
 
     navWrapper.addEventListener("scroll", updateNavScrollButtons);
+
+    // Mouse-wheel horizontal scrolling support
+    const handleNavWheel = (e) => {
+      const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      if (delta !== 0) {
+        e.preventDefault();
+        navWrapper.scrollLeft += delta;
+        updateNavScrollButtons();
+      }
+    };
+    navWrapper.addEventListener("wheel", handleNavWheel, { passive: false });
+    const mainNavBar = document.querySelector(".main-nav-bar");
+    if (mainNavBar && mainNavBar !== navWrapper) {
+      mainNavBar.addEventListener("wheel", handleNavWheel, { passive: false });
+    }
+
     // Initial check
     setTimeout(updateNavScrollButtons, 100);
   }
+
+  // Universal horizontal mouse-wheel scrolling for horizontal strips (AI chips, subtabs, presets, etc.)
+  document.addEventListener("wheel", (e) => {
+    const el = e.target.closest(
+      ".ai-quick-chips, .ai-pages-list, .ai-provider-pills, .ai-pinned-strip, .soc-subtabs, .pm-preset-row, .dual-tabs-row, .sub-nav-wrapper, #biblio-modal .sub-tabs, [data-scroll='horizontal']"
+    );
+    if (el && el.scrollWidth > el.clientWidth) {
+      const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      if (delta !== 0) {
+        e.preventDefault();
+        el.scrollLeft += delta;
+      }
+    }
+  }, { passive: false });
   /* -------------------------------------------------------------
      TAB AUTOFILL
   ------------------------------------------------------------- */
@@ -2442,9 +2479,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       emptyDiv.style.borderRadius = "8px";
       emptyDiv.style.background = "rgba(15,23,42,0.3)";
       const emptyEmoji = document.createElement("div");
-      emptyEmoji.style.fontSize = "18px";
-      emptyEmoji.style.marginBottom = "4px";
-      emptyEmoji.textContent = "📝";
+      emptyEmoji.style.marginBottom = "6px";
+      emptyEmoji.style.display = "flex";
+      emptyEmoji.style.justifyContent = "center";
+      emptyEmoji.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.7;"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><path d="M9 12h6"></path><path d="M9 16h6"></path></svg>';
       const emptyMessage = document.createElement("div");
       emptyMessage.textContent = emptyText;
       emptyDiv.appendChild(emptyEmoji);
@@ -2551,7 +2589,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const chkBox = document.createElement("div");
         chkBox.className = "todo-checkbox-box";
         const chkIcon = document.createElement("span");
-        chkIcon.innerHTML = '<svg class="todo-check-icon" viewBox="0 0 24 24" width="11" height="11" stroke="#ffffff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+        chkIcon.innerHTML = '<svg class="todo-check-icon" viewBox="0 0 24 24" width="11" height="11" stroke="#0f172a" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
         chkBox.appendChild(chkIcon);
         labelCheck.appendChild(chk);
         labelCheck.appendChild(chkBox);
@@ -2592,8 +2630,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           sourceBtn.setAttribute("data-libid", item.libId);
           sourceBtn.title = sourceText;
           const sourceIcon = document.createElement("span");
-          sourceIcon.textContent = "🔗";
-          sourceIcon.style.fontSize = "12px";
+          sourceIcon.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>';
           sourceBtn.appendChild(sourceIcon);
           sourceBtn.appendChild(document.createTextNode("\u00A0" + sourceText));
           sourceBtn.style.fontSize = "10px";

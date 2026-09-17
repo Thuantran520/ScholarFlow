@@ -1,6 +1,226 @@
-/* ScholarFlow — Tab Manager tab: cards, groups, sessions */
+/* ScholarFlow — Tab Manager: Monochrome & RAM Optimization */
 
-/* Tab Manager — monochrome */
+/* Section headers matching DarkMode & Security tabs */
+.tabmgr-section-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 14px 0 8px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tabmgr-section-icon {
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.tabmgr-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #94a3b8;
+}
+
+/* Hero card: RAM Saver & Tab Overview */
+.tabmgr-hero {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tabmgr-hero-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tabmgr-hero-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.tabmgr-hero-stats {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.tabmgr-stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #cbd5e1;
+}
+
+.tabmgr-stat-pill strong {
+  color: #f1f5f9;
+  font-weight: 700;
+}
+
+.tabmgr-stat-pill.is-ram {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #e2e8f0;
+}
+
+/* 1-Click Optimize RAM Hero Button */
+.tabmgr-hero-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.tabmgr-opt-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 7px;
+  padding: 8px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #f1f5f9;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tabmgr-opt-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.tabmgr-opt-btn:active {
+  transform: translateY(1px);
+}
+
+.tabmgr-sub-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 7px;
+  padding: 7px 10px;
+  font-size: 11px;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tabmgr-sub-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #cbd5e1;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Controls row */
+.tabmgr-control-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.tabmgr-search-input {
+  flex: 1;
+  font-size: 11px;
+  padding: 6px 9px;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  color: #f1f5f9;
+}
+
+.tabmgr-search-input:focus {
+  border-color: rgba(255, 255, 255, 0.25);
+  outline: none;
+}
+
+.tabmgr-refresh-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.tabmgr-refresh-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f1f5f9;
+}
+
+.tabmgr-select {
+  font-size: 11px;
+  padding: 5px 8px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  color: #cbd5e1;
+}
+
+/* Batch actions grid */
+.tabmgr-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.tabmgr-chip-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5px;
+  padding: 5px 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  white-space: nowrap;
+}
+
+.tabmgr-chip-btn:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: #e2e8f0;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Tab Card */
 .tabmgr-card {
   background: rgba(15, 23, 42, 0.45);
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -8,27 +228,27 @@
   padding: 9px 10px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
   transition: all 0.15s ease;
   cursor: pointer;
 }
 
 .tabmgr-card:hover {
-  border-color: rgba(56, 189, 248, 0.22);
-  background: rgba(30, 41, 59, 0.55);
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(30, 41, 59, 0.5);
 }
 
 .tabmgr-card.is-active {
-  border-color: rgba(56, 189, 248, 0.35);
-  background: rgba(56, 189, 248, 0.07);
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .tabmgr-card.is-pinned {
-  border-left: 2px solid #38bdf8;
+  border-left: 2px solid #94a3b8;
 }
 
 .tabmgr-card.is-discarded {
-  opacity: 0.55;
+  opacity: 0.6;
 }
 
 .tabmgr-card-top {
@@ -46,7 +266,7 @@
 }
 
 .tabmgr-card-title {
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
   color: #e2e8f0;
   flex: 1;
@@ -59,11 +279,11 @@
 .tabmgr-pin-icon {
   font-size: 9px;
   font-weight: 700;
-  color: #38bdf8;
-  border: 1px solid rgba(56, 189, 248, 0.25);
-  background: rgba(56, 189, 248, 0.1);
+  color: #94a3b8;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
   border-radius: 3px;
-  padding: 0 3px;
+  padding: 0 4px;
   line-height: 1.4;
   flex-shrink: 0;
 }
@@ -71,14 +291,27 @@
 .tabmgr-live-dot {
   font-size: 8px;
   font-weight: 700;
-  color: #38bdf8;
-  background: rgba(56, 189, 248, 0.12);
-  border: 1px solid rgba(56, 189, 248, 0.2);
+  letter-spacing: 0.5px;
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 4px;
   padding: 1px 5px;
   line-height: 1.4;
   flex-shrink: 0;
-  animation: tabmgrPulse 1.2s infinite alternate;
+}
+
+.tabmgr-discard-dot {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #64748b;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  padding: 1px 5px;
+  line-height: 1.4;
+  flex-shrink: 0;
 }
 
 .tabmgr-card-url {
@@ -94,7 +327,7 @@
   gap: 4px;
   align-items: center;
   flex-wrap: wrap;
-  margin-top: 5px;
+  margin-top: 4px;
   width: 100%;
 }
 
@@ -105,8 +338,8 @@
 .tabmgr-card-actions .tabmgr-discard-btn::before {
   content: "";
   width: 1px;
-  height: 14px;
-  background: rgba(255, 255, 255, 0.12);
+  height: 12px;
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 1px;
   margin-right: 3px;
   flex-shrink: 0;
@@ -128,35 +361,36 @@
 }
 
 .tabmgr-action-btn:hover {
-  background: rgba(56, 189, 248, 0.1);
-  border-color: rgba(56, 189, 248, 0.22);
-  color: #38bdf8;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #f1f5f9;
 }
 
 .tabmgr-action-btn.is-active {
-  background: rgba(56, 189, 248, 0.14);
-  border-color: rgba(56, 189, 248, 0.3);
-  color: #38bdf8;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #f8fafc;
 }
 
 .tabmgr-del-btn:hover {
-  background: rgba(239, 68, 68, 0.14) !important;
-  border-color: rgba(239, 68, 68, 0.32) !important;
+  background: rgba(239, 68, 68, 0.12) !important;
+  border-color: rgba(239, 68, 68, 0.25) !important;
   color: #f87171 !important;
 }
 
+/* Grouping headers */
 .tabmgr-group-header {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 6px;
-  margin: 6px 0 2px;
-  background: rgba(56, 189, 248, 0.06);
-  border: 1px solid rgba(56, 189, 248, 0.12);
+  padding: 5px 8px;
+  margin: 8px 0 3px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
-  color: #38bdf8;
+  color: #cbd5e1;
 }
 
 .tabmgr-group-toggle {
@@ -165,10 +399,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(56, 189, 248, 0.08);
-  border: 1px solid rgba(56, 189, 248, 0.18);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 4px;
-  color: #38bdf8;
+  color: #94a3b8;
   cursor: pointer;
   font-size: 11px;
   line-height: 1;
@@ -184,10 +418,19 @@
 
 .tabmgr-group-count {
   font-size: 10px;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.05);
   padding: 1px 6px;
   border-radius: 8px;
   color: #64748b;
+}
+
+/* Sessions */
+.tabmgr-session-card {
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 10px;
 }
 
 .tabmgr-session-row {
@@ -237,7 +480,7 @@
 }
 
 .tabmgr-session-btn:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.08);
   color: #e2e8f0;
 }
 

@@ -16,8 +16,8 @@ function updateInspectButtonsUI() {
   const tStop = window.i18n ? window.i18n.t("btn_stop_inspect") : "Dừng chọn";
 
   if (isInspectMode) {
-    btnStart.textContent = `🎯 ${tStart}...`;
-    btnStart.className = "btn btn-danger";
+    btnStart.textContent = `${tStart}...`;
+    btnStart.className = "btn btn-secondary";
     btnStart.style.opacity = "1";
 
     btnStop.className = "btn btn-primary";
@@ -25,7 +25,7 @@ function updateInspectButtonsUI() {
     btnStop.style.cursor = "pointer";
     btnStop.textContent = tStop;
   } else {
-    btnStart.textContent = `🎯 ${tStart}`;
+    btnStart.textContent = tStart;
     btnStart.className = "btn btn-primary";
     btnStart.style.opacity = "1";
 
@@ -47,22 +47,22 @@ function updateRedactionVisibilityUI() {
     btnEnable.className = "btn btn-secondary";
     btnEnable.style.opacity = "0.75";
     btnEnable.style.boxShadow = "none";
-    btnEnable.textContent = `🙈 ${tEnable}`;
+    btnEnable.textContent = tEnable;
 
-    btnDisable.className = "btn btn-warning";
+    btnDisable.className = "btn btn-primary";
     btnDisable.style.opacity = "1";
-    btnDisable.style.boxShadow = "0 0 10px rgba(245, 158, 11, 0.4)";
-    btnDisable.textContent = `👁️ ${tDisable} ✓`;
+    btnDisable.style.boxShadow = "none";
+    btnDisable.textContent = `${tDisable} ✓`;
   } else {
-    btnEnable.className = "btn btn-success";
+    btnEnable.className = "btn btn-primary";
     btnEnable.style.opacity = "1";
-    btnEnable.style.boxShadow = "0 0 10px rgba(16, 185, 129, 0.4)";
-    btnEnable.textContent = `🙈 ${tEnable} ✓`;
+    btnEnable.style.boxShadow = "none";
+    btnEnable.textContent = `${tEnable} ✓`;
 
     btnDisable.className = "btn btn-secondary";
     btnDisable.style.opacity = "0.75";
     btnDisable.style.boxShadow = "none";
-    btnDisable.textContent = `👁️ ${tDisable}`;
+    btnDisable.textContent = tDisable;
   }
 }
 
@@ -133,7 +133,7 @@ function renderRedactedList(list) {
 
     const emptyIcon = document.createElement("div");
     emptyIcon.className = "empty-list-icon";
-    emptyIcon.textContent = "🛡️";
+    emptyIcon.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.6;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>';
 
     const emptyTitle = document.createElement("div");
     emptyTitle.className = "empty-list-title";
@@ -151,10 +151,10 @@ function renderRedactedList(list) {
   }
 
   const styleMap = {
-    blur: (px) => `🌫️ Mờ ${px || 12}px`,
-    blackout: () => "⬛ Hộp đen",
-    pixelate: () => "▦ Điểm ảnh",
-    hide: () => "👻 Ẩn"
+    blur: (px) => `Mờ ${px || 12}px`,
+    blackout: () => "Hộp đen",
+    pixelate: () => "Điểm ảnh",
+    hide: () => "Ẩn"
   };
 
   list.forEach((item, index) => {
@@ -172,7 +172,7 @@ function renderRedactedList(list) {
 
     const tagPill = document.createElement("span");
     tagPill.className = "redacted-tag-pill";
-    tagPill.textContent = item.kind === "region" ? "📍 Vùng" : `<${item.tagName}>`;
+    tagPill.textContent = item.kind === "region" ? "Vùng" : `<${item.tagName}>`;
 
     const stylePill = document.createElement("span");
     stylePill.className = "redacted-style-pill";

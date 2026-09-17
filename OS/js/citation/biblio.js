@@ -250,13 +250,13 @@ function renderBiblioModalList() {
     empty.className = "empty-list-box";
     const icon = document.createElement("div");
     icon.className = "empty-list-icon";
-    icon.textContent = "📚";
+    icon.innerHTML = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:#64748b; margin-bottom:4px;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>';
     const title = document.createElement("div");
     title.className = "empty-list-title";
     title.textContent = query ? (window.i18n ? window.i18n.t("biblio_empty_search_title") : "Không tìm thấy tài liệu phù hợp") : (window.i18n ? window.i18n.t("biblio_empty_title") : "Chưa có trích dẫn nào được lưu");
     const sub = document.createElement("div");
     sub.className = "empty-list-sub";
-    sub.textContent = query ? (window.i18n ? window.i18n.t("biblio_empty_search_sub") : "Hãy thử tìm kiếm với từ khóa khác.") : (window.i18n ? window.i18n.t("biblio_empty_sub") : "Bấm nút ➕ Lưu ở Tab 1 để thêm bài báo hoặc trang web vào danh mục.");
+    sub.textContent = query ? (window.i18n ? window.i18n.t("biblio_empty_search_sub") : "Hãy thử tìm kiếm với từ khóa khác.") : (window.i18n ? window.i18n.t("biblio_empty_sub") : "Bấm nút Lưu ở Tab 1 để thêm bài báo hoặc trang web vào danh mục.");
     empty.appendChild(icon);
     empty.appendChild(title);
     empty.appendChild(sub);
@@ -369,7 +369,15 @@ function renderBiblioModalList() {
     actions.appendChild(btnCopy);
       const btnEdit = document.createElement("button");
       btnEdit.className = "btn btn-secondary biblio-card-btn";
-      btnEdit.textContent = window.i18n ? window.i18n.t("biblio_btn_edit") : "✏️ Nạp form";
+      btnEdit.style.display = "inline-flex";
+      btnEdit.style.alignItems = "center";
+      btnEdit.style.gap = "4px";
+      const btnEditIcon = document.createElement("span");
+      btnEditIcon.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>';
+      const btnEditLabel = document.createElement("span");
+      btnEditLabel.textContent = window.i18n ? window.i18n.t("biblio_btn_edit") : "Nạp form";
+      btnEdit.appendChild(btnEditIcon);
+      btnEdit.appendChild(btnEditLabel);
       btnEdit.addEventListener("click", () => {
         currentMeta = { ...item.meta };
         currentMeta.tag = item.tag || "";
@@ -389,7 +397,15 @@ function renderBiblioModalList() {
 
       const btnDel = document.createElement("button");
       btnDel.className = "btn btn-danger biblio-card-btn";
-      btnDel.textContent = window.i18n ? window.i18n.t("biblio_btn_del") : "🗑️ Xóa";
+      btnDel.style.display = "inline-flex";
+      btnDel.style.alignItems = "center";
+      btnDel.style.gap = "4px";
+      const btnDelIcon = document.createElement("span");
+      btnDelIcon.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>';
+      const btnDelLabel = document.createElement("span");
+      btnDelLabel.textContent = window.i18n ? window.i18n.t("biblio_btn_del") : "Xóa";
+      btnDel.appendChild(btnDelIcon);
+      btnDel.appendChild(btnDelLabel);
       btnDel.addEventListener("click", () => {
         if (confirm(window.i18n ? window.i18n.t("biblio_confirm_del") : "Bạn có chắc chắn muốn xóa tài liệu này?")) {
           savedBibliographies.splice(index, 1);

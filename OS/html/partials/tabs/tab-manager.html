@@ -1,44 +1,82 @@
-<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
-      <div class="feature-title" style="margin-bottom:0;" data-i18n="tabmgr_title">Tab Manager</div>
-      <span id="tabmgr-count-badge" style="font-size:11px; font-weight:700; color:#38bdf8; background:rgba(56,189,248,0.12); padding:2px 8px; border-radius:12px; border:1px solid rgba(56,189,248,0.25);">0</span>
+    <!-- Tab Manager Hero: RAM Optimizer & Tab Metrics -->
+    <div class="tabmgr-hero">
+      <div class="tabmgr-hero-top">
+        <div class="tabmgr-hero-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect></svg>
+          <span data-i18n="tabmgr_title">Tab Manager</span>
+        </div>
+        <div class="tabmgr-hero-stats">
+          <span class="tabmgr-stat-pill"><span data-i18n="tabmgr_lbl_total_tabs">Tổng tab</span>: <strong id="tabmgr-count-badge">0</strong></span>
+          <span class="tabmgr-stat-pill"><span data-i18n="tabmgr_lbl_hibernated">Đã tạm dừng</span>: <strong id="tabmgr-discard-count">0</strong></span>
+          <span class="tabmgr-stat-pill is-ram" id="tabmgr-ram-saved">~0 MB</span>
+        </div>
+      </div>
+      <div class="tabmgr-hero-actions">
+        <button id="btn-tabmgr-optimize-ram" class="tabmgr-opt-btn" title="Tạm dừng toàn bộ tab không hoạt động để giải phóng bộ nhớ RAM">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg>
+          <span data-i18n="tabmgr_btn_optimize_ram">Tối ưu RAM</span>
+        </button>
+        <button id="btn-tabmgr-close-dup" class="tabmgr-sub-btn" data-i18n="tabmgr_btn_close_dup">Đóng trùng</button>
+        <button id="btn-tabmgr-close-blank" class="tabmgr-sub-btn" data-i18n="tabmgr_btn_close_blank">Đóng tab rỗng</button>
+      </div>
     </div>
-    <p style="color:var(--text-muted); font-size:11.5px; margin-bottom:8px; line-height:1.4;" data-i18n="tabmgr_desc">Quản lý tab trên cả Firefox & Chromium — ghim, bookmark, đóng, nhân đôi.</p>
-    <div id="tabmgr-active-live" style="font-size:10px; color:#38bdf8; background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.15); border-radius:6px; padding:4px 8px; margin-bottom:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">--:--:--</div>
-    <div style="display:flex; gap:6px; margin-bottom:8px;">
-      <input type="text" id="tabmgr-search" class="form-control" placeholder="Tìm tab..." data-i18n-placeholder="tabmgr_search_ph" style="flex:1; font-size:11px; padding:5px 8px;">
-      <button id="btn-tabmgr-refresh" class="cal-tool-btn" title="Làm mới" data-i18n-title="tabmgr_btn_refresh">↻</button>
+
+    <!-- Active Tab Live Tracker Bar -->
+    <div id="tabmgr-active-live" class="tabmgr-card-url" style="font-size:10px; color:#94a3b8; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:4px 8px; margin-bottom:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">--:--:--</div>
+
+    <!-- Search & Filters -->
+    <div class="tabmgr-control-row">
+      <input type="text" id="tabmgr-search" class="tabmgr-search-input" placeholder="Tìm tab..." data-i18n-placeholder="tabmgr_search_ph">
+      <button id="btn-tabmgr-refresh" class="tabmgr-refresh-btn" title="Làm mới" data-i18n-title="tabmgr_btn_refresh">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+      </button>
     </div>
-    <div style="display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap; align-items:center;">
-      <select id="tabmgr-sort" class="form-control" style="width:130px; font-size:11px; padding:5px 6px;">
+    <div class="tabmgr-control-row" style="flex-wrap:wrap;">
+      <select id="tabmgr-sort" class="tabmgr-select" style="flex:1; min-width:110px;">
         <option value="title_asc" data-i18n="tabmgr_sort_title_asc">Tên A→Z</option>
         <option value="title_desc" data-i18n="tabmgr_sort_title_desc">Tên Z→A</option>
         <option value="domain" data-i18n="tabmgr_sort_domain">Theo domain</option>
         <option value="url_asc" data-i18n="tabmgr_sort_url">Theo URL</option>
       </select>
-      <select id="tabmgr-group-mode" class="form-control" style="width:130px; font-size:11px; padding:5px 6px;">
+      <select id="tabmgr-group-mode" class="tabmgr-select" style="flex:1; min-width:110px;">
         <option value="none" data-i18n="tabmgr_group_none">Không nhóm</option>
         <option value="domain" data-i18n="tabmgr_group_domain">Nhóm domain</option>
         <option value="function" data-i18n="tabmgr_group_function">Nhóm chức năng</option>
       </select>
-      <span style="margin-left:auto; font-size:10px; color:var(--text-muted);"><span id="tabmgr-domain-count">0</span> domain</span>
+      <span style="font-size:10.5px; color:#64748b; margin-left:auto;"><span id="tabmgr-domain-count">0</span> domain</span>
     </div>
-    <div style="display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap;">
-      <button id="btn-tabmgr-close-dup" class="btn-text-small" data-i18n="tabmgr_btn_close_dup">Đóng trùng</button>
-      <button id="btn-tabmgr-bookmark-all" class="btn-text-small" data-i18n="tabmgr_btn_bookmark_all">Bookmark tất cả</button>
-      <button id="btn-tabmgr-discard-all" class="btn-text-small" data-i18n="tabmgr_btn_discard_all">Tạm dừng</button>
-      <button id="btn-tabmgr-close-all" class="btn-text-small" style="color:#94a3b8; border-color:rgba(255,255,255,0.08);" data-i18n="tabmgr_btn_close_all">Đóng tất cả</button>
+
+    <!-- Batch Actions Grid -->
+    <div class="tabmgr-section-head">
+      <span class="tabmgr-section-icon">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+      </span>
+      <span class="tabmgr-section-title" data-i18n="tabmgr_group_actions">Tác vụ hàng loạt</span>
     </div>
-    <div style="display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap;">
-      <button id="btn-tabmgr-export-md" class="btn-text-small" data-i18n="tabmgr_btn_export_md">Xuất MD</button>
-      <button id="btn-tabmgr-export-txt" class="btn-text-small" data-i18n="tabmgr_btn_export_txt">Xuất TXT</button>
-      <button id="btn-tabmgr-group-browser" class="btn-text-small" style="background:rgba(56,189,248,0.08); border-color:rgba(56,189,248,0.18); color:#38bdf8;" data-i18n="tabmgr_btn_group_browser">Nhóm ở trình duyệt</button>
+    <div class="tabmgr-actions-grid">
+      <button id="btn-tabmgr-bookmark-all" class="tabmgr-chip-btn" data-i18n="tabmgr_btn_bookmark_all">Bookmark tất cả</button>
+      <button id="btn-tabmgr-discard-all" class="tabmgr-chip-btn" data-i18n="tabmgr_btn_discard_all">Tạm dừng tất cả</button>
+      <button id="btn-tabmgr-close-all" class="tabmgr-chip-btn" data-i18n="tabmgr_btn_close_all">Đóng tất cả</button>
+      <button id="btn-tabmgr-export-md" class="tabmgr-chip-btn" data-i18n="tabmgr_btn_export_md">Xuất MD</button>
+      <button id="btn-tabmgr-export-txt" class="tabmgr-chip-btn" data-i18n="tabmgr_btn_export_txt">Xuất TXT</button>
+      <button id="btn-tabmgr-group-browser" class="tabmgr-chip-btn" data-i18n="tabmgr_btn_group_browser">Nhóm ở trình duyệt</button>
     </div>
-    <div style="background:rgba(15,23,42,0.5); border:1px solid var(--card-border); border-radius:8px; padding:8px; margin-bottom:10px;">
-      <div style="font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:6px;" data-i18n="tabmgr_session_title">Phiên làm việc</div>
+
+    <!-- Sessions Section -->
+    <div class="tabmgr-session-card">
+      <div style="font-size:11px; font-weight:700; color:#94a3b8; margin-bottom:6px;" data-i18n="tabmgr_session_title">Phiên làm việc</div>
       <div style="display:flex; gap:6px; margin-bottom:6px;">
-        <input type="text" id="tabmgr-session-name" class="form-control" placeholder="Tên phiên..." data-i18n-placeholder="tabmgr_session_ph" style="flex:1; font-size:11px; padding:5px 8px;">
-        <button id="btn-tabmgr-save-session" class="btn-text-small" data-i18n="tabmgr_btn_save_session">Lưu</button>
+        <input type="text" id="tabmgr-session-name" class="tabmgr-search-input" placeholder="Tên phiên..." data-i18n-placeholder="tabmgr_session_ph">
+        <button id="btn-tabmgr-save-session" class="tabmgr-sub-btn" data-i18n="tabmgr_btn_save_session">Lưu</button>
       </div>
       <div id="tabmgr-session-list" style="display:flex; flex-direction:column; gap:6px;"></div>
     </div>
-    <div id="tabmgr-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+
+    <!-- Tab List Header & Container -->
+    <div class="tabmgr-section-head">
+      <span class="tabmgr-section-icon">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+      </span>
+      <span class="tabmgr-section-title" data-i18n="tabmgr_group_list">Danh sách tab</span>
+    </div>
+    <div id="tabmgr-list" style="display:flex; flex-direction:column; gap:6px;"></div>

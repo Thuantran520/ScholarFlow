@@ -1413,7 +1413,8 @@ function aiInitEvents(){
     input.addEventListener("input",()=>{ aiGrowInput(input); });
   }
   /* Floating "↓ newest" pill over the chat + copy-conversation (Markdown) */
-  const jumpBtn=document.createElement("button"); jumpBtn.type="button"; jumpBtn.id="ai-btn-latest"; jumpBtn.className="ai-jump-latest"; jumpBtn.textContent="↓"; jumpBtn.title=aiT("ai_btn_jump_latest",null,"Tới tin mới nhất"); jumpBtn.setAttribute("aria-label",aiT("ai_btn_jump_latest",null,"Tới tin mới nhất"));
+  const jumpBtn=document.createElement("button"); jumpBtn.type="button"; jumpBtn.id="ai-btn-latest"; jumpBtn.className="ai-jump-latest"; jumpBtn.title=aiT("ai_btn_jump_latest",null,"Tới tin mới nhất"); jumpBtn.setAttribute("aria-label",aiT("ai_btn_jump_latest",null,"Tới tin mới nhất"));
+  jumpBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>';
   jumpBtn.addEventListener("click",()=>{ aiScrollToBottom(); aiUpdateLatestBtn(); });
   const chatWrap=document.querySelector(".ai-chat-wrapper"); if(chatWrap) chatWrap.appendChild(jumpBtn);
   const chatScrollEl=document.getElementById("ai-chat-history");

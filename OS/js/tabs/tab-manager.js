@@ -108,7 +108,19 @@ function tabmgrRenderList() {
   const list = document.getElementById("tabmgr-list");
   const badge = document.getElementById("tabmgr-count-badge");
   const domainBadge = document.getElementById("tabmgr-domain-count");
+  const discardBadge = document.getElementById("tabmgr-discard-count");
+  const ramBadge = document.getElementById("tabmgr-ram-saved");
   if (badge) badge.textContent = String(tabmgrState.tabs.length);
+  const discardedCount = tabmgrState.tabs.filter(function (t) { return t.discarded; }).length;
+  if (discardBadge) discardBadge.textContent = String(discardedCount);
+  if (ramBadge) {
+    const savedMB = Math.round(discardedCount * 40);
+    try {
+      ramBadge.textContent = t("tabmgr_ram_saved_badge").replace("{0}", String(savedMB));
+    } catch (e) {
+      ramBadge.textContent = "~" + savedMB + " MB";
+    }
+  }
   if (domainBadge) {
     const domains = {};
     tabmgrState.tabs.forEach(function (t) { domains[_tabmgrDomain(t.url || "")] = true; });
@@ -187,13 +199,21 @@ function _tabmgrCreateCard(tab) {
   titleEl.title = tab.url || "";
   const pinIcon = document.createElement("span");
   pinIcon.className = "tabmgr-pin-icon";
-  if (tab.pinned) pinIcon.textContent = "P";
+  if (tab.pinned) pinIcon.textContent = "PIN";
   const liveDot = document.createElement("span");
   liveDot.className = "tabmgr-live-dot";
-  if (tab.active) liveDot.textContent = "● LIVE";
+  if (tab.active) {
+    try { liveDot.textContent = t("tabmgr_status_live"); } catch (e) { liveDot.textContent = "LIVE"; }
+  }
+  const discardDot = document.createElement("span");
+  discardDot.className = "tabmgr-discard-dot";
+  if (tab.discarded) {
+    try { discardDot.textContent = t("tabmgr_status_hibernated"); } catch (e) { discardDot.textContent = "SLEEP"; }
+  }
   top.appendChild(fav);
   top.appendChild(titleEl);
   if (tab.active) top.appendChild(liveDot);
+  if (tab.discarded) top.appendChild(discardDot);
   if (tab.pinned) top.appendChild(pinIcon);
   const urlEl = document.createElement("div");
   urlEl.className = "tabmgr-card-url";
@@ -400,6 +420,63 @@ function tabmgrDiscardAll() {
   });
   if (done === 0) setTimeout(function () { tabmgrLoadTabs(); }, 500);
 }
+function tabmgrOptimizeRam() {
+  const api = _getTabsApi();
+  if (!api || !api.discard) { showToast(t("tabmgr_toast_no_discard_api")); return; }
+  const candidates = tabmgrState.tabs.filter(function (t) { return !t.active && !t.pinned && !t.discarded; });
+  if (candidates.length === 0) { showToast(t("tabmgr_toast_no_discard")); return; }
+  let done = 0;
+  candidates.forEach(function (tab) {
+    try {
+      const p = api.discard(tab.id);
+      if (p && typeof p.then === "function") {
+        p.then(function () {
+          done++;
+          if (done === candidates.length) {
+            tabmgrLoadTabs();
+            const freedMB = done * 40;
+            showToast(t("tabmgr_toast_ram_freed").replace("{0}", String(done)).replace("{1}", String(freedMB)));
+          }
+        }).catch(function () {});
+      } else {
+        api.discard(tab.id, function () {
+          done++;
+          if (done === candidates.length) {
+            tabmgrLoadTabs();
+            const freedMB = done * 40;
+            showToast(t("tabmgr_toast_ram_freed").replace("{0}", String(done)).replace("{1}", String(freedMB)));
+          }
+        });
+      }
+    } catch (e) {}
+  });
+  if (done === 0) setTimeout(function () { tabmgrLoadTabs(); }, 500);
+}
+function tabmgrCloseBlankTabs() {
+  const api = _getTabsApi();
+  if (!api || !api.remove) return;
+  const blankTabs = tabmgrState.tabs.filter(function (t) {
+    const u = (t.url || "").trim().toLowerCase();
+    const title = (t.title || "").trim().toLowerCase();
+    return !t.pinned && (u === "about:blank" || u === "chrome://newtab/" || u === "edge://newtab/" || (u === "" && title === ""));
+  });
+  if (blankTabs.length === 0) { showToast(t("tabmgr_toast_no_blank")); return; }
+  const ids = blankTabs.map(function (t) { return t.id; });
+  try {
+    const p = api.remove(ids);
+    if (p && typeof p.then === "function") {
+      p.then(function () {
+        tabmgrLoadTabs();
+        showToast(t("tabmgr_toast_blank_closed").replace("{0}", String(ids.length)));
+      }).catch(function () {});
+    } else {
+      api.remove(ids, function () {
+        tabmgrLoadTabs();
+        showToast(t("tabmgr_toast_blank_closed").replace("{0}", String(ids.length)));
+      });
+    }
+  } catch (e) {}
+}
 function tabmgrExportMd() {
   const res = _tabmgrSortedFiltered();
   const list = res.list;
@@ -572,6 +649,10 @@ onReady(function () {
   if (groupModeSel) groupModeSel.addEventListener("change", function () { tabmgrState.groupMode = groupModeSel.value; tabmgrRenderList(); });
   const btnRefresh = document.getElementById("btn-tabmgr-refresh");
   if (btnRefresh) btnRefresh.addEventListener("click", tabmgrLoadTabs);
+  const btnOptRam = document.getElementById("btn-tabmgr-optimize-ram");
+  if (btnOptRam) btnOptRam.addEventListener("click", tabmgrOptimizeRam);
+  const btnCloseBlank = document.getElementById("btn-tabmgr-close-blank");
+  if (btnCloseBlank) btnCloseBlank.addEventListener("click", tabmgrCloseBlankTabs);
   const btnDup = document.getElementById("btn-tabmgr-close-dup");
   if (btnDup) btnDup.addEventListener("click", tabmgrCloseDuplicates);
   const btnBmAll = document.getElementById("btn-tabmgr-bookmark-all");

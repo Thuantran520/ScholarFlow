@@ -3,7 +3,7 @@
 /* Dual-Web Quick Switcher Bar */
 .dual-tabs-bar {
   background: rgba(15, 23, 42, 0.4);
-  border: 1px solid rgba(56, 189, 248, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   padding: 10px 12px;
   margin-bottom: 12px;
@@ -20,18 +20,18 @@
 .dual-tabs-title {
   font-size: 10.5px;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--text-primary, #f1f5f9);
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
 .btn-text-small {
-  background: rgba(56, 189, 248, 0.12);
-  border: 1px solid rgba(56, 189, 248, 0.3);
-  color: var(--primary);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #cbd5e1;
   font-size: 9.5px;
-  font-weight: 700;
+  font-weight: 600;
   border-radius: 4px;
   padding: 2px 7px;
   cursor: pointer;
@@ -39,7 +39,7 @@
 }
 
 .btn-text-small:hover {
-  background: rgba(56, 189, 248, 0.25);
+  background: rgba(255, 255, 255, 0.16);
   color: #ffffff;
 }
 
@@ -47,10 +47,17 @@
   display: flex;
   align-items: center;
   gap: 5px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex-wrap: nowrap;
+}
+
+.dual-tabs-row::-webkit-scrollbar {
+  display: none;
 }
 
 .dual-tab-pill {
-  flex: 1;
+  flex: 1 1 0;
   min-width: 0;
   display: flex;
   align-items: center;
@@ -70,12 +77,12 @@
 
 .dual-tab-pill:hover {
   background: rgba(15, 23, 42, 0.9);
-  border-color: rgba(56, 189, 248, 0.4);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .dual-tab-pill.active {
-  border-color: #38bdf8;
-  background: rgba(56, 189, 248, 0.15);
+  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.12);
   color: #ffffff;
   font-weight: 600;
 }
@@ -88,13 +95,13 @@
 }
 
 .dot-current {
-  background: #10b981;
-  box-shadow: 0 0 6px rgba(16, 185, 129, 0.8);
+  background: #ffffff;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.5);
 }
 
 .dot-linked {
-  background: #38bdf8;
-  box-shadow: 0 0 6px rgba(56, 189, 248, 0.8);
+  background: #94a3b8;
+  box-shadow: none;
 }
 
 .tab-title-text {
@@ -107,7 +114,7 @@
 
 .dual-swap-arrow {
   font-size: 13px;
-  color: var(--primary);
+  color: #94a3b8;
   cursor: pointer;
   padding: 2px 4px;
   border-radius: 4px;

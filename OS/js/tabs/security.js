@@ -74,13 +74,13 @@ function secUpdateUI() {
   const protoBadge = document.getElementById("sec-proto-badge");
   if (protoBadge) {
     if (_secCurrentProto === "https:") {
-      protoBadge.textContent = "🔒 HTTPS";
+      protoBadge.textContent = "HTTPS";
       protoBadge.className = "sec-pill sec-pill-safe";
       protoBadge.style.color = "";
     } else if (_secCurrentProto === "http:") {
-      protoBadge.textContent = "⚠️ HTTP";
+      protoBadge.textContent = "HTTP";
       protoBadge.className = "sec-pill";
-      protoBadge.style.color = "#f87171";
+      protoBadge.style.color = "#cbd5e1";
     } else {
       protoBadge.textContent = "—";
       protoBadge.className = "sec-pill";

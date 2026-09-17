@@ -1,4 +1,5 @@
-/* Enhanced Bibliography Modal Styles */
+/* ScholarFlow — Modal Overlay & Components */
+
 .modal-overlay {
   display: none;
   position: fixed;
@@ -50,4 +51,365 @@
   overflow-y: auto;
   padding-right: 4px;
   min-height: 0;
+}
+
+/* =============================================================
+   Bibliography Modal (#biblio-modal) — Monochrome & Fixed Layout
+   ============================================================= */
+
+#biblio-modal {
+  display: none;
+}
+#biblio-modal.is-active,
+#biblio-modal[style*="display: block"],
+#biblio-modal[style*="display: flex"] {
+  display: flex !important;
+}
+
+#biblio-modal .modal-header {
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+#biblio-modal #btn-close-biblio {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #94a3b8;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+#biblio-modal #btn-close-biblio:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+#biblio-modal #biblio-search-input {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #f1f5f9;
+  transition: all 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+#biblio-modal #biblio-search-input:focus {
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08);
+  background: rgba(15, 23, 42, 0.85);
+  outline: none;
+}
+
+#biblio-modal #biblio-sort-select {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #cbd5e1;
+  outline: none;
+  cursor: pointer;
+}
+
+/* Modal Style Switch Tabs: Scrollable Horizontal Strip — No Overlapping */
+#biblio-modal .sub-tabs {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 4px;
+  gap: 4px;
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  flex-shrink: 0;
+  margin-bottom: 8px;
+}
+#biblio-modal .sub-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+#biblio-modal .sub-tab-btn {
+  flex: 0 0 auto;
+  min-width: max-content;
+  white-space: nowrap;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #94a3b8;
+  padding: 5px 12px;
+  border: 1px solid transparent;
+  background: transparent;
+  text-align: center;
+  transition: all 0.18s ease;
+  cursor: pointer;
+  user-select: none;
+  box-sizing: border-box;
+}
+#biblio-modal .sub-tab-btn:hover {
+  color: #f1f5f9;
+  background: rgba(255, 255, 255, 0.06);
+}
+#biblio-modal .sub-tab-btn.active {
+  background: rgba(255, 255, 255, 0.12);
+  color: #f8fafc;
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  font-weight: 600;
+}
+
+/* Empty State Styling inside modals */
+.empty-list-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 12px;
+  gap: 6px;
+  color: #94a3b8;
+  text-align: center;
+}
+.empty-list-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+.empty-list-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+.empty-list-sub {
+  font-size: 10.5px;
+  color: #64748b;
+  line-height: 1.4;
+  max-width: 280px;
+}
+
+/* Card list & Items */
+#biblio-items {
+  margin-bottom: 8px;
+  flex: 1;
+  min-height: 80px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+#biblio-items::-webkit-scrollbar {
+  width: 4px;
+}
+#biblio-items::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+.biblio-card {
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 8px;
+  position: relative;
+  transition: all 0.2s ease;
+}
+.biblio-card:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+.biblio-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.biblio-index-pill {
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f1f5f9;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.biblio-tag-pill {
+  font-size: 9.5px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.06);
+  color: #cbd5e1;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+}
+.biblio-card-text {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: #e2e8f0;
+  word-break: break-word;
+  margin-bottom: 6px;
+  user-select: text;
+}
+.biblio-card-text.bibtex-code {
+  font-family: ui-monospace, monospace;
+  white-space: pre-wrap;
+  color: #cbd5e1;
+}
+.biblio-card-notes {
+  font-size: 10.5px;
+  color: #94a3b8;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 4px 8px;
+  border-radius: 4px;
+  border-left: 2px solid rgba(255, 255, 255, 0.2);
+  margin-bottom: 6px;
+  font-style: italic;
+}
+.biblio-card-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.biblio-card-btn {
+  padding: 3px 8px;
+  font-size: 10.5px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cbd5e1;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.biblio-card-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+/* Modal Action Buttons Group */
+.biblio-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: auto;
+  flex-shrink: 0;
+}
+
+/* Row 1: Primary Action (Copy All) — Monochrome Dark Highlight */
+.btn.biblio-action-btn-primary,
+button#btn-copy-all-biblio {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+.btn.biblio-action-btn-primary:hover,
+button#btn-copy-all-biblio:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  transform: translateY(-1px);
+}
+.btn.biblio-action-btn-primary:active,
+button#btn-copy-all-biblio:active {
+  transform: translateY(0);
+}
+.btn.biblio-action-btn-primary svg,
+button#btn-copy-all-biblio svg {
+  flex-shrink: 0;
+}
+
+/* Row 2: Export Row (.bib, .ris, .txt, .xml, .json) */
+.biblio-export-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(62px, 1fr));
+  gap: 5px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.btn.biblio-export-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 4px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+.btn.biblio-export-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+.btn.biblio-export-btn:active {
+  transform: translateY(0);
+}
+.btn.biblio-export-btn svg {
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+/* Row 3: Destructive Action (Clear All) — Subtle Outline with Red Warning Hover */
+.btn.biblio-clear-btn,
+button#btn-clear-all-biblio {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 7px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+.btn.biblio-clear-btn:hover,
+button#btn-clear-all-biblio:hover {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
+}
+.btn.biblio-clear-btn:active,
+button#btn-clear-all-biblio:active {
+  transform: translateY(0);
+}
+.btn.biblio-clear-btn svg,
+button#btn-clear-all-biblio svg {
+  flex-shrink: 0;
+  opacity: 0.9;
 }

@@ -1,22 +1,22 @@
 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
       <div class="feature-title" style="margin-bottom:0;" data-i18n="todo_title">Todo List</div>
-      <span id="todo-badge-stats" style="font-size:11px; font-weight:700; color:#38bdf8; background:rgba(56,189,248,0.12); padding:2px 8px; border-radius:12px; border:1px solid rgba(56,189,248,0.25);">0/0</span>
+      <span id="todo-badge-stats" style="font-size:11px; font-weight:600; color:var(--text-primary, #f1f5f9); background:rgba(255,255,255,0.06); padding:2px 8px; border-radius:12px; border:1px solid rgba(255,255,255,0.12);">0/0</span>
     </div>
     <p style="color:var(--text-muted); font-size:11.5px; margin-bottom:8px; line-height:1.4;" data-i18n="todo_desc">Ghi chú nhanh các công việc cần làm.</p>
 
     <!-- Progress Bar -->
-    <div style="background:rgba(15,23,42,0.6); border-radius:6px; height:6px; overflow:hidden; margin-bottom:12px; border:1px solid rgba(255,255,255,0.06);">
-      <div id="todo-progress-bar" style="background:linear-gradient(90deg, #0ea5e9, #10b981); height:100%; width:0%; transition:width 0.3s ease;"></div>
+    <div style="background:rgba(15,23,42,0.6); border-radius:6px; height:6px; overflow:hidden; margin-bottom:12px; border:1px solid rgba(255,255,255,0.08);">
+      <div id="todo-progress-bar" style="background:rgba(255,255,255,0.85); height:100%; width:0%; transition:width 0.3s ease;"></div>
     </div>
 
     <!-- Add Task Card -->
-    <div class="feature-card" style="padding:10px 12px; margin-bottom:12px; background:rgba(15,23,42,0.5); border:1px solid rgba(56,189,248,0.2); border-radius:10px;">
+    <div class="feature-card" style="padding:10px 12px; margin-bottom:12px; background:rgba(15,23,42,0.5); border:1px solid rgba(255,255,255,0.12); border-radius:10px;">
       <div style="display:flex; gap:6px; margin-bottom:8px;">
         <input type="text" id="todo-input" class="form-control" placeholder="Thêm việc mới..." data-i18n-placeholder="todo_placeholder" style="flex:1; font-size:13px; padding:7px 10px;">
-        <select id="todo-priority-select" class="form-control" style="width:110px; font-size:11.5px; padding:6px 6px; cursor:pointer;">
-          <option value="normal" data-i18n="todo_priority_normal">🟡 Vừa</option>
-          <option value="urgent" data-i18n="todo_priority_urgent">🔴 Gấp</option>
-          <option value="low" data-i18n="todo_priority_low">🟢 Thấp</option>
+        <select id="todo-priority-select" class="form-control" style="width:105px; font-size:11.5px; padding:6px 6px; cursor:pointer;">
+          <option value="normal" data-i18n="todo_priority_normal">Vừa</option>
+          <option value="urgent" data-i18n="todo_priority_urgent">Gấp</option>
+          <option value="low" data-i18n="todo_priority_low">Thấp</option>
         </select>
         <button id="btn-todo-add" class="btn btn-primary" style="padding:7px 12px; font-size:12px; font-weight:700;" data-i18n="todo_btn_add">Thêm</button>
       </div>
@@ -33,9 +33,18 @@
         <button type="button" class="btn-text-small todo-filter-btn" data-filter="done" id="filter-done" data-i18n="todo_filter_done">Đã xong</button>
       </div>
       <div style="display:flex; gap:6px;">
-        <button type="button" class="todo-tool-btn" id="btn-todo-copy-all" title="Sao chép toàn bộ danh sách" data-i18n="todo_btn_copy_all">📋 Copy</button>
-        <button type="button" class="todo-tool-btn" id="btn-todo-export" title="Xuất file văn bản" data-i18n="todo_btn_export">📥 Xuất TXT</button>
-        <button type="button" class="todo-tool-btn todo-tool-btn-danger" id="btn-todo-clear-done" title="Dọn dẹp các mục đã hoàn thành" data-i18n="todo_btn_clear_done">🧹 Dọn việc xong</button>
+        <button type="button" class="todo-tool-btn" id="btn-todo-copy-all" title="Sao chép toàn bộ danh sách">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+          <span data-i18n="todo_btn_copy_all">Copy</span>
+        </button>
+        <button type="button" class="todo-tool-btn" id="btn-todo-export" title="Xuất file văn bản">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          <span data-i18n="todo_btn_export">Xuất TXT</span>
+        </button>
+        <button type="button" class="todo-tool-btn todo-tool-btn-danger" id="btn-todo-clear-done" title="Dọn dẹp các mục đã hoàn thành">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          <span data-i18n="todo_btn_clear_done">Dọn việc xong</span>
+        </button>
       </div>
     </div>
 
