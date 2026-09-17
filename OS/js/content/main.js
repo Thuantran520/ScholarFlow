@@ -12,7 +12,7 @@
   window.notifySidebar = notifySidebar;
 
   // Message listener from sidebar / background (Firefox + Chrome compatible)
-  // --- YouTube transcript helpers (reads page's own ytInitialPlayerResponse -> timedtext API) ---
+  // --- YouTube meta helpers (page's ytInitialPlayerResponse) ---
   function sfYtExtractBalancedJson(s, i0) {
     let depth = 0, inStr = false, esc = false;
     for (let i = i0; i < s.length; i++) {
@@ -24,67 +24,6 @@
       if (depth === 0 && i - i0 > 600000) break;
     }
     return "";
-  }
-  function sfYtFmtTs(totalSec) {
-    const s0 = Math.max(0, Math.floor(totalSec) || 0);
-    const h = Math.floor(s0 / 3600), m = Math.floor((s0 % 3600) / 60), sec = s0 % 60;
-    const p = (n) => String(n).padStart(2, "0");
-    return (h ? h + ":" : "") + p(m) + ":" + p(sec);
-  }
-  const SF_CAPTION_NOISE = /^\s*[\[(]?\s*(music|ti\u1ebfng nh\u1ea1c|nh\u1ea1c n\u1ec1n|applause|v\u1ed1 tay|ti\u1ebfng v\u1ed1|laugh(?:ing|s)?|c\u01b0\u1eddi|sound(?:s)?|audio|\u00e2m thanh)\s*[\])?]?\s*$/i;
-  function sfYtCaptionToLines(json) {
-    let evs = [];
-    try { evs = (json && json.events) || []; } catch (e) { evs = []; }
-    const out = []; let cur = "", curMs = 0, total = 0;
-    const pushLine = () => {
-      let txt = cur.replace(/\s+/g, " ").trim();
-      cur = "";
-      txt = txt.replace(/\[\s*(music|ti\u1ebfng nh\u1ea1c|nh\u1ea1c n\u1ec1n|applause|v\u1ed1 tay|ti\u1ebfng v\u1ed1|laugh(?:ing|s)?|c\u01b0\u1eddi|sound(?:s)?|audio|\u00e2m thanh)\s*\]/gi, " ").replace(/\s+/g, " ").trim();
-      if (!txt || SF_CAPTION_NOISE.test(txt)) return;
-      const last = out.length ? out[out.length - 1] : "";
-      const lastTxt = last.replace(/^\[[0-9:]+\]\s*/, "");
-      if (lastTxt && (lastTxt === txt || (txt.length > 15 && txt.includes(lastTxt)))) { out[out.length - 1] = last; return; }
-      const line = "[" + sfYtFmtTs(curMs) + "] " + txt;
-      out.push(line); total += line.length;
-    };
-    for (const ev of evs) {
-      const segs = ev.segs || []; let t = "";
-      for (const sg of segs) { if (sg && typeof sg.utf8 === "string") t += sg.utf8; }
-      if (!t) continue;
-      if (/^\s*\n+\s*$/.test(t)) {
-        if (cur.trim()) pushLine();
-        if (total > 23000) break;
-        continue;
-      }
-      if (!cur.trim()) curMs = Math.round((ev.tStartMs || 0) / 1000);
-      cur += t;
-    }
-    if (cur.trim()) pushLine();
-    const clean = out.join("\n").slice(0, 24000);
-    const spoken = clean.replace(/\[[\d:]+\]\s*/g, "");
-    if (spoken.replace(/\s/g, "").length < 200) return "";
-    return clean;
-  }
-  function sfYtPickTrack(tracks, lang) {
-    if (!Array.isArray(tracks) || !tracks.length) return null;
-    const want = String(lang || "vi").toLowerCase();
-    const root = want.split("-")[0];
-    let t = tracks.find(x => x && x.languageCode === want && x.kind !== "asr");
-    if (!t) t = tracks.find(x => x && String(x.languageCode || "").toLowerCase().startsWith(root) && x.kind !== "asr");
-    if (!t) t = tracks.find(x => x && String(x.languageCode || "").toLowerCase().startsWith(root));
-    if (!t) t = tracks.find(x => x && String(x.languageCode || "").toLowerCase().startsWith("en"));
-    if (!t) t = tracks.find(x => x && x.kind !== "asr");
-    if (!t) t = tracks[0];
-    return t || null;
-  }
-  function sfYtSafeBaseUrl(u) {
-    try {
-      const x = new URL(u);
-      const h = (x.hostname || "").toLowerCase();
-      if (x.protocol !== "https:" && x.protocol !== "http:") return "";
-      if (!/(^|\.)(youtube|youtube-nocookie|google|googlevideo|ggpht)\.com$/.test(h)) return "";
-      return x.toString();
-    } catch (e) { return ""; }
   }
   function sfYtPad2(n) { n = Number(n) || 0; return (n < 10 ? "0" : "") + n; }
   function sfYtParseUiDate(s) {
@@ -602,36 +541,7 @@
           sendResponse({ success: true, text: rawText, scripts: rawScripts });
           break;
         }
-        case "GET_YT_TRANSCRIPT": {
-          let ytDone = false;
-          const ytRespond = (o) => { if (!ytDone) { ytDone = true; sendResponse(o); } }
-          try {
-            if (!sfYtIsVideoPage()) { ytRespond({ success: true, ok: false, reason: "not_youtube" }); break; }
-            const ytVidCur = sfYtCurrentVideoId();
-            const obj = sfYtReadPlayerResponse();
-            const vd = (obj && obj.videoDetails) || {};
-            const mfObj = obj && obj.microformat && obj.microformat.playerMicroformatRenderer;
-            const title = vd.title || String(document.title || "").replace(/ - YouTube$/i, "") || "";
-            const author = vd.author || "";
-            const descSnip = String(vd.shortDescription || "").slice(0, 6000);
-            const dateSnip = String((mfObj && mfObj.publishDate) || (mfObj && mfObj.uploadDate) || "").slice(0, 10);
-            const viewsSnip = String(vd.viewCount || "");
-            const tracks = obj && obj.captions && obj.captions.playerCaptionsTracklistRenderer && obj.captions.playerCaptionsTracklistRenderer.captionTracks;
-            if (!Array.isArray(tracks) || !tracks.length) { ytRespond({ success: true, ok: false, reason: "no_captions", videoId: ytVidCur, title: title, author: author, description: descSnip, date: dateSnip, views: viewsSnip }); break; }
-            const tr = sfYtPickTrack(tracks, (msg && msg.lang) || "vi");
-            const safeUrl = tr && tr.baseUrl ? sfYtSafeBaseUrl(String(tr.baseUrl) + (String(tr.baseUrl).indexOf("?") !== -1 ? "&" : "?") + "fmt=json3") : "";
-            if (!safeUrl) { ytRespond({ success: true, ok: false, reason: "no_captions", videoId: ytVidCur, title: title, author: author, description: descSnip, date: dateSnip, views: viewsSnip }); break; }
-            fetch(safeUrl, { signal: AbortSignal.timeout(8000) }).then(r => r.ok ? r.text() : "").then(txt => {
-              let json = null;
-              try { json = JSON.parse(txt); } catch (e) { json = null; }
-              const transcript = json ? sfYtCaptionToLines(json) : "";
-              ytRespond({ success: true, ok: transcript.length > 0, reason: transcript.length > 0 ? "" : "no_captions", lang: tr.languageCode || "", kind: tr.kind || "manual", videoId: ytVidCur, title: title, author: author, description: descSnip, date: dateSnip, views: viewsSnip, transcript: transcript });
-            }).catch(() => ytRespond({ success: true, ok: false, reason: "fetch_failed", title: title, author: author, description: descSnip, date: dateSnip, views: viewsSnip }));
-            setTimeout(() => ytRespond({ success: true, ok: false, reason: "timeout", title: title, author: author, description: descSnip, date: dateSnip, views: viewsSnip }), 9500);
-          } catch (e) { ytRespond({ success: true, ok: false, reason: "error" }); }
-          break;
-        }
-        case "GET_YT_META": {
+case "GET_YT_META": {
           try {
             if (!sfYtIsVideoPage()) { sendResponse({ success: true, ok: false, reason: "not_youtube" }); break; }
             const gm = (sel, attr) => { try { const el = document.querySelector(sel); return el ? String(el.getAttribute(attr || "content") || "") : ""; } catch (e) { return ""; } };
@@ -647,7 +557,7 @@
               || txt("ytd-video-owner-renderer #channel-name a") || txt("#owner #channel-name a") || txt("ytd-channel-name a") || txt("ytd-watch-metadata #owner a");
             const fDate = microFresh ? (gm('meta[itemprop="datePublished"]') || gm('meta[itemprop="uploadDate"]') || gm('meta[itemprop="startDate"]')) : "";
             if (fAuthor && fDate) {
-              sendResponse({ success: true, ok: true, fast: true, title: fTitle, author: fAuthor, publishDate: fDate, publisher: "YouTube", platform: "YouTube", videoId: curVid, lengthSeconds: "" });
+              sendResponse({ success: true, ok: true, fast: true, title: fTitle, author: fAuthor, publishDate: fDate, publisher: "YouTube", platform: "YouTube", videoId: curVid, lengthSeconds: (function(){try{var v=document.querySelector("video");var d=v&&v.duration;if(d&&isFinite(d))return String(Math.round(d));var pr=window.ytInitialPlayerResponse;var ls=pr&&pr.videoDetails&&pr.videoDetails.lengthSeconds;return ls?String(ls):"";}catch(e){return "";}})() });
               break;
             }
             const obj = sfYtReadPlayerResponse();
@@ -659,7 +569,7 @@
                   if (box) uiDate = sfYtParseUiDate(String(box.textContent || "").slice(0, 3000));
                 } catch (e) { uiDate = ""; }
               }
-              sendResponse({ success: true, ok: !!(fTitle && fAuthor && uiDate), domOnly: true, title: fTitle, author: fAuthor, publishDate: uiDate, publisher: "YouTube", platform: "YouTube", videoId: curVid, lengthSeconds: "" });
+              sendResponse({ success: true, ok: !!(fTitle && fAuthor && uiDate), domOnly: true, title: fTitle, author: fAuthor, publishDate: uiDate, publisher: "YouTube", platform: "YouTube", videoId: curVid, lengthSeconds: (function(){try{var v=document.querySelector("video");var d=v&&v.duration;if(d&&isFinite(d))return String(Math.round(d));var pr=window.ytInitialPlayerResponse;var ls=pr&&pr.videoDetails&&pr.videoDetails.lengthSeconds;return ls?String(ls):"";}catch(e){return "";}})() });
               break;
             }
             const mf = obj && obj.microformat && obj.microformat.playerMicroformatRenderer;

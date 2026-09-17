@@ -7,7 +7,7 @@ const AI_PROVIDERS = {
   custom: { label: "Custom", models: [], defaultModel: "", webUrl: "" }
 };
 const AI_STORAGE_KEYS = { provider: "sf_ai_provider", keys: "sf_ai_keys", history: "sf_ai_history", settings: "sf_ai_settings", models: "sf_ai_models", prompts: "sf_ai_prompts", sessions: "sf_ai_sessions", mem: "sf_ai_mem" };
-const AI_DEFAULT_SETTINGS = { includePage: true, includeSelection: true, includeNotes: false, includeImages: true, includeSource: false, stream: true, webSearch: true, scope: "auto", maxChars: 5000, temperature: 0.7 };
+const AI_DEFAULT_SETTINGS = { includePage: true, includeSelection: true, includeNotes: false, includeImages: true, includeSource: false, stream: true, webSearch: true, autoVideo: true, scope: "auto", maxChars: 5000, temperature: 0.7 };
 const AI_DEFAULT_PROMPTS = { summary: "Tóm tắt trang này thành 5 bullet + 1 đoạn 100 chữ bằng tiếng Việt.", qa: "Trả lời câu hỏi dựa trên nội dung trang đang đứng, trích dẫn nguồn nếu có.", explain: "Giải thích đoạn bôi đen bằng tiếng Việt đơn giản.", translate: "Dịch nội dung chính của trang sang tiếng Việt tự nhiên.", outline: "Tạo outline 3 cấp (I, 1, a) cho bài viết này.", cite: "Gợi ý 3 câu hỏi nghiên cứu + 5 từ khóa học thuật từ trang này.", answer: "Giải các câu trắc nghiệm trong nội dung trang: mỗi câu nêu đáp án đúng (A/B/C/D hoặc giá trị) kèm giải thích 1 dòng bằng tiếng Việt. Nếu dữ liệu đáp án nằm trong mã nguồn/script của trang, hãy dựa vào đó để khẳng định.", tabs: "Tóm tắt TỪNG tab đang mở (mỗi tab 2 gạch đầu dòng bằng tiếng Việt), sau đó lập bảng so sánh các tab theo: chủ đề, luận điểm chính, độ tin cậy nguồn.", papers: "Dựa vào danh sách tài liệu tìm được từ Crossref/OpenAlex ở phần ngữ cảnh: chọn và xếp hạng 5 công trình liên quan nhất tới chủ đề trang, mỗi cái nêu lý do 1 dòng và định dạng trích dẫn APA." };
 let aiProvider = "gemini";
 let aiKeys = {};
@@ -25,7 +25,7 @@ let aiPages = [];
 function aiAddPage(page) {
   if (!page || !page.url) return;
   if (aiPages.some(function(p) { return p.url === page.url; })) return;
-  aiPages.push({ url: page.url, title: page.title || "", favicon: page.favicon || "", text: page.text || "", transcript: page.transcript || null });
+  aiPages.push({ url: page.url, title: page.title || "", favicon: page.favicon || "", text: page.text || "" });
   aiRenderPages();
 }
 function aiRemovePage(url) {
@@ -90,14 +90,17 @@ const AI_INJECTION_RE = /(\bignore\b[\s\S]{0,40}\b(previous|above|all)\b[\s\S]{0
 let aiSendTimes = [];
 let aiPromptFlagged = false;
 let aiQuickCtx = null;
-let aiForcedWeb = "";
-const aiWebCache = {};
-function aiWebSearchCached(query){
-  const k=String(query||"").toLowerCase().trim();
-  if(!k) return Promise.resolve("");
-  const hit=aiWebCache[k];
-  if(hit&&Date.now()-hit.t<3e5) return Promise.resolve(hit.v);
-  return aiWebSearch(query).then(v=>{ const keys=Object.keys(aiWebCache); if(keys.length>20){ keys.sort((a,b)=>aiWebCache[a].t-aiWebCache[b].t); delete aiWebCache[keys[0]]; } aiWebCache[k]={t:Date.now(),v:String(v||"")}; return String(v||""); });
+let aiForceGround = false;
+let aiActiveVideoId = "";
+let aiVideoResumeAt = 0;
+const _AI_STOPWORDS={a:1,an:1,the:1,of:1,on:1,at:1,in:1,is:1,are:1,was:1,were:1,be:1,to:1,for:1,and:1,or:1,but:1,it:1,its:1,this:1,that:1,these:1,those:1,with:1,from:1,by:1,as:1,do:1,does:1,did:1,what:1,which:1,who:1,how:1,why:1,when:1,where:1,would:1,will:1,can:1,could:1,should:1,about:1,there:1,their:1,your:1,you:1,i:1,me:1,my:1,we:1,us:1,our:1,not:1,no:1,yes:1,so:1,if:1,then:1,than:1,also:1,more:1,most:1,cua:1,va:1,la:1,cho:1,voi:1,mot:1,nhung:1,cac:1,cai:1,nay:1,neu:1,khi:1,ma:1,vao:1,ra:1,o:1,tren:1,duoi:1,trong:1,ngoai:1,tai:1,den:1,tu:1,cung:1,khong:1,co:1,duoc:1,hay:1,sao:1,de:1,v:1,nhieu:1,ban:1,toi:1,ai:1};
+function aiContextCovers(query, text){
+  const q=String(query||"").toLowerCase().normalize("NFC");
+  const t=String(text||"").toLowerCase().normalize("NFC");
+  const terms=q.split(/[^a-z0-9\u00C0-\u024F]/i).map(s=>s.toLowerCase().normalize("NFC")).filter(s=>s.length>=2&&!_AI_STOPWORDS[s]);
+  if(!terms.length) return true;
+  const matched=terms.filter(term=>t.includes(term)).length;
+  return matched/terms.length>=0.5;
 }
 let aiSessions = [];
 let aiMem = {};
@@ -106,8 +109,8 @@ function aiSessionId(){ return "s" + Date.now().toString(36) + Math.floor(Math.r
 function aiSessionsPersist(){ const clean=aiSessions.slice(0,15).map(s=>({id:s.id,name:String(s.name||"").slice(0,60),ts:Number(s.ts)||Date.now(),msgs:(s.msgs||[]).slice(-60)})); try{ storSet({[AI_STORAGE_KEYS.sessions]:clean}); }catch(e){} }
 function aiSessionsLoad(list){ if(!Array.isArray(list)) return []; return list.filter(s=>s&&s.id&&Array.isArray(s.msgs)).slice(0,15).map(s=>({id:String(s.id),name:String(s.name||"").slice(0,60),ts:Number(s.ts)||Date.now(),msgs:s.msgs.slice(-60).map(m=>({role:m.role==="user"?"user":"assistant",content:String(m.content||"").slice(0,16000),provider:AI_PROVIDERS[m.provider]?m.provider:"gemini",ts:Number(m.ts)||Date.now()}))})); }
 function aiSessionsSaveCurrent(){ if(!aiHistory.length) return; const cur=aiSessions.find(s=>s.id==="__current"); const snap={role:"",ts:Date.now(),msgs:aiHistory.map(m=>({role:m.role,content:m.content,provider:m.provider,ts:m.ts}))}; if(cur){ cur.msgs=snap.msgs; cur.ts=Date.now(); } else { aiSessions.unshift({id:"__current",name:"⟲",ts:Date.now(),msgs:snap.msgs}); } aiSessionsPersist(); }
-function aiSessionsNew(name){ aiSessionsSaveCurrent(); aiHistory=[]; aiSaveHistory(); aiRenderHistory(); if(name){ aiSessions.unshift({id:aiSessionId(),name:String(name).slice(0,60),ts:Date.now(),msgs:[]}); aiSessionsPersist(); } }
-function aiSessionsOpen(id){ const s=aiSessions.find(x=>x.id===id); if(!s) return; aiSessionsSaveCurrent(); const idx=aiSessions.findIndex(x=>x.id===id); if(idx!==-1) aiSessions.splice(idx,1); aiHistory=(s.msgs||[]).map(m=>({role:m.role,content:m.content,provider:m.provider,ts:m.ts})); aiSaveHistory(); aiRenderHistory(); }
+function aiSessionsNew(name){ aiSessionsSaveCurrent(); aiHistory=[]; aiActiveVideoId=""; aiVideoResumeAt=0; aiSaveHistory(); aiRenderHistory(); if(name){ aiSessions.unshift({id:aiSessionId(),name:String(name).slice(0,60),ts:Date.now(),msgs:[]}); aiSessionsPersist(); } }
+function aiSessionsOpen(id){ const s=aiSessions.find(x=>x.id===id); if(!s) return; aiSessionsSaveCurrent(); const idx=aiSessions.findIndex(x=>x.id===id); if(idx!==-1) aiSessions.splice(idx,1); aiHistory=(s.msgs||[]).map(m=>({role:m.role,content:m.content,provider:m.provider,ts:m.ts})); aiActiveVideoId=""; aiVideoResumeAt=0; aiSaveHistory(); aiRenderHistory(); }
 function aiSessionsDelete(id){ aiSessions=aiSessions.filter(s=>s.id!==id); aiSessionsPersist(); }
 function aiSessionsSearch(q){ const t=String(q||"").toLowerCase().trim(); if(!t) return aiSessions; return aiSessions.filter(s=>String(s.name).toLowerCase().includes(t)||s.msgs.some(m=>String(m.content||"").toLowerCase().includes(t))); }
 function aiRenderSessions(){ const list=document.getElementById("ai-session-list"); const se=document.getElementById("ai-session-search"); if(!list) return; const q=se?se.value:""; list.textContent=""; const items=aiSessionsSearch(q); if(!items.length){ const e=document.createElement("div"); e.className="ai-empty"; e.textContent=aiT("ai_sessions_empty",null,"Chưa có phiên nào được lưu."); list.appendChild(e); return; } items.forEach(s=>{ const row=document.createElement("div"); row.className="ai-session-row"; const info=document.createElement("div"); info.className="ai-session-info"; const nm=document.createElement("div"); nm.className="ai-session-name"; nm.textContent=s.id==="__current"?aiT("ai_sessions_current",null,"Phiên hiện tại"):s.name||"(khong ten)"; const meta=document.createElement("div"); meta.className="ai-session-meta"; try{ meta.textContent=new Date(s.ts).toLocaleString()+" · "+s.msgs.length+" tin"; }catch(e){ meta.textContent=s.msgs.length+" tin"; } info.appendChild(nm); info.appendChild(meta); const acts=document.createElement("div"); acts.className="ai-session-actions"; if(s.id!=="__current"){ const open=document.createElement("button"); open.type="button"; open.className="ai-session-btn"; open.textContent="↪"; open.title=aiT("ai_sessions_open",null,"Mở phiên"); open.addEventListener("click",()=>{ aiHideSessions(); aiSessionsOpen(s.id); }); acts.appendChild(open); } const del=document.createElement("button"); del.type="button"; del.className="ai-session-btn ai-session-del"; del.textContent="✕"; del.title=aiT("ai_sessions_delete",null,"Xoá phiên"); del.addEventListener("click",()=>{ aiSessionsDelete(s.id); aiRenderSessions(); if(typeof showToast==="function") showToast("ai_toast_session_deleted","success"); }); acts.appendChild(del); row.appendChild(info); row.appendChild(acts); list.appendChild(row); }); }
@@ -118,6 +121,20 @@ function aiMemKey(url){ return String(url||"").replace(/^https?:\/\//,"").replac
 function aiMemPersist(){ try{ const keys=Object.keys(aiMem); while(keys.length>60){ delete aiMem[keys.shift()]; } storSet({[AI_STORAGE_KEYS.mem]:aiMem}); }catch(e){} }
 function aiMemRemember(url, question){ if(!url||url==="—"||/^(about|chrome|moz-extension|file):/i.test(url)) return; const k=aiMemKey(url); const e=aiMem[k]||{q:[],ts:0,hits:0}; const q=String(question).slice(0,180); const arr=(Array.isArray(e.q)?e.q:[]).filter(x=>x!==q); arr.unshift(q); aiMem[k]={q:arr.slice(0,3),ts:Date.now(),hits:(e.hits||0)+1}; aiMemPersist(); }
 function aiMemFor(url){ const k=aiMemKey(url); const e=aiMem[k]; if(!e||!Array.isArray(e.q)||!e.q.length) return ""; if(Date.now()-(e.ts||0)>30*864e5) return ""; return "[Kỷ niệm AI về trang này] Lan truoc day ban da hoi:\n- "+e.q.join("\n- ")+"\n(Can nhac lai neu cau hoi hom nay lien quan.)"; }
+/* ── Auto page-intent (Copilot-style: no +/@ prefix needed) ── */
+const AI_PAGE_INTENT_RE = /(trang\s+(này|hiện tại|của tôi|đang xem)|(web|website)\s+này|bài\s+(này|viết này|báo này|bài báo này)|video\s+này|clip\s+này|mv\s+này|nội dung\s+này|đoạn\s+này|(trên|ở)\s+trang(\s+này)?|trang hiện tại|trang\s+đang\s+(mở|xem)|tác giả\s+(của\s+)?(trang|bài|video|bài hát|mv)\s+này|người\s+viết\s+bài\s+này|this\s+(page|article|video|website|post|document)|current\s+(page|tab|url))/i;
+const AI_PAGE_TOOL_RE = /(tóm tắt\s+(trang|trang web|video|clip|nội dung|bài viết|video này|bài này)|dịch\s+(trang|bài|video|đoạn|nội dung)(\s+sang)?|giải\s+các\s+câu\s+trắc\s+nghiệm|trắc\s+nghiệm\s+(trong|ở)\s+trang|đáp\s+án\s+(câu|bài|đề)|tạo\s+outline|outline\s+(this|the)|bôi\s+đen|tóm\s+tắt\s+các\s+tab|so\s+sánh\s+các\s+tab|tài\s+liệu\s+liên\s+quan|trích\s+dẫn\s+APA|định\s+dạng\s+APA|gợi\s+ý\s+câu\s+hỏi\s+nghiên\s+cứu|translate\s+this)/i;
+function aiDetectPageIntent(raw){
+  const q=String(raw||"").trim();
+  if(!q) return false;
+  if(/^[+@]\s*/.test(q)) return true;
+  return AI_PAGE_INTENT_RE.test(q)||AI_PAGE_TOOL_RE.test(q);
+}
+function aiSourcesLabel(){
+  const L={vi:"Nguồn web (Google Search):",en:"Web sources (Google Search):",zh:"网络来源（Google 搜索）:",ru:"Веб-источники (поиск Google):",ja:"ウェブ出典（Google検索）:"};
+  const lang=(typeof currentAppLanguage!=="undefined"&&currentAppLanguage)||"vi";
+  return L[lang]||"Web sources:";
+}
 /* ── Multi-passage RAG ── */
 function aiSelectRelevantWindows(fullText, query, budget){
   const T=String(fullText||"");
@@ -157,13 +174,38 @@ async function aiStreamSSE(res, extract, opts){
   }
   return full;
 }
-async function aiStreamGemini(model, apiKey, contents, temperature, opts, tools){
+function aiGroundingSources(cand){
+  const out=[];
+  if(!cand) return out;
+  const gm=cand.groundingMetadata;
+  const chunks=(gm&&Array.isArray(gm.groundingChunks))?gm.groundingChunks:((gm&&Array.isArray(gm.sources))?gm.sources:[]);
+  for(const c of chunks){
+    const w=c&&c.web;
+    const u=w?(w.uri||""):((c&&c.uri)||"");
+    if(!u||!/^https?:\/\//i.test(String(u))) continue;
+    const tit=String((w&&w.title)||(c&&c.title)||"").replace(/\s+/g," ").trim();
+    if(out.some(x=>x.u===u)) continue;
+    out.push({u:String(u).slice(0,300),t:tit.slice(0,140)});
+  }
+  return out.slice(0,8);
+}
+async function aiStreamGemini(model, apiKey, contents, temperature, opts, tools, maxMs, genExtra){
   const url="https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(model)+":streamGenerateContent?alt=sse&key="+encodeURIComponent(apiKey);
-  const body={contents:contents,generationConfig:{temperature:temperature}}; if(tools&&tools.length) body.tools=tools;
-  const res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),signal:aiSig(opts&&opts.signal,90000)});
+  const body={contents:contents,generationConfig:Object.assign({temperature:temperature},genExtra||null)}; if(tools&&tools.length) body.tools=tools;
+  const res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),signal:aiSig(opts&&opts.signal,maxMs||90000)});
   if(!res.ok){ const t=res.status===404?"model_404":String(res.status); throw new Error("gemini_stream_"+t); }
-  const full=await aiStreamSSE(res, (o)=>{ const cand=o.candidates&&o.candidates[0]; const p2=cand&&cand.content&&cand.content.parts; return p2&&p2[0]&&typeof p2[0].text==="string"?p2[0].text:""; }, opts);
+  const srcs=[];
+  const extract=(o)=>{
+    const cand=o.candidates&&o.candidates[0];
+    const p2=cand&&cand.content&&cand.content.parts;
+    const txt=p2&&p2[0]&&typeof p2[0].text==="string"?p2[0].text:"";
+    const got=aiGroundingSources(cand);
+    for(const s of got){ if(!srcs.some(x=>x.u===s.u)) srcs.push(s); }
+    return txt;
+  };
+  const full=await aiStreamSSE(res, extract, opts);
   if(!full) throw new Error("gemini_stream_empty");
+  if(srcs.length&&opts) opts.__groundingSources=srcs.slice(0,8);
   return full;
 }
 async function aiStreamOpenAI(apiUrl, model, messages, temperature, apiKey, opts){
@@ -346,175 +388,35 @@ function aiExtractYouTubeId(text){
   const m=String(text||"").match(/(?:youtube\.com\/watch\?(?:[^\s<>"']*[&?])?v=|youtube\.com\/shorts\/|youtube\.com\/embed\/|youtu\.be\/)([\w-]{8,12})/i);
   return m?m[1]:"";
 }
-function aiYtBalancedJson(s, i0){
-  let depth=0, inStr=false, esc=false;
-  for(let i=i0;i<s.length;i++){
-    const ch=s[i];
-    if(inStr){ if(esc){ esc=false; } else if(ch==="\\"){ esc=true; } else if(ch==="\""){ inStr=false; } continue; }
-    if(ch==="\""){ inStr=true; continue; }
-    if(ch==="{"){ depth++; continue; }
-    if(ch==="}"){ depth--; if(depth===0) return s.slice(i0,i+1); }
-    if(depth===0&&i-i0>1200000) break;
-  }
-  return "";
-}
-function aiYtParseCaption(json, lang){
-  const empty={ text:"", title:"", author:"", lang:"", kind:"", url:"" };
+function aiYtBalancedJson(s,i0){ let depth=0,inStr=false,esc=false; for(let i=i0;i<s.length;i++){ const ch=s[i]; if(inStr){ if(esc){esc=false;} else if(ch==="\\"){esc=true;} else if(ch==="\""){inStr=false;} continue; } if(ch==="\""){inStr=true;continue;} if(ch==="{"){depth++;continue;} if(ch==="}"){depth--; if(depth===0) return s.slice(i0,i+1);} if(depth===0&&i-i0>800000) break; } return ""; }
+/* YouTube citation metadata via a DIRECT background fetch (extension already has <all_urls>,
+   so this is CORS-privileged from the sidebar page). NO hidden tab is opened — unlike the old
+   background-tab fallback which force-loaded a watch page and closed it (the flicker users disliked).
+   If the page returns a consent/stripped interstitial, we simply return what we parsed (or null) and
+   oEmbed is the last resort. */
+async function aiYtMetaViaFetch(videoId){
+  const vid=String(videoId||"").trim(); if(!vid) return null;
   try{
-    const title=(json&&json.videoDetails&&json.videoDetails.title)||"";
-    const author=(json&&json.videoDetails&&json.videoDetails.author)||"";
-    const tracks=json&&json.captions&&json.captions.playerCaptionsTracklistRenderer&&json.captions.playerCaptionsTracklistRenderer.captionTracks;
-    if(!Array.isArray(tracks)||!tracks.length) return Object.assign(empty,{title:title,author:author,noCaptions:true});
-    const want=String(lang||"vi").toLowerCase(); const root=want.split("-")[0];
-    const t=tracks.find(x=>x&&x.languageCode===want&&x.kind!=="asr")||tracks.find(x=>x&&String(x.languageCode||"").toLowerCase().startsWith(root)&&x.kind!=="asr")||tracks.find(x=>x&&String(x.languageCode||"").toLowerCase().startsWith(root))||tracks.find(x=>x&&String(x.languageCode||"").toLowerCase().startsWith("en"))||tracks.find(x=>x&&x.kind!=="asr")||tracks[0];
-    if(!t||!t.baseUrl) return Object.assign(empty,{title:title,author:author,noCaptions:true});
-    const u=String(t.baseUrl)+(String(t.baseUrl).indexOf("?")!==-1?"&":"?")+"fmt=json3";
-    try{
-      const x=new URL(u); const h=(x.hostname||"").toLowerCase();
-      if((x.protocol!=="https:"&&x.protocol!=="http:")||!/([a-z0-9-]+\.)*(youtube|youtube-nocookie|google|googlevideo|ggpht)\.com$/i.test(h)) return Object.assign(empty,{title:title,author:author,noCaptions:true});
-    }catch(e){ return Object.assign(empty,{title:title,author:author}); }
-    return { url:u, title:title, author:author, lang:String(t.languageCode||""), kind:String(t.kind||"manual") };
-  }catch(e){ return Object.assign(empty,{noCaptions:true}); }
-}
-function aiYtCaptionEventsToLines(json){
-  let evs=[]; try{ evs=(json&&json.events)||[]; }catch(e){ evs=[]; }
-  const fmt=(x)=>{ x=Math.max(0,Math.floor(x)||0); const h=Math.floor(x/3600),m=Math.floor((x%3600)/60),s=x%60,p=n=>String(n).padStart(2,"0"); return (h?h+":":"")+p(m)+":"+p(s); };
-  const NOISE=/^\s*[\[(]?\s*(music|ti\u1ebfng nh\u1ea1c|nh\u1ea1c n\u1ec1n|applause|v\u1ed1 tay|ti\u1ebfng v\u1ed1|laugh(?:ing|s)?|c\u01b0\u1eddi|sound(?:s)?|audio|\u00e2m thanh)\s*[\])?]?\s*$/i;
-  const out=[]; let cur="", curMs=0, total=0;
-  const push=()=>{ let txt=cur.replace(/\s+/g," ").trim(); cur=""; txt=txt.replace(/\[\s*(music|ti\u1ebfng nh\u1ea1c|nh\u1ea1c n\u1ec1n|applause|v\u1ed1 tay|ti\u1ebfng v\u1ed1|laugh(?:ing|s)?|c\u01b0\u1eddi|sound(?:s)?|audio|\u00e2m thanh)\s*\]/gi," ").replace(/\s+/g," ").trim(); if(!txt||NOISE.test(txt)) return; const last=out.length?out[out.length-1]:""; const lastTxt=last.replace(/^\[[0-9:]+\]\s*/,""); if(lastTxt&&(lastTxt===txt||(txt.length>15&&txt.includes(lastTxt)))) return; const line="["+fmt(curMs)+"] "+txt; out.push(line); total+=line.length; };
-  for(const ev of evs){
-    const segs=ev.segs||[]; let t="";
-    for(const sg of segs){ if(sg&&typeof sg.utf8==="string") t+=sg.utf8; }
-    if(!t) continue;
-    if(/^\s*\n+\s*$/.test(t)){ if(cur.trim()) push(); if(total>23000) break; continue; }
-    if(!cur.trim()) curMs=Math.round((ev.tStartMs||0)/1000);
-    cur+=t;
-  }
-  if(cur.trim()) push();
-  const clean=out.join("\n").slice(0,24000);
-  if(clean.replace(/\[[\d:]+\]\s*/g,"").replace(/\s/g,"").length<200) return "";
-  return clean;
-}
-async function aiYtOembedMeta(videoId){
-  try{
-    const u="https://www.youtube.com/oembed?url="+encodeURIComponent("https://www.youtube.com/watch?v="+videoId)+"&format=json";
-    const r=await fetch(u,{signal:AbortSignal.timeout(6000),credentials:"omit"});
+    const r=await fetch("https://www.youtube.com/watch?v="+encodeURIComponent(vid),{signal:AbortSignal.timeout(9000),credentials:"omit"});
     if(!r.ok) return null;
-    const j=await r.json();
-    return { title:String((j&&j.title)||""), author:String((j&&j.author_name)||"") };
+    const html=String(await r.text());
+    const idx=html.indexOf("ytInitialPlayerResponse"); if(idx===-1) return null;
+    const b=html.indexOf("{",idx); if(b===-1||b-idx>200) return null;
+    const j=aiYtBalancedJson(html,b); if(!j) return null;
+    let obj=null; try{ obj=JSON.parse(j); }catch(e){ return null; }
+    const vd=(obj&&obj.videoDetails)||{}; const mf=obj&&obj.microformat&&obj.microformat.playerMicroformatRenderer;
+    const gotVid=String(vd.videoId||""); if(gotVid&&gotVid!==vid) return null;
+    const title=String(vd.title||"").replace(/\s*-\s*YouTube$/i,"");
+    const author=String(vd.author||"");
+    const publishDate=String((mf&&mf.publishDate)||(mf&&mf.uploadDate)||"").slice(0,10);
+    const lengthSeconds=String(vd.lengthSeconds||"");
+    const ok=!!(title||author||publishDate);
+    return { success:true, ok:ok, domOnly:true, title:title, author:author, publishDate:publishDate, publisher:"YouTube", platform:"YouTube", videoId:vid, lengthSeconds:lengthSeconds };
   }catch(e){ return null; }
 }
-async function aiYtHiddenTabMeta(videoId){
-  const tabsApi=(typeof browser!=="undefined"&&browser.tabs)?browser.tabs:(typeof chrome!=="undefined"?chrome.tabs:null);
-  if(!tabsApi||!tabsApi.create||!tabsApi.sendMessage||!tabsApi.remove||!videoId) return null;
-  let tab=null;
-  try{ const p=tabsApi.create({url:"https://www.youtube.com/watch?v="+encodeURIComponent(videoId), active:false}); tab=(p&&typeof p.then==="function")?await p:null; }catch(e){ return null; }
-  if(!tab||!tab.id) return null;
-  try{
-    for(let i=0;i<24;i++){
-      let st="";
-      try{ const g=tabsApi.get(tab.id); const t=(g&&typeof g.then==="function")?await g:await new Promise(r=>tabsApi.get(tab.id,r)); st=(t&&t.status)||""; }catch(e){ st="gone"; }
-      if(st==="complete"||st==="gone") break;
-      await new Promise(r=>setTimeout(r,300));
-    }
-    return await Promise.race([
-      (function(){ try{ const p=tabsApi.sendMessage(tab.id,{action:"GET_YT_META"}); return (p&&typeof p.then==="function")?p:new Promise(r=>{ try{ tabsApi.sendMessage(tab.id,{action:"GET_YT_META"},r); }catch(e){ r(null); } }); }catch(e){ return Promise.resolve(null); } })(),
-      new Promise(r=>setTimeout(()=>r(null),9000))
-    ]);
-  } finally {
-    try{ const rp=tabsApi.remove(tab.id); if(rp&&typeof rp.then==="function") rp.then(()=>{},()=>{}); }catch(e){}
-  }
-}
-async function aiScrapeTranscriptViaHiddenTab(videoId){
-  const tabsApi=(typeof browser!=="undefined"&&browser.tabs)?browser.tabs:(typeof chrome!=="undefined"?chrome.tabs:null);
-  if(!tabsApi||!tabsApi.create||!tabsApi.sendMessage||!tabsApi.remove) return null;
-  const url="https://www.youtube.com/watch?v="+encodeURIComponent(videoId);
-  let tab=null;
-  try{ const p=tabsApi.create({url:url, active:false}); tab=(p&&typeof p.then==="function")?await p:null; }catch(e){ return null; }
-  if(!tab||!tab.id) return null;
-  try{
-    for(let i=0;i<28;i++){
-      let st="";
-      try{ const g=tabsApi.get(tab.id); const t=(g&&typeof g.then==="function")?await g:await new Promise(r=>tabsApi.get(tab.id,r)); st=(t&&t.status)||""; }catch(e){ st="gone"; }
-      if(st==="complete"||st==="gone") break;
-      await new Promise(r=>setTimeout(r,300));
-    }
-    const res=await Promise.race([
-      (function(){ try{ const p=tabsApi.sendMessage(tab.id,{action:"GET_YT_TRANSCRIPT", lang:(typeof currentAppLanguage!=="undefined"&&currentAppLanguage)||"vi"}); return (p&&typeof p.then==="function")?p:new Promise(r=>{ try{ tabsApi.sendMessage(tab.id,{action:"GET_YT_TRANSCRIPT", lang:(typeof currentAppLanguage!=="undefined"&&currentAppLanguage)||"vi"}, r); }catch(e){ r(null); } }); }catch(e){ return Promise.resolve(null); } })(),
-      new Promise(r=>setTimeout(()=>r(null),12500))
-    ]);
-    if(res&&res.ok&&res.transcript) return { title:String(res.title||""), author:String(res.author||""), description:String(res.description||""), date:String(res.date||""), views:String(res.views||""), lang:String(res.lang||""), kind:String(res.kind||""), text:String(res.transcript).slice(0,24000) };
-    if(res&&res.reason==="no_captions") return { noCaptions:true, title:String(res.title||""), author:String(res.author||""), description:String(res.description||""), date:String(res.date||""), views:String(res.views||"") };
-    return null;
-  } finally {
-    try{ const rp=tabsApi.remove(tab.id); if(rp&&typeof rp.then==="function") rp.then(()=>{},()=>{}); }catch(e){}
-  }
-}
-async function aiFetchTranscriptForVideo(vid, lang){
-  if(!vid) return null;
-  try{
-    const res=await fetch("https://www.youtube.com/watch?v="+encodeURIComponent(vid),{signal:AbortSignal.timeout(10000),credentials:"omit"});
-    if(res.ok){
-      const html=String(await res.text()).slice(0,1500000);
-      const idx=html.indexOf("ytInitialPlayerResponse");
-      if(idx!==-1){
-        const b=html.indexOf("{",idx);
-        if(b!==-1&&b-idx<=200){
-          const j=aiYtBalancedJson(html,b);
-          let obj=null; if(j){ try{ obj=JSON.parse(j); }catch(e){ obj=null; } }
-          if(obj){
-            const meta=aiYtParseCaption(obj,(typeof currentAppLanguage!=="undefined"&&currentAppLanguage)||lang||"vi");
-            const vd=(obj&&obj.videoDetails)||{};
-            const mfX=obj&&obj.microformat&&obj.microformat.playerMicroformatRenderer;
-            const extra={ title:meta.title||String(vd.title||""), author:meta.author||String(vd.author||""), description:String(vd.shortDescription||"").slice(0,6000), date:String((mfX&&mfX.publishDate)||"").slice(0,10), views:String(vd.viewCount||"") };
-            if(meta.url){
-              const r2=await fetch(meta.url,{signal:AbortSignal.timeout(8000),credentials:"omit"});
-              if(r2.ok){
-                let cj=null; try{ cj=JSON.parse(await r2.text()); }catch(e){ cj=null; }
-                const text=cj?aiYtCaptionEventsToLines(cj):"";
-                if(text) return { lang:meta.lang, kind:meta.kind, text:text, title:extra.title, author:extra.author, description:extra.description, date:extra.date, views:extra.views };
-              }
-              return { noCaptions:true, title:extra.title, author:extra.author, description:extra.description, date:extra.date, views:extra.views };
-            } else if(meta.noCaptions) return { noCaptions:true, title:extra.title, author:extra.author, description:extra.description, date:extra.date, views:extra.views };
-          }
-        }
-      }
-    }
-  }catch(e){ /* CORS (Firefox) or network error -> hidden-tab same-origin scrape below */ }
-  try{
-    const hidden=await aiScrapeTranscriptViaHiddenTab(vid);
-    if(hidden) return hidden;
-  }catch(e){}
-  const om=await aiYtOembedMeta(vid);
-  if(om&&(om.title||om.author)) return { noCaptions:true, title:om.title, author:om.author };
-  return null;
-}
-const AI_EXPLICIT_WEB_RE = /(t\xecm web|tra c\u1EE9u|google|l\xean m\u1EA1ng|ai s\u00E1ng t\u00E1c|s\u00E1ng t\u00E1c b\u1EDFi|t\xEAn b\u00E0i h\u00E1t|b\u00E0i h\u00E1t n\u00E0y|ca s\u1EC9|ph\u1EA7m m\u1EBDi|ng\u00F4i nh\u00E0|t\u00EDch s\u1ED1|population|born in|who (wrote|sang|sings))/i;
-async function aiWebSearch(query){
-  const q=String(query||"").replace(/[\u0000-\u001F]/g," ").trim().slice(0,140);
-  if(q.length<3) return "";
-  const one=(u)=>fetch(u,{signal:AbortSignal.timeout(7000),credentials:"omit"}).then(r=>r.ok?r.json().catch(()=>null):null).catch(()=>null);
-  const jobs=[];
-  jobs.push(one("https://api.duckduckgo.com/?q="+encodeURIComponent(q)+"&format=json&no_html=1&skip_disambig=1").then(d=>{ if(!d||typeof d!=="object") return ""; const L=[]; if(d.Answer&&typeof d.Answer==="string")L.push("- [DDG] "+d.Answer.slice(0,300)); if(typeof d.Definition==="string")L.push("- [DDG] "+d.Definition.slice(0,300)); if(typeof d.AbstractText==="string")L.push("- [DDG] "+String(d.AbstractSource||"")+": "+d.AbstractText.slice(0,600)+(typeof d.AbstractURL==="string"?" ("+d.AbstractURL+")":"")); (Array.isArray(d.RelatedTopics)?d.RelatedTopics:[]).slice(0,4).forEach(t=>{ if(t&&typeof t.Text==="string")L.push("- [DDG] "+t.Text.slice(0,220)); }); return L.join("\n"); }));
-  const wiki=(lang)=>one("https://"+lang+".wikipedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrsearch="+encodeURIComponent(q)+"&gsrlimit=3&prop=extracts&exintro=1&explaintext=1&exchars=550").then(d=>{ const pages=d&&d.query&&d.query.pages; if(!pages||typeof pages!=="object")return ""; const L=[]; Object.values(pages).slice(0,3).forEach(p=>{ const ex=String((p&&p.extract)||"").replace(/\s+/g," ").slice(0,480); if(ex) L.push("- [Wikipedia "+lang+"] "+String((p&&p.title)||"").slice(0,80)+": "+ex); }); return L.join("\n"); });
-  jobs.push(wiki("vi")); jobs.push(wiki("en"));
-  const rs=await Promise.all(jobs);
-  return rs.filter(Boolean).join("\n").slice(0,3500);
-}
-function aiGetYouTubeTranscript(){
-  return new Promise(res=>{
-    if(typeof sendTabMessage!=="function"){ res(null); return; }
-    let done=false; const fin=v=>{ if(!done){ done=true; res(v); } };
-    setTimeout(()=>fin(null),15000);
-    try{
-      sendTabMessage({action:"GET_YT_TRANSCRIPT", timeoutMs:14000, lang:(typeof currentAppLanguage!=="undefined"&&currentAppLanguage)||"vi"}, r=>{
-        if(r&&r.ok&&typeof r.transcript==="string"&&r.transcript.trim()){ fin({vid:String(r.videoId||""),title:String(r.title||""),author:String(r.author||""),description:String(r.description||""),date:String(r.date||""),views:String(r.views||""),lang:String(r.lang||""),kind:String(r.kind||""),text:String(r.transcript).slice(0,24000)}); }
-        else if(r&&r.reason==="no_captions"){ fin({noCaptions:true,vid:String(r.videoId||""),title:String(r.title||""),author:String(r.author||""),description:String(r.description||""),date:String(r.date||""),views:String(r.views||"")}); }
-        else fin(null);
-      });
-    }catch(e){ fin(null); }
-  });
-}
+/* Web search now uses ONLY Gemini's native Google Search grounding (tools:[{google_search}]).
+   The old DuckDuckGo/Wikipedia HTML+API scraper (aiWebSearch/aiWebSearchHtml/aiDecodeDdgUrl)
+   was removed because its results were noisy and polluted answers. */
 function aiIsYouTubeUrl(u){
   try{ const hn=String(u||""); const m=/^[a-z][a-z0-9+.-]*:\/\/([^/?#]+)/i.exec(hn); const host=(m?m[1]:hn.split("/")[0]).toLowerCase().replace(/^www\./,""); return /(^|\.)youtube\.com$/.test(host)||host==="youtu.be"; }catch(e){ return false; }
 }
@@ -667,11 +569,12 @@ function aiRenderFormattedText(bubble, text){
     flushTable();
     if(trimmed.startsWith("```")){ if(inCode) flush(); inCode=!inCode; return; }
     if(inCode){ buf.push(raw); return; }
-    if(/^(GỢI Ý|Gợi ý câu hỏi|SUGGESTED|SUGGESTED QUESTIONS|SUGGESTIONS|建议问题|次の質問|Идеи вопросов)[:：]?\s*$/i.test(trimmed)){ sugMode=true; const lab=document.createElement("div"); lab.className="ai-suggest-title"; lab.textContent="💡 "+aiT("ai_suggest_title",null,"Câu hỏi gợi ý tiếp theo"); bubble.appendChild(lab); return; }
+    const sugHead=trimmed.replace(/^[#>\*\s]+/,"").replace(/[\*\s]+$/,"");
+    if(/^(GỢI Ý|GỢI\s*Ý|Gợi ý câu hỏi|SUGGESTED(?:\s*QUESTIONS)?|SUGGESTIONS|建议问题|次の質問|Идеи вопросов)[:：]?$/i.test(sugHead)){ sugMode=true; const lab=document.createElement("div"); lab.className="ai-suggest-title"; lab.textContent="💡 "+aiT("ai_suggest_title",null,"Câu hỏi gợi ý tiếp theo"); bubble.appendChild(lab); return; }
     if(trimmed.startsWith("---")||trimmed.startsWith("***")){ sugMode=false; if(trimmed.length<5){ const hr=document.createElement("hr"); hr.style.border="none"; hr.style.borderTop="1px solid rgba(255,255,255,0.08)"; hr.style.margin="8px 0"; bubble.appendChild(hr); return; } }
     const indent=raw.match(/^(\s*)/)[1].length, t=raw.trimStart();
     const numM=t.match(/^([0-9]{1,2})[.)]\s+(.+)/);
-    if(numM){ const row=document.createElement("div"); row.style.display="flex"; row.style.gap="6px"; row.style.marginLeft=indent>=2?"16px":"0"; row.style.marginTop="2px"; const nb=document.createElement("span"); nb.textContent=numM[1]+"."; nb.style.color="#38bdf8"; nb.style.fontWeight="700"; nb.style.flexShrink="0"; row.appendChild(nb); const sp=document.createElement("span"); sp.style.flex="1"; sp.appendChild(aiFormatInline(numM[2])); row.appendChild(sp); bubble.appendChild(row); return; }
+    if(numM){ if(sugMode&&numM[2]){ const chip=document.createElement("button"); chip.type="button"; chip.className="ai-suggest"; const cText=numM[2].replace(/[*`]/g,"").trim(); chip.textContent=cText.slice(0,160); chip.addEventListener("click",()=>{ const inp=document.getElementById("ai-input"); if(inp){ inp.value=cText.slice(0,800); inp.focus(); aiGrowInput(inp); } }); bubble.appendChild(chip); return; } const row=document.createElement("div"); row.style.display="flex"; row.style.gap="6px"; row.style.marginLeft=indent>=2?"16px":"0"; row.style.marginTop="2px"; const nb=document.createElement("span"); nb.textContent=numM[1]+"."; nb.style.color="#38bdf8"; nb.style.fontWeight="700"; nb.style.flexShrink="0"; row.appendChild(nb); const sp=document.createElement("span"); sp.style.flex="1"; sp.appendChild(aiFormatInline(numM[2])); row.appendChild(sp); bubble.appendChild(row); return; }
     if(t.startsWith("- ")||t.startsWith("* ")||t.startsWith("• ")){
       const itemText=t.slice(2).replace(/[*`]/g,"").trim();
       if(sugMode&&itemText){
@@ -685,7 +588,7 @@ function aiRenderFormattedText(bubble, text){
       const dot=document.createElement("span"); dot.textContent="•"; dot.style.color=indent>=2?"#94a3b8":"#a78bfa"; dot.style.flexShrink="0"; row.appendChild(dot);
       const span=document.createElement("span"); span.style.flex="1"; span.appendChild(aiFormatInline(t.slice(2))); row.appendChild(span); bubble.appendChild(row); return;
     }
-    if(trimmed===""){ sugMode=sugMode?false:false; bubble.appendChild(document.createElement("br")); return; }
+    if(trimmed===""){ if(sugMode) return; bubble.appendChild(document.createElement("br")); return; }
     if(sugMode&&/^[^\-\*•|]{3,}$/.test(trimmed)&&!/^\d+[).]/.test(trimmed)){
       const chip=document.createElement("button"); chip.type="button"; chip.className="ai-suggest"; chip.textContent=trimmed.slice(0,160);
       chip.addEventListener("click",()=>{ const inp=document.getElementById("ai-input"); if(inp){ inp.value=trimmed.slice(0,800); inp.focus(); aiGrowInput(inp); } });
@@ -728,7 +631,7 @@ function aiAppendMessage(role, content, provider, image){
   if(c){ const em=c.querySelector(".ai-empty"); if(em) c.removeChild(em); c.appendChild(aiBuildMsgRow(e)); c.scrollTop=c.scrollHeight; }
   else aiRenderHistory();
 }
-function aiClearHistory(){ aiHistory=[]; aiSaveHistory(); aiRenderHistory(); if(typeof showToast==="function") showToast("ai_toast_cleared","success"); }
+function aiClearHistory(){ aiHistory=[]; aiActiveVideoId=""; aiVideoResumeAt=0; aiSaveHistory(); aiRenderHistory(); if(typeof showToast==="function") showToast("ai_toast_cleared","success"); }
 function aiPopulateModelSelect(){
   const cfg=aiGetProviderConfig(aiProvider);
   const all=[...(cfg.models||[]),...aiFetchedModels]; const uniq=[...new Set(all)];
@@ -754,25 +657,9 @@ function aiUpdateProviderUI(){
   const cu=document.getElementById("ai-custom-url");
   if(cu){ cu.value=(aiProvider==="custom")?(aiKeys["custom"]||""):""; cu.style.display=aiProvider==="custom"?"":"none"; const lab=document.querySelector('[data-i18n="ai_custom_label"]'); if(lab&&lab.parentElement) lab.parentElement.style.display=aiProvider==="custom"?"":"none"; }
 }
-function aiBuildPrompt(userText, pageText, selectionText, imageNote, transcript, pageLink, memNote, webNote, isPageQuery){
+function aiBuildPrompt(userText, pageText, selectionText, imageNote, pinnedNote, pageLink, memNote, _webNote, isPageQuery){
   const b=[]; aiPromptFlagged=false;
-  if(isPageQuery && transcript&&(transcript.text||transcript.title||transcript.description)){
-    const info=[];
-    if(transcript.title) info.push("Title: "+String(transcript.title).slice(0,160));
-    if(transcript.author) info.push("Kenh/Tac gia: "+String(transcript.author).slice(0,80));
-    if(transcript.date) info.push("Ngay dang: "+String(transcript.date).slice(0,10));
-    if(transcript.views) info.push("Luot xem: "+String(transcript.views).slice(0,12));
-    if(info.length) b.push("[THONG TIN VIDEO]\n"+info.join("\n"));
-    if(transcript.text){
-      const s=aiSanitizeExternal(transcript.text,14000); if(s.flagged) aiPromptFlagged=true;
-      b.push("[B\u1ea3n ghi video YouTube"+(transcript.lang?" | ng\u00f4n ng\u1eef "+transcript.lang:"")+(transcript.kind==="asr"?" (t\u1ef1 \u0111\u1ed9ng sinh)":"")+"]\n<<<DATA_UNTRUSTED_3_BEGIN>>>\n"+s.text+"\n<<<DATA_UNTRUSTED_3_END>>>");
-      if(transcript.kind==="asr") b.push("[LUU Y ASR] Bang ghi nay do YouTube TU DONG nhan dien tieng (ASR): co the chay ten rieng, thieu dau cau, lap cum tu. Hay tu chuan hoa loi hien nhien theo ngu canh truoc khi tra loi; giu nguyen ten khong chac chan; neu khong chac ve mot ten/su kien nao do, dien dat 'co ve/khong chac' mot cach tu nhien, khong dung nhan trong ngoac vuong.");
-    } else if(transcript.description){
-      const s=aiSanitizeExternal(transcript.description,5000); if(s.flagged) aiPromptFlagged=true;
-      b.push("[MO TA VIDEO]\n<<<DATA_UNTRUSTED_4_BEGIN>>>\n"+s.text+"\n<<<DATA_UNTRUSTED_4_END>>>\nLUU Y: video nay CHUA co transcript cong khai. Tra loi dua tren mo ta + thong tin o tren va kien thuc dang tin; neu thieu du lieu hay noi ro dang thieu bang loi dien tu nhien, khong chen nhan danh dau trong ngoac vuong.");
-    }
-  }
-  if(webNote&&String(webNote).trim()){ const sw=aiSanitizeExternal(webNote,3500); b.push("[KET QUA TIM KIEM WEB (DuckDuckGo/Wikipedia)]\n<<<DATA_UNTRUSTED_5_BEGIN>>>\n"+sw.text+"\n<<<DATA_UNTRUSTED_5_END>>>"); }
+  if(pinnedNote&&String(pinnedNote).trim()){ const sp=aiSanitizeExternal(pinnedNote,Math.min(20000,aiSettings.maxChars+8000)); if(sp.flagged) aiPromptFlagged=true; b.push("[Cac trang da them / Pinned pages]\n<<<DATA_UNTRUSTED_6_BEGIN>>>\n"+sp.text+"\n<<<DATA_UNTRUSTED_6_END>>>"); }
   if(isPageQuery && aiSettings.includePage&&pageText){ const s=aiSanitizeExternal(pageText,Math.min(16000,aiSettings.maxChars+6000)); if(s.flagged) aiPromptFlagged=true; b.push("[Current page context]\n<<<DATA_UNTRUSTED_1_BEGIN>>>\n"+s.text+"\n<<<DATA_UNTRUSTED_1_END>>>"); }
   if(isPageQuery && aiSettings.includeSelection&&selectionText){ const s=aiSanitizeExternal(selectionText,4000); if(s.flagged) aiPromptFlagged=true; b.push("[Highlighted selection]\n<<<DATA_UNTRUSTED_2_BEGIN>>>\n"+s.text+"\n<<<DATA_UNTRUSTED_2_END>>>"); }
   if(isPageQuery && aiSettings.includeNotes){ const n=document.getElementById("f-notes")?document.getElementById("f-notes").value.trim():""; if(n) b.push("[Research notes]\n"+n.slice(0,2000)); }
@@ -793,13 +680,17 @@ function aiBuildPrompt(userText, pageText, selectionText, imageNote, transcript,
     sysBody="BẠN LÀ TRỢ LÝ HỌC THUẬT ScholarFlow. QUY TẮC:\n1) Trả lời bằng "+langName+". Vào thẳng câu trả lời — không chào hỏi, không tự giới thiệu.\n2) Trả lời từ kiến thức của bạn và kết quả tìm kiếm web (nếu có). KHÔNG BỊA. Nếu không chắc → nói rõ 'MÌNH KHÔNG CHẮC' thay vì bịa. Thông tin nhân vật thật (tên khai sinh, ngày sinh, quê quán) chỉ nêu khi có xác nhận trong khối ngữ cảnh/kết quả web.\n3) Markdown gọn: ## cho phần dài, bullet, BẢNG | cột | khi so sánh, `code` cho thuật ngữ, *in nghiêng* để nhấn tinh tế, > trích dẫn nguyên văn, ==đánh dấu== ý quan trọng.\n4) Kết thúc bằng đúng khối:\nGỢI Ý:\n- <câu hỏi 1>\n- <câu hỏi 2>\n- <câu hỏi 3>";
   }
   if(sysBody.indexOf("{0}")!==-1) sysBody=sysBody.split("{0}").join(langName);
-  const sys=sysBody+"\n\n";
+  /* Strict anti-fabrication rule for REAL-WORLD facts: personal identifiers only when present
+     verbatim in a Google-Search/page source, must carry a source URL, never merge two people/orgs. */
+  const FACT_RULE="\n\nQUY TẮC SỰ THẬT (tuyệt đối): Tên thật, ngày/tháng sinh, quê quán, gia đình, chức danh, tổ chức của MỘT NGƯỜI THẬT chỉ được nêu khi chúng XUẤT HIỆN NGUYÊN VĂN trong kết quả Google Search (grounding) hoặc trong khối ngữ cảnh được cung cấp; VÀ phải kèm URL nguồn ngay sau thông tin đó. Nguồn không xác nhận rõ → ghi 'MÌNH KHÔNG CHẮC' và KHÔNG đoán, KHÔNG diễn giải thêm. TUYỆT ĐỐI KHÔNG gộp/hợp nhất hai người hay hai tổ chức thành một (không lấy tên người này gắn cho người khác). Khi trích web, chỉ lấy đúng điều nguồn nói.";
+  const sys=sysBody+FACT_RULE+"\n\n";
   let scopeNote="";
   if(isPageQuery) {
     scopeNote="[PHẠM VI] HỎI VỀ TRANG: Người dùng đang hỏi về nội dung trang/video. Ưu tiên ngữ cảnh trang; khi thiếu dữ liệu dùng kiến thức và web search. Nói rõ nguồn trích dẫn.";
   } else {
     scopeNote="[PHẠM VI] TRÒ CHUYỆN CHUNG: Trả lời tự do từ kiến thức + web search. KHÔNG dùng nội dung trang trừ khi người dùng hỏi rõ.";
   }
+  if(aiSettings.scope==="web") scopeNote += " CHẾ ĐỘ 'web': ở dòng 'Nguồn:' ghi URL đầy đủ của từng nguồn đã dùng (mỗi URL chỉ MỘT lần, cuối câu) và kèm 3-5 từ khóa để người dùng tự kiểm chứng.";
   return sys+scopeNote+"\n\n"+(memNote?"[BO NHO CUA AI]\n"+memNote+"\n\n":"")+guard+linkLine+ctx+"[Câu hỏi]\n"+aiSanitizeExternal(isPageQuery?userText.replace(/^[+@]\s*/,""):userText,8000).text;
 }
 function aiTrimHist(hist){ const h=(Array.isArray(hist)?hist:[]).slice(-6).map(m=>({role:m&&m.role==="user"?"user":"assistant",content:String(m&&m.content||"").slice(0,800)})).filter(m=>m.content.trim()); return h; }
@@ -824,6 +715,74 @@ async function aiCallGeminiLite(prompt, apiKey, imgs, hist){
 }
 /* Gemini 2.x/3.x models support native Google Search grounding via tools:[{google_search:{}}]. */
 function aiGeminiSupportsGrounding(model){ const m=String(model||"").toLowerCase(); return /gemini-[23]/.test(m)||m.includes("latest"); }
+/* Gemini can watch a PUBLIC YouTube video server-side: pass the watch URL as fileData.fileUri
+   (no transcript scraping, no CORS, no hidden tab). Text part goes AFTER the video part. */
+function aiGeminiSupportsVideo(model){ const m=String(model||"").toLowerCase(); return /gemini-[23]/.test(m)||m.includes("latest"); }
+/* Agentic video understanding (Gemini 3.5/3.6/3.7/3.8-Flash) reads a long video far cheaper
+   (~88% fewer tokens) and more accurately than static 1-FPS. For videos over ~8 min we auto-use an
+   agentic-capable model for THIS call only (never changes the user's saved model). */
+const AI_AGENTIC_MODELS=["gemini-3.8-flash","gemini-3.7-flash","gemini-3.6-flash","gemini-3.5-flash-lite"];
+const AI_AGENTIC_MIN_SEC=480;
+function aiGeminiSupportsAgentic(model){ return AI_AGENTIC_MODELS.indexOf(String(model||"").toLowerCase())!==-1; }
+function aiFirstAgenticModel(list){ const av=list||((aiFetchedModels&&aiFetchedModels.length)?aiFetchedModels:null); if(!av) return ""; for(let i=0;i<AI_AGENTIC_MODELS.length;i++){ if(av.indexOf(AI_AGENTIC_MODELS[i])!==-1) return AI_AGENTIC_MODELS[i]; } return ""; }
+function aiPickVideoModel(lengthSec, avail){ const cur=aiGetModel("gemini"); if((lengthSec||0)>=AI_AGENTIC_MIN_SEC){ if(aiGeminiSupportsAgentic(cur)) return {model:cur,agentic:true}; const alt=aiFirstAgenticModel(avail); if(alt) return {model:alt,agentic:true}; return {model:cur,agentic:false}; } return {model:cur,agentic:false}; }
+function aiGetYtLengthSec(){
+  return new Promise(res=>{
+    if(typeof sendTabMessage!=="function"){ res(0); return; }
+    let done=false; const fin=v=>{ if(!done){ done=true; res(v); } };
+    setTimeout(()=>fin(0),4000);
+    try{ sendTabMessage({action:"GET_YT_META", timeoutMs:3500, silent:true}, r=>{ const s=r&&r.ok?Number(r.lengthSeconds):0; fin(isFinite(s)&&s>0?s:0); }); }catch(e){ fin(0); }
+  });
+}
+function _aiFoldAscii(s){ return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/Đ/g,"D").toLowerCase(); }
+const AI_TRANSCRIPT_RE=/(chep\s*loi|bang\s*chep|transcript|phu\s*de|subtitle|lyric|loi\s*(?:bai\s*hat|dan|thoai|ca)|文字起こし|字幕|歌词|转录|транскрипт|субтитр|расшифровк)/i;
+const AI_VIDEO_REF_RE=/(video|clip|phim|doan\s*(?:vua|nay|do|tren)|vua\s*(?:xem|nghe)|trong\s*(?:video|clip|phim)|chep\s*loi|phu\s*de|transcript|subtitle)/i;
+function aiIsTranscriptRequest(text){ return AI_TRANSCRIPT_RE.test(_aiFoldAscii(text)); }
+function aiQueryRefersToVideo(text){ return AI_VIDEO_REF_RE.test(_aiFoldAscii(text)); }
+function _aiMMSS(sec){ sec=Math.max(0,Math.floor(sec)||0); const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=sec%60,p=function(n){return (n<10?"0":"")+n;}; return (h?h+":":"")+p(m)+":"+p(s); }
+function aiLastTimestampSec(text){ const m=String(text||"").match(/\[(\d{1,2}):([0-5]\d)(?::([0-5]\d))?\]/g)||[]; if(!m.length) return 0; const p=m[m.length-1].replace(/[\[\]]/g,"").split(":").map(Number); return p.length===3?p[0]*3600+p[1]*60+p[2]:p[0]*60+p[1]; }
+const AI_CONTINUE_RE=/(?:^|\s)(tiep tuc|tiep theo|tiep lai|tiep den|tiep|con nua|con lai|lam tiep|noi tiep|doc tiep|dich tiep|phan con lai|phan con|continue|next|go on|more)(?:\s|$|[!?.])/;
+function aiIsContinueRequest(text){ const t=_aiFoldAscii(text).replace(/\s+/g," ").trim(); return t.length<=60 && AI_CONTINUE_RE.test(" "+t+" "); }
+function aiVideoQuestionText(question, transcriptMode, isLong){
+  const tm = transcriptMode || aiIsTranscriptRequest(question);
+  let sys="Bạn là trợ lý học thuật ScholarFlow. HÃY XEM video này (CẢ hình ảnh LẪN tiếng) và chỉ trả lời DỰA TRÊN NỘI DUNG THỰC TẾ đã thấy/nghe. TUYỆT ĐỐI không bịa; ý nào video không có thì nói rõ là không đề cập.\n";
+  if(isLong){
+    sys+="- Video này DÀI. KHÔNG cố chép nguyên văn toàn bộ (một lượt sẽ bị cắt giữa chừng). Thay vào đó hãy trả về BẢNG TIMELINE: chia thành các mục '[mm:ss] – [mm:ss]', mỗi mục 1–2 câu TÓM TẮT sự kiện/ý chính + chi tiết hình ảnh nổi bật, bám đúng thứ tự thời gian tới hết video.\n";
+  } else {
+    sys+="- Nếu hỏi tóm tắt/phân tích/ý nghĩa/nhân vật: bám cả CHI TIẾT HÌNH ẢNH (đồ vật, hành động, cảnh, chữ trên màn hình) lẫn lời thoại; mỗi luận điểm kèm mốc [mm:ss]. Trả lời gọn, đúng markdown.\n";
+    if(tm) sys+="- NẾU xin BẢN CHÉP LỜI / phụ đề / lyrics: chép NGUYÊN VĂN từng câu nói hoặc lời hát, theo DÒNG THỜI GIAN, MỖI phát ngôn một dòng '[mm:ss] <lời>' — KHÔNG gom nhóm theo nhân vật/chủ đề, KHÔNG viết dạng mục lục, KHÔNG dịch, KHÔNG tóm tắt, KHÔNG bỏ sót; bỏ nhãn '[Music]'; nghe không rõ ghi '[nghe không rõ]'. Chép LIÊN TỤC tới HẾT video; nếu không kịp trong một lần, hãy chép đến một mốc '[mm:ss]' hợp lý rồi thêm DÒNG CUỐI đúng định dạng: '⏭️ Còn tiếp — nhắn \"tiếp tục\"'. KHÔNG nhảy cóc hay bịa phần chưa chép.\n";
+  }
+  sys+="Kết thúc bằng khối 'GỢI Ý:' với 3 câu hỏi tiềm năng.";
+  return sys+"\n\n[Câu hỏi]\n"+String(question||"").slice(0,4000);
+}
+function aiVideoContents(videoId, question, hist, transcriptMode, agentic, isLong){
+  const contents=[];
+  (Array.isArray(hist)?hist:[]).slice(-6).forEach(function(m){ if(!m||!m.content) return; contents.push({role:m.role==="assistant"?"model":"user",parts:[{text:String(m.content).slice(0,4000)}]}); });
+  var vpart={fileData:{fileUri:"https://www.youtube.com/watch?v="+String(videoId||"").trim()}}; if(agentic) vpart.mediaProcessing="AGENTIC";
+  contents.push({role:"user",parts:[vpart,{text:aiVideoQuestionText(question, transcriptMode, isLong)}]});
+  return contents;
+}
+async function aiCallGeminiVideo(videoId, question, apiKey, hist, opts, transcriptMode, lengthSec){
+  const isLong=(lengthSec||0)>=AI_AGENTIC_MIN_SEC;
+  const pick=aiPickVideoModel(lengthSec||0); const model=pick.model; const contents=aiVideoContents(videoId, question, hist, transcriptMode, pick.agentic, isLong);
+  const genExtra = pick.agentic ? {mediaResolution:"MEDIA_RESOLUTION_LOW"} : null;
+  if(aiSettings.stream!==false&&opts){ try{ return await aiStreamGemini(model, apiKey, contents, aiSettings.temperature, opts, null, pick.agentic?180000:90000, genExtra); }catch(se){ if(opts&&opts.signal&&opts.signal.aborted) throw se; } }
+  let lastErr="";
+  for(const ver of ["v1beta","v1"]){
+    let res;
+    try{
+      const url="https://generativelanguage.googleapis.com/"+ver+"/models/"+encodeURIComponent(model)+":generateContent?key="+encodeURIComponent(apiKey);
+      res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:contents,generationConfig:Object.assign({temperature:aiSettings.temperature},genExtra||null)}),signal:aiSig(opts&&opts.signal,180000)});
+    }catch(e){ lastErr=String(e&&e.message||e); if(/timed out|timeout|aborterror/i.test(lastErr)){ if(ver==="v1beta"){ await new Promise(r=>setTimeout(r,1200)); continue; } throw new Error("gemini_video_timeout"); } throw new Error("gemini_video_network_"+lastErr.slice(0,120)); }
+    if(res.ok){ const d=await res.json(); const cand=d.candidates&&d.candidates[0]; const parts=cand&&cand.content&&cand.content.parts; const got=aiGroundingSources(cand); if(got.length&&opts) opts.__groundingSources=got.slice(0,8); return (parts&&parts[0]&&typeof parts[0].text==="string")?parts[0].text:""; }
+    lastErr=await res.text().catch(()=>"");
+    if(res.status===400){ const bl=String(lastErr).toLowerCase(); if(bl.includes("prohibited")||bl.includes("private")||bl.includes("unavailable")||bl.includes("age")) return ""; }
+    if((res.status===429||res.status===503||res.status===504)&&ver==="v1beta"){ await new Promise(r=>setTimeout(r,1200)); continue; }
+    if(res.status===404&&ver==="v1beta"){ continue; }
+    throw new Error("gemini_video_"+res.status+"_"+String(lastErr).slice(0,200));
+  }
+  return "";
+}
 async function aiCallProvider(provider, prompt, apiKey, image, hist, opts){
   const cfg=aiGetProviderConfig(provider);
   const imgs=Array.isArray(image)?image.filter(x=>x&&x.data):((image&&image.data)?[image]:[]);
@@ -836,7 +795,7 @@ async function aiCallProvider(provider, prompt, apiKey, image, hist, opts){
   }
   if(provider==="gemini"){
     const model=aiGetModel(provider); let lastErr="";
-    let grounding=(aiSettings.webSearch!==false)&&aiGeminiSupportsGrounding(model);
+    let grounding=(((aiSettings.webSearch!==false)&&aiSettings.scope!=="only")||(opts&&opts.groundOverride))&&aiGeminiSupportsGrounding(model);
     if(wantStream){ try{ return await aiStreamGemini(model, apiKey, aiHistoryToGeminiContents(hist,prompt,imgs), aiSettings.temperature, opts, grounding?[{google_search:{}}]:null); }catch(se){ if(opts&&opts.signal&&opts.signal.aborted) throw se; } }
     for(const ver of ["v1beta","v1"]){
       let res;
@@ -846,7 +805,7 @@ async function aiCallProvider(provider, prompt, apiKey, image, hist, opts){
         const body={contents:aiHistoryToGeminiContents(hist,prompt,imgs),generationConfig:{temperature:aiSettings.temperature}}; if(grounding) body.tools=[{google_search:{}}];
         res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),signal:aiSig(opts&&opts.signal,prompt.length>9000?45000:28000)});
       }catch(e){ lastErr=String(e&&e.message||e); if(lastErr.toLowerCase().includes("timed out")||lastErr.toLowerCase().includes("timeout")||lastErr.includes("AbortError")){ if(ver==="v1beta"){ await new Promise(r=>setTimeout(r,1200)); continue; } throw new Error("gemini_timeout_"+lastErr.slice(0,120)+" — Model "+model+" overloaded/timeout - switch to a Lite model in Settings"); } throw new Error("gemini_network_"+lastErr.slice(0,120)); }
-      if(res.ok){ const d=await res.json(); const cand=d.candidates&&d.candidates[0]; const parts=cand&&cand.content&&cand.content.parts; if(parts&&parts[0]&&parts[0].text) return parts[0].text; return JSON.stringify(d).slice(0,4000); }
+      if(res.ok){ const d=await res.json(); const cand=d.candidates&&d.candidates[0]; const parts=cand&&cand.content&&cand.content.parts; if(parts&&parts[0]&&parts[0].text){ const got=aiGroundingSources(cand); if(got.length&&opts) opts.__groundingSources=got.slice(0,8); return parts[0].text; } return JSON.stringify(d).slice(0,4000); }
       const t=await res.text().catch(()=> ""); lastErr=t;
       if(res.status===400&&grounding){ grounding=false; continue; }
       if((res.status===503||res.status===429)&&ver==="v1beta"){ await new Promise(r=>setTimeout(r,1200)); continue; }
@@ -900,14 +859,13 @@ async function aiSendCurrent(){
   if(!raw){ if(typeof showToast==="function") showToast("ai_toast_empty","warning"); return; }
   if(!aiRateLimitOk()){ if(typeof showToast==="function") showToast("ai_toast_rate_limited","warning"); return; }
   if(raw.length>8000&&input){ input.value=raw.slice(0,8000); }
-  /* ── Trigger detection: +/@ prefix, or a quick-chip request (always page-bound) ── */
-  const isPageQuery = /^[+@]\s*/.test(raw) || !!quickReq;
-  const cleanQuery = raw.replace(/^[+@]\s*/, "");
+  /* ── Trigger detection: +/@ prefix, quick-chip (always page-bound), or auto page-intent (Copilot-style) ── */
   const scopeNow=(typeof aiSettings.scope==="string"&&["only","auto","web"].includes(aiSettings.scope))?aiSettings.scope:"auto";
-  const webOn=!!aiForcedWeb||(aiSettings.webSearch!==false);
-  /* When Gemini grounds natively on Google Search, skip our DDG/Wikipedia pre-fetch (no double search). */
-  const geminiGrounds=(aiProvider==="gemini")&&aiHasKey("gemini")&&aiSettings.webSearch!==false&&aiGeminiSupportsGrounding(aiGetModel("gemini"));
-  const webPromise=(webOn&&!geminiGrounds)?aiWebSearchCached(isPageQuery?cleanQuery:raw):Promise.resolve("");
+  const isPageQuery = (/^[+@]\s*/.test(raw) || !!quickReq || scopeNow==="only" || aiDetectPageIntent(raw));
+  const cleanQuery = raw.replace(/^[+@]\s*/, "");
+  /* Web search now relies solely on Gemini's native Google Search grounding; the old DuckDuckGo/
+     Wikipedia scraper is gone. The 🔎 button forces grounding on for this one turn via groundOverride. */
+  const forceGround = aiForceGround; aiForceGround = false;
   const provider=aiProvider; const key=aiKeys[provider]||"";
   const imageToSend=aiAttachedImage; const imagePreview=imageToSend?imageToSend.preview:null;
   aiAppendMessage("user", raw, provider, imagePreview);
@@ -935,49 +893,74 @@ async function aiSendCurrent(){
       else if(kc.kind==="papers"){ const sc=await aiScholarSearch(cleanQuery); if(sc){ pageText = pageText ? pageText+"\n\n[Scholarly search results]\n"+sc : "[Scholarly search results]\n"+sc; } else if(typeof showToast==="function") showToast("ai_toast_scholar_empty","warning"); }
     }catch(e){}
   }
-  let transcriptData=null; let pageUrl="";
+  let pageUrl="";
   try{ pageUrl=(typeof currentTabUrl!=="undefined"&&currentTabUrl)?String(currentTabUrl):((typeof currentMeta!=="undefined"&&currentMeta&&currentMeta.url)?String(currentMeta.url):""); }catch(e){}
-  /* Only fetch transcript if page query */
-  if(isPageQuery) {
-    const pageVid=aiIsYouTubeUrl(pageUrl)?aiExtractYouTubeId(pageUrl):"";
-    if(aiIsYouTubeUrl(pageUrl)){ try{ transcriptData=await aiGetYouTubeTranscript(); }catch(e){} if(transcriptData&&pageVid&&transcriptData.vid&&transcriptData.vid!==pageVid) transcriptData=null; }
-    if(!transcriptData||!transcriptData.text){
-      const staleLive=!transcriptData||(transcriptData.noCaptions&&!transcriptData.description&&!transcriptData.date);
-      const ytVid=aiExtractYouTubeId(cleanQuery)||(staleLive?pageVid:"");
-      if(ytVid){ try{ const alt=await aiFetchTranscriptForVideo(ytVid); if(alt&&(!transcriptData||alt.text||(alt.description&&!transcriptData.description))) transcriptData=alt; }catch(e){} }
+  /* Gemini "watch the video" mode: a PUBLIC YouTube URL is handed to Gemini server-side (visual+audio),
+     no transcript scraping / no CORS / no hidden tab. Also keeps video context ALIVE across follow-ups:
+     once a video was watched this session, staying on its tab (or saying "video/clip/chép lời") re-attaches
+     it, so later questions stay grounded in the real footage instead of only the page title/comments.
+     Long videos: if the last transcript was cut off, "tiếp tục" resumes from after the last [mm:ss]. */
+  let videoDirectId=""; let wantContinue=false;
+  try{
+    if(provider==="gemini"&&key&&aiGeminiSupportsVideo(aiGetModel("gemini"))){
+      const pid=aiIsYouTubeUrl(pageUrl)?aiExtractYouTubeId(pageUrl):"";
+      const qid=aiExtractYouTubeId(cleanQuery)||aiExtractYouTubeId(raw);
+      const refersVideo=aiQueryRefersToVideo(cleanQuery)||aiIsTranscriptRequest(cleanQuery);
+      if(qid) videoDirectId=qid;
+      else if(aiIsContinueRequest(cleanQuery)&&aiActiveVideoId&&aiVideoResumeAt>0){ videoDirectId=aiActiveVideoId; wantContinue=true; }
+      else if(pid&&(isPageQuery||refersVideo||aiActiveVideoId===pid)) videoDirectId=pid;
+      else if(refersVideo&&aiActiveVideoId) videoDirectId=aiActiveVideoId;
+      else if(aiSettings.autoVideo&&pid) videoDirectId=pid;
     }
-  }
+  }catch(e){}
   let pageImages=[];
-  const hasTranscript=transcriptData&&transcriptData.text;
-  if(hasTranscript){ try{ pageText=aiBuildContext(); }catch(e){} }
-  if(isPageQuery && !_imageForApi && aiSettings.includeImages && provider!=="custom" && pageText && !hasTranscript){ try{ pageImages=await aiGetPageImages(); }catch(e){} }
-  if(isPageQuery && aiSettings.includeSource){ try{ const srcRaw=await aiGetPageSourceText(); if(srcRaw){ const winSrc=aiSelectRelevantWindow(srcRaw, cleanQuery, 1600); pageText = pageText ? pageText+"\n\n[Raw page source + scripts - relevant excerpt]\n"+winSrc : winSrc; } }catch(e){} }
-  /* ── Add multi-page context from aiPages ── */
-  if(isPageQuery && aiPages.length > 0) {
+  if(isPageQuery && !videoDirectId && !_imageForApi && aiSettings.includeImages && provider!=="custom" && pageText){ try{ pageImages=await aiGetPageImages(); }catch(e){} }
+  if(isPageQuery && !videoDirectId && aiSettings.includeSource){ try{ const srcRaw=await aiGetPageSourceText(); if(srcRaw){ const winSrc=aiSelectRelevantWindow(srcRaw, cleanQuery, 1600); pageText = pageText ? pageText+"\n\n[Raw page source + scripts - relevant excerpt]\n"+winSrc : winSrc; } }catch(e){} }
+  /* ── Add multi-page context from pinned pages (aiPages) ──
+     Building a "pinnedNote" that ALWAYS reaches the model (regardless of page-intent):
+     when the current tab IS a pinned page, its stored snapshot becomes the single
+     source of truth (pageText) so in-page and outside answers match exactly. */
+  let pinnedNote="";
+  if(aiPages.length > 0) {
+    const curPg = pageUrl ? aiPages.find(pg=>pg.url===pageUrl) : null;
     var multiPageCtx = "";
     aiPages.forEach(function(pg) {
-      if(pg.text) { multiPageCtx += "\n\n[Trang: " + (pg.url||"") + (pg.title?" | "+pg.title:"") + "]\n" + pg.text.slice(0, 8000); }
-      if(pg.transcript && pg.transcript.text) { multiPageCtx += "\n\n[Bản ghi video: " + (pg.title||pg.url) + "]\n" + pg.transcript.text.slice(0, 12000); }
+      const curMark = (curPg && pg.url===curPg.url) ? " ✓" : "";
+      if(pg.text) { multiPageCtx += "\n\n[Trang" + curMark + ": " + (pg.url||"") + (pg.title?" | "+pg.title:"") + "]\n" + pg.text.slice(0, 8000); }
     });
-    if(multiPageCtx) pageText = pageText ? pageText + multiPageCtx : multiPageCtx;
+    if(multiPageCtx) {
+      if(isPageQuery && curPg && curPg.text) pageText = multiPageCtx;
+      else pinnedNote = multiPageCtx;
+    }
   }
   const apiImages=_imageForApi?[{data:_imageForApi.data,mimeType:_imageForApi.mimeType||"image/jpeg"}]:pageImages;
   const imageNote=apiImages.length?("[Attached images: "+apiImages.length+" taken from the current page. If the question needs visual info (counting objects, reading text in the image), answer from these images.]"):null;
-  let webResults="";
-  try{ webResults=aiForcedWeb||await webPromise; }catch(e){}
-  aiForcedWeb="";
-  const prompt=aiBuildPrompt(raw, pageText, selectionText, imageNote, transcriptData||null, {url:pageUrl||"", title:(function(){ try{ if(typeof currentMeta!=="undefined"&&currentMeta&&currentMeta.title) return String(currentMeta.title); if(typeof currentTabObj!=="undefined"&&currentTabObj&&currentTabObj.title) return String(currentTabObj.title); }catch(e){} return document.title||""; })(), videoId:aiIsYouTubeUrl(pageUrl)?aiExtractYouTubeId(pageUrl):""}, (function(){ try{ return aiMemFor(pageUrl)||""; }catch(e){ return ""; } })(), webResults||null, isPageQuery);
+  const prompt=aiBuildPrompt(raw, pageText, selectionText, imageNote, pinnedNote, {url:pageUrl||"", title:(function(){ try{ if(typeof currentMeta!=="undefined"&&currentMeta&&currentMeta.title) return String(currentMeta.title); if(typeof currentTabObj!=="undefined"&&currentTabObj&&currentTabObj.title) return String(currentTabObj.title); }catch(e){} return document.title||""; })(), videoId:aiIsYouTubeUrl(pageUrl)?aiExtractYouTubeId(pageUrl):""}, (function(){ try{ return aiMemFor(pageUrl)||""; }catch(e){ return ""; } })(), null, isPageQuery);
   if(aiPromptFlagged&&typeof showToast==="function") showToast("ai_toast_injection","warning");
-  let answer=""; let usedFallback=false;
+  let answer=""; let usedFallback=false; let callOpts=null;
   if(!aiHasKey(provider)){
     const label=aiGetProviderConfig(provider).label;
     const needKeyMsg=(typeof getI18nText==="function")?getI18nText("ai_need_key",[label]):"⚠️ Chưa nhập API key cho "+label+". Hãy bấm ⚙ Cài đặt → nhập key (Gemini free tại aistudio.google.com). Đã chuẩn hoá: chỉ gửi 4000 ký tự đầu để tiết kiệm token.";
     answer=needKeyMsg+"\n\n--- Context preview that will be sent (first ~5000 chars) ---\n"+prompt.slice(0,1200)+(prompt.length>1200?"...":"")+"\n\n("+aiLocalFallback(prompt, pageText)+")";
     usedFallback=true; if(typeof showToast==="function") showToast("ai_toast_need_key","warning");
   } else {
+    callOpts={signal:aiAbort.signal, onToken:onToken, groundOverride:forceGround};
     try{
-      if(streaming){ await aiCallProvider(provider, prompt, key, apiImages, hist, {signal:aiAbort.signal, onToken:onToken}); answer=String(streamAcc||""); }
-      else answer=await aiCallProvider(provider, prompt, key, apiImages, hist, {signal:aiAbort.signal});
+      if(videoDirectId){
+        if(typeof showToast==="function") showToast("ai_toast_watching_video","info");
+        let vidLen=0; try{ const _onTabVid=aiIsYouTubeUrl(pageUrl)?aiExtractYouTubeId(pageUrl):""; if(videoDirectId===_onTabVid) vidLen=await aiGetYtLengthSec(); }catch(e){}
+        const vIsTranscript = wantContinue || aiIsTranscriptRequest(cleanQuery);
+        let vQuestion = cleanQuery;
+        if(wantContinue && aiVideoResumeAt>0) vQuestion = "TIẾP TỤC: chép NGUYÊN VĂN lời nói/tiếng từ SAU mốc "+_aiMMSS(aiVideoResumeAt)+" đến HẾT video, theo dòng thời gian, mỗi phát ngôn một dòng '[mm:ss] <lời>'. KHÔNG lặp lại các dòng đã có ở lượt trước.\n\n[Yêu cầu]\n"+cleanQuery;
+        let vans="";
+        try{ vans=await aiCallGeminiVideo(videoDirectId, vQuestion, key, hist, callOpts, vIsTranscript, vidLen); }catch(ve){ if(aiUserStopped) throw ve; vans=""; }
+        if(vans&&String(vans).trim()){ answer=String(vans).trim(); aiActiveVideoId=String(videoDirectId); aiVideoResumeAt=aiLastTimestampSec(answer); }
+        else { answer=aiT("ai_err_yt_video",[aiGetModel("gemini")],"⚠️ Gemini không xem được video này (chỉ hỗ trợ video CÔNG KHAI, không giới hạn tuổi, với model "+aiGetModel("gemini")+"). Hãy thử model gemini-2.5/3.x, hoặc dán link video khác."); usedFallback=true; }
+      }
+      if(!answer){
+        if(streaming){ await aiCallProvider(provider, prompt, key, apiImages, hist, callOpts); answer=String(streamAcc||""); }
+        else answer=await aiCallProvider(provider, prompt, key, apiImages, hist, callOpts);
+      }
     }catch(e){
       if(aiUserStopped){
         answer=String(streamAcc||"")+"\n\n"+aiT("ai_toast_stopped",null,"⏹ Đã dừng tạo câu trả lời."); usedFallback=true; if(typeof showToast==="function") showToast("ai_toast_stopped","warning");
@@ -998,6 +981,11 @@ async function aiSendCurrent(){
       }
       }
     }
+  }
+  /* Copilot-style citation footer: surface Gemini's native Google-Search grounding as clickable URLs. */
+  if(!usedFallback&&provider==="gemini"&&callOpts&&Array.isArray(callOpts.__groundingSources)&&callOpts.__groundingSources.length&&String(answer||"").trim()){
+    const gSrc=callOpts.__groundingSources.slice(0,8).filter(s=>s&&s.u&&/^https?:\/\//i.test(s.u));
+    if(gSrc.length) answer=String(answer).replace(/\s+$/,"")+"\n\n"+aiSourcesLabel()+"\n- "+gSrc.map(s=>((s.t?"["+s.t+"] ":"")+s.u)).join("\n- ");
   }
   aiHideTyping();
   if(streaming){ const last=aiHistory[aiHistory.length-1]; if(streamRow&&last&&last.role==="assistant"){ last.content=String(answer).slice(0,16000); aiSaveHistorySoon(); aiRenderHistory(); } else if(answer){ aiAppendMessage("assistant", answer, provider); } }
@@ -1057,7 +1045,7 @@ function aiInitEvents(){
   const newChatBtn=document.getElementById("ai-btn-new-chat"); if(newChatBtn) newChatBtn.addEventListener("click",()=>{ const dt=(function(){ try{ return new Date().toLocaleString(); }catch(e){ return ""; } })(); aiSessionsNew(aiT("ai_session_default_name",null,"Phiên")+" "+dt); if(typeof showToast==="function") showToast("ai_toast_session_saved","success"); });
   const copyBtn=document.getElementById("ai-btn-copy-last"); if(copyBtn) copyBtn.addEventListener("click",()=>{ const last=aiHistory.slice().reverse().find(m=>m.role==="assistant"); if(!last){ if(typeof showToast==="function") showToast("ai_toast_no_answer","warning"); return; } navigator.clipboard.writeText(last.content).then(()=>{ if(typeof showToast==="function") showToast("toast_copied","success"); }).catch(()=>{ if(typeof showToast==="function") showToast("toast_copy_failed","error"); }); });
   const insertBtn=document.getElementById("ai-btn-insert-note"); if(insertBtn) insertBtn.addEventListener("click",()=>{ const last=aiHistory.slice().reverse().find(m=>m.role==="assistant"); if(!last){ if(typeof showToast==="function") showToast("ai_toast_no_answer","warning"); return; } const notesEl=document.getElementById("f-notes"); if(!notesEl) return; const sep=notesEl.value.trim()?"\n\n":""; notesEl.value=notesEl.value+sep+last.content.slice(0,2000); notesEl.dispatchEvent(new Event("input",{bubbles:true})); if(typeof showToast==="function") showToast("toast_notes_inserted","success"); });
-  ["ai-opt-page","ai-opt-selection","ai-opt-notes","ai-opt-images","ai-opt-source","ai-opt-stream","ai-opt-websearch"].forEach(id=>{ const el=document.getElementById(id); if(!el) return; el.addEventListener("change",()=>{ if(id==="ai-opt-page") aiSettings.includePage=el.checked; if(id==="ai-opt-selection") aiSettings.includeSelection=el.checked; if(id==="ai-opt-notes") aiSettings.includeNotes=el.checked; if(id==="ai-opt-images") aiSettings.includeImages=el.checked; if(id==="ai-opt-source") aiSettings.includeSource=el.checked; if(id==="ai-opt-stream") aiSettings.stream=el.checked; if(id==="ai-opt-websearch") aiSettings.webSearch=el.checked; aiSaveSettings(); }); });
+  ["ai-opt-page","ai-opt-selection","ai-opt-notes","ai-opt-images","ai-opt-source","ai-opt-stream","ai-opt-websearch","ai-opt-autovideo"].forEach(id=>{ const el=document.getElementById(id); if(!el) return; el.addEventListener("change",()=>{ if(id==="ai-opt-page") aiSettings.includePage=el.checked; if(id==="ai-opt-selection") aiSettings.includeSelection=el.checked; if(id==="ai-opt-notes") aiSettings.includeNotes=el.checked; if(id==="ai-opt-images") aiSettings.includeImages=el.checked; if(id==="ai-opt-source") aiSettings.includeSource=el.checked; if(id==="ai-opt-stream") aiSettings.stream=el.checked; if(id==="ai-opt-websearch") aiSettings.webSearch=el.checked; if(id==="ai-opt-autovideo") aiSettings.autoVideo=el.checked; aiSaveSettings(); }); });
   const scopeSel=document.getElementById("ai-scope-select"); if(scopeSel) scopeSel.addEventListener("change",()=>{ aiSettings.scope=["only","auto","web"].includes(scopeSel.value)?scopeSel.value:"auto"; aiSaveSettings(); });
   const btnWeb=document.getElementById("ai-btn-web-search"); if(btnWeb) btnBtnWire(btnWeb);
   function btnBtnWire(btn){ btn.addEventListener("click",async()=>{
@@ -1065,8 +1053,9 @@ function aiInitEvents(){
     const inp=document.getElementById("ai-input"); const typed=inp?inp.value.trim():"";
     let q=typed; if(!q){ for(let i=aiHistory.length-1;i>=0;i--){ if(aiHistory[i].role==="user"){ q=String(aiHistory[i].content||""); break; } } }
     if(!q){ if(typeof showToast==="function") showToast("ai_toast_empty","warning"); return; }
+    if(aiProvider!=="gemini"){ if(typeof showToast==="function") showToast("ai_toast_web_need_gemini","warning"); return; }
     if(typeof showToast==="function") showToast("ai_toast_web_searching","info");
-    try{ aiForcedWeb=await aiWebSearchCached(q); }catch(e){ aiForcedWeb=""; }
+    aiForceGround=true;
     if(inp) inp.value="";
     if(typed){ aiSendCurrent(); } else { aiRegenerate(); }
   }); }
@@ -1100,7 +1089,7 @@ function aiInitEvents(){
   const savePromptsBtn=document.getElementById("ai-btn-save-prompts"); if(savePromptsBtn) savePromptsBtn.addEventListener("click",()=>{ promptIds.forEach(k=>{ const el=document.getElementById("ai-prompt-"+k); if(el) aiPrompts[k]=el.value.trim()||AI_DEFAULT_PROMPTS[k]; }); storSet({[AI_STORAGE_KEYS.prompts]:aiPrompts}); if(typeof showToast==="function") showToast("ai_toast_prompts_saved","success"); });
   const resetPromptsBtn=document.getElementById("ai-btn-reset-prompts"); if(resetPromptsBtn) resetPromptsBtn.addEventListener("click",()=>{ aiPrompts=aiDefaultPrompts(); try{ storRemove([AI_STORAGE_KEYS.prompts]); }catch(e){} promptIds.forEach(k=>{ const el=document.getElementById("ai-prompt-"+k); if(el) el.value=aiPrompts[k]; }); if(typeof showToast==="function") showToast("ai_toast_prompts_reset","success"); });
   const copyPageBtn=document.getElementById("ai-btn-copy-page"); if(copyPageBtn) copyPageBtn.addEventListener("click",()=>{ const u=document.getElementById("ai-page-url"); const t=u?u.textContent:""; if(t&&t!=="—") navigator.clipboard.writeText(t).then(()=>{ if(typeof showToast==="function") showToast("toast_copied","success"); }); });
-  const addPageBtn=document.getElementById("ai-btn-add-page"); if(addPageBtn) addPageBtn.addEventListener("click",async()=>{ const info=aiGetCurrentPageInfo(); if(!info.url){ if(typeof showToast==="function") showToast("ai_toast_no_page","warning"); return; } if(aiPages.some(p=>p.url===info.url)){ if(typeof showToast==="function") showToast("ai_toast_page_added","success",[info.title||info.url]); return; } let pgText=""; try{ pgText=await aiGetPageContextText(""); }catch(e){} aiAddPage({ url:info.url, title:info.title, favicon:info.favicon, text:pgText, transcript:null }); if(typeof showToast==="function") showToast("ai_toast_page_added","success",[info.title||info.url]); });
+  const addPageBtn=document.getElementById("ai-btn-add-page"); if(addPageBtn) addPageBtn.addEventListener("click",async()=>{ const info=aiGetCurrentPageInfo(); if(!info.url){ if(typeof showToast==="function") showToast("ai_toast_no_page","warning"); return; } if(aiPages.some(p=>p.url===info.url)){ if(typeof showToast==="function") showToast("ai_toast_page_added","success",[info.title||info.url]); return; } let pgText=""; try{ pgText=await aiGetPageContextText(""); }catch(e){} aiAddPage({ url:info.url, title:info.title, favicon:info.favicon, text:pgText }); if(typeof showToast==="function") showToast("ai_toast_page_added","success",[info.title||info.url]); });
   const attachBtn=document.getElementById("ai-btn-attach-image"); const imgInput=document.getElementById("ai-image-input"); const preview=document.getElementById("ai-image-preview"); const thumb=document.getElementById("ai-image-thumb"); const nameEl=document.getElementById("ai-image-name"); const removeBtn=document.getElementById("ai-btn-remove-image");
   if(attachBtn&&imgInput){ attachBtn.addEventListener("click",()=>imgInput.click()); imgInput.addEventListener("change",()=>{ const f=imgInput.files&&imgInput.files[0]; if(!f) return; aiAttachImageFile(f); }); }
   const pasteHandler=(e)=>{ const cd=e.clipboardData||null; if(!cd||!cd.items) return; let img=null; for(const it of cd.items){ try{ if(it.kind==="file"&&it.type&&it.type.startsWith("image/")){ img=it.getAsFile(); if(img) break; } }catch(e2){} } if(img){ if(e.preventDefault) e.preventDefault(); aiAttachImageFile(img); } };
@@ -1110,11 +1099,11 @@ function aiInitEvents(){
 async function initAI(){
   await aiLoadSettings(); aiUpdateProviderUI();
   const page=document.getElementById("ai-opt-page"); const sel=document.getElementById("ai-opt-selection"); const notes=document.getElementById("ai-opt-notes"); const imgs=document.getElementById("ai-opt-images"); const src=document.getElementById("ai-opt-source"); const strm=document.getElementById("ai-opt-stream");
-  if(page) page.checked=!!aiSettings.includePage; if(sel) sel.checked=!!aiSettings.includeSelection; if(notes) notes.checked=!!aiSettings.includeNotes; if(imgs) imgs.checked=!!aiSettings.includeImages; if(src) src.checked=!!aiSettings.includeSource;   if(strm) strm.checked=aiSettings.stream!==false; const wsc=document.getElementById("ai-opt-websearch"); if(wsc) wsc.checked=aiSettings.webSearch!==false;
+  if(page) page.checked=!!aiSettings.includePage; if(sel) sel.checked=!!aiSettings.includeSelection; if(notes) notes.checked=!!aiSettings.includeNotes; if(imgs) imgs.checked=!!aiSettings.includeImages; if(src) src.checked=!!aiSettings.includeSource;   if(strm) strm.checked=aiSettings.stream!==false; const wsc=document.getElementById("ai-opt-websearch"); if(wsc) wsc.checked=aiSettings.webSearch!==false; const av=document.getElementById("ai-opt-autovideo"); if(av) av.checked=aiSettings.autoVideo!==false;
   const scp=document.getElementById("ai-scope-select"); if(scp) scp.value=(aiSettings.scope==="only"||aiSettings.scope==="web")?aiSettings.scope:"auto";
   aiRenderHistory(); aiInitEvents(); aiUpdateCurrentPageDisplay(); aiUpdateChatHeight(); setInterval(()=>{ const ta=document.getElementById("tab-ai"); if(ta&&!ta.classList.contains("active")) return; aiUpdateCurrentPageDisplay(); aiUpdateChatHeight(); },2000); window.addEventListener("resize",aiUpdateChatHeight); const aiVisHandler=()=>{ if(document.visibilityState==="visible"){ aiUpdateCurrentPageDisplay(); aiUpdateChatHeight(); } }; document.addEventListener("visibilitychange",aiVisHandler); const tabAi=document.getElementById("tab-ai"); if(tabAi){ const obs=new MutationObserver(()=>{ if(tabAi.classList.contains("active")){ aiUpdateCurrentPageDisplay(); aiUpdateChatHeight(); requestAnimationFrame(()=>requestAnimationFrame(aiScrollToBottom)); } }); obs.observe(tabAi,{attributes:true,attributeFilter:["class"]}); }
 }
 if(typeof window!=="undefined"){
-  window.AI_PROVIDERS=AI_PROVIDERS; window.aiValidateCustomUrl=aiValidateCustomUrl; window.aiSanitizeExternal=aiSanitizeExternal; window.aiSanitizeHistory=aiSanitizeHistory; window.aiRateLimitOk=aiRateLimitOk; window.aiSelectRelevantWindow=aiSelectRelevantWindow; window.aiIsYouTubeUrl=aiIsYouTubeUrl; window.aiGetYouTubeTranscript=aiGetYouTubeTranscript; window.aiHistoryToGeminiContents=aiHistoryToGeminiContents; window.aiHistoryToOpenAIMessages=aiHistoryToOpenAIMessages; window.aiHistoryToClaudeMessages=aiHistoryToClaudeMessages; window.aiCollectTabsContext=aiCollectTabsContext; window.aiScholarSearch=aiScholarSearch; window.aiAttachImageFile=aiAttachImageFile; window.aiExtractYouTubeId=aiExtractYouTubeId; window.aiYtBalancedJson=aiYtBalancedJson; window.aiFetchTranscriptForVideo=aiFetchTranscriptForVideo; window.aiScrapeTranscriptViaHiddenTab=aiScrapeTranscriptViaHiddenTab; window.aiYtHiddenTabMeta=aiYtHiddenTabMeta; window.aiCallGeminiLite=aiCallGeminiLite; window.aiSig=aiSig; window.aiRegenerate=aiRegenerate; window.aiSelectRelevantWindows=aiSelectRelevantWindows; window.aiSessionsSearch=aiSessionsSearch; window.aiMemKey=aiMemKey; window.aiMemFor=aiMemFor; window.aiRenderSessions=aiRenderSessions; window.aiShowSessions=aiShowSessions; window.aiHideSessions=aiHideSessions; window.aiGetProviderConfig=aiGetProviderConfig; window.aiGetModel=aiGetModel; window.aiSetModel=aiSetModel; window.aiFetchGeminiModels=aiFetchGeminiModels; window.aiHasKey=aiHasKey; window.aiBuildPrompt=aiBuildPrompt; window.aiAddPage=aiAddPage; window.aiRemovePage=aiRemovePage; window.aiRenderPages=aiRenderPages; window.aiGetCurrentPageInfo=aiGetCurrentPageInfo; window.aiLocalFallback=aiLocalFallback; window.aiUseWebBridge=aiUseWebBridge; window.aiCallProvider=aiCallProvider; window.aiLoadSettings=aiLoadSettings; window.aiSaveHistory=aiSaveHistory; window.aiRenderHistory=aiRenderHistory; window.aiScrollToBottom=aiScrollToBottom; window.aiGeminiSupportsGrounding=aiGeminiSupportsGrounding; window.aiConversationMarkdown=aiConversationMarkdown; window.aiUpdateLatestBtn=aiUpdateLatestBtn; window.aiAppendMessage=aiAppendMessage; window.aiClearHistory=aiClearHistory; window.aiUpdateProviderUI=aiUpdateProviderUI; window.aiPopulateModelSelect=aiPopulateModelSelect; window.aiSendCurrent=aiSendCurrent; window.aiQuickPrompt=aiQuickPrompt; window.initAI=initAI; window.aiProvider=aiProvider; window.aiSettings=aiSettings; window.aiModels=aiModels; window.aiUpdateCurrentPageDisplay=aiUpdateCurrentPageDisplay;
+  window.AI_PROVIDERS=AI_PROVIDERS; window.aiValidateCustomUrl=aiValidateCustomUrl; window.aiSanitizeExternal=aiSanitizeExternal; window.aiSanitizeHistory=aiSanitizeHistory; window.aiRateLimitOk=aiRateLimitOk; window.aiSelectRelevantWindow=aiSelectRelevantWindow; window.aiIsYouTubeUrl=aiIsYouTubeUrl; window.aiHistoryToGeminiContents=aiHistoryToGeminiContents; window.aiHistoryToOpenAIMessages=aiHistoryToOpenAIMessages; window.aiHistoryToClaudeMessages=aiHistoryToClaudeMessages; window.aiCollectTabsContext=aiCollectTabsContext; window.aiScholarSearch=aiScholarSearch; window.aiAttachImageFile=aiAttachImageFile; window.aiExtractYouTubeId=aiExtractYouTubeId; window.aiYtMetaViaFetch=aiYtMetaViaFetch; window.aiYtBalancedJson=aiYtBalancedJson; window.aiCallGeminiLite=aiCallGeminiLite; window.aiSig=aiSig; window.aiRegenerate=aiRegenerate; window.aiSelectRelevantWindows=aiSelectRelevantWindows; window.aiSessionsSearch=aiSessionsSearch; window.aiMemKey=aiMemKey; window.aiMemFor=aiMemFor; window.aiRenderSessions=aiRenderSessions; window.aiShowSessions=aiShowSessions; window.aiHideSessions=aiHideSessions; window.aiGetProviderConfig=aiGetProviderConfig; window.aiGetModel=aiGetModel; window.aiSetModel=aiSetModel; window.aiFetchGeminiModels=aiFetchGeminiModels; window.aiHasKey=aiHasKey; window.aiBuildPrompt=aiBuildPrompt; window.aiAddPage=aiAddPage; window.aiRemovePage=aiRemovePage; window.aiRenderPages=aiRenderPages; window.aiGetCurrentPageInfo=aiGetCurrentPageInfo; window.aiLocalFallback=aiLocalFallback; window.aiUseWebBridge=aiUseWebBridge; window.aiContextCovers=aiContextCovers; window.aiCallProvider=aiCallProvider; window.aiLoadSettings=aiLoadSettings; window.aiSaveHistory=aiSaveHistory; window.aiRenderHistory=aiRenderHistory; window.aiScrollToBottom=aiScrollToBottom; window.aiDetectPageIntent=aiDetectPageIntent; window.aiGroundingSources=aiGroundingSources; window.aiSourcesLabel=aiSourcesLabel; window.aiGeminiSupportsGrounding=aiGeminiSupportsGrounding; window.aiGeminiSupportsVideo=aiGeminiSupportsVideo; window.aiGeminiSupportsAgentic=aiGeminiSupportsAgentic; window.aiPickVideoModel=aiPickVideoModel; window.aiVideoContents=aiVideoContents; window.aiCallGeminiVideo=aiCallGeminiVideo; window.aiIsTranscriptRequest=aiIsTranscriptRequest; window.aiQueryRefersToVideo=aiQueryRefersToVideo; window.aiIsContinueRequest=aiIsContinueRequest; window.aiLastTimestampSec=aiLastTimestampSec; window.aiConversationMarkdown=aiConversationMarkdown; window.aiUpdateLatestBtn=aiUpdateLatestBtn; window.aiAppendMessage=aiAppendMessage; window.aiClearHistory=aiClearHistory; window.aiUpdateProviderUI=aiUpdateProviderUI; window.aiPopulateModelSelect=aiPopulateModelSelect; window.aiSendCurrent=aiSendCurrent; window.aiQuickPrompt=aiQuickPrompt; window.initAI=initAI; window.aiProvider=aiProvider; window.aiSettings=aiSettings; window.aiModels=aiModels; window.aiUpdateCurrentPageDisplay=aiUpdateCurrentPageDisplay;
 }
 if(document.readyState!=="loading") initAI(); else document.addEventListener("DOMContentLoaded",initAI);

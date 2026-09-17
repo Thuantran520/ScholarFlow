@@ -31,6 +31,7 @@ const ALLOWED_HOSTS = new Set([
   "img.youtube.com",
   "video.google.com",
   "api.duckduckgo.com",
+  "html.duckduckgo.com",
   "vi.wikipedia.org",
   "en.wikipedia.org",
   "api.openalex.org",

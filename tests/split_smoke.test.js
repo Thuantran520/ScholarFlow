@@ -969,9 +969,10 @@ async function main() {
       !!w.document.querySelector('#tab-ai [data-ai-quick="answer"]') &&
       !!w.document.querySelector('#tab-ai [data-ai-quick="tabs"]') &&
       !!w.document.querySelector('#tab-ai [data-ai-quick="papers"]') &&
-      !!w.document.getElementById("ai-prompt-answer") && !!w.document.getElementById("ai-prompt-tabs") && !!w.document.getElementById("ai-prompt-papers") &&
+      !!w.document.querySelector('#tab-ai [data-ai-quick="summary"]') &&
+      !!w.document.getElementById("ai-prompt-answer") && !!w.document.getElementById("ai-prompt-tabs") && !!w.document.getElementById("ai-prompt-papers") && !!w.document.getElementById("ai-prompt-summary") &&
       !!w.document.querySelector("#tab-ai .ai-top-actions #ai-btn-sessions") && !!w.document.querySelector("#tab-ai .ai-top-actions #ai-btn-open-settings"),
-      `${htmlFile}: tab-ai markup + 9 quick chips (answer/tabs/papers) present`);
+      `${htmlFile}: tab-ai markup + 9 quick chips (answer/tabs/papers/summary...) present`);
     check(!!w.document.getElementById("ai-settings-modal") && !!w.document.getElementById("ai-key-gemini") &&
       !!w.document.getElementById("ai-key-openai") && !!w.document.getElementById("ai-key-claude") &&
       !!w.document.getElementById("ai-btn-save-key") && !!w.document.getElementById("ai-btn-toggle-key") &&
@@ -1010,10 +1011,38 @@ async function main() {
         "sidebar: aiSelectRelevantWindow locates the passage matching the question");
       check(await w.eval(`aiIsYouTubeUrl("x://www.youtube.com/watch?v=abc") === true && aiIsYouTubeUrl("x://youtu.be/abc") === true && aiIsYouTubeUrl("x://vietjack.com/go.jsp") === false && aiIsYouTubeUrl("") === false`),
         "sidebar: YouTube URL detection (scheme-agnostic, no remote literals)");
-      check(await w.eval(`(function(){var p=aiBuildPrompt("QQ","","",null,{text:"noisy transcript line",title:"V",lang:"vi",kind:"asr"},"","",null,true); return p.indexOf("DATA_UNTRUSTED_3_BEGIN") !== -1 && p.indexOf("noisy transcript line") !== -1 && p.endsWith("QQ");})()`),
-        "sidebar: transcript enters prompt isolated in untrusted block");
-      check(await w.eval(`typeof aiGetYouTubeTranscript === "function" && typeof aiGetPageImages === "function"`),
-        "sidebar: transcript + page-image helpers exported");
+      check(await w.eval(`(function(){var p=aiBuildPrompt("QQ","","",null,"PINNED PAGE CONTENT","","",null,false); return p.indexOf("Pinned pages") !== -1 && p.indexOf("DATA_UNTRUSTED_6_BEGIN") !== -1 && p.indexOf("PINNED PAGE CONTENT") !== -1 && p.endsWith("QQ");})()`),
+        "sidebar: pinned pages enter the prompt in an untrusted block even in general-chat mode");
+      check(await w.eval(`typeof aiContextCovers === "function" && typeof aiGetPageImages === "function"`),
+        "sidebar: context-coverage heuristic + page-image helpers exported");
+      check(await w.eval(`(function(){var c=aiVideoContents("dQw4w9WgXcQ","T\u00f3m t\u1eaft video n\u00e0y",[]); var p=c&&c[0]&&c[0].parts; return c.length===1 && c[0].role==="user" && !!p && p[0].fileData && p[0].fileData.fileUri==="https://www.youtube.com/watch?v=dQw4w9WgXcQ" && !p[0].fileData.mimeType && p[1] && typeof p[1].text==="string" && p[1].text.indexOf("T\u00f3m t\u1eaft")!==-1;})()`),
+        "sidebar: video-direct builds a server-side watch-URL part (text AFTER video, no scraping)");
+      check(await w.eval(`aiGeminiSupportsVideo("gemini-3.1-flash-lite") && aiGeminiSupportsVideo("gemini-2.5-flash") && !aiGeminiSupportsVideo("gpt-4o") && !aiGeminiSupportsVideo("claude-3-5-sonnet-20241022")`),
+        "sidebar: video-direct gate covers gemini-2/3 (+latest), rejects other providers");
+      check(await w.eval(`(function(){var c=aiVideoContents("abc123DEF","h\u1ecfi",[{role:"user",content:"tr\u01b0\u1edbc"},{role:"assistant",content:"sau"}]); return c.length===3 && c[0].role==="user" && c[0].parts[0].text==="tr\u01b0\u1edbc" && c[1].role==="model" && c[2].parts[0].fileData.fileUri.indexOf("abc123DEF")!==-1;})()`),
+        "sidebar: video-direct preserves conversation history before the video turn");
+      check(await w.eval(`aiIsTranscriptRequest("\u0111\u01b0a t\u00f4i b\u1ea3ng ch\u00e9p l\u1eddi c\u1ee7a video tr\u00ean chi ti\u1ebft \u0111i") === true && aiIsTranscriptRequest("cho t\u00f4i ph\u1ee5 \u0111\u1ec1") === true && aiIsTranscriptRequest("d\u1ecbch c\u00e2u n\u00e0y sang ti\u1ebfng Anh") === false`),
+        "sidebar: transcript-request detection fires on the exact follow-up that used to be refused");
+      check(await w.eval(`aiQueryRefersToVideo("ph\u00e2n t\u00edch video n\u00e0y") === true && aiQueryRefersToVideo("v\u1ee5 \u00e1n tr\u00ean l\u00e0 g\u00ec") === false && aiQueryRefersToVideo("d\u1ecbch \u0111o\u1ea1n v\u1eeba xem") === true`),
+        "sidebar: video-reference detection keys on video/clip/\u2018\u0111o\u1ea1n v\u1eeba xem\u2019, not every message");
+      check(await w.eval(`(function(){var t=aiVideoQuestionText("ch\u00e9p l\u1eddi"); return t.indexOf("mm:ss")!==-1 && t.indexOf("NGUY\u00caN V\u0102N")!==-1 && t.indexOf("kh\u00f4ng b\u1ecba")!==-1 && t.indexOf("h\u00ecnh \u1ea3nh")!==-1 && t.indexOf("ch\u00e9p l\u1eddi")!==-1;})()`),
+        "sidebar: video prompt demands verbatim transcript + visual grounding + no fabrication");
+      check(await w.eval(`aiIsContinueRequest("ti\u1ebfp t\u1ee5c") === true && aiIsContinueRequest("c\u00f2n n\u1eefa") === true && aiIsContinueRequest("\u0111\u01b0a b\u1ea3ng ch\u00e9p l\u1eddi c\u00f2n l\u1ea1i") === true && aiIsContinueRequest("t\u00f3m t\u1eaft video n\u00e0y") === false && aiIsContinueRequest("ph\u00e2n t\u00edch chi ti\u1ebft nh\u00e2n v\u1eadt nam ch\u00ednh c\u00f3 ti\u1ebfp di\u1ec5n kh\u00f4ng th\u00ec sao nh\u1ec9") === false`),
+        "sidebar: 'tiếp tục/còn nữa' detected as a continuation, but not an ordinary long question");
+      check(await w.eval(`aiLastTimestampSec("[00:00] a ... [21:13] b G\u1ee2I \u00dd") === 1273 && aiLastTimestampSec("[00:10] x [1:02:03] y") === 3723 && aiLastTimestampSec("kh\u00f4ng m\u1ed1c") === 0`),
+        "sidebar: resume point = the LAST [mm:ss] (handles mm:ss and h:mm:ss), so 'tiếp tục' continues correctly");
+      check(await w.eval(`(function(){var s=aiVideoQuestionText("t\u00f3m t\u1eaft video",false); var t=aiVideoQuestionText("ch\u00e9p l\u1eddi",true); return s.indexOf("D\u00d2NG TH\u1edcI GIAN")===-1 && t.indexOf("D\u00d2NG TH\u1edcI GIAN")!==-1 && t.indexOf("kh\u00f4ng b\u1ecba")!==-1;})()`),
+         "sidebar: transcript-only rules appear only for transcript requests (summarize isn't forced into a dump)");
+      check(await w.eval(`(function(){var L=aiVideoQuestionText("ch\u00e9p l\u1eddi",true,true); var S=aiVideoQuestionText("ch\u00e9p l\u1eddi",true,false); return L.indexOf("B\u1ea2NG TIMELINE")!==-1 && L.indexOf("Video n\u00e0y D\u00c0I")!==-1 && L.indexOf("M\u1ed6I ph\u00e1t ng\u00f4n m\u1ed9t d\u00f2ng")===-1 && S.indexOf("M\u1ed6I ph\u00e1t ng\u00f4n m\u1ed9t d\u00f2ng")!==-1;})()`),
+        "sidebar: long videos get a timeline-summary prompt (no verbatim-everything that would truncate)");
+      check(await w.eval(`aiGeminiSupportsAgentic("gemini-3.7-flash") && aiGeminiSupportsAgentic("gemini-3.5-flash-lite") && !aiGeminiSupportsAgentic("gemini-3.1-flash-lite") && !aiGeminiSupportsAgentic("gemini-2.5-flash")`),
+        "sidebar: agentic video gated to the 3.5/3.6/3.7/3.8 family only");
+      check(await w.eval(`(function(){var A=aiVideoContents("vid1","h\u1ecfi",[],false,true); var a=A[A.length-1].parts[0]; var B=aiVideoContents("vid1","h\u1ecfi",[],false,false); var b=B[B.length-1].parts[0]; return a.mediaProcessing==="AGENTIC" && b.mediaProcessing===undefined && a.fileData.fileUri.indexOf("vid1")!==-1;})()`),
+        "sidebar: agentic mode tags the video part mediaProcessing=AGENTIC (static/short leaves it off)");
+      check(await w.eval(`(function(){var AG=["gemini-3.8-flash","gemini-3.7-flash","gemini-3.1-flash-lite","gemini-2.5-flash"]; var L=aiPickVideoModel(1740,AG); var S=aiPickVideoModel(60,AG); var NONE=aiPickVideoModel(1740,["gemini-2.5-flash","gemini-2.5-flash-lite"]); return L.agentic===true && L.model==="gemini-3.8-flash" && S.agentic===false && S.model===aiGetModel("gemini") && NONE.agentic===false && NONE.model===aiGetModel("gemini");})()`),
+        "sidebar: long video auto-picks a CONFIRMED agentic model; short or unsupported keys keep the user's model");
+      check(await w.eval(`aiSettings.autoVideo===true && !!document.getElementById("ai-opt-autovideo")`),
+        "sidebar: 'auto-watch open video' is on by default and its checkbox is wired");
       check(await w.eval(`(function(){var c=aiHistoryToGeminiContents([{role:"user",content:"hi"},{role:"assistant",content:"yo"}],"NOW",[]); return c.length===3 && c[1].role==="model" && c[2].role==="user" && c[2].parts[0].text==="NOW";})()`),
         "sidebar: multi-turn history -> Gemini contents");
       check(await w.eval(`(function(){var m=aiHistoryToClaudeMessages([{role:"user",content:"a"},{role:"assistant",content:"b"}],"NOW",[]); return m.length===3 && m[0].role==="user" && m[1].role==="assistant" && m[2].role==="user" && m[2].content==="NOW";})()`),
@@ -1026,12 +1055,16 @@ async function main() {
         "sidebar: current page URL + videoId are injected into every prompt");
       check(await w.eval(`typeof aiCallGeminiLite === "function" && aiHistoryToGeminiContents([], "P", [{data:"AA",mimeType:"image/jpeg"}]).length === 1`),
         "sidebar: Lite-fallback helper exported; contents shape valid");
+      check(await w.eval(`(function(){var t="Trang hoc tap mon Toan lop 4 - luyen tap phep nhan so co hai chu so."; return aiContextCovers("cach nhan so co hai chu so lop 4", t) === true && aiContextCovers("thoi tiet hom nay o Ha Noi the nao", t) === false;})()`),
+        "sidebar: aiContextCovers tells when the local context actually covers the question");
       check(await w.eval(`typeof aiCollectTabsContext === "function" && typeof aiScholarSearch === "function" && typeof aiAttachImageFile === "function"`),
         "sidebar: tabs-collect + scholar-search + image-attach helpers exported");
       check(await w.eval(`aiExtractYouTubeId("xem youtu.be/dQw4w9WgXcQ nha") === "dQw4w9WgXcQ" && aiExtractYouTubeId("lien ket www.youtube.com/watch?v=abcdefgh123&x=1 ok") === "abcdefgh123" && aiExtractYouTubeId("khong co link") === ""`),
         "sidebar: aiExtractYouTubeId parses youtu.be / watch / shorts ids");
+      check(await w.eval(`aiContextCovers("ch\u1ed1ng nghi\u1ec7n thu\u1ed1c l\u00e1", "ph\u00f2ng ch\u1ed1ng nghi\u1ec7n thu\u1ed1c l\u00e1 cho h\u1ecdc sinh") === true && aiContextCovers("", "no context") === true`),
+        "sidebar: aiContextCovers tolerates diacritics/empty queries");
       check(await w.eval(`aiYtBalancedJson('x = {"a":{"b":"}{"}} tail', 4) === '{"a":{"b":"}{"}}'`),
-        "sidebar: aiYtBalancedJson respects strings/escapes");
+        "sidebar: aiYtBalancedJson respects nested braces/strings (powers the direct-fetch parser)");
       check(await w.eval(`(function(){var d=document.createElement("div"); aiRenderFormattedText(d,"nguon: [https://www.youtube.com/watch?v=2YoLd1RFitg](https://www.youtube.com/watch?v=2YoLd1RFitg) xong"); var a=d.querySelector("a.ai-link"); return !!a && a.textContent.length<40 && a.textContent.indexOf("youtube.com")!==-1 && a.title==="https://www.youtube.com/watch?v=2YoLd1RFitg" && a.target==="_blank" && a.rel==="noopener noreferrer";})()`),
         "sidebar: URL-as-label anchors render shortened with full URL in title (safe noopener)");
       check(await w.eval(`(function(){var d=document.createElement("div"); aiRenderFormattedText(d,"xem https://www.youtube.com/watch?v=abcdefgh1234 nha"); var a=d.querySelector("a.ai-link"); return !!a && a.textContent.length<40 && a.textContent.indexOf("abcdefgh123")!==-1;})()`),
@@ -1058,8 +1091,10 @@ async function main() {
         "sidebar: markdown tables render as real <table>");
       check(await w.eval(`(function(){var d=document.createElement("div"); aiRenderFormattedText(d,"| A | B |\\n|---|---|\\n| **1** | ==x== |"); var t=d.querySelector("table.ai-table"); return !!t && !!t.querySelector("td strong") && t.querySelector("td strong").textContent==="1" && !!t.querySelector("td span");})()`),
         "sidebar: inline formatting (**bold**, ==highlight==) applies INSIDE table cells");
-      check(await w.eval(`(function(){var p=aiBuildPrompt("QQ","","",null,null,"","","WEBRESULT123XYZ",false); return p.indexOf("WEBRESULT123XYZ")!==-1 && p.indexOf("DATA_UNTRUSTED_5")!==-1;})()`),
-        "sidebar: web-search results reach the prompt even in general-chat mode (no + prefix)");
+      check(await w.eval(`(function(){var p=aiBuildPrompt("QQ","","",null,null,"","","WEBRESULT123XYZ",false); return p.indexOf("WEBRESULT123XYZ")===-1 && p.indexOf("DATA_UNTRUSTED_5")===-1;})()`),
+         "sidebar: scraped web results are NO LONGER injected into the prompt (DDG/Wikipedia removed)");
+      check(await w.eval(`(function(){var p=aiBuildPrompt("Hoi","",null,null,null,null,null,null,false); return p.indexOf("Google Search (grounding)")!==-1 && p.indexOf("URL ngu")!==-1;})()`),
+        "sidebar: strict fact rule injected — real-world identifiers need a verbatim Google/page source + URL");
       check(await w.eval(`(function(){var d=document.createElement("div"); aiRenderFormattedText(d,"tra loi nhe\\nGỢI Ý:\\n- cau a\\n- cau b\\n- cau c"); return d.querySelectorAll(".ai-suggest").length===3;})()`),
         "sidebar: follow-up suggestion block renders clickable chips");
       check(await w.eval(`typeof aiSig === "function" && typeof aiRegenerate === "function"`),
@@ -1070,10 +1105,8 @@ async function main() {
         "sidebar: answer-scope note injected into prompt (general chat mode)");
       check(!!w.document.getElementById("ai-scope-select") && !!w.document.getElementById("ai-btn-web-search") && !!w.document.getElementById("ai-temp-val") && !!w.document.querySelector(".ai-temp-row .ai-range"),
         "page: scope select + web-search button + restyled temperature row present");
-      check(await w.eval(`(function(){var s="Xin chao cac ban hom nay chung ta se lam mot buoi live that thu vi va keo dai noi dung nay se mang lai rat nhieu dieu moi la bat ngo cho toan the nguoi xem cua chung ta toi nay, nho like va share de ung ho kenh nhe cac ban oi, va dung quen de lai comment gop y cho chung minh nhe cam on moi nguoi da dong hanh";var j={events:[{tStartMs:0,segs:[{utf8:"[Music]"}]},{tStartMs:1000,segs:[{utf8:s}]},{tStartMs:9000,segs:[{utf8:"\\n"}]},{tStartMs:10000,segs:[{utf8:s}]}]};var t=aiYtCaptionEventsToLines(j);return t.split("\\n").length===1&&t.indexOf("[Music]")===-1&&t.length>200;})()`),
-        "sidebar: caption cleaner drops noise tokens and duplicate ASR lines");
-      check(await w.eval(`(function(){try{var p=aiBuildPrompt("QQ","","",null,{title:"Tieu de video",author:"Kenh X",date:"2026-09-01",views:"785000",description:"MO TA NGAY MAY GIO LIVE 19H"},"","",null,true); return typeof p==="string" && p.indexOf("DATA_UNTRUSTED_4_BEGIN")!==-1;}catch(e){return false;}})()`),
-        "sidebar: no-caption videos fall back to description+channel metadata block");
+      check(await w.eval(`aiContextCovers("xem video h\u01b0\u1edbng d\u1eabn l\u1eafp r\u00e1p", "video h\u01b0\u1edbng d\u1eabn l\u1eafp r\u00e1p" ) === true`),
+        "sidebar: aiContextCovers matches the question's content terms (auto web search when it does not)");
       check(await w.eval(`(function(){try{aiAddPage({url:"https://alpha.test/1",title:"Alpha",text:"noi dung A"});aiAddPage({url:"https://xss.test/2",title:'<img src=x onerror=alert(1)>',text:"B"});var chips=document.querySelectorAll(".ai-page-chip").length;var vis=document.getElementById("ai-pages-context").style.display!=="none";var cnt=document.getElementById("ai-pages-count").textContent==="2";var inj=document.querySelector(".ai-page-chip img")!==null;var rmbs=document.querySelectorAll(".ai-page-chip-remove").length===2;aiRemovePage("https://alpha.test/1");var after=document.querySelectorAll(".ai-page-chip").length===1;aiRemovePage("https://xss.test/2");var hidden=document.getElementById("ai-pages-context").style.display==="none";return chips===2&&vis&&cnt&&!inj&&rmbs&&after&&hidden;}catch(e){return false;}})()`),
         "sidebar: pinned-pages strip renders chips safely (title XSS inert, add/remove + auto-hide)");
       check(await w.eval(`typeof aiAddPage==="function" && typeof aiRemovePage==="function" && typeof aiGetCurrentPageInfo==="function"`),
@@ -1086,8 +1119,18 @@ async function main() {
         "sidebar: floating \\u2193-newest pill created in chat wrapper");
       check(await w.eval(`typeof aiGeminiSupportsGrounding==="function" && aiGeminiSupportsGrounding("gemini-2.5-flash")===true && aiGeminiSupportsGrounding("gemini-3.1-flash-lite")===true && aiGeminiSupportsGrounding("gemini-flash-lite-latest")===true && aiGeminiSupportsGrounding("gemini-1.5-flash")===false && aiGeminiSupportsGrounding("")===false`),
         "sidebar: Gemini native Google-Search grounding detection (2.x/3.x yes, 1.5 no)");
-      check(await w.eval(`typeof aiWebSearch === "function"`),
-        "sidebar: web-search helper exported");
+      check(await w.eval(`typeof aiWebSearch === "undefined" && typeof aiWebSearchHtml === "undefined" && typeof aiDecodeDdgUrl === "undefined"`),
+        "sidebar: DDG/Wikipedia scraper helpers fully removed");
+      check(await w.eval(`typeof aiDetectPageIntent === "function" && aiDetectPageIntent("tóm tắt trang này")===true && aiDetectPageIntent("giải các câu trắc nghiệm trong bài")===true && aiDetectPageIntent("tác giả của bài này là ai")===true && aiDetectPageIntent("this article")===true && aiDetectPageIntent("bài viết này")===true && aiDetectPageIntent("+ tóm tắt")===true`),
+        "sidebar: auto page-intent detector fires on deictic/tool queries");
+      check(await w.eval(`aiDetectPageIntent("tóm tắt bài hát Attention")===false && aiDetectPageIntent("tác giả bài hát Billboard là ai")===false && aiDetectPageIntent("trời hôm nay thế nào")===false && aiDetectPageIntent("1+1 bằng mấy")===false && aiDetectPageIntent("")===false`),
+        "sidebar: auto page-intent detector stays quiet on general chat");
+      check(await w.eval(`(function(){var c=aiGroundingSources({groundingMetadata:{groundingChunks:[{web:{uri:"https://example.com/a",title:"Title A"}},{web:{uri:"https://example.com/a",title:"dup"}},{web:{uri:"javascript:alert(1)",title:"evil"}},{web:{uri:"https://example.com/b"}}]}}); var e=aiGroundingSources(null); return c.length===2 && e.length===0 && c[0].u==="https://example.com/a" && c[0].t==="Title A" && c[1].u==="https://example.com/b";})()`),
+        "sidebar: grounding citations extracted, deduped, protocol-safe");
+      check(await w.eval(`typeof aiSourcesLabel==="function" && typeof aiSourcesLabel()==="string" && aiSourcesLabel().length>0`),
+        "sidebar: citation-footer label localizer present");
+      check(await w.eval(`(function(){var old=aiSettings.scope; aiSettings.scope="web"; var p=aiBuildPrompt("QQ","","","",null,null,"",null,true); aiSettings.scope=old; return p.indexOf("Nguồn:")!==-1 && p.indexOf("từ khóa")!==-1;})()`),
+        "sidebar: scope=web prompt asks the model to list source URLs + verification keywords");
       check(!!w.document.getElementById("ai-opt-websearch"),
         "page: auto web-search checkbox present");
       check(await w.eval(`typeof aiSelectRelevantWindows === "function" && typeof aiMemKey === "function" && typeof aiSessionsSearch === "function"`),
@@ -1110,8 +1153,8 @@ async function main() {
       "content script: GET_PAGE_TEXT main-content extractor present");
     check(contentMain.includes('"GET_PAGE_SOURCE"') && contentMain.includes("script:not([src])"),
       "content script: GET_PAGE_SOURCE returns hidden text + inline scripts");
-    check(contentMain.includes('"GET_YT_TRANSCRIPT"') && contentMain.includes("captionTracks") && contentMain.includes("fmt=json3") && contentMain.includes("sfYtSafeBaseUrl"),
-      "content script: GET_YT_TRANSCRIPT reads ytInitialPlayerResponse -> safe caption URL");
+    check(!contentMain.includes('"GET_YT_TRANSCRIPT"') && !contentMain.includes("sfYtScrapeDomTranscript") && !contentMain.includes("sfYtCloseTranscriptPanel") && !contentMain.includes("sfYtReadDomTranscript"),
+      "content script: GET_YT_TRANSCRIPT + transcript DOM scraping fully removed");
     check(contentMain.includes('"YT_SEEK"') && contentMain.includes("currentTime"),
       "content script: YT_SEEK seeks the page video element");
     check(contentMain.includes("GET_YT_META") && contentMain.includes("playerMicroformatRenderer"),
@@ -1122,19 +1165,43 @@ async function main() {
       "content script: video title prefers fresh SPA DOM (h1/#title/document.title) over stale og:title");
     const aiSrc = fs.readFileSync(path.join(__dirname, "..", "OS", "js", "tabs", "ai.js"), "utf8");
     check(aiSrc.includes('addEventListener("paste"'), "AI module: clipboard image paste wired");
-    check(aiSrc.includes("window.aiScrapeTranscriptViaHiddenTab") && aiSrc.includes("async function aiScrapeTranscriptViaHiddenTab"),
-      "AI module: hidden-tab transcript scrape wired (CORS-proof fallback)");
-    check(contentMain.includes("SF_CAPTION_NOISE") && contentMain.includes("reason: transcript.length > 0 ? \x22\x22 : \x22no_captions\x22"),
-      "content script: ASR transcript noise-strip + dedupe + low-quality -> description fallback");
-    check(aiSrc.includes("[LUU Y ASR]"),
-      "AI module: ASR-quality caveat injected for auto captions");
-    check(aiSrc.includes("async function aiYtHiddenTabMeta") && aiSrc.includes("window.aiYtHiddenTabMeta"),
-      "AI module: hidden-tab hard-load YT meta scraper exported");
+    check(!aiSrc.includes("aiScrapeTranscriptViaHiddenTab") && !aiSrc.includes("aiFetchTranscriptForVideo") && !aiSrc.includes("aiGetYouTubeTranscript"),
+      "AI module: transcript scrape/fetch helpers removed");
+    check(!aiSrc.includes("aiYtParseCaption") && !aiSrc.includes("aiYtCaptionEventsToLines") && !aiSrc.includes("aiYtOembedMeta"),
+      "AI module: transcript parsing helpers removed");
+    check(!aiSrc.includes("aiVideoCloudDirect") && !aiSrc.includes("aiGeminiSupportsDirectVideo") && !aiSrc.includes("aiVideoDirectContents") && !aiSrc.includes("captionTracks") && !aiSrc.includes("timedtext") && !aiSrc.includes("aiYtParseCaption"),
+      "AI module: transcript/caption scraping fully gone (only a metadata fetch remains, no captionTracks/timedtext)");
+    check(aiSrc.includes("function aiGeminiSupportsVideo") && aiSrc.includes("function aiVideoContents") && aiSrc.includes("function aiCallGeminiVideo") && aiSrc.includes("window.aiCallGeminiVideo"),
+      "AI module: server-side video-watch helpers present + exported");
+    check(aiSrc.includes("fileUri") && aiSrc.includes("videoDirectId"),
+      "AI module: video-direct routes the public watch URL to Gemini as fileData.fileUri");
+    check(aiSrc.includes("aiActiveVideoId=String(videoDirectId)") && aiSrc.includes("aiActiveVideoId===pid") && aiSrc.includes("aiQueryRefersToVideo") && aiSrc.includes("aiIsTranscriptRequest"),
+      "AI module: watched-video stays active so follow-ups (transcript/visual) re-attach the same video");
+    check(aiSrc.includes("aiVideoResumeAt=aiLastTimestampSec(answer)") && aiSrc.includes("wantContinue") && aiSrc.includes("_aiMMSS(aiVideoResumeAt)") && aiSrc.includes("aiIsContinueRequest(cleanQuery)"),
+      "AI module: long-transcript truncation is resumable (tracks last [mm:ss], 'tiếp tục' continues after it)");
+    check(aiSrc.includes("AI_AGENTIC_MODELS") && aiSrc.includes('mediaProcessing="AGENTIC"') && aiSrc.includes("function aiPickVideoModel") && aiSrc.includes("aiGetYtLengthSec"),
+      "AI module: long video auto-switches to an agentic model (per-call) via GET_YT_META length");
+    check(!aiSrc.includes("startOffset") && !aiSrc.includes("endOffset") && !aiSrc.includes("videoMetadata"),
+      "AI module: does NOT use YouTube time-window clipping (known audio-token bug) — relies on agentic instead");
+    check(aiSrc.includes("aiSettings.autoVideo&&pid") && aiSrc.includes("autoVideo: true") && aiSrc.includes("ai-opt-autovideo"),
+      "AI module + wiring: 'auto-watch open video' setting defaults on and attaches the current tab's video");
+    check(aiSrc.includes('mediaResolution:"MEDIA_RESOLUTION_LOW"') && aiSrc.includes("genExtra") && /generationConfig:Object\.assign\(\{temperature:aiSettings\.temperature\},genExtra\|\|null\)/.test(aiSrc),
+      "AI module: long/agentic video requests low media-resolution (faster + cheaper) via genExtra in both paths");
+    check(!contentMain.includes('reason: "no_captions"') && !contentMain.includes("sfYtTsToSecondsLine"),
+      "content script: no-caption/transcript-only code gone");
+    check(!aiSrc.includes("[LUU Y ASR]"),
+      "AI module: ASR caveat removed with the transcript feature");
+    check(!contentMain.includes("sfYtDomOpened") && !contentMain.includes("sfYtIsVisible") && !contentMain.includes("stableSince"),
+      "content script: DOM-transcript scrapers/polling removed");
+    check(aiSrc.includes("async function aiYtMetaViaFetch") && aiSrc.includes("window.aiYtMetaViaFetch") && aiSrc.includes("window.aiYtBalancedJson"),
+      "AI module: YouTube meta now uses a direct fetch (no hidden tab) + JSON extractor exported");
+    check(!aiSrc.includes("aiYtHiddenTabMeta") && !aiSrc.includes("active:false") && !aiSrc.includes('tabsApi.create({url:"https://www.youtube.com'),
+      "AI module: no background YouTube tab is ever opened (flicker source removed)");
     const initSrc = fs.readFileSync(path.join(__dirname, "..", "OS", "js", "init.js"), "utf8");
-    check(initSrc.includes("aiYtHiddenTabMeta") && initSrc.includes("oembed"),
-      "citation: YouTube meta 3-tier merge (live tab -> hidden hard-load tab -> oEmbed)");
-    check(contentMain.includes("videoId: ytVidCur") && aiSrc.includes("transcriptData.vid!==pageVid") && initSrc.includes("ytMeta.videoId !== ytVid"),
-      "SPA race guard: all consumers discard metadata whose videoId differs from the open video");
+    check(initSrc.includes("aiYtMetaViaFetch") && initSrc.includes("oembed") && !initSrc.includes("aiYtHiddenTabMeta"),
+      "citation: YouTube meta merge is live tab -> direct fetch -> oEmbed, no hidden tab");
+    check(contentMain.includes("videoId: curVid") && initSrc.includes("ytMeta.videoId !== ytVid"),
+      "SPA race guard: content-script metadata reports the video id; init discards mismatches");
     check(contentMain.includes("sfYtParseUiDate") && contentMain.includes("thg"),
       "content script: on-screen VN/EN publish date parsed when playerResponse not yet inserted");
     check(initSrc.includes("for (let ytTry = 0; ytTry < 3"),
@@ -1144,7 +1211,7 @@ async function main() {
     check(aiSrc.includes("streamGenerateContent") && aiSrc.includes("?alt=sse"),
       "AI module: SSE streaming for Gemini wired");
     const msgSrc = fs.readFileSync(path.join(__dirname, "..", "OS", "js", "core", "messaging.js"), "utf8");
-    check(msgSrc.includes("timeoutMs") && aiSrc.includes("timeoutMs:9000") && aiSrc.includes("timeoutMs:14000"),
+    check(msgSrc.includes("timeoutMs") && aiSrc.includes("timeoutMs:9000") && aiSrc.includes("timeoutMs:12000"),
       "messaging: per-action timeoutMs plumbed (fixes 1.2s race killing heavy YT/page actions)");
     check(contentMain.includes("_sfYtPRCache") && contentMain.includes('meta[itemprop="datePublished"]') && contentMain.includes("startDate"),
       "content script: GET_YT_META fast microdata path + playerResponse cache");
@@ -1154,12 +1221,27 @@ async function main() {
       "AI module: chat auto-scrolls to newest message on tab activation (no manual scrolling)");
     check(aiSrc.includes("KHÔNG CÓ THÔNG TIN ĐỦ"),
       "AI module: anti-hallucination rule in system preamble");
-    check(aiSrc.includes("google_search") && aiSrc.includes("geminiGrounds") && aiSrc.includes("function aiGeminiSupportsGrounding"),
-      "AI module: Gemini native Google Search grounding wired (tools:[{google_search}], 400 fallback, DDG skipped when grounding)");
+    check(aiSrc.includes("google_search") && aiSrc.includes("groundOverride") && aiSrc.includes("function aiGeminiSupportsGrounding"),
+      "AI module: web search is Gemini native Google Search grounding only (tools:[{google_search}], button forces it)");
+    check(!aiSrc.includes("html.duckduckgo.com") && !aiSrc.includes("api.duckduckgo.com") && !aiSrc.includes("wikipedia.org/w/api") && !aiSrc.includes("function aiWebSearch"),
+      "AI module: no DuckDuckGo/Wikipedia endpoints or scraper functions remain in the AI code");
     check(aiSrc.includes('aiQuickCtx={kind:"page"}') && aiSrc.includes("const quickReq = aiQuickCtx") && aiSrc.includes("|| !!quickReq"),
       "AI module: quick chips (summary/qa/...) always send page context via quickReq (fixes empty-context chip answers)");
+    check(!aiSrc.includes("transcript:aiPrompts.transcript") && !aiSrc.includes("ai_prompt_transcript") && !aiSrc.includes('kind==="transcript"'),
+      "AI module: 'transcript' quick chip fully removed (prompts, defaults, chip routing)");
+    check(!aiSrc.includes("ytChip") && !aiSrc.includes("wantVideoDirect") && !aiSrc.includes("ai_err_yt_direct"),
+      "AI module: cloud-direct chip routing removed");
+    check(aiSrc.includes("aiContextCovers") && aiSrc.includes("_AI_STOPWORDS") && aiSrc.includes("window.aiContextCovers"),
+      "AI module: context-coverage heuristic exported (drives auto web search on thin pages)");
     check(aiSrc.includes("text:pgText") && aiSrc.includes('await aiGetPageContextText("")'),
       "AI module: add-page (+) captures page text so pinned pages reach the multi-page context");
+    check(aiSrc.includes('if(aiPages.length > 0) {') && aiSrc.includes('const curPg = pageUrl ? aiPages.find') && aiSrc.includes('pageText = multiPageCtx'),
+      "AI module: pinned pages always join context; pinned snapshot is the single source of truth -> in-page/outside answers match");
+    {
+      const htmlFiles = ["sidebar.html", "popup.html", "partials/modals/ai-settings.html"];
+      const allHave = htmlFiles.every(f => { const s = fs.readFileSync(path.join(__dirname, "..", "OS", "html", f), "utf8"); return s.includes('id="ai-opt-autovideo"') && s.includes('data-i18n="ai_opt_autovideo"'); });
+      check(allHave, "sidebar/popup/ai-settings: auto-video checkbox present + translated in all 3 (mirrored)");
+    }
     {
       const aiCssSrc = fs.readFileSync(path.join(__dirname, "..", "OS", "css", "tabs", "ai.css"), "utf8");
       check(aiCssSrc.includes("body:has(.ai-chat-tab.active)") && aiCssSrc.includes("height: 100vh") && aiCssSrc.includes("flex-direction: column"),

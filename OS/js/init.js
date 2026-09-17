@@ -2020,10 +2020,10 @@ document.getElementById("btn-quick-swap-tabs")?.addEventListener("click", swapDu
           }
           console.info("[SF-YT-META] live tab:", ytMeta && ytMeta.ok ? ("ok date=" + (ytMeta.publishDate || "-") + " author=" + (ytMeta.author || "-")) : "empty/fail");
           const ytIncomplete = !ytMeta || !ytMeta.ok || !ytMeta.publishDate || !ytMeta.author;
-          if (ytIncomplete && ytVid && typeof aiYtHiddenTabMeta === "function") {
+          if (ytIncomplete && ytVid && typeof aiYtMetaViaFetch === "function") {
             try {
-              const hm = await aiYtHiddenTabMeta(ytVid);
-              console.info("[SF-YT-META] hidden tab:", hm && hm.ok ? ("ok date=" + (hm.publishDate || "-") + " author=" + (hm.author || "-")) : "empty/fail");
+              const hm = await aiYtMetaViaFetch(ytVid);
+              console.info("[SF-YT-META] direct fetch:", hm && hm.ok ? ("ok date=" + (hm.publishDate || "-") + " author=" + (hm.author || "-")) : "empty/fail");
               if (hm && hm.ok) {
                 ytMeta = {
                   ok: true,

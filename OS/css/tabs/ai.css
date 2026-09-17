@@ -168,10 +168,13 @@ body.is-popup .ai-chat-wrapper {
   flex-shrink: 0;
 }
 
-/* Floating "↓ newest" pill — appears when user scrolls up in chat */
+/* Floating "↓ newest" pill — appears when user scrolls up in chat, centered over the chat frame */
 .ai-jump-latest {
   position: absolute;
-  right: 16px;
+  left: 0;
+  right: 0;
+  margin-left: auto;
+  margin-right: auto;
   bottom: 108px;
   z-index: 6;
   width: 32px;
@@ -575,14 +578,26 @@ body.is-popup .ai-chat-wrapper {
 }
 
 .ai-ts {
-  color: #38bdf8;
-  cursor: pointer;
-  text-decoration: underline dotted;
+  color: #7dd3fc;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 7px;
+  padding: 1px 6px;
+  margin: 0 1px;
+  font-family: ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, monospace;
   font-variant-numeric: tabular-nums;
+  font-size: 0.92em;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
 }
 
 .ai-ts:hover {
-  color: #7dd3fc;
+  color: #fff;
+  background: rgba(14, 165, 233, 0.4);
+  border-color: #38bdf8;
 }
 
 .ai-link {

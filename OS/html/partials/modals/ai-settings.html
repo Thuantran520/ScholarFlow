@@ -50,7 +50,7 @@
           <textarea id="ai-prompt-answer" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;"></textarea>
           <label class="ai-field-sub" data-i18n="ai_prompt_papers_label">Tài liệu</label>
           <textarea id="ai-prompt-papers" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;"></textarea>
-          <label class="ai-field-sub" data-i18n="ai_prompt_tabs_label">Tóm tắt tab</label>
+<label class="ai-field-sub" data-i18n="ai_prompt_tabs_label">Tóm tắt tab</label>
           <textarea id="ai-prompt-tabs" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;"></textarea>
           <button type="button" class="btn btn-secondary" id="ai-btn-save-prompts" style="width:100%; margin-top:8px;" data-i18n="ai_btn_save_prompts">Lưu prompt</button>
           <button type="button" class="btn btn-secondary" id="ai-btn-reset-prompts" style="width:100%; margin-top:6px;" data-i18n="ai_btn_reset_prompts">Khôi phục</button>
@@ -70,7 +70,8 @@
             <option value="auto" selected data-i18n="ai_scope_auto">Trang + kiến thức AI + tự tìm web</option>
             <option value="web" data-i18n="ai_scope_web">Như trên + gợi ý từ khóa để tôi tự tìm web</option>
           </select>
-          <label class="ai-check" style="margin-top:8px;"><input type="checkbox" id="ai-opt-websearch" checked> <span data-i18n="ai_opt_websearch">Tự tìm web (DuckDuckGo/Wikipedia) khi trang thiếu thông tin</span></label>
+          <label class="ai-check" style="margin-top:8px;"><input type="checkbox" id="ai-opt-websearch" checked> <span data-i18n="ai_opt_websearch">Tự dùng Google Search (Gemini) khi thiếu thông tin</span></label>
+          <label class="ai-check" style="margin-top:8px;"><input type="checkbox" id="ai-opt-autovideo" checked> <span data-i18n="ai_opt_autovideo">Hỏi gì cũng tự xem video đang mở (Gemini)</span></label>
           <div class="ai-temp-row">
             <div class="ai-temp-head"><span class="ai-field-label" data-i18n="ai_temp_label">Temperature</span><span class="ai-temp-badge" id="ai-temp-val">0.7</span></div>
             <input type="range" class="ai-range" id="ai-temp-range" min="0" max="1" step="0.1" value="0.7">
