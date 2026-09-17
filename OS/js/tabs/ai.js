@@ -135,6 +135,11 @@ function aiSourcesLabel(){
   const lang=(typeof currentAppLanguage!=="undefined"&&currentAppLanguage)||"vi";
   return L[lang]||"Web sources:";
 }
+function aiSearchQueriesLabel(){
+  const L={vi:"Truy vấn Google Search:",en:"Google Search queries:",zh:"Google 搜索查询词：",ru:"Запросы Google Search:",ja:"Google検索クエリ:"};
+  const lang=(typeof currentAppLanguage!=="undefined"&&currentAppLanguage)||"vi";
+  return L[lang]||"Google Search queries:";
+}
 /* ── Multi-passage RAG ── */
 function aiSelectRelevantWindows(fullText, query, budget){
   const T=String(fullText||"");
@@ -189,23 +194,40 @@ function aiGroundingSources(cand){
   }
   return out.slice(0,8);
 }
-async function aiStreamGemini(model, apiKey, contents, temperature, opts, tools, maxMs, genExtra){
+function aiGroundingQueries(cand){
+  const out=[];
+  if(!cand) return out;
+  const gm=cand.groundingMetadata;
+  const qList=(gm&&Array.isArray(gm.webSearchQueries))?gm.webSearchQueries:[];
+  for(const q of qList){
+    const s=String(q||"").replace(/\s+/g," ").trim();
+    if(s&&!out.includes(s)) out.push(s.slice(0,120));
+  }
+  return out.slice(0,5);
+}
+async function aiStreamGemini(model, apiKey, contents, temperature, opts, tools, maxMs, genExtra, sysInst){
   const url="https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(model)+":streamGenerateContent?alt=sse&key="+encodeURIComponent(apiKey);
-  const body={contents:contents,generationConfig:Object.assign({temperature:temperature},genExtra||null)}; if(tools&&tools.length) body.tools=tools;
+  const body={contents:contents,generationConfig:Object.assign({temperature:temperature},genExtra||null)};
+  if(sysInst) body.systemInstruction={parts:[{text:sysInst}]};
+  if(tools&&tools.length) body.tools=tools;
   const res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),signal:aiSig(opts&&opts.signal,maxMs||90000)});
   if(!res.ok){ const t=res.status===404?"model_404":String(res.status); throw new Error("gemini_stream_"+t); }
   const srcs=[];
+  const queries=[];
   const extract=(o)=>{
     const cand=o.candidates&&o.candidates[0];
     const p2=cand&&cand.content&&cand.content.parts;
-    const txt=p2&&p2[0]&&typeof p2[0].text==="string"?p2[0].text:"";
+    const txt=Array.isArray(p2)?p2.map(p=>(p&&typeof p.text==="string")?p.text:"").join(""):((p2&&p2[0]&&typeof p2[0].text==="string")?p2[0].text:"");
     const got=aiGroundingSources(cand);
     for(const s of got){ if(!srcs.some(x=>x.u===s.u)) srcs.push(s); }
+    const gotQ=aiGroundingQueries(cand);
+    for(const q of gotQ){ if(!queries.includes(q)) queries.push(q); }
     return txt;
   };
   const full=await aiStreamSSE(res, extract, opts);
   if(!full) throw new Error("gemini_stream_empty");
   if(srcs.length&&opts) opts.__groundingSources=srcs.slice(0,8);
+  if(queries.length&&opts) opts.__groundingQueries=queries.slice(0,5);
   return full;
 }
 async function aiStreamOpenAI(apiUrl, model, messages, temperature, apiKey, opts){
@@ -657,6 +679,21 @@ function aiUpdateProviderUI(){
   const cu=document.getElementById("ai-custom-url");
   if(cu){ cu.value=(aiProvider==="custom")?(aiKeys["custom"]||""):""; cu.style.display=aiProvider==="custom"?"":"none"; const lab=document.querySelector('[data-i18n="ai_custom_label"]'); if(lab&&lab.parentElement) lab.parentElement.style.display=aiProvider==="custom"?"":"none"; }
 }
+function aiBuildSystemInstruction(isPageQuery){
+  const LANGN={vi:"tiếng Việt",en:"English",zh:"中文",ru:"русский язык",ja:"日本語"};
+  const langUi=(typeof currentAppLanguage!=="undefined"&&currentAppLanguage)||"vi";
+  const langName=LANGN[langUi]||langUi;
+  let sysBody="";
+  if(isPageQuery) {
+    try{ if(typeof getI18nText==="function"){ const v=getI18nText("ai_sys_preamble",[langName]); if(v&&v!=="ai_sys_preamble") sysBody=v; } }catch(e){}
+    if(!sysBody) sysBody="BẠN LÀ TRỢ LÝ HỌC THUẬT ScholarFlow. Trả lời bằng "+langName+". Ưu tiên dữ liệu trong các khối ngữ cảnh trang; khi thiếu hãy kết hợp Google Search. Tuyệt đối KHÔNG BỊA.";
+  } else {
+    sysBody="BẠN LÀ TRỢ LÝ HỌC THUẬT ScholarFlow. Trả lời bằng "+langName+". Trả lời từ kiến thức xác thực và Google Search. Tuyệt đối KHÔNG BỊA. Nếu không chắc chắn, nói rõ 'MÌNH KHÔNG CHẮC'.";
+  }
+  if(sysBody.indexOf("{0}")!==-1) sysBody=sysBody.split("{0}").join(langName);
+  const factRule="\n\nQUY TẮC SỰ THẬT (tuyệt đối): Tên thật, ngày/tháng sinh, quê quán, gia đình, chức danh của MỘT NGƯỜI THẬT (streamer, game thủ, KOL, tác giả...) BẮT BUỘC chỉ được nêu khi chúng XUẤT HIỆN NGUYÊN VĂN trong kết quả Google Search (grounding) hoặc ngữ cảnh; VÀ phải kèm URL nguồn ngay sau thông tin đó. Khi tìm kiếm về một streamer hay nhân vật có biệt danh (như Snake, Dev Nguyễn, PewPew...), BẮT BUỘC chỉ trích xuất thông tin khớp chính xác với biệt danh đó. Nếu có nhiều nhân vật trùng tên/biệt danh hoặc nguồn chưa thống nhất, phải nêu rõ các khả năng và ghi 'CHƯA CÓ NGUỒN XÁC NHẬN CHÍNH THỨC' thay vì suy đoán hay ghép tên người này cho người khác. Khi trích web, chỉ lấy đúng điều nguồn nói.";
+  return sysBody+factRule;
+}
 function aiBuildPrompt(userText, pageText, selectionText, imageNote, pinnedNote, pageLink, memNote, _webNote, isPageQuery){
   const b=[]; aiPromptFlagged=false;
   if(pinnedNote&&String(pinnedNote).trim()){ const sp=aiSanitizeExternal(pinnedNote,Math.min(20000,aiSettings.maxChars+8000)); if(sp.flagged) aiPromptFlagged=true; b.push("[Cac trang da them / Pinned pages]\n<<<DATA_UNTRUSTED_6_BEGIN>>>\n"+sp.text+"\n<<<DATA_UNTRUSTED_6_END>>>"); }
@@ -682,7 +719,7 @@ function aiBuildPrompt(userText, pageText, selectionText, imageNote, pinnedNote,
   if(sysBody.indexOf("{0}")!==-1) sysBody=sysBody.split("{0}").join(langName);
   /* Strict anti-fabrication rule for REAL-WORLD facts: personal identifiers only when present
      verbatim in a Google-Search/page source, must carry a source URL, never merge two people/orgs. */
-  const FACT_RULE="\n\nQUY TẮC SỰ THẬT (tuyệt đối): Tên thật, ngày/tháng sinh, quê quán, gia đình, chức danh, tổ chức của MỘT NGƯỜI THẬT chỉ được nêu khi chúng XUẤT HIỆN NGUYÊN VĂN trong kết quả Google Search (grounding) hoặc trong khối ngữ cảnh được cung cấp; VÀ phải kèm URL nguồn ngay sau thông tin đó. Nguồn không xác nhận rõ → ghi 'MÌNH KHÔNG CHẮC' và KHÔNG đoán, KHÔNG diễn giải thêm. TUYỆT ĐỐI KHÔNG gộp/hợp nhất hai người hay hai tổ chức thành một (không lấy tên người này gắn cho người khác). Khi trích web, chỉ lấy đúng điều nguồn nói.";
+  const FACT_RULE="\n\nQUY TẮC SỰ THẬT (tuyệt đối): Tên thật, ngày/tháng sinh, quê quán, gia đình, chức danh, tổ chức của MỘT NGƯỜI THẬT (streamer, KOL, tác giả...) chỉ được nêu khi chúng XUẤT HIỆN NGUYÊN VĂN trong kết quả Google Search (grounding) hoặc trong khối ngữ cảnh được cung cấp; VÀ phải kèm URL nguồn ngay sau thông tin đó. Khi tìm kiếm về một streamer hay nhân vật có biệt danh (như Snake, Dev Nguyễn...), BẮT BUỘC chỉ trích xuất thông tin khớp chính xác với biệt danh đó từ nguồn. Nguồn không xác nhận rõ → ghi 'MÌNH KHÔNG CHẮC' và KHÔNG đoán, KHÔNG diễn giải thêm. TUYỆT ĐỐI KHÔNG gộp/hợp nhất hai người hay hai tổ chức thành một (không lấy tên người này gắn cho người khác). Khi trích web, chỉ lấy đúng điều nguồn nói.";
   const sys=sysBody+FACT_RULE+"\n\n";
   let scopeNote="";
   if(isPageQuery) {
@@ -796,16 +833,34 @@ async function aiCallProvider(provider, prompt, apiKey, image, hist, opts){
   if(provider==="gemini"){
     const model=aiGetModel(provider); let lastErr="";
     let grounding=(((aiSettings.webSearch!==false)&&aiSettings.scope!=="only")||(opts&&opts.groundOverride))&&aiGeminiSupportsGrounding(model);
-    if(wantStream){ try{ return await aiStreamGemini(model, apiKey, aiHistoryToGeminiContents(hist,prompt,imgs), aiSettings.temperature, opts, grounding?[{google_search:{}}]:null); }catch(se){ if(opts&&opts.signal&&opts.signal.aborted) throw se; } }
+    const effTemp = (grounding || (opts&&opts.groundOverride)) ? Math.min(0.15, aiSettings.temperature) : aiSettings.temperature;
+    const isPg = opts && !!opts.isPageQuery;
+    const sysInst = aiBuildSystemInstruction(isPg);
+    if(wantStream){ try{ return await aiStreamGemini(model, apiKey, aiHistoryToGeminiContents(hist,prompt,imgs), effTemp, opts, grounding?[{google_search:{}}]:null, null, null, sysInst); }catch(se){ if(opts&&opts.signal&&opts.signal.aborted) throw se; } }
     for(const ver of ["v1beta","v1"]){
       let res;
       try{
         const base="https://generativelanguage.googleapis.com/"+ver+"/models/";
         const url=base+encodeURIComponent(model)+":generateContent?key="+encodeURIComponent(apiKey);
-        const body={contents:aiHistoryToGeminiContents(hist,prompt,imgs),generationConfig:{temperature:aiSettings.temperature}}; if(grounding) body.tools=[{google_search:{}}];
+        const body={contents:aiHistoryToGeminiContents(hist,prompt,imgs),generationConfig:{temperature:effTemp}};
+        if(ver==="v1beta"&&sysInst) body.systemInstruction={parts:[{text:sysInst}]};
+        if(grounding) body.tools=[{google_search:{}}];
         res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),signal:aiSig(opts&&opts.signal,prompt.length>9000?45000:28000)});
       }catch(e){ lastErr=String(e&&e.message||e); if(lastErr.toLowerCase().includes("timed out")||lastErr.toLowerCase().includes("timeout")||lastErr.includes("AbortError")){ if(ver==="v1beta"){ await new Promise(r=>setTimeout(r,1200)); continue; } throw new Error("gemini_timeout_"+lastErr.slice(0,120)+" — Model "+model+" overloaded/timeout - switch to a Lite model in Settings"); } throw new Error("gemini_network_"+lastErr.slice(0,120)); }
-      if(res.ok){ const d=await res.json(); const cand=d.candidates&&d.candidates[0]; const parts=cand&&cand.content&&cand.content.parts; if(parts&&parts[0]&&parts[0].text){ const got=aiGroundingSources(cand); if(got.length&&opts) opts.__groundingSources=got.slice(0,8); return parts[0].text; } return JSON.stringify(d).slice(0,4000); }
+      if(res.ok){
+        const d=await res.json();
+        const cand=d.candidates&&d.candidates[0];
+        const parts=cand&&cand.content&&cand.content.parts;
+        const txt=Array.isArray(parts)?parts.map(p=>(p&&typeof p.text==="string")?p.text:"").join(""):((parts&&parts[0]&&typeof parts[0].text==="string")?parts[0].text:"");
+        if(txt){
+          const got=aiGroundingSources(cand);
+          if(got.length&&opts) opts.__groundingSources=got.slice(0,8);
+          const gotQ=aiGroundingQueries(cand);
+          if(gotQ.length&&opts) opts.__groundingQueries=gotQ.slice(0,5);
+          return txt;
+        }
+        return JSON.stringify(d).slice(0,4000);
+      }
       const t=await res.text().catch(()=> ""); lastErr=t;
       if(res.status===400&&grounding){ grounding=false; continue; }
       if((res.status===503||res.status===429)&&ver==="v1beta"){ await new Promise(r=>setTimeout(r,1200)); continue; }
@@ -944,7 +999,7 @@ async function aiSendCurrent(){
     answer=needKeyMsg+"\n\n--- Context preview that will be sent (first ~5000 chars) ---\n"+prompt.slice(0,1200)+(prompt.length>1200?"...":"")+"\n\n("+aiLocalFallback(prompt, pageText)+")";
     usedFallback=true; if(typeof showToast==="function") showToast("ai_toast_need_key","warning");
   } else {
-    callOpts={signal:aiAbort.signal, onToken:onToken, groundOverride:forceGround};
+    callOpts={signal:aiAbort.signal, onToken:onToken, groundOverride:forceGround, isPageQuery:isPageQuery};
     try{
       if(videoDirectId){
         if(typeof showToast==="function") showToast("ai_toast_watching_video","info");
@@ -982,10 +1037,18 @@ async function aiSendCurrent(){
       }
     }
   }
-  /* Copilot-style citation footer: surface Gemini's native Google-Search grounding as clickable URLs. */
-  if(!usedFallback&&provider==="gemini"&&callOpts&&Array.isArray(callOpts.__groundingSources)&&callOpts.__groundingSources.length&&String(answer||"").trim()){
-    const gSrc=callOpts.__groundingSources.slice(0,8).filter(s=>s&&s.u&&/^https?:\/\//i.test(s.u));
-    if(gSrc.length) answer=String(answer).replace(/\s+$/,"")+"\n\n"+aiSourcesLabel()+"\n- "+gSrc.map(s=>((s.t?"["+s.t+"] ":"")+s.u)).join("\n- ");
+  /* Copilot-style citation footer: surface Gemini's native Google-Search grounding as clickable URLs and search queries. */
+  if(!usedFallback&&provider==="gemini"&&callOpts&&String(answer||"").trim()){
+    const gSrc=Array.isArray(callOpts.__groundingSources)?callOpts.__groundingSources.slice(0,8).filter(s=>s&&s.u&&/^https?:\/\//i.test(s.u)):[];
+    const gQ=Array.isArray(callOpts.__groundingQueries)?callOpts.__groundingQueries.slice(0,5):[];
+    let footer="";
+    if(gQ.length){
+      footer+="\n\n"+aiSearchQueriesLabel()+" "+gQ.map(q=>"`"+q+"`").join(", ");
+    }
+    if(gSrc.length){
+      footer+="\n\n"+aiSourcesLabel()+"\n- "+gSrc.map(s=>((s.t?"["+s.t+"] ":"")+s.u)).join("\n- ");
+    }
+    if(footer) answer=String(answer).replace(/\s+$/,"")+footer;
   }
   aiHideTyping();
   if(streaming){ const last=aiHistory[aiHistory.length-1]; if(streamRow&&last&&last.role==="assistant"){ last.content=String(answer).slice(0,16000); aiSaveHistorySoon(); aiRenderHistory(); } else if(answer){ aiAppendMessage("assistant", answer, provider); } }
@@ -1104,6 +1167,6 @@ async function initAI(){
   aiRenderHistory(); aiInitEvents(); aiUpdateCurrentPageDisplay(); aiUpdateChatHeight(); setInterval(()=>{ const ta=document.getElementById("tab-ai"); if(ta&&!ta.classList.contains("active")) return; aiUpdateCurrentPageDisplay(); aiUpdateChatHeight(); },2000); window.addEventListener("resize",aiUpdateChatHeight); const aiVisHandler=()=>{ if(document.visibilityState==="visible"){ aiUpdateCurrentPageDisplay(); aiUpdateChatHeight(); } }; document.addEventListener("visibilitychange",aiVisHandler); const tabAi=document.getElementById("tab-ai"); if(tabAi){ const obs=new MutationObserver(()=>{ if(tabAi.classList.contains("active")){ aiUpdateCurrentPageDisplay(); aiUpdateChatHeight(); requestAnimationFrame(()=>requestAnimationFrame(aiScrollToBottom)); } }); obs.observe(tabAi,{attributes:true,attributeFilter:["class"]}); }
 }
 if(typeof window!=="undefined"){
-  window.AI_PROVIDERS=AI_PROVIDERS; window.aiValidateCustomUrl=aiValidateCustomUrl; window.aiSanitizeExternal=aiSanitizeExternal; window.aiSanitizeHistory=aiSanitizeHistory; window.aiRateLimitOk=aiRateLimitOk; window.aiSelectRelevantWindow=aiSelectRelevantWindow; window.aiIsYouTubeUrl=aiIsYouTubeUrl; window.aiHistoryToGeminiContents=aiHistoryToGeminiContents; window.aiHistoryToOpenAIMessages=aiHistoryToOpenAIMessages; window.aiHistoryToClaudeMessages=aiHistoryToClaudeMessages; window.aiCollectTabsContext=aiCollectTabsContext; window.aiScholarSearch=aiScholarSearch; window.aiAttachImageFile=aiAttachImageFile; window.aiExtractYouTubeId=aiExtractYouTubeId; window.aiYtMetaViaFetch=aiYtMetaViaFetch; window.aiYtBalancedJson=aiYtBalancedJson; window.aiCallGeminiLite=aiCallGeminiLite; window.aiSig=aiSig; window.aiRegenerate=aiRegenerate; window.aiSelectRelevantWindows=aiSelectRelevantWindows; window.aiSessionsSearch=aiSessionsSearch; window.aiMemKey=aiMemKey; window.aiMemFor=aiMemFor; window.aiRenderSessions=aiRenderSessions; window.aiShowSessions=aiShowSessions; window.aiHideSessions=aiHideSessions; window.aiGetProviderConfig=aiGetProviderConfig; window.aiGetModel=aiGetModel; window.aiSetModel=aiSetModel; window.aiFetchGeminiModels=aiFetchGeminiModels; window.aiHasKey=aiHasKey; window.aiBuildPrompt=aiBuildPrompt; window.aiAddPage=aiAddPage; window.aiRemovePage=aiRemovePage; window.aiRenderPages=aiRenderPages; window.aiGetCurrentPageInfo=aiGetCurrentPageInfo; window.aiLocalFallback=aiLocalFallback; window.aiUseWebBridge=aiUseWebBridge; window.aiContextCovers=aiContextCovers; window.aiCallProvider=aiCallProvider; window.aiLoadSettings=aiLoadSettings; window.aiSaveHistory=aiSaveHistory; window.aiRenderHistory=aiRenderHistory; window.aiScrollToBottom=aiScrollToBottom; window.aiDetectPageIntent=aiDetectPageIntent; window.aiGroundingSources=aiGroundingSources; window.aiSourcesLabel=aiSourcesLabel; window.aiGeminiSupportsGrounding=aiGeminiSupportsGrounding; window.aiGeminiSupportsVideo=aiGeminiSupportsVideo; window.aiGeminiSupportsAgentic=aiGeminiSupportsAgentic; window.aiPickVideoModel=aiPickVideoModel; window.aiVideoContents=aiVideoContents; window.aiCallGeminiVideo=aiCallGeminiVideo; window.aiIsTranscriptRequest=aiIsTranscriptRequest; window.aiQueryRefersToVideo=aiQueryRefersToVideo; window.aiIsContinueRequest=aiIsContinueRequest; window.aiLastTimestampSec=aiLastTimestampSec; window.aiConversationMarkdown=aiConversationMarkdown; window.aiUpdateLatestBtn=aiUpdateLatestBtn; window.aiAppendMessage=aiAppendMessage; window.aiClearHistory=aiClearHistory; window.aiUpdateProviderUI=aiUpdateProviderUI; window.aiPopulateModelSelect=aiPopulateModelSelect; window.aiSendCurrent=aiSendCurrent; window.aiQuickPrompt=aiQuickPrompt; window.initAI=initAI; window.aiProvider=aiProvider; window.aiSettings=aiSettings; window.aiModels=aiModels; window.aiUpdateCurrentPageDisplay=aiUpdateCurrentPageDisplay;
+  window.AI_PROVIDERS=AI_PROVIDERS; window.aiValidateCustomUrl=aiValidateCustomUrl; window.aiSanitizeExternal=aiSanitizeExternal; window.aiSanitizeHistory=aiSanitizeHistory; window.aiRateLimitOk=aiRateLimitOk; window.aiSelectRelevantWindow=aiSelectRelevantWindow; window.aiIsYouTubeUrl=aiIsYouTubeUrl; window.aiHistoryToGeminiContents=aiHistoryToGeminiContents; window.aiHistoryToOpenAIMessages=aiHistoryToOpenAIMessages; window.aiHistoryToClaudeMessages=aiHistoryToClaudeMessages; window.aiCollectTabsContext=aiCollectTabsContext; window.aiScholarSearch=aiScholarSearch; window.aiAttachImageFile=aiAttachImageFile; window.aiExtractYouTubeId=aiExtractYouTubeId; window.aiYtMetaViaFetch=aiYtMetaViaFetch; window.aiYtBalancedJson=aiYtBalancedJson; window.aiCallGeminiLite=aiCallGeminiLite; window.aiSig=aiSig; window.aiRegenerate=aiRegenerate; window.aiSelectRelevantWindows=aiSelectRelevantWindows; window.aiSessionsSearch=aiSessionsSearch; window.aiMemKey=aiMemKey; window.aiMemFor=aiMemFor; window.aiRenderSessions=aiRenderSessions; window.aiShowSessions=aiShowSessions; window.aiHideSessions=aiHideSessions; window.aiGetProviderConfig=aiGetProviderConfig; window.aiGetModel=aiGetModel; window.aiSetModel=aiSetModel; window.aiFetchGeminiModels=aiFetchGeminiModels; window.aiHasKey=aiHasKey; window.aiBuildPrompt=aiBuildPrompt; window.aiAddPage=aiAddPage; window.aiRemovePage=aiRemovePage; window.aiRenderPages=aiRenderPages; window.aiGetCurrentPageInfo=aiGetCurrentPageInfo; window.aiLocalFallback=aiLocalFallback; window.aiUseWebBridge=aiUseWebBridge; window.aiContextCovers=aiContextCovers; window.aiCallProvider=aiCallProvider; window.aiLoadSettings=aiLoadSettings; window.aiSaveHistory=aiSaveHistory; window.aiRenderHistory=aiRenderHistory; window.aiScrollToBottom=aiScrollToBottom; window.aiDetectPageIntent=aiDetectPageIntent; window.aiGroundingSources=aiGroundingSources; window.aiSourcesLabel=aiSourcesLabel; window.aiGeminiSupportsGrounding=aiGeminiSupportsGrounding; window.aiGeminiSupportsVideo=aiGeminiSupportsVideo; window.aiGeminiSupportsAgentic=aiGeminiSupportsAgentic; window.aiPickVideoModel=aiPickVideoModel; window.aiVideoContents=aiVideoContents; window.aiCallGeminiVideo=aiCallGeminiVideo; window.aiIsTranscriptRequest=aiIsTranscriptRequest; window.aiQueryRefersToVideo=aiQueryRefersToVideo; window.aiIsContinueRequest=aiIsContinueRequest; window.aiLastTimestampSec=aiLastTimestampSec; window.aiConversationMarkdown=aiConversationMarkdown; window.aiUpdateLatestBtn=aiUpdateLatestBtn; window.aiAppendMessage=aiAppendMessage; window.aiClearHistory=aiClearHistory; window.aiUpdateProviderUI=aiUpdateProviderUI; window.aiPopulateModelSelect=aiPopulateModelSelect; window.aiSendCurrent=aiSendCurrent; window.aiQuickPrompt=aiQuickPrompt; window.initAI=initAI; window.aiProvider=aiProvider; window.aiSettings=aiSettings; window.aiModels=aiModels; window.aiUpdateCurrentPageDisplay=aiUpdateCurrentPageDisplay; window.aiGroundingQueries=aiGroundingQueries; window.aiSearchQueriesLabel=aiSearchQueriesLabel; window.aiBuildSystemInstruction=aiBuildSystemInstruction;
 }
 if(document.readyState!=="loading") initAI(); else document.addEventListener("DOMContentLoaded",initAI);

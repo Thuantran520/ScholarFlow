@@ -1127,8 +1127,12 @@ async function main() {
         "sidebar: auto page-intent detector stays quiet on general chat");
       check(await w.eval(`(function(){var c=aiGroundingSources({groundingMetadata:{groundingChunks:[{web:{uri:"https://example.com/a",title:"Title A"}},{web:{uri:"https://example.com/a",title:"dup"}},{web:{uri:"javascript:alert(1)",title:"evil"}},{web:{uri:"https://example.com/b"}}]}}); var e=aiGroundingSources(null); return c.length===2 && e.length===0 && c[0].u==="https://example.com/a" && c[0].t==="Title A" && c[1].u==="https://example.com/b";})()`),
         "sidebar: grounding citations extracted, deduped, protocol-safe");
-      check(await w.eval(`typeof aiSourcesLabel==="function" && typeof aiSourcesLabel()==="string" && aiSourcesLabel().length>0`),
-        "sidebar: citation-footer label localizer present");
+      check(await w.eval(`(function(){var q=aiGroundingQueries({groundingMetadata:{webSearchQueries:["dev nguyen ten that","dev nguyen 1999","dev nguyen 1999"]}}); var e=aiGroundingQueries(null); return q.length===2 && e.length===0 && q[0]==="dev nguyen ten that" && q[1]==="dev nguyen 1999";})()`),
+        "sidebar: grounding search queries extracted and deduped");
+      check(await w.eval(`typeof aiSourcesLabel==="function" && typeof aiSourcesLabel()==="string" && aiSourcesLabel().length>0 && typeof aiSearchQueriesLabel==="function" && typeof aiSearchQueriesLabel()==="string" && aiSearchQueriesLabel().length>0`),
+        "sidebar: citation-footer and search-queries label localizers present");
+      check(await w.eval(`typeof aiBuildSystemInstruction==="function" && aiBuildSystemInstruction(false).indexOf("QUY TẮC SỰ THẬT")!==-1 && aiBuildSystemInstruction(true).indexOf("ScholarFlow")!==-1`),
+        "sidebar: systemInstruction builder present and contains factual constraint");
       check(await w.eval(`(function(){var old=aiSettings.scope; aiSettings.scope="web"; var p=aiBuildPrompt("QQ","","","",null,null,"",null,true); aiSettings.scope=old; return p.indexOf("Nguồn:")!==-1 && p.indexOf("từ khóa")!==-1;})()`),
         "sidebar: scope=web prompt asks the model to list source URLs + verification keywords");
       check(!!w.document.getElementById("ai-opt-websearch"),
@@ -1223,6 +1227,10 @@ async function main() {
       "AI module: anti-hallucination rule in system preamble");
     check(aiSrc.includes("google_search") && aiSrc.includes("groundOverride") && aiSrc.includes("function aiGeminiSupportsGrounding"),
       "AI module: web search is Gemini native Google Search grounding only (tools:[{google_search}], button forces it)");
+    check(aiSrc.includes("aiGroundingQueries") && aiSrc.includes("aiSearchQueriesLabel") && aiSrc.includes("aiBuildSystemInstruction"),
+      "AI module: search queries extraction and systemInstruction wired");
+    check(aiSrc.includes("effTemp = (grounding") && aiSrc.includes("Math.min(0.15"),
+      "AI module: adaptive temperature <= 0.15 applied for factual web search grounding");
     check(!aiSrc.includes("html.duckduckgo.com") && !aiSrc.includes("api.duckduckgo.com") && !aiSrc.includes("wikipedia.org/w/api") && !aiSrc.includes("function aiWebSearch"),
       "AI module: no DuckDuckGo/Wikipedia endpoints or scraper functions remain in the AI code");
     check(aiSrc.includes('aiQuickCtx={kind:"page"}') && aiSrc.includes("const quickReq = aiQuickCtx") && aiSrc.includes("|| !!quickReq"),
