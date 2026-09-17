@@ -226,7 +226,7 @@ async function aiStreamGemini(model, apiKey, contents, temperature, opts, tools,
   };
   const full=await aiStreamSSE(res, extract, opts);
   if(!full) throw new Error("gemini_stream_empty");
-  if(srcs.length&&opts) opts.__groundingSources=srcs.slice(0,8);
+  if(srcs.length&&opts) opts.__groundingSources=srcs.concat(opts.__groundingSources||[]).slice(0,8);
   if(queries.length&&opts) opts.__groundingQueries=queries.slice(0,5);
   return full;
 }
@@ -436,9 +436,54 @@ async function aiYtMetaViaFetch(videoId){
     return { success:true, ok:ok, domOnly:true, title:title, author:author, publishDate:publishDate, publisher:"YouTube", platform:"YouTube", videoId:vid, lengthSeconds:lengthSeconds };
   }catch(e){ return null; }
 }
-/* Web search now uses ONLY Gemini's native Google Search grounding (tools:[{google_search}]).
-   The old DuckDuckGo/Wikipedia HTML+API scraper (aiWebSearch/aiWebSearchHtml/aiDecodeDdgUrl)
-   was removed because its results were noisy and polluted answers. */
+function aiDecodeHtmlEntities(str){
+  return String(str||"")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, ' ');
+}
+/* Multi-source live web search: queries web search to extract real snippets and URLs.
+   Enables the AI to cross-reference multiple sources and synthesize the consensus. */
+async function aiSearchMultiSources(query){
+  const q=String(query||"").replace(/[\u0000-\u001F]/g," ").trim().slice(0,140);
+  if(q.length<2) return { text:"", sources:[] };
+  try{
+    const url="https://html.duckduckgo.com/html/?q="+encodeURIComponent(q);
+    const res=await fetch(url,{
+      signal:AbortSignal.timeout(6500)
+    });
+    if(!res.ok) return { text:"", sources:[] };
+    const html=await res.text();
+    const re=/<a[^>]*class="result__snippet"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+    let m;
+    const items=[];
+    const sources=[];
+    while((m=re.exec(html))!==null && items.length<6){
+      let rawUrl=m[1];
+      if(rawUrl.includes("uddg=")){
+        try{
+          const u=new URL("https:"+(rawUrl.startsWith("//")?rawUrl:"//"+rawUrl));
+          rawUrl=decodeURIComponent(u.searchParams.get("uddg")||rawUrl);
+        }catch(e){}
+      }
+      const snippet=aiDecodeHtmlEntities(m[2].replace(/<[^>]+>/g,"").replace(/\s+/g," ").trim());
+      if(snippet && rawUrl.startsWith("http")){
+        let host="";
+        try{ host=new URL(rawUrl).hostname.replace(/^www\./,""); }catch(e){}
+        items.push("- [Nguồn "+(items.length+1)+": "+host+"] ("+rawUrl+"):\n  \""+snippet+"\"");
+        sources.push({ u: rawUrl, t: host });
+      }
+    }
+    if(!items.length) return { text:"", sources:[] };
+    const header="[KẾT QUẢ TÌM KIẾM ĐA NGUỒN TỪ WEB THỰC TẾ (ĐỐI CHIẾU CHÉO)]:\nQUY TẮC ĐỐI CHIẾU: Hãy đọc kỹ các nguồn bên dưới, tìm thông tin trùng khớp nhất giữa các nguồn (tên thật, ngày/tháng/năm sinh, quê quán, danh tính) để trả lời. Khi các nguồn cùng nhắc đến một thông tin (đồng thuận), hãy khẳng định thông tin đó là đúng. Trích dẫn đầy đủ URL nguồn ở cuối.\n\n";
+    return { text: header+items.join("\n\n"), sources: sources };
+  }catch(e){
+    return { text:"", sources:[] };
+  }
+}
 function aiIsYouTubeUrl(u){
   try{ const hn=String(u||""); const m=/^[a-z][a-z0-9+.-]*:\/\/([^/?#]+)/i.exec(hn); const host=(m?m[1]:hn.split("/")[0]).toLowerCase().replace(/^www\./,""); return /(^|\.)youtube\.com$/.test(host)||host==="youtu.be"; }catch(e){ return false; }
 }
@@ -694,9 +739,10 @@ function aiBuildSystemInstruction(isPageQuery){
   const factRule="\n\nQUY TẮC SỰ THẬT: Khi câu hỏi hỏi về streamer, game thủ, KOL, người nổi tiếng hoặc sự kiện (ví dụ Rambo, Snake, Dev Nguyễn...): hãy dùng Google Search để tra cứu tên thật, ngày/năm sinh, quê quán và trích xuất đúng từ kết quả tìm kiếm Google Search (grounding) kèm link nguồn. Trả lời rõ ràng, chính xác. Phân biệt rõ ràng từng cá nhân, không nhầm lẫn hay ghép nối thông tin.";
   return sysBody+factRule;
 }
-function aiBuildPrompt(userText, pageText, selectionText, imageNote, pinnedNote, pageLink, memNote, _webNote, isPageQuery){
+function aiBuildPrompt(userText, pageText, selectionText, imageNote, pinnedNote, pageLink, memNote, webNote, isPageQuery){
   const b=[]; aiPromptFlagged=false;
   if(pinnedNote&&String(pinnedNote).trim()){ const sp=aiSanitizeExternal(pinnedNote,Math.min(20000,aiSettings.maxChars+8000)); if(sp.flagged) aiPromptFlagged=true; b.push("[Cac trang da them / Pinned pages]\n<<<DATA_UNTRUSTED_6_BEGIN>>>\n"+sp.text+"\n<<<DATA_UNTRUSTED_6_END>>>"); }
+  if(webNote&&String(webNote).trim()){ b.push(webNote); }
   if(isPageQuery && aiSettings.includePage&&pageText){ const s=aiSanitizeExternal(pageText,Math.min(16000,aiSettings.maxChars+6000)); if(s.flagged) aiPromptFlagged=true; b.push("[Current page context]\n<<<DATA_UNTRUSTED_1_BEGIN>>>\n"+s.text+"\n<<<DATA_UNTRUSTED_1_END>>>"); }
   if(isPageQuery && aiSettings.includeSelection&&selectionText){ const s=aiSanitizeExternal(selectionText,4000); if(s.flagged) aiPromptFlagged=true; b.push("[Highlighted selection]\n<<<DATA_UNTRUSTED_2_BEGIN>>>\n"+s.text+"\n<<<DATA_UNTRUSTED_2_END>>>"); }
   if(isPageQuery && aiSettings.includeNotes){ const n=document.getElementById("f-notes")?document.getElementById("f-notes").value.trim():""; if(n) b.push("[Research notes]\n"+n.slice(0,2000)); }
@@ -809,7 +855,7 @@ async function aiCallGeminiVideo(videoId, question, apiKey, hist, opts, transcri
       const url="https://generativelanguage.googleapis.com/"+ver+"/models/"+encodeURIComponent(model)+":generateContent?key="+encodeURIComponent(apiKey);
       res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:contents,generationConfig:Object.assign({temperature:aiSettings.temperature},genExtra||null)}),signal:aiSig(opts&&opts.signal,180000)});
     }catch(e){ lastErr=String(e&&e.message||e); if(/timed out|timeout|aborterror/i.test(lastErr)){ if(ver==="v1beta"){ await new Promise(r=>setTimeout(r,1200)); continue; } throw new Error("gemini_video_timeout"); } throw new Error("gemini_video_network_"+lastErr.slice(0,120)); }
-    if(res.ok){ const d=await res.json(); const cand=d.candidates&&d.candidates[0]; const parts=cand&&cand.content&&cand.content.parts; const got=aiGroundingSources(cand); if(got.length&&opts) opts.__groundingSources=got.slice(0,8); return (parts&&parts[0]&&typeof parts[0].text==="string")?parts[0].text:""; }
+    if(res.ok){ const d=await res.json(); const cand=d.candidates&&d.candidates[0]; const parts=cand&&cand.content&&cand.content.parts; const got=aiGroundingSources(cand); if(got.length&&opts) opts.__groundingSources=got.concat(opts.__groundingSources||[]).slice(0,8); return (parts&&parts[0]&&typeof parts[0].text==="string")?parts[0].text:""; }
     lastErr=await res.text().catch(()=>"");
     if(res.status===400){ const bl=String(lastErr).toLowerCase(); if(bl.includes("prohibited")||bl.includes("private")||bl.includes("unavailable")||bl.includes("age")) return ""; }
     if((res.status===429||res.status===503||res.status===504)&&ver==="v1beta"){ await new Promise(r=>setTimeout(r,1200)); continue; }
@@ -852,7 +898,7 @@ async function aiCallProvider(provider, prompt, apiKey, image, hist, opts){
         const txt=Array.isArray(parts)?parts.map(p=>(p&&typeof p.text==="string")?p.text:"").join(""):((parts&&parts[0]&&typeof parts[0].text==="string")?parts[0].text:"");
         if(txt){
           const got=aiGroundingSources(cand);
-          if(got.length&&opts) opts.__groundingSources=got.slice(0,8);
+          if(got.length&&opts) opts.__groundingSources=got.concat(opts.__groundingSources||[]).slice(0,8);
           const gotQ=aiGroundingQueries(cand);
           if(gotQ.length&&opts) opts.__groundingQueries=gotQ.slice(0,5);
           return txt;
@@ -988,7 +1034,19 @@ async function aiSendCurrent(){
   }
   const apiImages=_imageForApi?[{data:_imageForApi.data,mimeType:_imageForApi.mimeType||"image/jpeg"}]:pageImages;
   const imageNote=apiImages.length?("[Attached images: "+apiImages.length+" taken from the current page. If the question needs visual info (counting objects, reading text in the image), answer from these images.]"):null;
-  const prompt=aiBuildPrompt(raw, pageText, selectionText, imageNote, pinnedNote, {url:pageUrl||"", title:(function(){ try{ if(typeof currentMeta!=="undefined"&&currentMeta&&currentMeta.title) return String(currentMeta.title); if(typeof currentTabObj!=="undefined"&&currentTabObj&&currentTabObj.title) return String(currentTabObj.title); }catch(e){} return document.title||""; })(), videoId:aiIsYouTubeUrl(pageUrl)?aiExtractYouTubeId(pageUrl):""}, (function(){ try{ return aiMemFor(pageUrl)||""; }catch(e){ return ""; } })(), null, isPageQuery);
+  const webSearchEnabled=((aiSettings.webSearch!==false)&&aiSettings.scope!=="only")||forceGround;
+  let multiWebNote="";
+  let multiWebSources=[];
+  if(webSearchEnabled&&!videoDirectId&&!quickReq){
+    try{
+      const sRes=await aiSearchMultiSources(cleanQuery);
+      if(sRes&&sRes.text){
+        multiWebNote=sRes.text;
+        multiWebSources=sRes.sources||[];
+      }
+    }catch(e){}
+  }
+  const prompt=aiBuildPrompt(raw, pageText, selectionText, imageNote, pinnedNote, {url:pageUrl||"", title:(function(){ try{ if(typeof currentMeta!=="undefined"&&currentMeta&&currentMeta.title) return String(currentMeta.title); if(typeof currentTabObj!=="undefined"&&currentTabObj&&currentTabObj.title) return String(currentTabObj.title); }catch(e){} return document.title||""; })(), videoId:aiIsYouTubeUrl(pageUrl)?aiExtractYouTubeId(pageUrl):""}, (function(){ try{ return aiMemFor(pageUrl)||""; }catch(e){ return ""; } })(), multiWebNote, isPageQuery);
   if(aiPromptFlagged&&typeof showToast==="function") showToast("ai_toast_injection","warning");
   let answer=""; let usedFallback=false; let callOpts=null;
   if(!aiHasKey(provider)){
@@ -997,7 +1055,7 @@ async function aiSendCurrent(){
     answer=needKeyMsg+"\n\n--- Context preview that will be sent (first ~5000 chars) ---\n"+prompt.slice(0,1200)+(prompt.length>1200?"...":"")+"\n\n("+aiLocalFallback(prompt, pageText)+")";
     usedFallback=true; if(typeof showToast==="function") showToast("ai_toast_need_key","warning");
   } else {
-    callOpts={signal:aiAbort.signal, onToken:onToken, groundOverride:forceGround, isPageQuery:isPageQuery};
+    callOpts={signal:aiAbort.signal, onToken:onToken, groundOverride:forceGround, isPageQuery:isPageQuery, __groundingSources:multiWebSources.slice()};
     try{
       if(videoDirectId){
         if(typeof showToast==="function") showToast("ai_toast_watching_video","info");
@@ -1035,8 +1093,8 @@ async function aiSendCurrent(){
       }
     }
   }
-  /* Copilot-style citation footer: surface Gemini's native Google-Search grounding as clickable URLs and search queries. */
-  if(!usedFallback&&provider==="gemini"&&callOpts&&String(answer||"").trim()){
+  /* Citation footer: surface multi-source web search & Gemini grounding as clickable URLs */
+  if(!usedFallback&&callOpts&&String(answer||"").trim()){
     const gSrc=Array.isArray(callOpts.__groundingSources)?callOpts.__groundingSources.slice(0,8).filter(s=>s&&s.u&&/^https?:\/\//i.test(s.u)):[];
     const gQ=Array.isArray(callOpts.__groundingQueries)?callOpts.__groundingQueries.slice(0,5):[];
     let footer="";
@@ -1044,7 +1102,12 @@ async function aiSendCurrent(){
       footer+="\n\n"+aiSearchQueriesLabel()+" "+gQ.map(q=>"`"+q+"`").join(", ");
     }
     if(gSrc.length){
-      footer+="\n\n"+aiSourcesLabel()+"\n- "+gSrc.map(s=>((s.t?"["+s.t+"] ":"")+s.u)).join("\n- ");
+      const seen=new Set();
+      const uniq=[];
+      for(const s of gSrc){
+        if(!seen.has(s.u)){ seen.add(s.u); uniq.push(s); }
+      }
+      footer+="\n\n"+aiSourcesLabel()+"\n- "+uniq.map(s=>((s.t?"["+s.t+"] ":"")+s.u)).join("\n- ");
     }
     if(footer) answer=String(answer).replace(/\s+$/,"")+footer;
   }
@@ -1165,6 +1228,6 @@ async function initAI(){
   aiRenderHistory(); aiInitEvents(); aiUpdateCurrentPageDisplay(); aiUpdateChatHeight(); setInterval(()=>{ const ta=document.getElementById("tab-ai"); if(ta&&!ta.classList.contains("active")) return; aiUpdateCurrentPageDisplay(); aiUpdateChatHeight(); },2000); window.addEventListener("resize",aiUpdateChatHeight); const aiVisHandler=()=>{ if(document.visibilityState==="visible"){ aiUpdateCurrentPageDisplay(); aiUpdateChatHeight(); } }; document.addEventListener("visibilitychange",aiVisHandler); const tabAi=document.getElementById("tab-ai"); if(tabAi){ const obs=new MutationObserver(()=>{ if(tabAi.classList.contains("active")){ aiUpdateCurrentPageDisplay(); aiUpdateChatHeight(); requestAnimationFrame(()=>requestAnimationFrame(aiScrollToBottom)); } }); obs.observe(tabAi,{attributes:true,attributeFilter:["class"]}); }
 }
 if(typeof window!=="undefined"){
-  window.AI_PROVIDERS=AI_PROVIDERS; window.aiValidateCustomUrl=aiValidateCustomUrl; window.aiSanitizeExternal=aiSanitizeExternal; window.aiSanitizeHistory=aiSanitizeHistory; window.aiRateLimitOk=aiRateLimitOk; window.aiSelectRelevantWindow=aiSelectRelevantWindow; window.aiIsYouTubeUrl=aiIsYouTubeUrl; window.aiHistoryToGeminiContents=aiHistoryToGeminiContents; window.aiHistoryToOpenAIMessages=aiHistoryToOpenAIMessages; window.aiHistoryToClaudeMessages=aiHistoryToClaudeMessages; window.aiCollectTabsContext=aiCollectTabsContext; window.aiScholarSearch=aiScholarSearch; window.aiAttachImageFile=aiAttachImageFile; window.aiExtractYouTubeId=aiExtractYouTubeId; window.aiYtMetaViaFetch=aiYtMetaViaFetch; window.aiYtBalancedJson=aiYtBalancedJson; window.aiCallGeminiLite=aiCallGeminiLite; window.aiSig=aiSig; window.aiRegenerate=aiRegenerate; window.aiSelectRelevantWindows=aiSelectRelevantWindows; window.aiSessionsSearch=aiSessionsSearch; window.aiMemKey=aiMemKey; window.aiMemFor=aiMemFor; window.aiRenderSessions=aiRenderSessions; window.aiShowSessions=aiShowSessions; window.aiHideSessions=aiHideSessions; window.aiGetProviderConfig=aiGetProviderConfig; window.aiGetModel=aiGetModel; window.aiSetModel=aiSetModel; window.aiFetchGeminiModels=aiFetchGeminiModels; window.aiHasKey=aiHasKey; window.aiBuildPrompt=aiBuildPrompt; window.aiAddPage=aiAddPage; window.aiRemovePage=aiRemovePage; window.aiRenderPages=aiRenderPages; window.aiGetCurrentPageInfo=aiGetCurrentPageInfo; window.aiLocalFallback=aiLocalFallback; window.aiUseWebBridge=aiUseWebBridge; window.aiContextCovers=aiContextCovers; window.aiCallProvider=aiCallProvider; window.aiLoadSettings=aiLoadSettings; window.aiSaveHistory=aiSaveHistory; window.aiRenderHistory=aiRenderHistory; window.aiScrollToBottom=aiScrollToBottom; window.aiDetectPageIntent=aiDetectPageIntent; window.aiGroundingSources=aiGroundingSources; window.aiSourcesLabel=aiSourcesLabel; window.aiGeminiSupportsGrounding=aiGeminiSupportsGrounding; window.aiGeminiSupportsVideo=aiGeminiSupportsVideo; window.aiGeminiSupportsAgentic=aiGeminiSupportsAgentic; window.aiPickVideoModel=aiPickVideoModel; window.aiVideoContents=aiVideoContents; window.aiCallGeminiVideo=aiCallGeminiVideo; window.aiIsTranscriptRequest=aiIsTranscriptRequest; window.aiQueryRefersToVideo=aiQueryRefersToVideo; window.aiIsContinueRequest=aiIsContinueRequest; window.aiLastTimestampSec=aiLastTimestampSec; window.aiConversationMarkdown=aiConversationMarkdown; window.aiUpdateLatestBtn=aiUpdateLatestBtn; window.aiAppendMessage=aiAppendMessage; window.aiClearHistory=aiClearHistory; window.aiUpdateProviderUI=aiUpdateProviderUI; window.aiPopulateModelSelect=aiPopulateModelSelect; window.aiSendCurrent=aiSendCurrent; window.aiQuickPrompt=aiQuickPrompt; window.initAI=initAI; window.aiProvider=aiProvider; window.aiSettings=aiSettings; window.aiModels=aiModels; window.aiUpdateCurrentPageDisplay=aiUpdateCurrentPageDisplay; window.aiGroundingQueries=aiGroundingQueries; window.aiSearchQueriesLabel=aiSearchQueriesLabel; window.aiBuildSystemInstruction=aiBuildSystemInstruction;
+  window.AI_PROVIDERS=AI_PROVIDERS; window.aiValidateCustomUrl=aiValidateCustomUrl; window.aiSanitizeExternal=aiSanitizeExternal; window.aiSanitizeHistory=aiSanitizeHistory; window.aiRateLimitOk=aiRateLimitOk; window.aiSelectRelevantWindow=aiSelectRelevantWindow; window.aiIsYouTubeUrl=aiIsYouTubeUrl; window.aiHistoryToGeminiContents=aiHistoryToGeminiContents; window.aiHistoryToOpenAIMessages=aiHistoryToOpenAIMessages; window.aiHistoryToClaudeMessages=aiHistoryToClaudeMessages; window.aiCollectTabsContext=aiCollectTabsContext; window.aiScholarSearch=aiScholarSearch; window.aiAttachImageFile=aiAttachImageFile; window.aiExtractYouTubeId=aiExtractYouTubeId; window.aiYtMetaViaFetch=aiYtMetaViaFetch; window.aiYtBalancedJson=aiYtBalancedJson; window.aiCallGeminiLite=aiCallGeminiLite; window.aiSig=aiSig; window.aiRegenerate=aiRegenerate; window.aiSelectRelevantWindows=aiSelectRelevantWindows; window.aiSessionsSearch=aiSessionsSearch; window.aiMemKey=aiMemKey; window.aiMemFor=aiMemFor; window.aiRenderSessions=aiRenderSessions; window.aiShowSessions=aiShowSessions; window.aiHideSessions=aiHideSessions; window.aiGetProviderConfig=aiGetProviderConfig; window.aiGetModel=aiGetModel; window.aiSetModel=aiSetModel; window.aiFetchGeminiModels=aiFetchGeminiModels; window.aiHasKey=aiHasKey; window.aiBuildPrompt=aiBuildPrompt; window.aiAddPage=aiAddPage; window.aiRemovePage=aiRemovePage; window.aiRenderPages=aiRenderPages; window.aiGetCurrentPageInfo=aiGetCurrentPageInfo; window.aiLocalFallback=aiLocalFallback; window.aiUseWebBridge=aiUseWebBridge; window.aiContextCovers=aiContextCovers; window.aiCallProvider=aiCallProvider; window.aiLoadSettings=aiLoadSettings; window.aiSaveHistory=aiSaveHistory; window.aiRenderHistory=aiRenderHistory; window.aiScrollToBottom=aiScrollToBottom; window.aiDetectPageIntent=aiDetectPageIntent; window.aiGroundingSources=aiGroundingSources; window.aiSourcesLabel=aiSourcesLabel; window.aiGeminiSupportsGrounding=aiGeminiSupportsGrounding; window.aiGeminiSupportsVideo=aiGeminiSupportsVideo; window.aiGeminiSupportsAgentic=aiGeminiSupportsAgentic; window.aiPickVideoModel=aiPickVideoModel; window.aiVideoContents=aiVideoContents; window.aiCallGeminiVideo=aiCallGeminiVideo; window.aiIsTranscriptRequest=aiIsTranscriptRequest; window.aiQueryRefersToVideo=aiQueryRefersToVideo; window.aiIsContinueRequest=aiIsContinueRequest; window.aiLastTimestampSec=aiLastTimestampSec; window.aiConversationMarkdown=aiConversationMarkdown; window.aiUpdateLatestBtn=aiUpdateLatestBtn; window.aiAppendMessage=aiAppendMessage; window.aiClearHistory=aiClearHistory; window.aiUpdateProviderUI=aiUpdateProviderUI; window.aiPopulateModelSelect=aiPopulateModelSelect; window.aiSendCurrent=aiSendCurrent; window.aiQuickPrompt=aiQuickPrompt; window.initAI=initAI; window.aiProvider=aiProvider; window.aiSettings=aiSettings; window.aiModels=aiModels; window.aiUpdateCurrentPageDisplay=aiUpdateCurrentPageDisplay; window.aiGroundingQueries=aiGroundingQueries; window.aiSearchQueriesLabel=aiSearchQueriesLabel; window.aiBuildSystemInstruction=aiBuildSystemInstruction; window.aiSearchMultiSources=aiSearchMultiSources; window.aiDecodeHtmlEntities=aiDecodeHtmlEntities;
 }
 if(document.readyState!=="loading") initAI(); else document.addEventListener("DOMContentLoaded",initAI);

@@ -1091,8 +1091,8 @@ async function main() {
         "sidebar: markdown tables render as real <table>");
       check(await w.eval(`(function(){var d=document.createElement("div"); aiRenderFormattedText(d,"| A | B |\\n|---|---|\\n| **1** | ==x== |"); var t=d.querySelector("table.ai-table"); return !!t && !!t.querySelector("td strong") && t.querySelector("td strong").textContent==="1" && !!t.querySelector("td span");})()`),
         "sidebar: inline formatting (**bold**, ==highlight==) applies INSIDE table cells");
-      check(await w.eval(`(function(){var p=aiBuildPrompt("QQ","","",null,null,"","","WEBRESULT123XYZ",false); return p.indexOf("WEBRESULT123XYZ")===-1 && p.indexOf("DATA_UNTRUSTED_5")===-1;})()`),
-         "sidebar: scraped web results are NO LONGER injected into the prompt (DDG/Wikipedia removed)");
+      check(await w.eval(`(function(){var p=aiBuildPrompt("QQ","","",null,null,"","","WEBRESULT123XYZ",false); return p.indexOf("WEBRESULT123XYZ")!==-1;})()`),
+        "sidebar: multi-source web results are injected into the prompt for consensus matching");
       check(await w.eval(`(function(){var p=aiBuildPrompt("Hoi","",null,null,null,null,null,null,false); return p.indexOf("Google Search (grounding)")!==-1 && p.indexOf("URL ngu")!==-1;})()`),
         "sidebar: strict fact rule injected — real-world identifiers need a verbatim Google/page source + URL");
       check(await w.eval(`(function(){var d=document.createElement("div"); aiRenderFormattedText(d,"tra loi nhe\\nGỢI Ý:\\n- cau a\\n- cau b\\n- cau c"); return d.querySelectorAll(".ai-suggest").length===3;})()`),
@@ -1231,8 +1231,8 @@ async function main() {
       "AI module: search queries extraction and systemInstruction wired");
     check(aiSrc.includes("effTemp = (grounding") && aiSrc.includes("Math.min(0.15"),
       "AI module: adaptive temperature <= 0.15 applied for factual web search grounding");
-    check(!aiSrc.includes("html.duckduckgo.com") && !aiSrc.includes("api.duckduckgo.com") && !aiSrc.includes("wikipedia.org/w/api") && !aiSrc.includes("function aiWebSearch"),
-      "AI module: no DuckDuckGo/Wikipedia endpoints or scraper functions remain in the AI code");
+    check(aiSrc.includes("aiSearchMultiSources") && !aiSrc.includes("api.duckduckgo.com") && !aiSrc.includes("wikipedia.org/w/api") && !aiSrc.includes("function aiWebSearch"),
+      "AI module: multi-source live search wired without obsolete api.duckduckgo or wikipedia scrapers");
     check(aiSrc.includes('aiQuickCtx={kind:"page"}') && aiSrc.includes("const quickReq = aiQuickCtx") && aiSrc.includes("|| !!quickReq"),
       "AI module: quick chips (summary/qa/...) always send page context via quickReq (fixes empty-context chip answers)");
     check(!aiSrc.includes("transcript:aiPrompts.transcript") && !aiSrc.includes("ai_prompt_transcript") && !aiSrc.includes('kind==="transcript"'),
