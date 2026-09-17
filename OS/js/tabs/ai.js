@@ -964,7 +964,8 @@ function aiBuildPrompt(userText, pageText, selectionText, imageNote, pinnedNote,
   }
   if(sysBody.indexOf("{0}")!==-1) sysBody=sysBody.split("{0}").join(langName);
   const FACT_RULE="\n\nQUY TẮC SỰ THẬT: Khi câu hỏi hỏi về streamer, KOL, tác giả hoặc nhân vật thực tế (như Rambo, Snake, Dev Nguyễn, DjChip...): hãy kết hợp sử dụng Google Search (grounding) và dữ liệu web thực tế để lấy tên thật, ngày/năm sinh chính xác từ nguồn uy tín nhất (người dùng không cần trích dẫn URL nguồn, chỉ cần thông tin chính xác 100%). Trả lời chuẩn xác theo các nguồn có sự đồng thuận; chỉ khi hoàn toàn không tìm thấy thông tin mới nói chưa rõ. Phân biệt rõ ràng từng người, không nhầm lẫn giữa các cá nhân. TUYỆT ĐỐI KHÔNG chèn nhãn [Nguồn:...] hay link URL vào nội dung câu trả lời.";
-  const sys=sysBody+FACT_RULE+"\n\n";
+  const COMPLETENESS_RULE="\n\nQUY TẮC NỘI DUNG ĐẦY ĐỦ: Khi người dùng yêu cầu nội dung đầy đủ/full/chi tiết/toàn bộ (lời bài hát, thơ, truyện, code, danh sách...): (1) Bắt buộc dùng Google Search để tìm bản đầy đủ chính xác nhất — KHÔNG dựa vào trí nhớ hay đoán mò. (2) Chép lại TOÀN BỘ nội dung theo đúng thứ tự, không được cắt bớt, không dùng dấu '...' hay ghi '(còn tiếp)', không tóm tắt thay thế. (3) Nếu kết quả tìm kiếm chỉ cho phần đầu: tiếp tục tìm thêm (ví dụ tìm từng khúc/đoạn/verse) để ghép lại đầy đủ. (4) Chỉ khi đã cố hết sức mà vẫn không tìm đủ: liệt kê rõ phần nào đã có, phần nào còn thiếu, và gợi ý nguồn để người dùng tự tra. KHÔNG được im lặng về phần thiếu.";
+  const sys=sysBody+FACT_RULE+COMPLETENESS_RULE+"\n\n";
   let scopeNote="";
   if(isPageQuery) {
     scopeNote="[PHẠM VI] HỎI VỀ TRANG: Người dùng đang hỏi về nội dung trang/video. Ưu tiên ngữ cảnh trang; khi thiếu dữ liệu dùng kiến thức và web search. Nói rõ nguồn trích dẫn.";
