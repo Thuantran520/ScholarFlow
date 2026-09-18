@@ -4,6 +4,7 @@ module.exports = [
   {
     ignores: [
       "OS/js/content/i18n.js",
+      "OS/js/libs/peer.min.js",
       "node_modules/**",
       "dist/**",
       "scripts/split/backup/**",
@@ -22,6 +23,7 @@ module.exports = [
         navigator: "readonly",
         chrome: "readonly",
         browser: "readonly",
+        Peer: "readonly",
         location: "readonly",
         URL: "readonly",
         Blob: "readonly",

@@ -1512,5 +1512,20 @@ window.I18N_ZH = {
     "cookie_badge_secure": "Secure",
     "cookie_badge_session": "会话",
     "cookie_quick_actions": "快捷操作",
-    "cookie_detail_heading": "Cookie 详情"
+    "cookie_detail_heading": "Cookie 详情",
+    "nav_flow": "Flow",
+    "tip_tab_flow": "P2P 聊天和文件共享",
+    "flow_title": "WebRTC Flow P2P",
+    "flow_my_id": "我的 ID:",
+    "flow_partner_id": "伙伴 ID:",
+    "flow_connect": "连接",
+    "flow_disconnect": "断开",
+    "flow_connected_to": "连接到:",
+    "flow_msg_placeholder": "输入消息...",
+    "flow_incoming_req": "连接请求",
+    "flow_wants_connect": "想要连接。",
+    "flow_accept": "接受",
+    "flow_reject": "拒绝",
+    "tip_copy": "复制 ID",
+    "tip_attach": "附加文件"
 };

@@ -1512,5 +1512,20 @@ window.I18N_EN = {
     "cookie_badge_secure": "Secure",
     "cookie_badge_session": "Session",
     "cookie_quick_actions": "Quick actions",
-    "cookie_detail_heading": "Cookie Details"
+    "cookie_detail_heading": "Cookie Details",
+    "nav_flow": "Flow",
+    "tip_tab_flow": "P2P Chat & File Share",
+    "flow_title": "WebRTC Flow P2P",
+    "flow_my_id": "My ID:",
+    "flow_partner_id": "Partner ID:",
+    "flow_connect": "Connect",
+    "flow_disconnect": "Disconnect",
+    "flow_connected_to": "Connected to:",
+    "flow_msg_placeholder": "Type a message...",
+    "flow_incoming_req": "Connection Request",
+    "flow_wants_connect": "wants to connect.",
+    "flow_accept": "Accept",
+    "flow_reject": "Reject",
+    "tip_copy": "Copy ID",
+    "tip_attach": "Attach file"
 };

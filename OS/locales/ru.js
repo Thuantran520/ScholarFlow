@@ -1512,5 +1512,20 @@ window.I18N_RU = {
     "cookie_badge_secure": "Secure",
     "cookie_badge_session": "Сессия",
     "cookie_quick_actions": "Быстрые действия",
-    "cookie_detail_heading": "Сведения о cookie"
+    "cookie_detail_heading": "Сведения о cookie",
+    "nav_flow": "Flow",
+    "tip_tab_flow": "P2P Чат и файлы",
+    "flow_title": "WebRTC Flow P2P",
+    "flow_my_id": "Мой ID:",
+    "flow_partner_id": "ID партнера:",
+    "flow_connect": "Подключиться",
+    "flow_disconnect": "Отключиться",
+    "flow_connected_to": "Подключено к:",
+    "flow_msg_placeholder": "Введите сообщение...",
+    "flow_incoming_req": "Запрос подключения",
+    "flow_wants_connect": "хочет подключиться.",
+    "flow_accept": "Принять",
+    "flow_reject": "Отклонить",
+    "tip_copy": "Копировать ID",
+    "tip_attach": "Прикрепить файл"
 };

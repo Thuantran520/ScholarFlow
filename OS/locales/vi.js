@@ -1512,5 +1512,20 @@ window.I18N_VI = {
     "cookie_badge_secure": "Secure",
     "cookie_badge_session": "Phiên",
     "cookie_quick_actions": "Thao tác nhanh",
-    "cookie_detail_heading": "Chi tiết Cookie"
+    "cookie_detail_heading": "Chi tiết Cookie",
+    "nav_flow": "Flow",
+    "tip_tab_flow": "Chat & Gửi file P2P",
+    "flow_title": "WebRTC Flow P2P",
+    "flow_my_id": "Mã của tôi:",
+    "flow_partner_id": "Mã thiết bị kết nối:",
+    "flow_connect": "Kết nối",
+    "flow_disconnect": "Ngắt",
+    "flow_connected_to": "Đang kết nối với:",
+    "flow_msg_placeholder": "Nhập tin nhắn...",
+    "flow_incoming_req": "Yêu cầu kết nối",
+    "flow_wants_connect": "muốn kết nối.",
+    "flow_accept": "Chấp nhận",
+    "flow_reject": "Từ chối",
+    "tip_copy": "Sao chép ID",
+    "tip_attach": "Đính kèm file"
 };

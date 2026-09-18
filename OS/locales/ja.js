@@ -1512,5 +1512,20 @@ window.I18N_JA = {
     "cookie_badge_secure": "Secure",
     "cookie_badge_session": "セッション",
     "cookie_quick_actions": "クイック操作",
-    "cookie_detail_heading": "Cookie詳細"
+    "cookie_detail_heading": "Cookie詳細",
+    "nav_flow": "Flow",
+    "tip_tab_flow": "P2Pチャットとファイル共有",
+    "flow_title": "WebRTC Flow P2P",
+    "flow_my_id": "マイ ID:",
+    "flow_partner_id": "パートナー ID:",
+    "flow_connect": "接続",
+    "flow_disconnect": "切断",
+    "flow_connected_to": "接続先:",
+    "flow_msg_placeholder": "メッセージを入力...",
+    "flow_incoming_req": "接続リクエスト",
+    "flow_wants_connect": "が接続を求めています。",
+    "flow_accept": "承認",
+    "flow_reject": "拒否",
+    "tip_copy": "IDをコピー",
+    "tip_attach": "ファイルを添付"
 };
