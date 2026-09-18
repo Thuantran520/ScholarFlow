@@ -442,7 +442,7 @@
       const call = peer.call(conn.peer, localStream);
       setupCall(call, localStream);
     } catch (e) {
-      alert("Không thể truy cập Camera/Micro: " + e.message);
+      handleMediaError(e);
     }
   }
 
@@ -462,11 +462,26 @@
               call.answer(stream);
               setupCall(call, stream);
             }).catch(e => {
-              alert("Lỗi truy cập Micro: " + e);
+              call.close();
+              handleMediaError(e);
             });
         });
     } else {
       call.close();
+    }
+  }
+
+  function handleMediaError(e) {
+    const msg = e.message ? e.message.toLowerCase() : '';
+    if (msg.includes('dismissed') || e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
+      // Browsers often block permission prompts inside Side Panels
+      if (typeof chrome !== 'undefined' && chrome.tabs) {
+        chrome.tabs.create({ url: chrome.runtime.getURL('OS/html/permission.html') });
+      } else {
+        alert("Vui lòng cấp quyền Camera/Micro trong cài đặt trình duyệt!");
+      }
+    } else {
+      alert("Không thể truy cập Camera/Micro: " + e.message);
     }
   }
 

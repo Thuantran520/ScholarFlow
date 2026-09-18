@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>ScholarFlow - Permission</title>
+  <link rel="stylesheet" href="../css/sidebar.css">
+  <style>
+    body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: var(--surface-1); color: var(--text); padding: 20px; text-align: center;}
+    .perm-card { background: var(--surface-2); padding: 30px; border-radius: 12px; max-width: 400px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); border: 1px solid var(--border); }
+    svg { margin-bottom: 20px; color: var(--primary); }
+  </style>
+</head>
+<body>
+  <div class="perm-card">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"></path><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+    <h2 style="margin-top:0;">Cấp quyền Camera & Micro</h2>
+    <p style="color: var(--text-muted); line-height: 1.5; margin-bottom: 24px;">
+      Trình duyệt Edge/Chrome không hiển thị bảng hỏi quyền truy cập trong thanh bên (Sidebar).<br><br>
+      Vui lòng bấm nút bên dưới để cấp quyền cho phép tiện ích sử dụng Camera và Micro cho cuộc gọi WebRTC, sau đó bạn có thể quay lại Sidebar.
+    </p>
+    <button id="btn-grant" class="modern-btn primary" style="width: 100%; padding: 12px; font-size: 15px;">Cấp quyền ngay</button>
+    <p id="perm-status" style="margin-top: 16px; font-size: 14px; font-weight: bold;"></p>
+  </div>
+  <script src="../js/core/permission.js"></script>
+</body>
+</html>
