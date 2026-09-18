@@ -1526,6 +1526,20 @@ window.I18N_ZH = {
     "flow_wants_connect": "想要连接。",
     "flow_accept": "接受",
     "flow_reject": "拒绝",
+    
+    "flow_unmute": "取消静音",
+    "flow_end_call": "结束通话",
+    "flow_incoming_call": "来电",
+    "flow_mute": "静音",
+    "flow_video_on": "打开摄像头",
+    "flow_call_video": "视频通话",
+    "flow_receiving_file": "接收中...",
+    "flow_video_off": "关闭摄像头",
+    "flow_sending_file": "发送中...",
+    "flow_call_audio": "语音通话",
+    "flow_refresh_id": "新ID",
+    "flow_is_calling": "正在给您打电话...",
     "tip_copy": "复制 ID",
     "tip_attach": "附加文件"
 };
+

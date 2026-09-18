@@ -1526,6 +1526,20 @@ window.I18N_EN = {
     "flow_wants_connect": "wants to connect.",
     "flow_accept": "Accept",
     "flow_reject": "Reject",
+    
+    "flow_unmute": "Unmute",
+    "flow_end_call": "End Call",
+    "flow_incoming_call": "Incoming Call",
+    "flow_mute": "Mute",
+    "flow_video_on": "Turn on cam",
+    "flow_call_video": "Video Call",
+    "flow_receiving_file": "Receiving...",
+    "flow_video_off": "Turn off cam",
+    "flow_sending_file": "Sending...",
+    "flow_call_audio": "Audio Call",
+    "flow_refresh_id": "New ID",
+    "flow_is_calling": "is calling you...",
     "tip_copy": "Copy ID",
     "tip_attach": "Attach file"
 };
+

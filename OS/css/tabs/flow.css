@@ -211,3 +211,53 @@
   font-weight: bold;
 }
 
+
+.icon-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+.icon-btn:hover {
+  background: var(--surface-3);
+  color: var(--primary);
+}
+.call-action {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--surface-3);
+  color: var(--text);
+}
+.call-action:hover {
+  background: var(--border);
+}
+.danger-call:hover {
+  background: #dc2626 !important;
+}
+
+.flow-progress-bar {
+  height: 4px;
+  background: var(--surface-3);
+  border-radius: 2px;
+  margin-top: 6px;
+  overflow: hidden;
+}
+.flow-progress-fill {
+  height: 100%;
+  background: var(--primary);
+  width: 0%;
+  transition: width 0.1s linear;
+}
+.flow-progress-text {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  text-align: right;
+}

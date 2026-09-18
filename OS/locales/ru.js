@@ -1526,6 +1526,20 @@ window.I18N_RU = {
     "flow_wants_connect": "хочет подключиться.",
     "flow_accept": "Принять",
     "flow_reject": "Отклонить",
+    
+    "flow_unmute": "Включить звук",
+    "flow_end_call": "Завершить вызов",
+    "flow_incoming_call": "Входящий вызов",
+    "flow_mute": "Отключить звук",
+    "flow_video_on": "Включить камеру",
+    "flow_call_video": "Видеозвонок",
+    "flow_receiving_file": "Получение...",
+    "flow_video_off": "Выключить камеру",
+    "flow_sending_file": "Отправка...",
+    "flow_call_audio": "Аудиозвонок",
+    "flow_refresh_id": "Новый ID",
+    "flow_is_calling": "звонит вам...",
     "tip_copy": "Копировать ID",
     "tip_attach": "Прикрепить файл"
 };
+

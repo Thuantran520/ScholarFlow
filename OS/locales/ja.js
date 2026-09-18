@@ -1526,6 +1526,20 @@ window.I18N_JA = {
     "flow_wants_connect": "が接続を求めています。",
     "flow_accept": "承認",
     "flow_reject": "拒否",
+    
+    "flow_unmute": "ミュート解除",
+    "flow_end_call": "通話終了",
+    "flow_incoming_call": "着信",
+    "flow_mute": "ミュート",
+    "flow_video_on": "カメラをオン",
+    "flow_call_video": "ビデオ通話",
+    "flow_receiving_file": "受信中...",
+    "flow_video_off": "カメラをオフ",
+    "flow_sending_file": "送信中...",
+    "flow_call_audio": "音声通話",
+    "flow_refresh_id": "新しいID",
+    "flow_is_calling": "さんが着信中...",
     "tip_copy": "IDをコピー",
     "tip_attach": "ファイルを添付"
 };
+

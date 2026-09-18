@@ -1526,6 +1526,20 @@ window.I18N_VI = {
     "flow_wants_connect": "muốn kết nối.",
     "flow_accept": "Chấp nhận",
     "flow_reject": "Từ chối",
+    
+    "flow_unmute": "Mở mic",
+    "flow_end_call": "Kết thúc",
+    "flow_incoming_call": "Cuộc gọi đến",
+    "flow_mute": "Tắt mic",
+    "flow_video_on": "Bật cam",
+    "flow_call_video": "Gọi video",
+    "flow_receiving_file": "Đang nhận...",
+    "flow_video_off": "Tắt cam",
+    "flow_sending_file": "Đang gửi...",
+    "flow_call_audio": "Gọi thoại",
+    "flow_refresh_id": "Tạo mã mới",
+    "flow_is_calling": "đang gọi cho bạn...",
     "tip_copy": "Sao chép ID",
     "tip_attach": "Đính kèm file"
 };
+
