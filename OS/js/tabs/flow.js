@@ -480,6 +480,8 @@
       } else {
         alert("Vui lòng cấp quyền Camera/Micro trong cài đặt trình duyệt!");
       }
+    } else if (e.name === 'NotFoundError' || msg.includes('requested device not found')) {
+      alert("Không tìm thấy Camera hoặc Micro trên máy của bạn (chưa cắm thiết bị hoặc bị hỏng).");
     } else {
       alert("Không thể truy cập Camera/Micro: " + e.message);
     }
