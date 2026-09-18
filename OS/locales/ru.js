@@ -1537,9 +1537,12 @@ window.I18N_RU = {
     "flow_video_off": "Выключить камеру",
     "flow_sending_file": "Отправка...",
     "flow_call_audio": "Аудиозвонок",
+    
+    "flow_popout": "Открыть в новой вкладке (сохраняет соединение)",
     "flow_refresh_id": "Новый ID",
     "flow_is_calling": "звонит вам...",
     "tip_copy": "Копировать ID",
     "tip_attach": "Прикрепить файл"
 };
+
 

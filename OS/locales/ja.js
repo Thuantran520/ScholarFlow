@@ -1537,9 +1537,12 @@ window.I18N_JA = {
     "flow_video_off": "カメラをオフ",
     "flow_sending_file": "送信中...",
     "flow_call_audio": "音声通話",
+    
+    "flow_popout": "新しいタブで開く (接続を維持)",
     "flow_refresh_id": "新しいID",
     "flow_is_calling": "さんが着信中...",
     "tip_copy": "IDをコピー",
     "tip_attach": "ファイルを添付"
 };
+
 

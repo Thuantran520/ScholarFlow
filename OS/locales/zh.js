@@ -1537,9 +1537,12 @@ window.I18N_ZH = {
     "flow_video_off": "关闭摄像头",
     "flow_sending_file": "发送中...",
     "flow_call_audio": "语音通话",
+    
+    "flow_popout": "弹出新标签页 (保持连接)",
     "flow_refresh_id": "新ID",
     "flow_is_calling": "正在给您打电话...",
     "tip_copy": "复制 ID",
     "tip_attach": "附加文件"
 };
+
 

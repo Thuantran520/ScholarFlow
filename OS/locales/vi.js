@@ -1537,9 +1537,12 @@ window.I18N_VI = {
     "flow_video_off": "Tắt cam",
     "flow_sending_file": "Đang gửi...",
     "flow_call_audio": "Gọi thoại",
+    
+    "flow_popout": "Mở ra Tab mới (Tránh mất kết nối khi đóng)",
     "flow_refresh_id": "Tạo mã mới",
     "flow_is_calling": "đang gọi cho bạn...",
     "tip_copy": "Sao chép ID",
     "tip_attach": "Đính kèm file"
 };
+
 

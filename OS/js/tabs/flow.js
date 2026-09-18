@@ -103,6 +103,15 @@
     elIncomingId = document.getElementById('flow-incoming-id');
     elBtnAccept = document.getElementById('btn-flow-accept');
     elBtnReject = document.getElementById('btn-flow-reject');
+    
+    const elBtnPopout = document.getElementById('btn-flow-popout');
+    if (elBtnPopout) {
+      elBtnPopout.addEventListener('click', () => {
+        if (typeof chrome !== 'undefined' && chrome.tabs) {
+          chrome.tabs.create({ url: chrome.runtime.getURL('OS/html/sidebar.html?tab=flow') });
+        }
+      });
+    }
 
     // Wire up buttons for V1+V2
     elBtnCopy.addEventListener('click', () => {

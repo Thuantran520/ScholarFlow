@@ -37,6 +37,7 @@ onReady(() => {
           behavior: "smooth"
         });
       }
+      
       if (target === "tab-cookie") {
         updateCookieTabUI();
       }
@@ -2878,3 +2879,13 @@ renderTodoList();
 renderTodoList();
   });
 
+
+
+window.addEventListener('DOMContentLoaded', () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const targetTab = urlParams.get('tab');
+  if (targetTab) {
+    const btn = document.querySelector('.main-nav-btn[data-target="tab-' + targetTab + '"]');
+    if (btn) setTimeout(() => btn.click(), 100);
+  }
+});

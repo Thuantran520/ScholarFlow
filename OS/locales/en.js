@@ -1537,9 +1537,12 @@ window.I18N_EN = {
     "flow_video_off": "Turn off cam",
     "flow_sending_file": "Sending...",
     "flow_call_audio": "Audio Call",
+    
+    "flow_popout": "Pop-out to Tab (Keeps connection alive)",
     "flow_refresh_id": "New ID",
     "flow_is_calling": "is calling you...",
     "tip_copy": "Copy ID",
     "tip_attach": "Attach file"
 };
+
 
