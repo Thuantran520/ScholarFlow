@@ -303,7 +303,7 @@ function renderBiblioModalList() {
         const citeTextEl = document.createElement("div");
     citeTextEl.className = "biblio-card-text";
     const formattedCite = getFormattedCitationByStyle(item.meta, currentModalTab, index + 1);
-    
+
     let htmlCite = "";
     if (currentModalTab === "bibtex") {
       citeTextEl.className += " bibtex-code";
@@ -346,13 +346,13 @@ function renderBiblioModalList() {
       const notePlain = item.notes ? formatResearchNote(item.notes, lang, false) : "";
       const plainText = formattedCite + notePlain;
       const richText = (htmlCite || formattedCite) + noteHtml;
-      
+
       if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write && richText) {
         const clipboardItem = new ClipboardItem({
           "text/plain": new Blob([plainText], { type: "text/plain" }),
           "text/html": new Blob([richText], { type: "text/html" })
         });
-        
+
         navigator.clipboard.write([clipboardItem]).then(() => {
           showToast("toast_biblio_item_copied", "success", [index + 1]);
         }).catch(() => {

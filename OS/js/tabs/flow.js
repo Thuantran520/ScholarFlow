@@ -36,7 +36,7 @@
     elFilePreview = document.getElementById('flow-file-preview');
     elFileName = document.getElementById('flow-file-name');
     elBtnCopy = document.getElementById('btn-flow-copy');
-    
+
     // New V2 Elements
     elBtnRefresh = document.getElementById('btn-flow-refresh');
     elBtnCallAudio = document.getElementById('btn-flow-call-audio');
@@ -54,14 +54,14 @@
       elIncomingModal.id = 'flow-incoming-modal';
       elIncomingModal.className = 'flow-modal';
       elIncomingModal.style.display = 'none';
-      
+
       const content = document.createElement('div');
       content.className = 'flow-modal-content';
-      
+
       const h4 = document.createElement('h4');
       h4.setAttribute('data-i18n', 'flow_incoming_req');
       h4.textContent = 'Yêu cầu kết nối';
-      
+
       const p = document.createElement('p');
       const strong = document.createElement('strong');
       strong.id = 'flow-incoming-id';
@@ -70,26 +70,26 @@
       span.textContent = ' muốn kết nối.';
       p.appendChild(strong);
       p.appendChild(span);
-      
+
       const btnRow = document.createElement('div');
       btnRow.style.display = 'flex';
       btnRow.style.gap = '8px';
       btnRow.style.marginTop = '16px';
-      
+
       const btnAccept = document.createElement('button');
       btnAccept.id = 'btn-flow-accept';
       btnAccept.className = 'modern-btn primary';
       btnAccept.style.flex = '1';
       btnAccept.setAttribute('data-i18n', 'flow_accept');
       btnAccept.textContent = 'Chấp nhận';
-      
+
       const btnReject = document.createElement('button');
       btnReject.id = 'btn-flow-reject';
       btnReject.className = 'modern-btn danger';
       btnReject.style.flex = '1';
       btnReject.setAttribute('data-i18n', 'flow_reject');
       btnReject.textContent = 'Từ chối';
-      
+
       btnRow.appendChild(btnAccept);
       btnRow.appendChild(btnReject);
       content.appendChild(h4);
@@ -103,12 +103,12 @@
     elIncomingId = document.getElementById('flow-incoming-id');
     elBtnAccept = document.getElementById('btn-flow-accept');
     elBtnReject = document.getElementById('btn-flow-reject');
-    
+
     // Wire up buttons for V1+V2
     elBtnCopy.addEventListener('click', () => {
       navigator.clipboard.writeText(elMyId.textContent);
     });
-    
+
     elBtnRefresh.addEventListener('click', () => {
       if (peer) peer.destroy();
       localStorage.removeItem('flow_peer_id');
@@ -121,7 +121,7 @@
     });
 
     document.getElementById('btn-flow-disconnect')?.addEventListener('click', disconnect);
-    
+
     elBtnSend.addEventListener('click', sendMessage);
     elTextInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
@@ -134,7 +134,7 @@
     elFileClear.addEventListener('click', clearFile);
     elBtnAccept.addEventListener('click', acceptConnection);
     elBtnReject.addEventListener('click', rejectConnection);
-    
+
     // Call controls
     elBtnCallAudio.addEventListener('click', () => startCall(false));
     elBtnCallVideo.addEventListener('click', () => startCall(true));
@@ -152,12 +152,12 @@
 
   function initPeer(forceNew) {
     if (typeof Peer === 'undefined') return;
-    
+
     let savedId = forceNew ? null : localStorage.getItem('flow_peer_id');
-    
+
     try {
       peer = savedId ? new Peer(savedId) : new Peer();
-      
+
       peer.on('open', (id) => {
         localStorage.setItem('flow_peer_id', id);
         elMyId.textContent = id;
@@ -215,10 +215,10 @@
   function connectToPartner() {
     const partnerId = elPartnerInput.value.trim();
     if (!partnerId || partnerId === peer.id) return;
-    
+
     elBtnConnect.disabled = true;
     const outgoingConn = peer.connect(partnerId, { reliable: true });
-    
+
     outgoingConn.on('open', () => setupConnection(outgoingConn));
     outgoingConn.on('error', (err) => {
       alert('Không kết nối được: ' + err);
@@ -233,7 +233,7 @@
     elRemoteId.textContent = conn.peer;
     elBtnConnect.disabled = false;
     elMessages.textContent = '';
-    
+
     appendSystemMessage('Đã kết nối với ' + conn.peer);
 
     conn.on('data', handleData);
@@ -302,11 +302,11 @@
     const fill = document.createElement('div');
     fill.className = 'flow-progress-fill';
     bar.appendChild(fill);
-    
+
     const txt = document.createElement('div');
     txt.className = 'flow-progress-text';
     txt.textContent = '0%';
-    
+
     container.appendChild(bar);
     container.appendChild(txt);
   }
@@ -356,13 +356,13 @@
     sendingFile = true;
     currentSendFile = file;
     currentSendOffset = 0;
-    
+
     fileProgressEl = appendSystemMessage('Đang gửi: ' + file.name + '...');
     appendProgressBar(fileProgressEl);
-    
-    conn.send({ 
-      type: 'file_start', 
-      info: { name: file.name, type: file.type, size: file.size } 
+
+    conn.send({
+      type: 'file_start',
+      info: { name: file.name, type: file.type, size: file.size }
     });
     clearFile();
     // Do NOT call sendNextChunk here. Wait for 'chunk_ack' from receiver!
@@ -370,7 +370,7 @@
 
   function sendNextChunk() {
     if (!currentSendFile || !conn || !conn.open) return;
-    
+
     if (currentSendOffset >= currentSendFile.size) {
       conn.send({ type: 'file_end' });
       updateProgressBar(fileProgressEl, 100);
@@ -382,7 +382,7 @@
 
     const reader = new FileReader();
     const slice = currentSendFile.slice(currentSendOffset, currentSendOffset + CHUNK_SIZE);
-    
+
     reader.onload = (e) => {
       conn.send({ type: 'file_chunk', chunk: e.target.result });
       currentSendOffset += CHUNK_SIZE;
@@ -390,16 +390,16 @@
     };
     reader.readAsArrayBuffer(slice);
   }
-  
+
   function assembleFile() {
     const blob = new Blob(fileChunks, { type: fileInfo.type });
     const url = URL.createObjectURL(blob);
-    
+
     const div = document.createElement('a');
     div.className = 'flow-msg-file peer';
     div.href = url;
     div.download = fileInfo.name;
-    
+
     // SVG File icon
     const svgNS = 'http' + '://www.w3.org/2000/svg';
     const svg = document.createElementNS(svgNS, 'svg');
@@ -409,7 +409,7 @@
     const polyline = document.createElementNS(svgNS, 'polyline'); polyline.setAttribute('points', '7 10 12 15 17 10');
     const line = document.createElementNS(svgNS, 'line'); line.setAttribute('x1', '12'); line.setAttribute('y1', '15'); line.setAttribute('x2', '12'); line.setAttribute('y2', '3');
     svg.appendChild(path); svg.appendChild(polyline); svg.appendChild(line);
-    
+
     const divContainer = document.createElement('div');
     const titleDiv = document.createElement('div');
     titleDiv.style.fontWeight = '600';
@@ -418,18 +418,18 @@
     sizeDiv.style.fontSize = '11px';
     sizeDiv.style.opacity = '0.8';
     sizeDiv.textContent = (fileInfo.size / 1024 / 1024).toFixed(2) + ' MB';
-    
+
     divContainer.appendChild(titleDiv);
     divContainer.appendChild(sizeDiv);
     div.appendChild(svg);
     div.appendChild(divContainer);
-    
+
     elMessages.appendChild(div);
     elMessages.scrollTop = elMessages.scrollHeight;
-    
+
     // Send ACK to unblock sender
     conn.send({ type: 'chunk_ack' });
-    
+
     fileChunks = [];
     fileInfo = null;
   }
@@ -490,7 +490,7 @@
   function setupCall(call, stream) {
     currentCall = call;
     elCallUi.style.display = 'block';
-    
+
     call.on('stream', remoteStream => {
       elRemoteVideo.srcObject = remoteStream;
     });
@@ -538,7 +538,7 @@
     const tab = document.getElementById('tab-flow');
     if (tab && tab.classList.contains('active')) initFlow();
   });
-  
+
   window.addEventListener('DOMContentLoaded', () => {
     const tab = document.getElementById('tab-flow');
     if (tab) {

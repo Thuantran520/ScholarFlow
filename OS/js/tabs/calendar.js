@@ -1004,24 +1004,24 @@ function calInit() {
   };
   if (prev) prev.addEventListener("click", function () { calStep(-1); });
   if (next) next.addEventListener("click", function () { calStep(1); });
-  if (today) today.addEventListener("click", function () {
+  if (today) {today.addEventListener("click", function () {
     const n = new Date();
     calViewYear = n.getFullYear();
     calViewMonth = n.getMonth();
     calViewFocusKey = calTodayKey();
     calSelectedKey = calTodayKey();
     calRenderCalendar();
-  });
+  });}
 
   const refreshAll = document.getElementById("btn-cal-refresh-all");
-  if (refreshAll) refreshAll.addEventListener("click", function () {
+  if (refreshAll) {refreshAll.addEventListener("click", function () {
     if (!calFeeds.length) {
       showToast(window.i18n ? window.i18n.t("cal_toast_no_feeds") : "⚠️ No calendars added yet", "error");
       return;
     }
     calFeeds.forEach(function (f) { if (f.url) calRefreshFeed(f.id, true); });
     showToast(window.i18n ? window.i18n.t("cal_toast_refreshing") : "🔄 Updating all calendars...", "success");
-  });
+  });}
 
   const now = new Date();
   if (!calViewYear) { calViewYear = now.getFullYear(); calViewMonth = now.getMonth(); }

@@ -1394,12 +1394,12 @@ function aiQuickPrompt(kind){
 function aiInitEvents(){
   const favImg=document.getElementById("ai-page-favicon"); if(favImg) favImg.addEventListener("error",()=>{ aiFavState.src=null; aiApplyFavicon(); });
   const chatHist=document.getElementById("ai-chat-history");
-  if(chatHist) chatHist.addEventListener("click",e=>{
+  if(chatHist) {chatHist.addEventListener("click",e=>{
     const tgt=e.target; const sp=(tgt&&tgt.closest)?tgt.closest(".ai-ts"):null; if(!sp) return;
     const secs=Number(sp.getAttribute("data-ts"))||0;
     if(typeof sendTabMessage!=="function") return;
     sendTabMessage({action:"YT_SEEK",seconds:secs},r=>{ if((!r||!r.success)&&typeof showToast==="function") showToast("ai_toast_no_video","warning"); });
-  });
+  });}
   document.querySelectorAll(".ai-provider-pill").forEach(btn=>{ btn.addEventListener("click",()=>{ aiProvider=btn.dataset.provider; aiSaveProvider(); aiUpdateProviderUI(); }); });
   const sel=document.getElementById("ai-provider-select"); if(sel) sel.addEventListener("change",()=>{ aiProvider=sel.value; aiSaveProvider(); aiUpdateProviderUI(); });
   ["ai-key-input","ai-key-input-modal"].forEach(kid=>{ const el=document.getElementById(kid); if(!el) return; el.addEventListener("change",()=>{ aiKeys[aiProvider]=el.value.trim(); aiSaveKeys(); aiUpdateProviderUI(); }); el.addEventListener("input",()=>{ const other=document.getElementById(kid==="ai-key-input"?"ai-key-input-modal":"ai-key-input"); if(other&&other.value!==el.value) other.value=el.value; const st=document.getElementById("ai-key-status"); if(st){ const has=el.value.trim().length>8; st.textContent=has?aiT("ai_key_entered",null,"Đã nhập"):aiT("ai_key_missing",null,"○ Chưa nhập key"); st.className=has?"ai-status is-connected":"ai-status"; } }); });
@@ -1435,15 +1435,15 @@ function aiInitEvents(){
     });
   }
   const exportMdBtn=document.getElementById("ai-btn-export-md");
-  if(exportMdBtn) exportMdBtn.addEventListener("click",()=>{
+  if(exportMdBtn) {exportMdBtn.addEventListener("click",()=>{
     if(exportMenu) exportMenu.classList.add("is-hidden");
     aiExportMarkdown();
-  });
+  });}
   const exportAnkiBtn=document.getElementById("ai-btn-export-anki");
-  if(exportAnkiBtn) exportAnkiBtn.addEventListener("click",()=>{
+  if(exportAnkiBtn) {exportAnkiBtn.addEventListener("click",()=>{
     if(exportMenu) exportMenu.classList.add("is-hidden");
     aiExportAnki();
-  });
+  });}
   const clearBtn=document.getElementById("ai-btn-clear-chat"); if(clearBtn) clearBtn.addEventListener("click",aiClearHistory);
   const newChatBtn=document.getElementById("ai-btn-new-chat"); if(newChatBtn) newChatBtn.addEventListener("click",()=>{ const dt=(function(){ try{ return new Date().toLocaleString(); }catch(e){ return ""; } })(); aiSessionsNew(aiT("ai_session_default_name",null,"Phiên")+" "+dt); if(typeof showToast==="function") showToast("ai_toast_session_saved","success"); });
   const copyBtn=document.getElementById("ai-btn-copy-last"); if(copyBtn) copyBtn.addEventListener("click",()=>{ const last=aiHistory.slice().reverse().find(m=>m.role==="assistant"); if(!last){ if(typeof showToast==="function") showToast("ai_toast_no_answer","warning"); return; } navigator.clipboard.writeText(last.content).then(()=>{ if(typeof showToast==="function") showToast("toast_copied","success"); }).catch(()=>{ if(typeof showToast==="function") showToast("toast_copy_failed","error"); }); });
@@ -1490,7 +1490,7 @@ function aiInitEvents(){
   const openSettings=document.getElementById("ai-btn-open-settings"); const closeSettings=document.getElementById("ai-btn-close-settings"); const backdrop=document.getElementById("ai-settings-backdrop"); const modal=document.getElementById("ai-settings-modal"); const changeModelBtn=document.getElementById("ai-btn-change-model"); const showModal=()=>{ if(modal) modal.style.display="flex"; aiPopulateModelSelect(); }; const hideModal=()=>{ if(modal) modal.style.display="none"; }; if(openSettings) openSettings.addEventListener("click",showModal); if(changeModelBtn) changeModelBtn.addEventListener("click",showModal); if(closeSettings) closeSettings.addEventListener("click",hideModal); if(backdrop) backdrop.addEventListener("click",hideModal);
   const modelSel=document.getElementById("ai-model-select"); if(modelSel) modelSel.addEventListener("change",()=>{ aiSetModel(aiProvider,modelSel.value); aiUpdateModelLine(); });
   const fetchBtn=document.getElementById("ai-btn-fetch-models");
-  if(fetchBtn) fetchBtn.addEventListener("click",async()=>{
+  if(fetchBtn) {fetchBtn.addEventListener("click",async()=>{
     const key=(document.getElementById("ai-key-input")?.value?.trim()||document.getElementById("ai-key-input-modal")?.value?.trim()||aiKeys["gemini"]||"").trim();
     if(!key||key.length<10){ if(typeof showToast==="function") showToast("ai_toast_need_key","warning"); return; }
     const orig=fetchBtn.textContent; fetchBtn.disabled=true; fetchBtn.textContent="...";
@@ -1498,7 +1498,7 @@ function aiInitEvents(){
     const list=await aiFetchGeminiModels(key);
     fetchBtn.disabled=false; fetchBtn.textContent=(typeof getI18nText==="function")?getI18nText("ai_btn_fetch_models"):orig;
     if(list.length){ aiPopulateModelSelect(); if(typeof showToast==="function") showToast("ai_toast_models_ok","success",[list.length]); const cur=aiGetModel("gemini"); if(!list.includes(cur)){ aiSetModel("gemini",list[0]); aiUpdateProviderUI(); } } else { if(typeof showToast==="function") showToast("ai_toast_models_fail","error"); }
-  });
+  });}
   const customUrl=document.getElementById("ai-custom-url");
   if(customUrl) customUrl.addEventListener("change",()=>{ const v=customUrl.value.trim(); if(v&&!aiValidateCustomUrl(v)){ if(typeof showToast==="function") showToast("ai_toast_url_blocked","warning"); customUrl.value=aiKeys["custom"]||""; return; } aiKeys["custom"]=v; storSet({[AI_STORAGE_KEYS.keys]:aiKeys}); });
   const tempRange=document.getElementById("ai-temp-range"); const tempVal=document.getElementById("ai-temp-val");

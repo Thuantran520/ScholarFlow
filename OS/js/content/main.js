@@ -227,7 +227,7 @@
             try {
               let pdfUrl = location.href || "";
               const embed = document.querySelector('embed[type="application/pdf"], iframe[type="application/pdf"], iframe[src$=".pdf"], embed[src$=".pdf"], object[type="application/pdf"]');
-              
+
               if (embed) {
                 pdfUrl = embed.src || embed.getAttribute('data') || pdfUrl;
               }

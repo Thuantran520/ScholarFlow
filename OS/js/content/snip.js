@@ -286,8 +286,8 @@ function onBoxEstablished() {
         return;
       }
 
-      const resolved = typeof resolveCaptureTarget === "function" 
-        ? resolveCaptureTarget(elUnder) 
+      const resolved = typeof resolveCaptureTarget === "function"
+        ? resolveCaptureTarget(elUnder)
         : (typeof window !== "undefined" && typeof window.resolveCaptureTarget === "function" ? window.resolveCaptureTarget(elUnder) : elUnder);
       if (!resolved || resolved === document.body || resolved === document.documentElement) {
         if (snipHoverBoxEl) snipHoverBoxEl.style.display = "none";
@@ -423,7 +423,7 @@ function onBoxEstablished() {
     if (snipDragState === "resizing" || snipDragState === "moving") {
       snipLockedTarget = null;
       snipDragState = null;
-      return;
+
     }
   }
 

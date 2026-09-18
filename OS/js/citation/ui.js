@@ -91,7 +91,7 @@ function updateCitationDisplay() {
   if (!isKnownCitationStyle(currentCitationTab)) {
     formattedCite = buildIeeeCitation(currentMeta);
   }
-  
+
   if (currentCitationTab === "bibtex") {
     box.classList.add("bibtex-code");
     box.style.fontFamily = "ui-monospace, monospace";
@@ -235,11 +235,11 @@ function updateSourceBadges(type, container) {
     if (currentMeta && typeof currentMeta.cited_by_count === 'number') {
       const count = currentMeta.cited_by_count;
       const countFormatted = count.toLocaleString ? count.toLocaleString() : count;
-      const badgeText = (window.i18n && typeof window.i18n.t === "function") 
-        ? window.i18n.t("metrics_citations_count", null, { count: countFormatted }) 
+      const badgeText = (window.i18n && typeof window.i18n.t === "function")
+        ? window.i18n.t("metrics_citations_count", null, { count: countFormatted })
         : `🔄 ${countFormatted} trích dẫn`;
-      const badgeTitle = (window.i18n && typeof window.i18n.t === "function") 
-        ? window.i18n.t("metrics_citations_tooltip", null, { count: countFormatted }) 
+      const badgeTitle = (window.i18n && typeof window.i18n.t === "function")
+        ? window.i18n.t("metrics_citations_tooltip", null, { count: countFormatted })
         : `Số lượt trích dẫn học thuật quốc tế (OpenAlex): ${countFormatted}`;
       metricsBadge.textContent = badgeText;
       metricsBadge.title = badgeTitle;
@@ -334,11 +334,11 @@ function syncMetaFromInputs() {
 function showToast(msgKey, type = 'success', variables = []) {
   const t = document.getElementById('notify');
   if (!t) return;
-  
+
   // Reset classes
   t.className = 'notify';
   if (type) t.classList.add('notify-' + type);
-  
+
   // Get translation from i18n
   let msg = msgKey;
   if (window.i18n && typeof window.i18n.t === "function") {
@@ -353,7 +353,7 @@ function showToast(msgKey, type = 'success', variables = []) {
       }
     }
   }
-  
+
   // Replace variables like {0}, {1} if any
   if (Array.isArray(variables)) {
     variables.forEach((val, i) => {
@@ -364,10 +364,10 @@ function showToast(msgKey, type = 'success', variables = []) {
       msg = msg.split('{' + k + '}').join(v !== undefined && v !== null ? v : "");
     }
   }
-  
+
   t.textContent = msg;
   t.classList.add('show');
-  
+
   setTimeout(() => {
     t.classList.remove('show');
   }, 3000);

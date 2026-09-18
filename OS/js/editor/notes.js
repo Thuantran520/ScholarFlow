@@ -20,7 +20,7 @@ function formatResearchNote(rawNote, lang = "vi", isHtml = false) {
   }
   if (!clean) return "";
 
-  const noteLabel = (window.i18n ? window.i18n.t("lbl_notes") : null) || 
+  const noteLabel = (window.i18n ? window.i18n.t("lbl_notes") : null) ||
     (lang === "en" ? "Research Notes" : (lang === "zh" ? "研究笔记" : (lang === "ja" ? "研究メモ" : (lang === "ru" ? "Заметки к исследованию" : "Ghi chú nghiên cứu"))));
 
   if (isHtml) {

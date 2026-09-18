@@ -194,7 +194,7 @@ function parsePdfText(text, filename = "", url = "") {
   title = title.replace(/^microsoft word\s*-\s*/i, "").trim();
 
   // Smart fallback: if extracted title is too short or too generic, depend on filename
-  const isTitleGeneric = !title || 
+  const isTitleGeneric = !title ||
                          /^(?:untitled|document|\.pdf|unnamed|new document|page)$/i.test(title) ||
                          title.length < 5;
 

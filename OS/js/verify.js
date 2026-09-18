@@ -718,7 +718,7 @@ function renderVerifyResult(result, originalQuery) {
   if (result.isReal && result.title && detailsBox) {
     detailsBox.style.display = "block";
     if (matchedTitle) matchedTitle.textContent = result.title;
-    
+
     const authorPrefix = getVerifyI18n("verify_label_author", "Tác giả: ");
     const venuePrefix = getVerifyI18n("verify_label_venue", "Nơi XB: ");
     const unknownAuthor = getVerifyI18n("verify_author_unknown", "Không rõ");

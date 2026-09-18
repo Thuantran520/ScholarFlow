@@ -204,14 +204,14 @@ function thCaptureShot() {
           if (wId != null) {
             try {
               const p2 = tabsApi.captureVisibleTab(wId, { format: "png" });
-              if (p2 && typeof p2.then === "function") p2.then(function (u) {
+              if (p2 && typeof p2.then === "function") {p2.then(function (u) {
                 if (u) { testHelperState.shots.push({ url: u, time: new Date().toISOString(), title: "shot-" + (testHelperState.shots.length + 1) }); thRenderShots(); showToast(t("th_toast_shot_ok").replace("{0}", String(testHelperState.shots.length))); }
                 else if (next) next(); else showToast(t("th_toast_shot_err"));
-              }).catch(function () { if (next) next(); else doCap(null); });
-              else tabsApi.captureVisibleTab(wId, { format: "png" }, function (u) {
+              }).catch(function () { if (next) next(); else doCap(null); });}
+              else {tabsApi.captureVisibleTab(wId, { format: "png" }, function (u) {
                 if (u) { testHelperState.shots.push({ url: u, time: new Date().toISOString(), title: "shot-" + (testHelperState.shots.length + 1) }); thRenderShots(); showToast(t("th_toast_shot_ok").replace("{0}", String(testHelperState.shots.length))); }
                 else if (next) next(); else showToast(t("th_toast_shot_err"));
-              });
+              });}
             } catch (e2) { if (next) next(); else doCap(null); }
           } else if (next) next(); else doCap(null);
         };

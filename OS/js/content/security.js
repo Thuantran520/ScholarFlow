@@ -330,9 +330,9 @@
         const set = function (r) { const s = r && r.sf_security_settings; pasteGuardOn = !!(s && s.pasteGuard); };
         if (p && typeof p.then === "function") p.then(set).catch(function () {});
         else get.get("sf_security_settings", set);
-        if (chrome.storage.onChanged) chrome.storage.onChanged.addListener(function (c, a) {
+        if (chrome.storage.onChanged) {chrome.storage.onChanged.addListener(function (c, a) {
           if (a === "local" && c && c.sf_security_settings) pasteGuardOn = !!(c.sf_security_settings.newValue && c.sf_security_settings.newValue.pasteGuard);
-        });
+        });}
       }
     } catch (e) {}
     function _showPasteWarn() {

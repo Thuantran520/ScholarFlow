@@ -361,7 +361,7 @@
     doc.querySelectorAll('script[type="application/ld+json"]').forEach(s => {
       try {
         const raw = JSON.parse(s.innerText || s.textContent || "");
-        
+
         // Deep collector for all objects inside JSON-LD
         const collectObjects = (node, acc = []) => {
           if (!node || typeof node !== "object") return acc;
@@ -622,7 +622,7 @@
       }
     } else if (hostname.includes("ieeexplore.ieee.org")) {
       sourceType = "academic";
-      
+
       const scripts = doc.querySelectorAll('script');
       for (const s of scripts) {
         const text = s.textContent || "";
@@ -632,11 +632,11 @@
             const match = text.match(/xplore\.document\.metadata=\s*(\{.*?\});/);
             if (match && match[1]) {
               const ieeeData = JSON.parse(match[1]);
-              
+
               if (ieeeData.title) title = ieeeData.title;
               if (ieeeData.authors && ieeeData.authors.length > 0) {
                 // Lấy mảng tên tác giả chuẩn
-                authors = ieeeData.authors.map(a => normalizeAuthorDisplayName(a.name)); 
+                authors = ieeeData.authors.map(a => normalizeAuthorDisplayName(a.name));
               }
               if (ieeeData.publicationTitle) container = ieeeData.publicationTitle;
               if (ieeeData.publicationYear) date = ieeeData.publicationYear;
@@ -660,12 +660,12 @@
         title = `${parts[0]}/${parts[1]}`;
       }
     }
-    
+
 
 // CHỈ CHẠY FALLBACK NẾU CHƯA PHẢI LÀ IEEE HOẶC CHƯA CÓ TITLE
     if (!hostname.includes("ieeexplore.ieee.org") || (!title && authors.length === 0)) {
-        
-        // 4. Microdata & Byline classes 
+
+        // 4. Microdata & Byline classes
         if (authors.length === 0) {
           // Fallback chung cho các trang khác (Đã xóa quét DOM dư thừa của IEEE)
           const authorNodes = doc.querySelectorAll([
@@ -936,18 +936,18 @@
         .replace(/\s*[-–|]\s*(YouTube|VnExpress|Dân Trí|Zing News|VietnamNet|Tuổi Trẻ|Thanh Niên|Báo Mới|Người Lao Động|Công An Nhân Dân|VTC News|Soha|GenK|GameK|Pháp Luật|CafeBiz).*$/i, "")
         .trim();
     }
-    
+
     if (container) {
       container = container
         .replace(/[\r\n\t]+/g, " ")
         .replace(/\s+/g, " ")
         // Cắt bỏ thanh điều hướng rác của ResearchGate và IEEE
-        .replace(/\s*or\s+Discover by subject area.*/i, "") 
-        .replace(/(,\s*)?(IEEE\.org|IEEE Xplore|IEEE SA|IEEE Spectrum).*$/i, "") 
+        .replace(/\s*or\s+Discover by subject area.*/i, "")
+        .replace(/(,\s*)?(IEEE\.org|IEEE Xplore|IEEE SA|IEEE Spectrum).*$/i, "")
         .replace(/,\s*$/, "") // Xóa dấu phẩy thừa ở cuối nếu có
         .trim();
     }
-    
+
     if (authors.length > 0) {
       authors = authors.map(a => {
         const cleaned = a.replace(/[\r\n\t]+/g, " ").replace(/\s+/g, " ").trim();
@@ -1065,8 +1065,8 @@
   setInterval(handleSpaNavigation, 2000);
 
   // Listener for EXTRACT_PAGE_METADATA & PING
-  const _cRuntime = (typeof browser !== "undefined" && browser.runtime) 
-    ? browser.runtime 
+  const _cRuntime = (typeof browser !== "undefined" && browser.runtime)
+    ? browser.runtime
     : ((typeof chrome !== "undefined" && chrome.runtime) ? chrome.runtime : null);
 
   if (_cRuntime && _cRuntime.onMessage) {

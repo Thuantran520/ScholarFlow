@@ -477,11 +477,11 @@ onReady(function () {
   const c = document.getElementById("sec-toggle-clickjack");
   const a = document.getElementById("sec-toggle-autoblock");
   const u = document.getElementById("sec-toggle-unlock");
-  if (p) p.addEventListener("change", function () {
+  if (p) {p.addEventListener("change", function () {
     secState.phishing = !!p.checked;
     secSaveSettings();
     if (secState.phishing) secScanPhishing();
-  });
+  });}
   if (c) c.addEventListener("change", function () { secState.clickjack = !!c.checked; secSaveSettings(); });
   if (a) a.addEventListener("change", function () { secState.autoBlock = !!a.checked; secSaveSettings(); });
   if (u) u.addEventListener("change", secToggleUnlockPerSite);

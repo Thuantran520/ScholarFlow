@@ -576,10 +576,10 @@ function pmBind() {
   const btnShort = document.getElementById("pm-preset-short");
   if (btnShort) btnShort.addEventListener("click", () => pmPreset("short"));
   const btnApplyCustom = document.getElementById("btn-pm-apply-custom");
-  if (btnApplyCustom) btnApplyCustom.addEventListener("click", () => {
+  if (btnApplyCustom) {btnApplyCustom.addEventListener("click", () => {
     const inp = document.getElementById("pm-focus-custom");
     pmApplyFocusLen(inp ? parseInt(inp.value, 10) : 25);
-  });
+  });}
   const btnCalc = document.getElementById("btn-pm-plan-calc");
   if (btnCalc) btnCalc.addEventListener("click", pmRunPlanCalc);
   ["pm-preset-deep", "pm-preset-sprint", "pm-preset-reading", "pm-preset-light"].forEach(function (id) {

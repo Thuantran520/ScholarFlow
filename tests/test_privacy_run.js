@@ -10,12 +10,12 @@ setTimeout(() => {
     try {
         const doc = dom.window.document;
         console.log("Current title:", doc.getElementById("doc-title").textContent);
-        
+
         // Simulate changing language to EN
         const sel = doc.getElementById("select-privacy-lang");
         sel.value = "en";
         sel.dispatchEvent(new dom.window.Event("change"));
-        
+
         console.log("Title after EN change:", doc.getElementById("doc-title").textContent);
     } catch (e) {
         console.error(e);

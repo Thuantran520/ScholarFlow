@@ -240,11 +240,11 @@ onReady(function () {
   const theme = document.getElementById("sec-dm-theme");
   if (theme) theme.addEventListener("change", function () { dmState.theme = theme.value || "std"; dmSave(); });
   const bright = document.getElementById("sec-dm-bright");
-  if (bright) bright.addEventListener("input", function () {
+  if (bright) {bright.addEventListener("input", function () {
     dmState.bright = Math.min(140, Math.max(60, parseInt(bright.value, 10) || 100));
     const bv = document.getElementById("dm-bright-val");
     if (bv) bv.textContent = dmState.bright + "%";
-  });
+  });}
   if (bright) bright.addEventListener("change", function () { dmSave(); });
   const btn = document.getElementById("btn-sec-dm-site");
   if (btn) btn.addEventListener("click", dmToggleSite);
@@ -260,21 +260,21 @@ onReady(function () {
     el.addEventListener("change", function () { _dmSetTune(row[1], el.value); });
   });
   const tuneReset = document.getElementById("btn-dm-tune-reset");
-  if (tuneReset) tuneReset.addEventListener("click", function () {
+  if (tuneReset) {tuneReset.addEventListener("click", function () {
     if (_dmCurrentHost && dmState.siteTune[_dmCurrentHost]) { delete dmState.siteTune[_dmCurrentHost]; dmSave(); showToast(t("dm_updated").replace("{0}", _dmCurrentHost)); }
-  });
+  });}
   const pc = document.getElementById("dm-paper-custom");
   if (pc) pc.addEventListener("input", function () { dmState.paper.custom = pc.value; dmState.paper.mode = "custom"; dmSave(); });
   const pa = document.getElementById("dm-paper-alpha");
   if (pa) pa.addEventListener("input", function () { const v = document.getElementById("dm-paper-alpha-val"); if (v) v.textContent = pa.value + "%"; });
   if (pa) pa.addEventListener("change", function () { dmState.paper.alpha = parseInt(pa.value, 10) || 18; dmSave(); });
   const tglT = document.getElementById("sec-dm-typo");
-  if (tglT) tglT.addEventListener("change", function () {
+  if (tglT) {tglT.addEventListener("change", function () {
     dmState.typo.on = !!tglT.checked;
     const typoPanel = document.getElementById("dm-typo-panel");
     if (typoPanel) typoPanel.classList.toggle("is-open", !!dmState.typo.on);
     dmSave();
-  });
+  });}
   const fam = document.getElementById("dm-font-family");
   if (fam) fam.addEventListener("change", function () { dmState.typo.family = fam.value; dmSave(); });
   [["dm-font-size", "size"], ["dm-font-line", "line"], ["dm-font-ls", "ls"], ["dm-font-ws", "ws"]].forEach(function (row) {

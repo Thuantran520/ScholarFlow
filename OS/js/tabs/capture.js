@@ -768,7 +768,7 @@ async function captureSnipRect(msg) {
           if (match[2] === "%") {
             br = (val / 100) * Math.min(sw, sh);
           } else {
-            br = val * scaleX; 
+            br = val * scaleX;
           }
         }
         if (br > 0) {

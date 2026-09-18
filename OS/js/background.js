@@ -141,15 +141,15 @@ const runtimeApi = browserRuntimeApi || chromeRuntimeApi;
         }
         const base64 = btoa(binary);
         const filename = (request.url.split('/').pop() || 'document.pdf').split('?')[0];
-        
+
         sendResponse({ base64: base64, filename: filename });
       })
       .catch(err => {
         console.error("Lỗi fetch PDF từ Background:", err);
         sendResponse(null);
       });
-      
-    return true; 
+
+    return true;
   }
 
 });

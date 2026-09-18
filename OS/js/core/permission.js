@@ -7,7 +7,7 @@ document.getElementById('btn-grant').addEventListener('click', async () => {
     stream.getTracks().forEach(t => t.stop()); // Stop immediately
     status.style.color = '#10b981'; // green
     status.textContent = 'Cấp quyền thành công! Tab này sẽ tự đóng sau 3 giây...';
-    
+
     // Notify the background or sidebar if needed, but usually just closing is fine.
     setTimeout(() => window.close(), 3000);
   } catch (e) {

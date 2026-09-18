@@ -40,7 +40,7 @@ function normalizeAuthorsString(raw) {
   }
   let s = String(raw).trim();
   if (!s) return "";
-  
+
   if (s.includes(";") || s.includes("\n")) {
     const sep = s.includes(";") ? ";" : "\n";
     return s.split(sep)
@@ -49,7 +49,7 @@ function normalizeAuthorsString(raw) {
       .filter(Boolean)
       .join(", ");
   }
-  
+
   let cleanStr = s.replace(/\s*&\s*/g, " and ").replace(/\s*&amp;\s*/g, " and ").replace(/\s+và\s+/gi, " and ");
   if (/\s+and\s+/i.test(cleanStr) && !/,\s+and\s+/i.test(cleanStr)) {
     const andParts = cleanStr.split(/\s+and\s+/i);
@@ -57,7 +57,7 @@ function normalizeAuthorsString(raw) {
       return andParts.map(normalizeAuthorDisplayName).filter(Boolean).join(", ");
     }
   }
-  
+
   const withCommas = cleanStr.replace(/,\s+and\s+/gi, ", ").replace(/\s+and\s+/gi, ", ").trim();
   const parts = withCommas.split(",").map(p => p.trim()).filter(Boolean);
   if (parts.length <= 1) {
@@ -71,7 +71,7 @@ function normalizeAuthorsString(raw) {
       return normalizeAuthorDisplayName(parts[0] + ", " + parts[1]);
     }
   }
-  
+
   // Check if parts are Last, First pairs
   let isPairs = parts.length >= 4 && parts.length % 2 === 0;
   if (isPairs) {
@@ -81,7 +81,7 @@ function normalizeAuthorsString(raw) {
       if (!oddAreInitials) isPairs = false;
     }
   }
-  
+
   if (isPairs) {
     const res = [];
     for (let i = 0; i < parts.length; i += 2) {
@@ -89,7 +89,7 @@ function normalizeAuthorsString(raw) {
     }
     return res.filter(Boolean).join(", ");
   }
-  
+
   return parts.map(normalizeAuthorDisplayName).filter(Boolean).join(", ");
 }
 

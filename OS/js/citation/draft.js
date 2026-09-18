@@ -29,7 +29,7 @@ function checkDraft(fresh) {
   if (!currentTabUrl) return;
   // Clean up any old obsolete global key for youtube
   storRemove("super_draft_https://www.youtube.com/watch");
-  
+
   const key = getDraftKey();
   storGet(key, (res) => {
     const d = res && res[key];
@@ -44,7 +44,7 @@ function checkDraft(fresh) {
     const freshPages = (fresh && fresh.pages) || "";
     const freshDoi = (fresh && fresh.doi) || "";
 
-    const hasDiff = 
+    const hasDiff =
       (d.notes && d.notes.trim() !== freshNotes.trim()) ||
       (d.tag && d.tag.trim() !== freshTag.trim()) ||
       (d.title && d.title.trim() !== freshTitle.trim()) ||

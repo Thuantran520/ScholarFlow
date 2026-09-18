@@ -28,7 +28,7 @@
         "OS/js/content/snip.js",
         "OS/js/content/scroll.js",
         "OS/js/content/citation.js",
-"OS/js/content/security.js",
+        "OS/js/content/security.js",
         "OS/js/content/social.js",
         "OS/js/content/main.js"
       ],
@@ -46,7 +46,8 @@
       ],
       "run_at": "document_idle",
       "all_frames": true
-    },    {
+    },
+    {
       "matches": [
         "<all_urls>"
       ],
@@ -99,10 +100,5 @@
         ]
       }
     }
-  },
-  "optional_host_permissions": [
-    "https://generativelanguage.googleapis.com/*",
-    "https://api.openai.com/*",
-    "https://api.anthropic.com/*"
-  ]
+  }
 }

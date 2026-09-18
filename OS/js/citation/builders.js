@@ -46,7 +46,7 @@ function buildIeeeCitation(meta) {
   const y = extractYear(meta.date) || (meta.date ? meta.date.trim() : "n.d.");
   const dateIeee = meta.date ? formatCitationDate(meta.date, "ieee") : y;
   const dateIeeeMonthYear = citationSettings.dateStyle === "full" ? dateIeee : dateIeee.replace(/\s\d{1,2},/, "");
-  
+
   let prefix = "";
   if (a && a.toLowerCase() !== cleanTitle.toLowerCase()) {
     prefix = `${a}, `;
@@ -710,7 +710,7 @@ function buildChicagoCitation(meta) {
     case "software":
       return `${a ? a + ". " : ""}*${cleanTitle}*. ${meta.pages ? meta.pages.trim() + ". " : ""}${meta.container ? meta.container.trim() + ", " : ""}${y || "n.d."}.${meta.url ? ` ${meta.url}.` : ""}`.trim();
     case "video":
-      return `${a ? a + ". " : ""}"${cleanTitle}." ${meta.container || "YouTube"}, ${dateChicago}, ${meta.url || ""}.`; 
+      return `${a ? a + ". " : ""}"${cleanTitle}." ${meta.container || "YouTube"}, ${dateChicago}, ${meta.url || ""}.`;
     default: {
       let out = `${a ? a + ". " : ""}"${cleanTitle}." `;
       if (meta.container && meta.container.trim() !== cleanTitle) out += `${meta.container.trim()}. `;

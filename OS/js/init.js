@@ -144,7 +144,7 @@ onReady(() => {
     const activeNotes = (document.getElementById("f-notes")?.value || currentMeta.notes || "").trim();
     const notePlain = activeNotes ? formatResearchNote(activeNotes, lang, false) : "";
     const noteHtml = activeNotes ? formatResearchNote(activeNotes, lang, true) : "";
-    
+
     let htmlCite = formattedCite
        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
        .replace(/\*([^\*]+)\*/g, "<i>$1</i>");
@@ -329,14 +329,14 @@ onReady(() => {
     try {
       const cookiesApi = (typeof browser !== "undefined" && browser.cookies) ? browser.cookies : (typeof chrome !== "undefined" ? chrome.cookies : null);
       if (!cookiesApi) return showToast("toast_cookie_export_no_api", "error");
-      
+
       const cookies = await cookiesApi.getAll({ url: currentTabUrl });
       if (!cookies || cookies.length === 0) return showToast("toast_cookie_export_empty", "warning");
-      
+
       const rawString = cookies.map(c => `${c.name}=${c.value}`).join("; ");
       const textarea = document.getElementById("cookie-raw-text");
       if (textarea) textarea.value = rawString;
-      
+
       await navigator.clipboard.writeText(rawString);
       showToast("toast_cookie_str_copied", "success", [cookies.length]);
     } catch (e) {
@@ -349,17 +349,17 @@ document.getElementById("btn-import-raw-cookie")?.addEventListener("click", asyn
     if (!currentTabUrl) return showToast("toast_cookie_export_no_url", "warning");
     const rawString = document.getElementById("cookie-raw-text")?.value.trim();
     if (!rawString) return showToast("toast_cookie_paste_needed", "warning");
-    
+
     try {
       const cookiesApi = (typeof browser !== "undefined" && browser.cookies) ? browser.cookies : (typeof chrome !== "undefined" ? chrome.cookies : null);
       if (!cookiesApi) return showToast("toast_cookie_export_no_api", "error");
-      
+
       const pairs = rawString.split(";").map(s => s.trim()).filter(s => s.length > 0);
       let successCount = 0;
       const urlObj = new URL(currentTabUrl);
       const domain = urlObj.hostname;
       const urlStr = urlObj.origin + "/";
-      
+
       const setPromises = pairs.map(async (pair) => {
         const idx = pair.indexOf("=");
         if (idx < 0) return false;
@@ -393,7 +393,7 @@ document.getElementById("btn-import-raw-cookie")?.addEventListener("click", asyn
   // -----------------------------------------
   // Cookie Manager: Import & Export JSON
   // -----------------------------------------
-  
+
   // Restored RIS Events
   document.getElementById("btn-download-ris")?.addEventListener("click", () => {
     if (!currentMeta.title) return showToast("Chưa có thông tin để xuất RIS!", "warning");
@@ -417,10 +417,10 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
     try {
       const cookiesApi = (typeof browser !== "undefined" && browser.cookies) ? browser.cookies : (typeof chrome !== "undefined" ? chrome.cookies : null);
       if (!cookiesApi) return showToast("toast_cookie_export_no_api", "error");
-      
+
       const cookies = await cookiesApi.getAll({ url: currentTabUrl });
       if (!cookies || cookies.length === 0) return showToast("toast_cookie_export_empty", "warning");
-      
+
       const blob = new Blob([JSON.stringify(cookies, null, 2)], { type: "application/json;charset=utf-8" });
       const u = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -446,21 +446,21 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
       cookieInput.style.display = "none";
       document.body.appendChild(cookieInput);
     }
-    
+
     btnImportCookie.addEventListener("click", () => cookieInput.click());
     cookieInput.addEventListener("change", (e) => {
       const file = e.target.files?.[0];
       if (!file) return;
-      
+
       const reader = new FileReader();
       reader.onload = async (evt) => {
         try {
           const cookiesApi = (typeof browser !== "undefined" && browser.cookies) ? browser.cookies : (typeof chrome !== "undefined" ? chrome.cookies : null);
           if (!cookiesApi) throw new Error("No API");
-          
+
           const cookies = JSON.parse(evt.target.result);
           if (!Array.isArray(cookies)) throw new Error("Invalid format");
-          
+
           let successCount = 0;
           const setPromises = cookies.map(async (c) => {
             let url = "http" + (c.secure ? "s" : "") + "://" + c.domain.replace(/^\./, "") + c.path;
@@ -489,7 +489,7 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
                  setArgs.expirationDate = c.expirationDate;
               }
               if (targetStoreId) setArgs.storeId = targetStoreId;
-              
+
               await cookiesApi.set(setArgs);
               return true;
             } catch (err) {
@@ -500,7 +500,7 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
           const results = await Promise.all(setPromises);
           successCount = results.filter(r => r).length;
           showToast("toast_cookie_import_success", "success", [successCount, cookies.length]);
-          
+
           // Optionally reload the tab to apply cookies
           const tabsApi = (typeof browser !== "undefined" && browser.tabs) ? browser.tabs : (typeof chrome !== "undefined" ? chrome.tabs : null);
           if (tabsApi && currentTabObj?.id) {
@@ -1012,7 +1012,6 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
       showToast("toast_site_data_err", "error");
     }
   });
-
 
 
   // Open Sidebar / Side Panel from Popup
@@ -1575,9 +1574,9 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
   document.getElementById("btn-cancel-countdown")?.addEventListener("click", cancelVideoCountdown);
 
   // Dual-Web Linked Tabs Controls & Shortcut
-  
+
   // Restored Prompter Events
-  
+
   // Restored Script Text Event
   let videoScriptTimer = null;
   document.getElementById("video-script-text")?.addEventListener("input", () => {
@@ -1755,7 +1754,7 @@ document.getElementById("btn-quick-swap-tabs")?.addEventListener("click", swapDu
                if (data.URL) currentMeta.url = data.URL;
                currentMeta.sourceType = "academic";
              }
-             
+
              // OpenAlex for cited_by_count
              const oaRes = await fetch(`https://api.openalex.org/works/https://doi.org/` + encodeURIComponent(doiClean));
              if (oaRes.ok) {
@@ -1768,7 +1767,7 @@ document.getElementById("btn-quick-swap-tabs")?.addEventListener("click", swapDu
              console.warn("Auto DOI/OpenAlex fetch failed:", e);
            }
         }
-        
+
         // Also Auto-fetch for arXiv URL
         const potentialArxiv = (currentTabUrl.match(/arxiv\.org\/(?:pdf|abs)\/(\d{4}\.\d{4,5}(?:v\d+)?)/i) || [])[1] || "";
         if (potentialArxiv) {
@@ -1797,7 +1796,7 @@ document.getElementById("btn-quick-swap-tabs")?.addEventListener("click", swapDu
              console.warn("Auto arXiv fetch failed:", e);
            }
         }
-        
+
         // Preserve existing user notes and tags
         const userNotes = document.getElementById("f-notes")?.value || currentMeta.notes;
         if (userNotes) currentMeta.notes = userNotes;
@@ -2170,7 +2169,7 @@ document.getElementById("btn-quick-swap-tabs")?.addEventListener("click", swapDu
     }
   });
 
-  
+
   const verEl = document.getElementById("app-version-display");
   if (verEl && typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.getManifest) {
     const m = chrome.runtime.getManifest();
@@ -2202,7 +2201,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       saveDraft();
     }
     showToast("✅ Đã chèn trích đoạn vào mục Ghi chú!");
-    
+
     // Switch to tab 1
     const tCite = document.querySelector('[data-target="tab-cite"]');
     if (tCite) tCite.click();
@@ -2252,7 +2251,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       } else {
         navScrollLeft.classList.add("is-hidden");
       }
-      
+
       if (navWrapper.scrollLeft < navWrapper.scrollWidth - navWrapper.clientWidth - 4) {
         navScrollRight.classList.remove("is-hidden");
       } else {
