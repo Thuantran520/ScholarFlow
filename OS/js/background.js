@@ -3,7 +3,8 @@
 
 // Enable native Side Panel on action click for Chromium browsers (Chrome 114+, Edge 114+)
 try {
-  if (typeof chrome !== "undefined" && chrome) {
+  const isEdge = navigator.userAgent.toLowerCase().includes("edg/");
+  if (!isEdge && typeof chrome !== "undefined" && chrome) {
     const sp = chrome["sidePanel"];
     if (sp && typeof sp.setPanelBehavior === "function") {
       sp.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
