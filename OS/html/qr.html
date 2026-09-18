@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>ScholarFlow - Apple Clip & QR Generator</title>
+  <link rel="stylesheet" href="../css/base/variables.css">
+  <link rel="stylesheet" href="../css/base/base.css">
+  <link rel="stylesheet" href="../css/components/buttons.css">
+  <link rel="stylesheet" href="../css/components/cards.css">
+  <link rel="stylesheet" href="../css/tabs/qr.css">
+  <style>
+    body {
+      background: #090d16;
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      box-sizing: border-box;
+    }
+    .standalone-container {
+      width: 100%;
+      max-width: 440px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="standalone-container">
+    <div class="qr-header-card">
+      <div class="qr-header-left">
+        <div class="qr-logo-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <circle cx="12" cy="12" r="6"></circle>
+            <circle cx="12" cy="12" r="2"></circle>
+          </svg>
+        </div>
+        <div class="qr-title-group">
+          <h3>ScholarFlow Apple Clip &amp; QR</h3>
+          <div class="qr-subtitle">Tạo mã Vòng cây (Apple Clip) &amp; QR Code tức thì (100% Offline)</div>
+        </div>
+      </div>
+      <button id="btn-qr-clear" class="flow-action-btn danger-hover" title="Xóa nội dung">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+      </button>
+    </div>
+
+    <div class="qr-card">
+      <div class="qr-label-row">
+        <span>Đường link (URL) hoặc nội dung:</span>
+        <span id="qr-char-count" style="font-size: 11px; color: #94a3b8;">0 ký tự</span>
+      </div>
+      <textarea id="qr-input" class="qr-input-field" rows="2" placeholder="Dán liên kết (https://...) hoặc nhập văn bản..."></textarea>
+    </div>
+
+    <!-- Options Card -->
+    <div class="qr-card qr-controls-card">
+      <!-- Mode Picker -->
+      <div class="qr-control-group">
+        <div class="qr-segmented-picker" id="qr-mode-picker">
+          <button type="button" class="qr-seg-btn active" data-mode="artistic">QR Nghệ Thuật ✨</button>
+          <button type="button" class="qr-seg-btn" data-mode="tree">Vòng Cây 🌿</button>
+          <button type="button" class="qr-seg-btn" data-mode="standard">QR Chuẩn</button>
+          <button type="button" class="qr-seg-btn" data-mode="moji">Moji 😊</button>
+          <button type="button" class="qr-seg-btn" data-mode="dot">Điểm Nguyên Trái</button>
+          <button type="button" class="qr-seg-btn" data-mode="rounded">Vuông Bo</button>
+          <button type="button" class="qr-seg-btn" data-mode="color">Màu Sắc</button>
+          <button type="button" class="qr-seg-btn" data-mode="geometric">Hình Học</button>
+        </div>
+      </div>
+
+      <!-- Theme & Icon -->
+      <div class="qr-options-row">
+        <div class="qr-opt-cell">
+          <select id="qr-theme-select" class="qr-select">
+            <option value="apple">Đen Trắng</option>
+            <option value="nature">Gỗ Xanh 🍃</option>
+            <option value="gold">Hoàng Kim ✨</option>
+          </select>
+        </div>
+        <div class="qr-opt-cell" id="qr-icon-selector-wrap">
+          <input type="text" id="qr-custom-icon-input" class="qr-custom-icon-input" maxlength="4" placeholder="Icon / Emoji (⭐, 🌿...)" value="">
+        </div>
+      </div>
+
+      <!-- Image Customization: Center Logo & Background Image (Photo QR) -->
+      <div class="qr-uploads-row" id="qr-logo-row">
+        <!-- Logo in Center -->
+        <div class="qr-upload-item">
+          <label class="qr-upload-btn" for="qr-logo-input">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            Tải ảnh làm logo
+          </label>
+          <input type="file" id="qr-logo-input" accept="image/*" style="display:none">
+          <img id="qr-logo-preview" class="qr-thumb-preview" src="" alt="logo">
+          <button type="button" id="qr-logo-remove" class="qr-thumb-remove-btn" title="Xóa logo">✕</button>
+        </div>
+
+        <!-- Photo QR Background Image -->
+        <div class="qr-upload-item">
+          <label class="qr-upload-btn" for="qr-bg-input">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            Ảnh nền mã QR 🖼️
+          </label>
+          <input type="file" id="qr-bg-input" accept="image/*" style="display:none">
+          <img id="qr-bg-preview" class="qr-thumb-preview" src="" alt="bg">
+          <button type="button" id="qr-bg-remove" class="qr-thumb-remove-btn" title="Xóa nền">✕</button>
+        </div>
+      </div>
+
+      <!-- Tilt hint -->
+      <div class="qr-toggle-row">
+        <span style="font-size:11px; color:#64748b;">Rê chuột để nghiêng 3D</span>
+      </div>
+    </div>
+
+    <!-- Scannable Badge -->
+    <div class="qr-scan-badge" id="qr-scan-badge">✅ 100% Quét được bằng Camera, Zalo, Google Lens</div>
+
+    <!-- 3D Preview Stage -->
+    <div class="qr-preview-stage" id="qr-3d-stage">
+      <div class="qr-canvas-card" id="qr-3d-card">
+        <div class="qr-canvas-inner">
+          <canvas id="qr-canvas" width="240" height="240"></canvas>
+        </div>
+        <div class="qr-card-glare" id="qr-card-glare"></div>
+      </div>
+    </div>
+
+    <div class="qr-actions-row">
+      <button id="btn-qr-download" class="qr-btn-primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        <span>Tải ảnh PNG</span>
+      </button>
+      <button id="btn-qr-copy-img" class="qr-btn-secondary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        <span>Chép ảnh</span>
+      </button>
+      <button id="btn-qr-copy-text" class="qr-btn-secondary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="10" y1="14" x2="21" y2="3"></line><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>
+        <span>Chép link</span>
+      </button>
+    </div>
+  </div>
+
+  <script src="../js/libs/qrious.min.js"></script>
+  <script src="../js/tabs/qr.js"></script>
+</body>
+</html>

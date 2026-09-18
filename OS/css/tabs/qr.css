@@ -1,0 +1,474 @@
+/* ==========================================================================
+   QR CODE & APPLE CLIP / TREE RINGS GENERATOR — STYLES
+   ========================================================================== */
+
+.qr-tab {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.qr-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 10px;
+  font-size: 13px;
+  overflow-y: auto;
+  padding-bottom: 16px;
+  padding-right: 2px;
+}
+
+/* Header */
+.qr-header-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.75), rgba(15, 23, 42, 0.85));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  backdrop-filter: blur(12px);
+}
+
+.qr-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.qr-logo-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+}
+
+.qr-title-group h3 {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #f8fafc;
+  margin: 0;
+  letter-spacing: -0.2px;
+}
+
+.qr-subtitle {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 1px;
+}
+
+/* Cards */
+.qr-card {
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  backdrop-filter: blur(10px);
+}
+
+.qr-card:focus-within {
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.qr-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.qr-input-field {
+  width: 100%;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: #f8fafc;
+  padding: 8px 11px;
+  font-size: 12px;
+  outline: none;
+  resize: vertical;
+  min-height: 52px;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  line-height: 1.4;
+  box-sizing: border-box;
+}
+
+.qr-input-field:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
+  background: rgba(15, 23, 42, 0.95);
+}
+
+/* Apple Segmented Control */
+.qr-controls-card {
+  gap: 10px;
+  padding: 10px 14px;
+}
+
+.qr-segmented-picker {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.qr-seg-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  padding: 6px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  text-align: center;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.3;
+}
+
+.qr-seg-btn:hover {
+  color: #f1f5f9;
+}
+
+.qr-seg-btn.active {
+  background: #1e293b;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+/* Uploads Row: Center Logo & Photo QR Background */
+.qr-uploads-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+}
+
+.qr-upload-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 4px 6px;
+  min-width: 0;
+}
+
+.qr-upload-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 5px 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.qr-upload-btn:hover {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #34d399;
+}
+
+.qr-thumb-preview {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  object-fit: cover;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  display: none;
+  flex-shrink: 0;
+}
+
+.qr-thumb-preview.visible {
+  display: block;
+}
+
+.qr-thumb-remove-btn {
+  background: transparent;
+  border: none;
+  color: #ef4444;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 5px;
+  border-radius: 4px;
+  transition: background 0.15s;
+  display: none;
+  flex-shrink: 0;
+}
+
+.qr-thumb-remove-btn.visible {
+  display: block;
+}
+
+.qr-thumb-remove-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+/* Options Row */
+.qr-options-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.qr-select {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f8fafc;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  outline: none;
+  cursor: pointer;
+  flex: 1;
+  transition: border-color 0.2s;
+}
+
+.qr-select:focus {
+  border-color: #10b981;
+}
+
+.qr-custom-icon-input {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f8fafc;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  outline: none;
+  width: 100%;
+  text-align: center;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.qr-custom-icon-input:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+
+/* Animation & Tilt Row */
+.qr-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #94a3b8;
+  padding-top: 2px;
+}
+
+.qr-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  color: #cbd5e1;
+  user-select: none;
+}
+
+.qr-checkbox-label input {
+  display: none;
+}
+
+.qr-checkbox-custom {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid #64748b;
+  border-radius: 4px;
+  display: inline-block;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.qr-checkbox-label input:checked + .qr-checkbox-custom {
+  background: #10b981;
+  border-color: #10b981;
+}
+
+.qr-checkbox-label input:checked + .qr-checkbox-custom::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 3.5px;
+  height: 7px;
+  border: solid white;
+  border-width: 0 1.8px 1.8px 0;
+  transform: rotate(45deg);
+}
+
+.qr-tilt-hint {
+  font-size: 10.5px;
+  color: #64748b;
+  font-style: italic;
+}
+
+/* Scannable Status Badge */
+.qr-scan-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #34d399;
+  text-align: center;
+  transition: all 0.25s ease;
+  margin: 2px auto 0;
+  max-width: 90%;
+}
+
+.qr-scan-badge.qr-badge-clip {
+  background: rgba(148, 163, 184, 0.1);
+  border-color: rgba(148, 163, 184, 0.2);
+  color: #94a3b8;
+}
+
+/* 3D Tilt Preview Stage */
+.qr-preview-stage {
+  perspective: 900px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.qr-canvas-card {
+  position: relative;
+  background: radial-gradient(circle at 50% 30%, #151d2c 0%, #090e18 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 22px;
+  padding: 16px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.55), 0 0 25px rgba(16, 185, 129, 0.08);
+  transform-style: preserve-3d;
+  transition: transform 0.12s ease-out, box-shadow 0.25s ease;
+  cursor: grab;
+  user-select: none;
+}
+
+.qr-canvas-card:hover {
+  box-shadow: 0 22px 48px rgba(0, 0, 0, 0.7), 0 0 32px rgba(16, 185, 129, 0.22);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.qr-canvas-inner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+#qr-canvas {
+  display: block;
+  border-radius: 14px;
+  max-width: 100%;
+}
+
+/* 3D Card Specular Glare */
+.qr-card-glare {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 22px;
+  pointer-events: none;
+  background: radial-gradient(circle 140px at 50% 50%, rgba(255, 255, 255, 0.12), transparent 75%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.qr-canvas-card:hover .qr-card-glare {
+  opacity: 1;
+}
+
+/* Action Buttons */
+.qr-actions-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.qr-btn-primary {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  font-weight: 600;
+  font-size: 11.5px;
+  border: none;
+  border-radius: 9px;
+  padding: 8px 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  box-shadow: 0 3px 10px rgba(16, 185, 129, 0.35);
+}
+
+.qr-btn-primary:hover {
+  background: linear-gradient(135deg, #34d399, #10b981);
+  transform: translateY(-1px);
+  box-shadow: 0 5px 15px rgba(16, 185, 129, 0.45);
+}
+
+.qr-btn-secondary {
+  background: rgba(255, 255, 255, 0.06);
+  color: #cbd5e1;
+  font-weight: 500;
+  font-size: 11.5px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9px;
+  padding: 8px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+}
+
+.qr-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #f8fafc;
+  border-color: rgba(255, 255, 255, 0.22);
+}

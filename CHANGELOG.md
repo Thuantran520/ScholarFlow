@@ -52,6 +52,54 @@ Tất cả thay đổi đáng chú ý của dự án đều được ghi tại �
 
 ---
 
+## So sánh nhanh v2.4.2 → v2.5.0
+
+| Hạng mục | v2.4.2 | v2.5.0 |
+|---|---|---|
+| **Tab Flow (P2P)** | — | **Tab mới**: Truyền file P2P mã hóa WebRTC trực tiếp không qua server, đồng bộ tab/link, Voice/Video Call thời gian thực |
+| **Tạo Mã QR & Vòng Cây** | — | **Tab mới**: QR Nghệ Thuật (Apple Squircle 100% quét được), Vòng Cây Apple Clip, Photo QR (biến ảnh thành mã QR), tùy biến Logo & Emoji trung tâm |
+| **Trợ lý AI** | — | **Nâng cấp đột phá**: Gemini Native Google Search grounding chống ảo giác, Consensus Search đối chiếu đa nguồn, Multi-window RAG, ghim trang web |
+| **Bảo vệ Mạng Xã Hội** | — | **Tab Social**: Khiên ẩn typing/đã xem 9 nền tảng, Wizard khôi phục tài khoản bị hack 8 kịch bản, Két sắt mã hóa AES-256-GCM lưu mã 2FA |
+| **Dark Mode Studio** | — | **Tab Dark Mode**: Engine v4 chạy từ `document_start` triệt tiêu chớp sáng, tối thông minh mọi website, tinh chỉnh độ tương phản & typography |
+| **Bảo vệ & Chống Lừa Đảo** | Cơ bản | **Trust report 12 lớp heuristic** phát hiện giả mạo ngân hàng/ví điện tử, tự động từ chối banner cookie 16+ CMP, audit theo dõi |
+| **Quản lý Tab (Tab Manager)** | — | Thống kê tab mở, tìm kiếm & đóng tab tức thì, tự động cập nhật khi đóng tab từ trình duyệt |
+| **Giao diện & Kiến trúc** | Chuẩn | Kiến trúc module hóa (OS/js/tabs/), chế độ cửa sổ nổi độc lập (Pop-out), đồng bộ 100% 5 ngôn ngữ (vi, en, zh, ru, ja) |
+
+---
+
+## [2.5.0] - 2026-09-18
+
+### Tab Flow mới (Đồng bộ & Truyền dữ liệu P2P thời gian thực)
+- **Truyền file P2P trực tiếp (WebRTC/PeerJS)**: Kết nối ngang hàng mã hóa 100% giữa 2 trình duyệt không qua bất kỳ máy chủ trung gian nào (No cloud, 100% riêng tư).
+- **Chunking dữ liệu lớn**: Chia nhỏ file thành các khối 64KB kèm thanh đo tiến trình thời gian thực, truyền ổn định file lớn mượt mà.
+- **Tự tạo phòng & Quét mã QR**: Tạo ID phòng cố định hoặc ngẫu nhiên, tạo mã QR kết nối nhanh tức thì bằng điện thoại hoặc máy tính khác.
+- **Cuộc gọi Audio/Video Call P2P**: Đàm thoại âm thanh và video trực tiếp hai chiều chất lượng cao ngay trong sidebar extension.
+- **Cửa sổ nổi độc lập (Pop-out Mode)**: Mở Flow ra tab riêng (`flow.html`) tránh việc ngắt kết nối cuộc gọi/truyền file khi vô tình đóng sidebar hoặc chuyển tab.
+
+### Tab QR Code mới (Tạo mã QR nghệ thuật & Photo QR)
+- **3 chế độ mã hóa**:
+  - **QR Nghệ Thuật ✨**: Định vị 3 mắt Apple Squircle bo góc mượt mà, chấm dữ liệu dạng hạt botanical hữu cơ, **100% quét được** ngay lập tức bằng mọi ứng dụng (Camera iOS/Android, Zalo, Google Lens).
+  - **Vòng Cây 🌿**: Mã hóa đồng tâm đa tầng lấy cảm hứng từ Apple App Clip Code.
+  - **QR Chuẩn**: Mã QR chuẩn ISO độ tương phản tối đa.
+- **Biến ảnh thành mã QR (Photo QR)**: Tải ảnh bất kỳ (avatar, sản phẩm, phong cảnh...) để làm nền nghệ thuật cho mã QR; tích hợp lớp phủ mờ thông minh và đệm trắng 3 góc định vị giữ vững 100% khả năng quét.
+- **Tùy biến biểu tượng trung tâm**: Hỗ trợ tải ảnh làm Logo thu nhỏ hoặc nhập bất kỳ ký tự/Emoji nào (`🚀`, `⭐`, `❤️`, chữ cái viết tắt...), tự co giãn kích thước font theo độ dài ký tự.
+- **Thiết kế tinh gọn**: Tự động lấp đầy các chấm dữ liệu khi không nhập icon/logo, không bị đục lỗ/vòng tròn trống ở giữa.
+- **3 Theme màu sang trọng**: Đen Trắng, Gỗ Xanh 🍃, Hoàng Kim ✨.
+- **Hiệu ứng 3D Card**: Thẻ QR nghiêng 3D theo chuyển động chuột (perspective tilt + ánh sáng bóng mờ).
+- **Tiện ích xuất**: Tải ảnh PNG chất lượng cao, chép ảnh vào bộ nhớ tạm 1 chạm, chép link, mở tab toàn màn hình độc lập (`qr.html`).
+
+### Nâng cấp Trợ lý AI & Grounding Search
+- **Gemini Native Google Search Grounding**: Tích hợp công cụ tìm kiếm Google gốc trực tiếp vào Gemini, loại bỏ ảo giác thông tin với strict fact rule.
+- **Consensus Search đa nguồn**: Tự động kiểm chứng và trích xuất nguồn URL xác thực, cung cấp gợi ý câu hỏi tiếp theo (follow-up chips).
+- **Multi-window RAG**: Phân đoạn nội dung trang web nhiều tầng, ghi nhớ ngữ cảnh thông minh và hỗ trợ ghim nhiều tab trang web (`pinned-pages strip`).
+- **SSE Streaming**: Phản hồi tức thì dạng dòng gõ chữ thời gian thực, có nút dừng (Stop generating) và tạo lại câu trả lời (Regenerate).
+
+### Hệ thống & Đa ngôn ngữ
+- Đồng bộ hoàn chỉnh **1568+ chuỗi dịch cho cả 5 ngôn ngữ**: Tiếng Việt (`vi`), Tiếng Anh (`en`), Tiếng Trung (`zh`), Tiếng Nga (`ru`), Tiếng Nhật (`ja`).
+- Vượt qua 100% bộ kiểm thử tự động (6/6 suites passed) và 41 bước kiểm tra nghiêm ngặt của Chrome Web Store & Firefox Add-on Store.
+
+---
+
 ## [2.4.5] - 2026-09-17
 
 ### Bảo vệ mạng xã hội (tab Social mới)

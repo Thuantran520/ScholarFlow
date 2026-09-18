@@ -34,6 +34,8 @@ const ALLOWED_HOSTS = new Set([
   "html.duckduckgo.com",
   "vi.wikipedia.org",
   "peerjs.com",
+  "drive.google.com",
+  "docs.google.com",
   "github.com",
   "opencollective.com",
   "0.peerjs.com",

@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="../css/tabs/cite.css">
   <link rel="stylesheet" href="../css/tabs/ai.css">
   <link rel="stylesheet" href="../css/tabs/flow.css">
+  <link rel="stylesheet" href="../css/tabs/qr.css">
   <link rel="stylesheet" href="../css/tabs/redact.css">
   <link rel="stylesheet" href="../css/tabs/capture.css">
   <link rel="stylesheet" href="../css/tabs/cookie.css">
@@ -166,6 +167,11 @@
         <span class="nav-icon" id="icon-tab-dm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></span>
 <span class="nav-label" data-i18n="nav_dm">Dark</span>
       </button>
+      <button class="main-nav-btn" data-target="tab-qr" title="Tạo mã QR từ liên kết hoặc văn bản" data-i18n-title="tip_tab_qr">
+        <span class="nav-icon" id="icon-tab-qr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg></span>
+        <span class="nav-label" data-i18n="nav_qr">QR</span>
+      </button>
+
 </div>
     <button id="nav-scroll-right" class="nav-scroll-arrow" title="Cuộn phải" data-i18n-title="tip_scroll_right">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
@@ -729,104 +735,147 @@
   
 
   <div id="tab-flow" class="tab-section flow-tab">
-    <div class="flow-wrapper">
-      <!-- Connection UI -->
-      <div id="flow-connect-ui" class="flow-connect-ui">
-        <div class="flow-header" style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-            <div style="display:flex; align-items:center; gap:8px;">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-              <div class="flow-title" data-i18n="flow_title">WebRTC Flow P2P</div>
+                <div class="flow-wrapper">
+        <!-- Header Card -->
+        <div class="flow-header-card">
+          <div class="flow-header-left">
+            <div class="flow-logo-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="18" cy="5" r="3"></circle>
+                <circle cx="6" cy="12" r="3"></circle>
+                <circle cx="18" cy="19" r="3"></circle>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+              </svg>
             </div>
-            <button id="btn-flow-popout" class="icon-btn" title="Mở rộng ra tab mới" data-i18n-title="flow_popout">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+            <div class="flow-title-group">
+              <h3>
+                <span>Scholar Flow</span>
+                <span class="flow-status-dot" title="Sẵn sàng kết nối"></span>
+              </h3>
+              <div class="flow-subtitle">P2P Mesh Network & Cloud Hub</div>
+            </div>
+          </div>
+          <div class="flow-header-actions">
+            <button id="btn-flow-export" class="flow-action-btn" title="Xuất lịch sử" data-i18n-title="flow_export">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            </button>
+            <button id="btn-flow-clear" class="flow-action-btn danger-hover" title="Xóa lịch sử" data-i18n-title="flow_clear">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
+            <button id="btn-flow-popout" class="flow-action-btn" title="Mở rộng ra tab mới" data-i18n-title="flow_popout">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
             </button>
           </div>
-        </div>
-        
-        <div class="flow-my-id-box">
-          <span data-i18n="flow_my_id">Mã của tôi:</span>
-          <strong id="flow-my-id" class="selectable-id">Đang khởi tạo...</strong>
-          <button id="btn-flow-copy" class="icon-btn" title="Copy ID" data-i18n-title="tip_copy">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-            </button>
-            <button id="btn-flow-refresh" class="icon-btn" title="New ID" data-i18n-title="flow_refresh_id">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
-            </button>
         </div>
 
-        <div class="flow-connect-box">
-          <label data-i18n="flow_partner_id">Mã thiết bị kết nối:</label>
-          <div style="display:flex; gap: 8px; margin-top:4px;">
-            <input type="text" id="flow-partner-input" class="modern-input" style="flex:1" placeholder="Nhập ID máy kia...">
-            <button id="btn-flow-connect" class="modern-btn primary" data-i18n="flow_connect">Kết nối</button>
+        <!-- Idle State (Setup & Connect) -->
+        <div id="flow-idle-ui" class="flow-idle-container">
+          <!-- Identity Card -->
+          <div class="flow-card">
+            <div class="flow-card-header">
+              <span class="flow-card-icon">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+              </span>
+              <span data-i18n="flow_display_name">Tên hiển thị & Định danh:</span>
+            </div>
+            <input type="text" id="flow-name-input" class="flow-text-field" placeholder="Tên của bạn..." data-i18n-placeholder="flow_name_placeholder">
+            
+            <div class="flow-id-badge-wrap">
+              <span style="font-size: 11px; color: #94a3b8;" data-i18n="flow_my_id">Mã của tôi:</span>
+              <strong id="flow-my-id" class="flow-my-id-text">Đang khởi tạo...</strong>
+              <button id="btn-flow-copy" class="flow-copy-btn" title="Copy ID" data-i18n-title="tip_copy">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                <span>Copy</span>
+              </button>
+              <button id="btn-flow-refresh" class="flow-refresh-btn" title="Làm mới ID" data-i18n-title="flow_refresh_id">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+              </button>
+            </div>
           </div>
+
+          <!-- Connect Card -->
+          <div class="flow-card">
+            <div class="flow-card-header">
+              <span class="flow-card-icon">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+              </span>
+              <span data-i18n="flow_partner_id">Kết nối thiết bị bạn bè:</span>
+            </div>
+            <div class="flow-input-group">
+              <input type="text" id="flow-partner-input" class="flow-text-field" placeholder="Nhập ID máy bên kia...">
+              <button id="btn-flow-connect" class="flow-btn-primary" data-i18n="flow_connect">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                <span>Kết nối</span>
+              </button>
+            </div>
+            <div class="flow-hint-text">Nhập Peer ID của bạn bè để gửi yêu cầu tham gia trò chuyện trực tiếp P2P.</div>
+          </div>
+
+          <!-- Cloud Drive Card -->
+          <div class="flow-card">
+            <div class="flow-card-header">
+              <span class="flow-card-icon" style="color: #60a5fa;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>
+              </span>
+              <span data-i18n="flow_drive_link">Thư mục Google Drive chung:</span>
+            </div>
+            <div class="flow-input-group">
+              <input type="text" id="flow-drive-input" class="flow-text-field" placeholder="drive.google.com/..." data-i18n-placeholder="flow_drive_placeholder">
+              <button id="btn-flow-set-drive" class="flow-btn-secondary" data-i18n="flow_set_drive">Ghim</button>
+            </div>
+            <div class="flow-hint-text">Ghim link thư mục Google Drive để các thành viên tự tải & chia sẻ các tệp tin dung lượng lớn mà không lo nghẽn mạng.</div>
+          </div>
+        </div>
+
+        <!-- Chat UI (Hidden until connected) -->
+        <div id="flow-chat-ui" class="flow-chat-container" style="display:none;">
+          <div class="flow-chat-topbar">
+            <div class="flow-chat-peer-info">
+              <div class="flow-peer-avatar">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+              </div>
+              <div>
+                <div style="font-size: 10px; color: #94a3b8;" data-i18n="flow_connected_to">Đang kết nối với:</div>
+                <div id="flow-remote-id" class="flow-peer-name">...</div>
+              </div>
+            </div>
+            <button id="btn-flow-disconnect" class="flow-disconnect-btn" data-i18n="flow_disconnect">Ngắt kết nối</button>
+          </div>
+
+          <!-- Pinned Drive Link Banner -->
+          <div id="flow-pinned-drive" class="flow-pinned-banner" style="display:none;">
+            <a id="flow-pinned-drive-link" class="flow-pinned-link" href="#" target="_blank">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+              <span>Thư mục chung</span>
+            </a>
+          </div>
+
+          <!-- Messages Area -->
+          <div id="flow-messages" class="flow-messages-area"></div>
+
+          <!-- Bottom Bar (Input & Attach) -->
+          <div class="flow-bottom-bar">
+            <div id="flow-file-preview" style="display:none;">
+              <div class="flow-file-tag">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
+                <span id="flow-file-name">filename.ext</span>
+                <span id="flow-file-clear" class="flow-file-tag-close" title="Hủy bỏ">✖</span>
+              </div>
+            </div>
+            <div class="flow-input-row">
+              <label class="flow-icon-action" title="Đính kèm file" data-i18n-title="tip_attach">
+                <input type="file" id="flow-file-input" style="display:none;" multiple>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+              </label>
+              <textarea id="flow-text-input" class="flow-msg-input" rows="1" placeholder="Nhập tin nhắn..." data-i18n-placeholder="flow_msg_placeholder"></textarea>
+              <button id="btn-flow-send" class="flow-send-btn" title="Gửi tin nhắn">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+              </button>
+      </div>
+      </div>
         </div>
       </div>
-
-      <!-- Chat UI (Hidden until connected) -->
-      <div id="flow-chat-ui" class="flow-chat-ui" style="display:none;">
-        <div class="flow-chat-header">
-            <div><span data-i18n="flow_connected_to">Dang ket noi voi:</span> <strong id="flow-remote-id">...</strong></div>
-            <div style="display:flex; gap:6px;">
-              <button id="btn-flow-call-audio" class="icon-btn" title="Audio Call" data-i18n-title="flow_call_audio">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-              </button>
-              <button id="btn-flow-call-video" class="icon-btn" title="Video Call" data-i18n-title="flow_call_video">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
-              </button>
-              <button id="btn-flow-disconnect" class="modern-btn small danger" data-i18n="flow_disconnect">Ngat</button>
-            </div>
-          </div>
-        
-        
-          <!-- Call UI (Audio/Video) -->
-          <div id="flow-call-ui" class="flow-call-ui" style="display:none;">
-            <video id="flow-remote-video" autoplay playsinline style="width:100%; max-height:200px; background:#000; border-radius:6px; margin-bottom:8px;"></video>
-            <div style="display:flex; justify-content:center; gap:12px; margin-bottom:12px;">
-              <button id="btn-flow-mute" class="icon-btn call-action" data-i18n-title="flow_mute">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-              </button>
-              <button id="btn-flow-video-toggle" class="icon-btn call-action" data-i18n-title="flow_video_off">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
-              </button>
-              <button id="btn-flow-end-call" class="icon-btn call-action danger-call" data-i18n-title="flow_end_call" style="background:#ef4444; color:white; border-radius:50%; width:40px; height:40px; display:flex; align-items:center; justify-content:center; border:none; cursor:pointer;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"></path><line x1="23" y1="1" x2="1" y2="23"></line></svg>
-              </button>
-            </div>
-          </div>
-          
-          <div id="flow-messages" class="flow-messages">
-          <!-- Messages go here -->
-        </div>
-
-        <div class="flow-input-area">
-          <div id="flow-file-preview" class="flow-file-preview" style="display:none;">
-             <span id="flow-file-name">filename.ext</span>
-             <span class="clear-file" id="flow-file-clear">✕</span>
-          </div>
-          <div style="display:flex; gap: 6px; align-items:center;">
-            <label class="flow-attach-btn" title="Đính kèm file" data-i18n-title="tip_attach">
-              <input type="file" id="flow-file-input" style="display:none;" multiple>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
-            </label>
-            <textarea id="flow-text-input" class="modern-input" rows="1" style="flex:1" placeholder="Nhập tin nhắn..." data-i18n-placeholder="flow_msg_placeholder"></textarea>
-            <button id="btn-flow-send" class="modern-btn primary" style="padding:6px 10px;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Accept/Reject Modal -->
-      <div id="flow-incoming-modal" class="flow-modal" style="display:none;">
-        <div class="flow-modal-content">
-          <h4 data-i18n="flow_incoming_req">Yêu cầu kết nối</h4>
-          <p><strong id="flow-incoming-id"></strong> <span data-i18n="flow_wants_connect">muốn kết nối.</span></p>
-          <div style="display:flex; gap: 8px; justify-content: flex-end; margin-top:16px;">
-            <button id="btn-flow-reject" class="modern-btn" data-i18n="flow_reject">Từ chối</button>
-            <button id="btn-flow-accept" class="modern-btn primary" data-i18n="flow_accept">Chấp nhận</button>
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -2666,10 +2715,140 @@
     </div>
   </div>
 
+  <!-- QR & Tree Ring Generator Tab -->
+  <div id="tab-qr" class="tab-section qr-tab">
+    <div class="qr-wrapper">
+      <!-- Header Card -->
+      <div class="qr-header-card">
+        <div class="qr-header-left">
+          <div class="qr-logo-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <circle cx="12" cy="12" r="6"></circle>
+              <circle cx="12" cy="12" r="2"></circle>
+            </svg>
+          </div>
+          <div class="qr-title-group">
+            <h3 data-i18n="qr_heading">Tạo Mã QR &amp; Vòng Cây</h3>
+            <div class="qr-subtitle" data-i18n="qr_subheading">Chuyển đổi liên kết &amp; văn bản thành mã Apple Clip / QR tức thì</div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 4px;">
+          <button id="btn-qr-clear" class="flow-action-btn danger-hover" title="Xóa nội dung" data-i18n-title="qr_btn_clear">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          </button>
+          <button id="btn-qr-popout" class="flow-action-btn" title="Mở rộng ra tab mới" data-i18n-title="flow_popout">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Input Card -->
+      <div class="qr-card">
+        <div class="qr-label-row">
+          <span data-i18n="qr_input_label">Đường link (URL) hoặc nội dung:</span>
+          <span id="qr-char-count" style="font-size: 11px; color: #94a3b8;">0 ký tự</span>
+        </div>
+        <textarea id="qr-input" class="qr-input-field" rows="2" placeholder="Dán liên kết (https://...) hoặc nhập văn bản..." data-i18n-placeholder="qr_placeholder"></textarea>
+        <div style="display: flex; justify-content: flex-end;">
+          <button id="btn-qr-current-url" class="qr-btn-secondary" title="Lấy liên kết trang web đang mở" data-i18n-title="qr_btn_current_page">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+            <span data-i18n="qr_btn_current_page">Lấy link trang hiện tại</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Options Card (Apple Style Controls) -->
+      <div class="qr-card qr-controls-card">
+        <!-- Mode Picker: Artistic / Tree / Standard -->
+        <div class="qr-control-group">
+          <div class="qr-segmented-picker" id="qr-mode-picker">
+            <button type="button" class="qr-seg-btn active" data-mode="artistic" data-i18n="qr_mode_artistic">QR Nghệ Thuật ✨</button>
+            <button type="button" class="qr-seg-btn" data-mode="tree" data-i18n="qr_mode_tree">Vòng Cây 🌿</button>
+            <button type="button" class="qr-seg-btn" data-mode="standard" data-i18n="qr_mode_standard">QR Chuẩn</button>
+          </div>
+        </div>
+
+        <!-- Theme Picker & Center Icon -->
+        <div class="qr-options-row">
+          <div class="qr-opt-cell">
+            <select id="qr-theme-select" class="qr-select">
+              <option value="apple" data-i18n="qr_theme_apple">Đen Trắng</option>
+              <option value="nature" data-i18n="qr_theme_nature">Gỗ Xanh 🍃</option>
+              <option value="gold" data-i18n="qr_theme_gold">Hoàng Kim ✨</option>
+            </select>
+          </div>
+          <div class="qr-opt-cell" id="qr-icon-selector-wrap">
+            <input type="text" id="qr-custom-icon-input" class="qr-custom-icon-input" maxlength="4" placeholder="Icon / Emoji (⭐, 🌿...)" data-i18n-placeholder="qr_icon_placeholder" value="">
+          </div>
+        </div>
+
+        <!-- Image Customization: Center Logo & Background Image (Photo QR) -->
+        <div class="qr-uploads-row" id="qr-logo-row">
+          <!-- Logo in Center -->
+          <div class="qr-upload-item">
+            <label class="qr-upload-btn" for="qr-logo-input" data-i18n="qr_upload_logo">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              Tải ảnh làm logo
+            </label>
+            <input type="file" id="qr-logo-input" accept="image/*" style="display:none">
+            <img id="qr-logo-preview" class="qr-thumb-preview" src="" alt="logo">
+            <button type="button" id="qr-logo-remove" class="qr-thumb-remove-btn" data-i18n="qr_remove_logo" title="Xóa logo">✕</button>
+          </div>
+
+          <!-- Photo QR Background Image -->
+          <div class="qr-upload-item">
+            <label class="qr-upload-btn" for="qr-bg-input" data-i18n="qr_bg_image">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              Ảnh nền mã QR 🖼️
+            </label>
+            <input type="file" id="qr-bg-input" accept="image/*" style="display:none">
+            <img id="qr-bg-preview" class="qr-thumb-preview" src="" alt="bg">
+            <button type="button" id="qr-bg-remove" class="qr-thumb-remove-btn" data-i18n="qr_remove_bg" title="Xóa nền">✕</button>
+          </div>
+        </div>
+
+        <!-- Tilt hint only -->
+        <div class="qr-toggle-row">
+          <span style="font-size:11px; color:#64748b;" data-i18n="qr_tilt_tip">Rê chuột để nghiêng 3D</span>
+        </div>
+      </div>
+
+      <!-- Scannable Badge -->
+      <div class="qr-scan-badge" id="qr-scan-badge" data-i18n="qr_scannable_badge">✅ 100% Quét được bằng Camera, Zalo, Google Lens</div>
+
+      <!-- 3D Preview Stage -->
+      <div class="qr-preview-stage" id="qr-3d-stage">
+        <div class="qr-canvas-card" id="qr-3d-card">
+          <div class="qr-canvas-inner">
+            <canvas id="qr-canvas" width="240" height="240"></canvas>
+          </div>
+          <div class="qr-card-glare" id="qr-card-glare"></div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="qr-actions-row">
+        <button id="btn-qr-download" class="qr-btn-primary" data-i18n="qr_btn_download">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          <span data-i18n="qr_btn_download">Tải ảnh PNG</span>
+        </button>
+        <button id="btn-qr-copy-img" class="qr-btn-secondary" data-i18n="qr_btn_copy_img">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+          <span data-i18n="qr_btn_copy_img">Chép ảnh</span>
+        </button>
+        <button id="btn-qr-copy-text" class="qr-btn-secondary" data-i18n="qr_btn_copy_text">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="10" y1="14" x2="21" y2="3"></line><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>
+          <span data-i18n="qr_btn_copy_text">Chép link</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div class="footer-trust-bar">
     <div class="trust-pill" title="Phiên bản hiện tại" data-i18n-title="tip_trust_version">
       <span class="trust-dot dot-green"></span>
-      <span id="app-version-display">v2.4.5_beta</span>
+      <span id="app-version-display">v2.5.0</span>
     </div>
     <div class="trust-divider">•</div>
     <div class="trust-pill" title="Được phát triển bởi Minh Thuận" data-i18n-title="tip_trust_author">
@@ -2723,7 +2902,9 @@
   <script src="../js/tabs/social-creator.js"></script>
   <script src="../js/tabs/darkmode.js"></script>
   <script src="../js/libs/peer.min.js"></script>
+  <script src="../js/libs/qrious.min.js"></script>
   <script src="../js/tabs/flow.js"></script>
+  <script src="../js/tabs/qr.js"></script>
   <script src="../js/debug.js"></script>
 </body>
 </html>
