@@ -76,6 +76,19 @@ async function main() {
     return;
   }
 
+  console.log("Gambling shield wiring:");
+  for (const [name, m] of [["ffRoot", ffRoot], ["ffShip", ffShip], ["chrome", chrome]]) {
+    check((m.permissions || []).includes("declarativeNetRequest"), `${name}: declarativeNetRequest permission declared`);
+    const war = (m.web_accessible_resources || []).flatMap((e) => e.resources || []);
+    check(war.includes("OS/html/gamble-block.html"), `${name}: gamble-block.html is web-accessible (DNR redirect target)`);
+  }
+  check(exists("OS/html/gamble-block.html") && exists("OS/js/gamble-block.js") && exists("OS/css/gamble-block.css"),
+    "gamble block page assets exist (html/js/css)");
+  const bgSrc = fs.readFileSync(path.join(ROOT, "OS/js/background.js"), "utf8");
+  check(bgSrc.includes("GMBL_LIST") && bgSrc.includes("updateDynamicRules") && bgSrc.includes("{{encodingHost}}") &&
+    bgSrc.includes("gamble-block.html"),
+    "background: gambling DNR rules redirect to localized block page");
+
   console.log("Version parity:");
   check([ffRoot, ffShip, chrome].every((m) => m.version === pkg.version),
     `all manifests carry package version ${pkg.version} (pkg=${pkg.version})`);

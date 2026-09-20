@@ -1,0 +1,52 @@
+/* ScholarFlow gambling-block page (redirect target for the gambling shield) */
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(1200px 600px at 50% -10%, #16233a 0%, #0b1220 55%, #070d18 100%);
+  color: #e2e8f0;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+.gbl-card {
+  max-width: 520px;
+  width: calc(100% - 32px);
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  border-radius: 16px;
+  padding: 28px 26px 20px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  text-align: center;
+}
+.gbl-shield { color: #f87171; margin-bottom: 10px; }
+.gbl-card h1 { margin: 0 0 10px; font-size: 21px; letter-spacing: 0.2px; }
+.gbl-msg { font-size: 14px; line-height: 1.65; color: #cbd5e1; margin: 0 0 10px; word-break: break-all; }
+.gbl-tip {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: #94a3b8;
+  background: rgba(245, 158, 11, 0.07);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 10px;
+  padding: 9px 12px;
+  margin: 0 0 16px;
+}
+.gbl-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.gbl-btn {
+  cursor: pointer;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 9px 16px;
+  border: 1px solid transparent;
+  transition: transform 0.06s ease, filter 0.15s ease;
+}
+.gbl-btn:active { transform: translateY(1px); }
+.gbl-btn-primary { background: #2563eb; color: #fff; }
+.gbl-btn-primary:hover { filter: brightness(1.15); }
+.gbl-btn-ghost { background: rgba(148, 163, 184, 0.1); color: #94a3b8; border-color: rgba(148, 163, 184, 0.25); }
+.gbl-btn-ghost:hover { color: #cbd5e1; }
+.gbl-foot { margin: 16px 0 0; font-size: 11.5px; color: #64748b; }

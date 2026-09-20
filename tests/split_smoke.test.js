@@ -995,10 +995,10 @@ async function main() {
     check(!!w.document.querySelector("#tab-ai .ai-chat-top .ai-model-bar .ai-model-select-wrap") && !!w.document.querySelector("#tab-ai .ai-chat-top .ai-top-actions") && !!w.document.querySelector(".ai-pages-context .ai-pages-label"),
       `${htmlFile}: merged chat-top (model-bar with unified model select inside header) + horizontal pages strip markup`);
     check(!!w.document.getElementById("soc-inj-shield") && !!w.document.getElementById("soc-inj-stats") && !!w.document.getElementById("btn-soc-inj-reset") &&
-      !!w.document.getElementById("soc-inj-mode") && !!w.document.getElementById("soc-link-clean") && !!w.document.getElementById("soc-shop-clean") &&
+      !!w.document.getElementById("soc-inj-mode") && !!w.document.getElementById("soc-link-clean") && !!w.document.getElementById("soc-shop-clean") && !!w.document.getElementById("soc-gamble-block") &&
       !w.document.getElementById("soc-fb-typing") && !w.document.getElementById("soc-zalo-typing") &&
       !w.document.getElementById("soc-ig-typing") && !w.document.getElementById("soc-wa-shield") && !w.document.getElementById("soc-tg-shield"),
-      `${htmlFile}: Social Protect card = injection shield + mode select + link cleaner + shop-link remover toggles, no legacy shields`);
+      `${htmlFile}: Social Protect card = injection + mode + link cleaner + shop remover + GAMBLING shield, no legacy shields`);
     check(await w.eval(`typeof _socClearBox === "function" && typeof socSaveSettings === "function" && typeof socSendToActive === "function" && typeof _socSwitchSub === "function" && typeof socFetchHostStats === "function"`),
       `${htmlFile}: social-protection core exposes shared helpers + host stats fetch to feature modules`);
     check(await w.eval(`(function(){ var p=document.querySelector('#tab-social [data-i18n="soc_inj_title"]'); _socSwitchSub('recover'); var ok1=document.getElementById('soc-sub-recover').classList.contains('active'); _socSwitchSub('protect'); var ok2=document.getElementById('soc-sub-protect').classList.contains('active') && !!document.getElementById('soc-inj-shield'); return !!p && ok1 && ok2; })()`),

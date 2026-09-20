@@ -12,7 +12,8 @@
     "cookies",
     "bookmarks",
     "contextMenus",
-    "browsingData"
+    "browsingData",
+    "declarativeNetRequest"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -29,7 +30,8 @@
         "OS/js/content/scroll.js",
         "OS/js/content/citation.js",
         "OS/js/content/security.js",
-        "OS/js/content/social.js", "OS/js/content/lingua.js",
+        "OS/js/content/social.js",
+        "OS/js/content/lingua.js",
         "OS/js/content/main.js"
       ],
       "css": [
@@ -100,5 +102,15 @@
         ]
       }
     }
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "OS/html/gamble-block.html"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
 }

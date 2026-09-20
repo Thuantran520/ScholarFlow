@@ -35,6 +35,10 @@ Tất cả thay đổi đáng chú ý của dự án đều được ghi tại �
 - **Máy chủ tùy biến (Custom/Local AI)**: thêm Ollama, LM Studio, vLLM, OpenRouter với tên/model/key riêng; selector model hợp nhất; Gemini mặc định đời mới.
 - Popup AI nhanh khi bôi đen (Reading Companion): thêm nút tắt/bật tức thì.
 
+- **Lá chắn cờ bạc (mặc định BẬT)**: dùng `declarativeNetRequest` chặn ngay từ tầng mạng ~65 domain cá độ / casino / game bài hướng VN (kubet, 88bet, bong88, w88, iwin, nohu, b52...) + mọi domain chứa `casino`, kể cả iframe quảng cáo cờ bạc nhúng trong trang khác. Không fetch danh sách — tất cả nằm trong máy.
+- Trang chặn **bản địa hóa 5 ngôn ngữ** (`gamble-block.html`): hiện tên miền bị chặn, cảnh báo chiêu lure "kèo sạch/tài xỉu 100%", nút Quay lại và **Bỏ chặn tên miền này** (lưu vào allowlist trong `sf_social_settings`, background dựng lại rule loại trừ).
+- Bật/tắt trong Social → Bảo vệ; lời từ nền tảng mạng xã hội (bấm link từ comment) được chuyển hướng vào trang giải thích thay vì "ERR_BLOCKED".
+
 ### 🌙 Dark Mode Studio — bản "tinh chỉnh an toàn"
 - **Night Reader (tông màu đọc — mặc định AN TOÀN, không vỡ UI)**: hoạt động *trên nền engine invert hiện có* — không đụng bố cục website. Slider **Ấm nóng chữ** (0–100%: chữ trắng → kem sepia như báo giấy), **Nền tối thêm** (0–60%: đen sâu tới mức tối nhất, tự bù sáng cho ảnh), **Màu liên kết** tùy chọn (màu được tính ngược qua filter invert để hiển thị đúng màu bạn chọn).
 - **3 bộ màu dựng sẵn**: 📰 *Sepia tin tức*, ⚫ *AMOLED* (nền đen tuyệt đối), 🌊 *Midnight ocean*.
@@ -58,6 +62,7 @@ Tất cả thay đổi đáng chú ý của dự án đều được ghi tại �
 | **Model tùy biến** | Custom URL đơn lẻ | + Kho máy chủ Ollama/LM Studio/vLLM/OpenRouter (tên + endpoint + model + key), selector hợp nhất |
 | **Minh bạch quyền hạn** | - | + Modal giải trình 5 nhóm permission, hiển thị lần đầu |
 | **Ngoại ngữ** | - | **+ tab Lingua Lab**: sentence mining mọi trang, SRS SM-2 thẻ L2→L2, grammar coach + sổ lỗi phân loại, drill liên từ, TTS nghe |
+| **Chống cờ bạc** | - | **+ lá chắn DNR** chặn ~65 domain cá độ VN + domain chứa casino, trang chặn bản địa 5 ngôn ngữ, bỏ chặn từng tên miền |
 
 ---
 ## So sánh nhanh v2.4.2 → v2.4.4

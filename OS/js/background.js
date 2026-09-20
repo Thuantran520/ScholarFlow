@@ -183,3 +183,144 @@ if (typeof chrome !== "undefined" && chrome.contextMenus) {
     }
   });
 }
+
+// ---------------------------------------------------------------------------
+// Gambling shield: declarativeNetRequest dynamic rules redirect known
+// betting/casino domains (VN bookmaker network) to the local block page
+// OS/html/gamble-block.html. On/off switch + per-host allowlist live in
+// sf_social_settings { gamble, gambleAllow } managed by the Social tab.
+// 100% local: the domain set is curated below; nothing is fetched.
+// ---------------------------------------------------------------------------
+const GMBL_LIST = [
+  "kubet", "kbets", "88bet", "bet88", "w88", "fun88", "go88", "iwin", "ri88",
+  "debet", "mig8", "v9bet", "188bet", "bet188", "bet365", "dafabet", "sbobet",
+  "sobet", "12bet", "cmd368", "bong88", "agbong88", "letou", "1xbet", "1win",
+  "melbet", "linebet", "bk8", "f8bet", "kimsa", "vb68", "net88", "sunwin",
+  "zowin", "nohu", "nhatvip", "789bet", "m88", "m88win", "one88", "manclub",
+  "youwin", "red88", "sv388", "sv88", "new88", "ufabet", "bayvip", "doiuba",
+  "tweelwin", "zwin", "b52", "v99", "v88", "v789", "hi88", "vik88", "yo88",
+  "mmavin", "567live", "lucky88", "noh9", "vnbet", "kkwin", "kfa88"
+];
+
+function _gmblDnrApi() {
+  const b = (typeof browser !== "undefined" && browser.declarativeNetRequest) ? browser.declarativeNetRequest : null;
+  const c = (typeof chrome !== "undefined" && chrome.declarativeNetRequest) ? chrome.declarativeNetRequest : null;
+  return b || c;
+}
+function _gmblStor() {
+  const b = (typeof browser !== "undefined" && browser.storage) ? browser.storage : null;
+  const c = (typeof chrome !== "undefined" && chrome.storage) ? chrome.storage : null;
+  return (b && b.local) || (c && c.local) || null;
+}
+function _gmblEscape(t) {
+  return String(t).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+function _gmblBuildRules(allow) {
+  const blockUrl = ((typeof browser !== "undefined" && browser.runtime) || chrome.runtime)
+    .getURL("OS/html/gamble-block.html");
+  const isFF = typeof browser !== "undefined" && !!browser.declarativeNetRequest;
+  const rt = isFF ? ["MAIN_FRAME", "SUB_FRAME"] : ["main_frame", "sub_frame"];
+  const rules = [];
+  let id = 1;
+  GMBL_LIST.forEach(function (d) {
+    if (allow && allow[d]) return;
+    rules.push({
+      id: id++,
+      priority: 1,
+      action: { type: "redirect", redirect: { regexSubstitution: blockUrl + "?h={{encodingHost}}" } },
+      condition: {
+        regexFilter: "^https?://(?:[a-z0-9-]+\\.)*" + _gmblEscape(d) + "[0-9a-z-]*\\.[a-z]{2,}(?::\\d+)?(?:/|$|\\?)",
+        resourceTypes: rt
+      }
+    });
+  });
+  if (!(allow && allow.__casino)) {
+    rules.push({
+      id: id++,
+      priority: 1,
+      action: { type: "redirect", redirect: { regexSubstitution: blockUrl + "?h={{encodingHost}}" } },
+      condition: {
+        regexFilter: "^https?://(?:[a-z0-9-]+\\.)*[a-z0-9-]*casino[a-z0-9-]*\\.([a-z]{2,})(?::\\d+)?(?:/|$|\\?)",
+        resourceTypes: rt
+      }
+    });
+  }
+  return rules;
+}
+function _gmblApply() {
+  const api = _gmblDnrApi();
+  const stor = _gmblStor();
+  if (!api || !stor) return;
+  const installRules = function (add) {
+    const after = function (existing) {
+      const removeRuleIds = (existing || []).map(function (r) { return r.id; });
+      try {
+        const p = api.updateDynamicRules({ removeRuleIds: removeRuleIds, addRules: add });
+        if (p && p.then) p.then(function () {}, function () {});
+      } catch (e) {}
+    };
+    try {
+      const g = api.getDynamicRules();
+      if (g && g.then) g.then(after, function () { after([]); });
+      else if (g) after(g);
+      else api.getDynamicRules(after);
+    } catch (e) { after([]); }
+  };
+  const onSettings = function (res) {
+    const s = (res && res.sf_social_settings) || {};
+    const on = s.gamble !== false;
+    installRules(on ? _gmblBuildRules(s.gambleAllow || {}) : []);
+  };
+  try {
+    const p = stor.get("sf_social_settings");
+    if (p && p.then) p.then(onSettings, function () {});
+    else stor.get("sf_social_settings", onSettings);
+  } catch (e) {}
+}
+function _gmblTokenForHost(host) {
+  const h = String(host || "").toLowerCase();
+  for (let i = 0; i < GMBL_LIST.length; i++) {
+    if (h.indexOf(GMBL_LIST[i]) !== -1) return GMBL_LIST[i];
+  }
+  return h.indexOf("casino") !== -1 ? "__casino" : "";
+}
+function _gmblAllowHost(token) {
+  const stor = _gmblStor();
+  if (!stor || !token) return;
+  const write = function (s) {
+    s.gambleAllow = s.gambleAllow || {};
+    s.gambleAllow[token] = true;
+    try {
+      const p = stor.set({ sf_social_settings: s });
+      if (p && p.then) p.then(function () { _gmblApply(); }, function () {});
+      else stor.set({ sf_social_settings: s }, _gmblApply);
+    } catch (e) {}
+  };
+  try {
+    const g = stor.get("sf_social_settings");
+    if (g && g.then) { g.then(function (res) { write((res && res.sf_social_settings) || {}); }, function () {}); return; }
+    stor.get("sf_social_settings", function (res) { write((res && res.sf_social_settings) || {}); });
+  } catch (e) {}
+}
+try {
+  if (typeof chrome !== "undefined" && chrome.runtime) {
+    if (chrome.runtime.onInstalled) chrome.runtime.onInstalled.addListener(function () { _gmblApply(); });
+    if (chrome.runtime.onStartup) chrome.runtime.onStartup.addListener(function () { _gmblApply(); });
+  }
+  const storG = _gmblStor();
+  if (storG && storG.onChanged) {
+    storG.onChanged.addListener(function (c, area) {
+      if (area === "local" && c && c.sf_social_settings) _gmblApply();
+    });
+  }
+  const rtG = (typeof browser !== "undefined" && browser.runtime) ? browser.runtime
+    : ((typeof chrome !== "undefined" && chrome.runtime) ? chrome.runtime : null);
+  if (rtG && rtG.onMessage && rtG.onMessage.addListener) {
+    rtG.onMessage.addListener(function (msg, sender, sendResponse) {
+      if (!msg || msg.action !== "GMBL_ALLOW_HOST") return;
+      _gmblAllowHost(_gmblTokenForHost(msg.host));
+      try { sendResponse({ ok: true }); } catch (e) {}
+    });
+  }
+  _gmblApply();
+} catch (e) {}

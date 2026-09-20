@@ -10,6 +10,7 @@ let socState = {
   injMode: "remove",
   linkClean: true,
   shopClean: false,
+  gamble: true,
   lastScan: null
 };
 let _socCurrentHost = "";
@@ -91,6 +92,7 @@ function socLoadSettings() {
       socState.injMode = s.injMode === "warn" ? "warn" : "remove";
       socState.linkClean = s.linkClean !== false;
       socState.shopClean = !!s.shopClean;
+      socState.gamble = s.gamble !== false;
       socState.lastScan = s.lastScan || null;
     }
     socUpdateActiveHost(function () { socUpdateUI(); });
@@ -99,7 +101,7 @@ function socLoadSettings() {
 function socSaveSettings() {
   const payload = {
     inj: socState.inj, injMode: socState.injMode, linkClean: socState.linkClean,
-    shopClean: socState.shopClean, lastScan: socState.lastScan
+    shopClean: socState.shopClean, gamble: socState.gamble, lastScan: socState.lastScan
   };
   storSet({ sf_social_settings: payload }, function () {
     socUpdateUI();
@@ -119,6 +121,7 @@ function socUpdateUI() {
   set("soc-inj-shield", socState.inj);
   set("soc-link-clean", socState.linkClean);
   set("soc-shop-clean", socState.shopClean);
+  set("soc-gamble-block", socState.gamble);
   const mode = document.getElementById("soc-inj-mode");
   if (mode) mode.value = socState.injMode;
   const st = document.getElementById("soc-status");
@@ -237,6 +240,14 @@ onReady(function () {
     shopEl.addEventListener("change", function () {
       socState.shopClean = !!shopEl.checked;
       socSaveSettings();
+    });
+  }
+  const gmblEl = document.getElementById("soc-gamble-block");
+  if (gmblEl) {
+    gmblEl.addEventListener("change", function () {
+      socState.gamble = !!gmblEl.checked;
+      socSaveSettings();
+      showToast(t(gmblEl.checked ? "soc_gamble_on" : "soc_gamble_off"));
     });
   }
   const resetBtn = document.getElementById("btn-soc-inj-reset");
