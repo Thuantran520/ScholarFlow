@@ -6,7 +6,8 @@
 // ---------------------------------------------------------------------------
 let dmState = { enabled: false, mode: "all", auto: true, bright: 100, theme: "std", onSites: {}, offSites: {}, forceSites: {}, siteTune: {},
   paper: { mode: "none", custom: "#f6ecd9", alpha: 18 },
-  typo: { on: false, family: "", size: 100, line: 1.6, ls: 0, ws: 0 }, darkKnown: {} };
+  typo: { on: false, family: "", size: 100, line: 1.6, ls: 0, ws: 0, width: 0, justify: false },
+  reader: { on: false, txt: "#e8dcc3", accent: "#f0a860", bg: "#16130e", dark: 35 }, darkKnown: {} };
 const DM_PAPERS = [
   { id: "none",     color: "transparent", key: "dm_paper_none" },
   { id: "paper",    color: "#f6ecd9",     key: "dm_paper_paper" },
@@ -26,8 +27,32 @@ const DM_FONTS = [
   { v: "Georgia, 'Times New Roman', serif", key: "dm_font_serif" },
   { v: "'Segoe UI', system-ui, sans-serif", key: "dm_font_sans" },
   { v: "'Courier New', ui-monospace, monospace", key: "dm_font_mono" },
-  { v: "'Lexend', Verdana, sans-serif", key: "dm_font_lexend" }
+  { v: "'Lexend', Verdana, sans-serif", key: "dm_font_lexend" },
+  { v: "'Palatino Linotype', Palatino, Garamond, 'Book Antiqua', serif", key: "dm_font_book" },
+  { v: "Verdana, Geneva, Tahoma, sans-serif", key: "dm_font_verdana" },
+  { v: "'Iowan Old Style', Charter, Georgia, serif", key: "dm_font_charter" },
+  { v: "'Atkinson Hyperlegible', Verdana, sans-serif", key: "dm_font_atkinson" },
+  { v: "Tahoma, 'Trebuchet MS', 'Segoe UI', sans-serif", key: "dm_font_tahoma" }
 ];
+const DM_READER_PRESETS = [
+  { id: "none", key: "dm_r_none", sw: "transparent" },
+  { id: "news", key: "dm_r_news", txt: "#e8dcc3", accent: "#f0a860", bg: "#16130e", dark: 0 },
+  { id: "amoled", key: "dm_r_amoled", txt: "#d7dde6", accent: "#6cb6ff", bg: "#000000", dark: 0 },
+  { id: "ocean", key: "dm_r_ocean", txt: "#cfe6e0", accent: "#4fd1c5", bg: "#0b1a22", dark: 0 }
+];
+function _dmHexRgb(h) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(h || "").trim());
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+function _dmMixToBlack(hex, pct) {
+  const rgb = _dmHexRgb(hex);
+  if (!rgb) return hex;
+  const k = Math.max(0, Math.min(100, Number(pct) || 0)) / 100;
+  const h = function (v) { const x = Math.max(0, Math.min(255, Math.round(v))).toString(16); return x.length === 1 ? "0" + x : x; };
+  return "#" + h(rgb[0] * (1 - k)) + h(rgb[1] * (1 - k)) + h(rgb[2] * (1 - k));
+}
 let _dmCurrentHost = "";
 
 function _dmRefreshHost(cb) {
@@ -58,6 +83,7 @@ function dmLoad() {
       dmState.darkKnown = s.darkKnown || {};
       if (s.paper) dmState.paper = Object.assign(dmState.paper, s.paper);
       if (s.typo) dmState.typo = Object.assign(dmState.typo, s.typo);
+      if (s.reader) dmState.reader = Object.assign(dmState.reader, s.reader);
     }
     _dmRefreshHost(dmRender);
   });
@@ -67,7 +93,7 @@ function dmSave() {
     enabled: dmState.enabled, mode: dmState.mode, auto: dmState.auto,
     bright: dmState.bright, theme: dmState.theme,
     onSites: dmState.onSites, offSites: dmState.offSites, forceSites: dmState.forceSites,
-    siteTune: dmState.siteTune, paper: dmState.paper, typo: dmState.typo, darkKnown: dmState.darkKnown || {}
+    siteTune: dmState.siteTune, paper: dmState.paper, typo: dmState.typo, reader: dmState.reader, darkKnown: dmState.darkKnown || {}
   } }, function () { dmRender(); });
 }
 function _dmSiteDark() {
@@ -176,6 +202,50 @@ function dmRender() {
     if (el) el.value = String(row[1] === "size" ? dmState.typo.size : raw);
     if (vEl) vEl.textContent = row[2](row[1] === "size" ? dmState.typo.size : dmState.typo[row[1]]);
   });
+  const rTgl = document.getElementById("sec-dm-reader");
+  if (rTgl) rTgl.checked = !!dmState.reader.on;
+  const rPanel = document.getElementById("dm-reader-panel");
+  if (rPanel) rPanel.classList.toggle("is-open", !!dmState.reader.on);
+  const rChips = document.getElementById("dm-reader-presets");
+  if (rChips) {
+    _socClearBox(rChips);
+    DM_READER_PRESETS.forEach(function (pr) {
+      const cb = document.createElement("button");
+      cb.type = "button";
+      const active = pr.id === "none" ? !dmState.reader.on : dmState.reader.on &&
+        dmState.reader.bg === pr.bg && dmState.reader.txt === pr.txt;
+      cb.className = "dm-paper-chip" + (active ? " is-active" : "");
+      const sw = document.createElement("span");
+      sw.className = "dm-sw";
+      if (pr.id === "none") sw.classList.add("dm-sw-none");
+      else { sw.style.background = pr.bg; sw.style.color = pr.txt; sw.textContent = "Aa"; sw.style.display = "flex"; sw.style.alignItems = "center"; sw.style.justifyContent = "center"; sw.style.fontSize = "8px"; }
+      cb.appendChild(sw);
+      cb.appendChild(document.createTextNode(t(pr.key)));
+      cb.addEventListener("click", function () {
+        if (pr.id === "none") { dmState.reader.on = false; }
+        else {
+          dmState.reader.on = true;
+          dmState.reader.txt = pr.txt; dmState.reader.accent = pr.accent; dmState.reader.bg = pr.bg; dmState.reader.dark = pr.dark || 0;
+        }
+        dmSave();
+      });
+      rChips.appendChild(cb);
+    });
+  }
+  [["dm-r-txt", "txt"], ["dm-r-accent", "accent"], ["dm-r-bg", "bg"]].forEach(function (row) {
+    const el = document.getElementById(row[0]);
+    if (el) el.value = dmState.reader[row[1]] || "#000000";
+  });
+  const rdEl = document.getElementById("dm-r-dark");
+  const rdvEl = document.getElementById("dm-r-dark-val");
+  if (rdEl) rdEl.value = String(dmState.reader.dark == null ? 35 : dmState.reader.dark);
+  if (rdvEl) rdvEl.textContent = (dmState.reader.dark == null ? 35 : dmState.reader.dark) + "% \u2192 " + _dmMixToBlack(dmState.reader.bg, dmState.reader.dark);
+  const wEl = document.getElementById("dm-font-width");
+  const wvEl = document.getElementById("dm-font-width-val");
+  if (wEl) wEl.value = String(dmState.typo.width || 0);
+  if (wvEl) wvEl.textContent = dmState.typo.width ? dmState.typo.width + "px" : t("dm_font_default");
+  const jEl = document.getElementById("dm-font-justify");
+  if (jEl) jEl.checked = !!dmState.typo.justify;
   const list = document.getElementById("dm-excl-list");
   if (list) {
     _socClearBox(list);
@@ -288,6 +358,35 @@ onReady(function () {
       dmSave();
     });
   });
+  const rTglBind = document.getElementById("sec-dm-reader");
+  if (rTglBind) rTglBind.addEventListener("change", function () {
+    dmState.reader.on = !!rTglBind.checked;
+    const rp = document.getElementById("dm-reader-panel");
+    if (rp) rp.classList.toggle("is-open", !!dmState.reader.on);
+    dmSave();
+  });
+  [["dm-r-txt", "txt"], ["dm-r-accent", "accent"], ["dm-r-bg", "bg"]].forEach(function (row) {
+    const el = document.getElementById(row[0]);
+    if (el) el.addEventListener("change", function () { dmState.reader[row[1]] = el.value; dmSave(); });
+  });
+  const rdInp = document.getElementById("dm-r-dark");
+  if (rdInp) {
+    rdInp.addEventListener("input", function () {
+      const v = document.getElementById("dm-r-dark-val");
+      if (v) v.textContent = rdInp.value + "% \u2192 " + _dmMixToBlack(dmState.reader.bg, parseInt(rdInp.value, 10));
+    });
+    rdInp.addEventListener("change", function () { dmState.reader.dark = Math.max(0, Math.min(85, parseInt(rdInp.value, 10) || 0)); dmSave(); });
+  }
+  const wInp = document.getElementById("dm-font-width");
+  if (wInp) {
+    wInp.addEventListener("input", function () {
+      const v = document.getElementById("dm-font-width-val");
+      if (v) v.textContent = wInp.value === "0" ? t("dm_font_default") : wInp.value + "px";
+    });
+    wInp.addEventListener("change", function () { dmState.typo.width = Math.max(0, Math.min(2000, parseInt(wInp.value, 10) || 0)); dmSave(); });
+  }
+  const jInp = document.getElementById("dm-font-justify");
+  if (jInp) jInp.addEventListener("change", function () { dmState.typo.justify = !!jInp.checked; dmSave(); });
   const clr = document.getElementById("btn-dm-clear-excl");
   if (clr) clr.addEventListener("click", dmClearLists);
   try {

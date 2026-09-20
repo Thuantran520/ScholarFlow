@@ -35,6 +35,12 @@ Tất cả thay đổi đáng chú ý của dự án đều được ghi tại �
 - **Máy chủ tùy biến (Custom/Local AI)**: thêm Ollama, LM Studio, vLLM, OpenRouter với tên/model/key riêng; selector model hợp nhất; Gemini mặc định đời mới.
 - Popup AI nhanh khi bôi đen (Reading Companion): thêm nút tắt/bật tức thì.
 
+### 🌙 Dark Mode Studio — bản "nâng cấp tinh chỉnh"
+- **Night Reader (chế độ đọc đêm thật)**: thay màu nền & màu chữ **trực tiếp bằng CSS** (không invert filter) — đổi được **màu chữ, màu liên kết/nút (accent), màu nền**, thanh "Dim nền thêm" trộn màu nền về phía đen tuyệt đối (0–85%) tới mức tối nhất có thể.
+- **2+1 bộ màu dựng sẵn**: *Sepia tin tức* (nâu giấy ấm rất hợp đọc báo), *AMOLED đen tuyệt đối* (nền #000), *Midnight ocean* (xanh bi đậm) — mỗi bộ hiện mẫu "Aa" trên chip.
+- **Typography mạnh hơn**: 10 font (thêm Palatino sách cổ điển, Charter báo, Verdana rộng, Atkinson Hyperlegible hỗ trợ thị giác kém, Tahoma gọn), slider **chiều rộng cột đọc** (0–1400px cho văn bản thẳng hàng giữa) + **căn lề 2 bên**.
+- Reader tự tắt invert cho site đó; vẫn tôn trọng danh sách loại trừ/ép tối theo site.
+
 ### ⚖️ Trung tâm uy tín
 - Modal **Minh Bạch Quyền Hạn Trình Duyệt** mới (giải trình từng permission <all_urls>/cookies/clipboard/storage/scripting), hiện lần đầu + mở lại từ nút trong Trust Center.
 - Version hiển thị về 2.5.1; `privacy_last_updated` đồng bộ 2.5.1_beta trên cả 5 ngôn ngữ.

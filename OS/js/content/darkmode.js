@@ -5,15 +5,67 @@
 // already cached (sf_darkmode.darkKnown), and only defers ~1 frame on the
 // very first visit to auto-detect already-dark native pages.
 // Settings: { enabled, mode, auto, bright, theme, onSites, offSites,
-//   forceSites, siteTune, paper, typo, darkKnown }
+//   forceSites, siteTune, paper, typo, reader, darkKnown }
 // ---------------------------------------------------------------------------
 (function () {
   const STYLE_ID = "__sf_dark_mode";
   const PAPER_ID = "__sf_paper_overlay";
   const TYPO_ID = "__sf_typo_style";
+  const READER_ID = "__sf_reader_style";
   const IMG_SEL = "img,video,iframe,canvas,picture,embed,object,[style*='background-image'],[class*='logo' i],[id*='logo' i]";
   const PAPER_COLORS = { paper: "#f6ecd9", mint: "#e4f2e7", sky: "#e4edf9", amber: "#f9e6c8", rose: "#fbe9ee" };
   let _s = null;
+
+  function _hexToRgb(h) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(String(h || "").trim());
+    if (!m) return null;
+    const n = parseInt(m[1], 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+  function _rgbToHex(a) {
+    const h = function (v) { const x = Math.max(0, Math.min(255, Math.round(v))).toString(16); return x.length === 1 ? "0" + x : x; };
+    return "#" + h(a[0]) + h(a[1]) + h(a[2]);
+  }
+  function _mixToBlack(hex, pct) {
+    const rgb = _hexToRgb(hex);
+    if (!rgb) return hex;
+    const k = Math.max(0, Math.min(100, Number(pct) || 0)) / 100;
+    return _rgbToHex([rgb[0] * (1 - k), rgb[1] * (1 - k), rgb[2] * (1 - k)]);
+  }
+  function _safeColor(c, fb) {
+    return /^#[0-9a-fA-F]{6}$/.test(String(c || "")) ? c : fb;
+  }
+  function _readerCss(r) {
+    const txt = _safeColor(r.txt, "#e8dcc3");
+    const accent = _safeColor(r.accent, "#f0a860");
+    const bg = _mixToBlack(_safeColor(r.bg, "#16130e"), r.dark == null ? 35 : r.dark);
+    return [
+      "html,body{background:" + bg + "!important;color:" + txt + "!important}",
+      "*:not(img):not(video):not(iframe):not(canvas):not(picture):not(source):not(embed):not(object){",
+      "  background:transparent!important;color:" + txt + "!important;",
+      "  border-color:rgba(255,255,255,0.14)!important;box-shadow:none!important;text-shadow:none!important}",
+      "code,pre,kbd,samp{background:rgba(255,255,255,0.08)!important}",
+      "a,a *,[role='link'],[role='link'] *{color:" + accent + "!important}",
+      "button,[role='button'],input[type='submit'],input[type='button']{color:" + accent + "!important}",
+      "input,textarea,select{background:rgba(255,255,255,0.07)!important;color:" + txt + "!important}",
+      "::selection{background:" + accent + ";color:" + bg + "!important}",
+      "img,video,iframe,canvas{background:transparent!important}"
+    ].join("");
+  }
+  function _applyReader(s) {
+    try {
+      const r = s && s.reader;
+      let st = document.getElementById(READER_ID);
+      if (!r || !r.on) { if (st) st.remove(); return false; }
+      if (!st) {
+        st = document.createElement("style");
+        st.id = READER_ID;
+        (document.head || document.documentElement).appendChild(st);
+      }
+      st.textContent = _readerCss(r);
+      return true;
+    } catch (e) { return false; }
+  }
 
   function _host() {
     try { return (window.location.hostname || "").replace(/^www\./, "").toLowerCase(); } catch (e) { return ""; }
@@ -99,8 +151,9 @@
   function _decide() {
     const host = _host();
     const s = _s;
-    if (!s || !host) { _removeFilter(); _applyExtras(); return; }
-    if (!_baseWanted(host, s)) { _removeFilter(); _applyExtras(); return; }
+    if (!s || !host) { _removeFilter(); _applyReader(s); _applyExtras(); return; }
+    if (!_baseWanted(host, s)) { _removeFilter(); _applyReader(s); _applyExtras(); return; }
+    if (_applyReader(s)) { _removeFilter(); _applyExtras(); return; }
     if (s.auto !== false && !(s.forceSites && s.forceSites[host])) {
       const known = (s.darkKnown && host in s.darkKnown) ? s.darkKnown[host] : undefined;
       if (known === true) { _removeFilter(); _applyExtras(); return; }
@@ -157,6 +210,9 @@
         "body{line-height:" + line.toFixed(2) + "!important;letter-spacing:" + ls.toFixed(2) + "px!important;word-spacing:" + ws.toFixed(2) + "px!important;";
       if (t.family) css += "font-family:" + t.family + "!important;";
       css += "}";
+      const w = Math.max(0, Math.min(2000, t.width || 0));
+      if (w) css += "main,article,[role='main'],[class*='article' i],[class*='content' i],[class*='post' i]{max-width:" + w + "px!important;margin-left:auto!important;margin-right:auto!important}";
+      if (t.justify) css += "p{text-align:justify!important}";
       if (!st) {
         st = document.createElement("style");
         st.id = TYPO_ID;

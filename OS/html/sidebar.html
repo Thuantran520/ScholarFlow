@@ -2743,6 +2743,52 @@
               <input type="range" id="dm-font-ws" min="-50" max="150" value="0">
               <span id="dm-font-ws-val" class="dm-sl-v">0.00px</span>
             </div>
+            <div class="dm-slider" style="--dm-acc:#94a3b8;">
+              <span class="dm-sl-l" data-i18n="dm_width">Cot doc</span>
+              <input type="range" id="dm-font-width" min="0" max="1400" step="40" value="0">
+              <span id="dm-font-width-val" class="dm-sl-v">Off</span>
+            </div>
+            <label class="switch-row" for="dm-font-justify" style="margin:2px 0 0;">
+              <div class="switch-row-left">
+                <span class="switch-row-title" data-i18n="dm_justify">Can le 2 ben</span>
+              </div>
+              <span class="custom-switch"><input type="checkbox" id="dm-font-justify"><span class="switch-slider"></span></span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Night reader (recolor) -->
+    <div class="feature-card dm-card dm-tight">
+      <div class="dm-section-head">
+        <svg class="dm-section-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h7a5 5 0 0 1 5 5v11a4 4 0 0 0-4-4H2z"></path><path d="M22 4h-7a5 5 0 0 0-5 5v11a4 4 0 0 1 4-4h8z"></path></svg>
+        <span class="dm-section-label" data-i18n="dm_reader_title">Night Reader</span>
+      </div>
+      <label class="switch-row" for="sec-dm-reader">
+        <div class="switch-row-left">
+          <span class="switch-row-title" data-i18n="dm_reader_title">Night Reader</span>
+          <span class="switch-row-desc" data-i18n="dm_reader_desc">Thay mau nen &amp; mau chu truc tiep (khong invert) - de doc bao, doc paper vai toi den tuyet doi</span>
+        </div>
+        <span class="custom-switch"><input type="checkbox" id="sec-dm-reader"><span class="switch-slider"></span></span>
+      </label>
+      <div class="dm-typo-panel" id="dm-reader-panel">
+        <div class="dm-paper-chips" id="dm-reader-presets" style="margin:6px 0;"></div>
+        <div class="dm-grid">
+          <div class="dm-cell" style="grid-column:1/-1;">
+            <div class="dm-slider" style="--dm-acc:#94a3b8;">
+              <span class="dm-sl-l" data-i18n="dm_r_txt">Mau chu</span>
+              <input type="color" id="dm-r-txt" value="#e8dcc3" aria-label="txt">
+              <span class="dm-sl-l" data-i18n="dm_r_accent">Lien ket</span>
+              <input type="color" id="dm-r-accent" value="#f0a860" aria-label="accent">
+              <span class="dm-sl-l" data-i18n="dm_r_bg">Mau nen</span>
+              <input type="color" id="dm-r-bg" value="#16130e" aria-label="bg">
+            </div>
+            <div class="dm-slider" style="--dm-acc:#94a3b8;">
+              <span class="dm-sl-l" data-i18n="dm_r_dark">Nam den nen</span>
+              <input type="range" id="dm-r-dark" min="0" max="85" value="35">
+              <span id="dm-r-dark-val" class="dm-sl-v">35%</span>
+            </div>
           </div>
         </div>
       </div>
