@@ -1,15 +1,15 @@
 // ---------------------------------------------------------------------------
 // ScholarFlow module: OS/js/tabs/social-protection.js
-// Social Protection CORE: state, privacy toggles, storage sync, shared
-// constants + DOM helpers. Feature modules (recovery/vault/checklist/tools/
-// creator) extend this file via globals — keep this module loaded FIRST.
-// 100% local: no network, no telemetry.
+// Social Protection CORE: settings for the single anti-injection shield,
+// storage sync, shared constants + DOM helpers. Feature modules
+// (recovery/vault/checklist/tools/creator) extend this file via globals —
+// keep this module loaded FIRST. 100% local: no network, no telemetry.
 // ---------------------------------------------------------------------------
 let socState = {
-  fb: { typing: true, seen: true, online: true },
-  zalo: { typing: true, seen: true, online: true },
-  ig: { typing: true, seen: true, activity: true },
-  shield: { wa: false, tt: false, dc: false, x: false, tg: false },
+  inj: true,
+  injMode: "remove",
+  linkClean: true,
+  shopClean: false,
   lastScan: null
 };
 let _socCurrentHost = "";
@@ -48,7 +48,6 @@ const SOC_PLAT_LINKS = {
     { label: "soc_link_sessions", url: "https://my.telegram.org/" }
   ]
 };
-const SOC_SCENARIOS = ["active_session", "still_pw", "email_lost", "phone_lost", "both_lost", "twofa", "whatsapp", "sim"];
 const SOC_WIZ_TITLES = {
   active_session: "soc_wz_active_session_t",
   still_pw: "soc_wz_still_pw_t",
@@ -84,28 +83,14 @@ const SOC_SESSION_COOKIES = [
   { key: "telegram", domains: ["web.telegram.org"], names: ["K", "A"] }
 ];
 
-function _socPlatformsPayload() {
-  return {
-    platforms: {
-      facebook: { typing: socState.fb.typing, seen: socState.fb.seen, online: socState.fb.online },
-      instagram: { typing: socState.ig.typing, seen: socState.ig.seen, online: socState.ig.activity },
-      zalo: { typing: socState.zalo.typing, seen: socState.zalo.seen, online: socState.zalo.online },
-      whatsapp: { typing: socState.shield.wa, seen: socState.shield.wa, online: false },
-      tiktok: { typing: socState.shield.tt, seen: false, online: false },
-      discord: { typing: socState.shield.dc, seen: false, online: false },
-      x: { typing: socState.shield.x, seen: false, online: false },
-      telegram: { typing: socState.shield.tg, seen: false, online: socState.shield.tg }
-    }
-  };
-}
 function socLoadSettings() {
   storGet("sf_social_settings", function (res) {
     const s = res && res.sf_social_settings;
     if (s) {
-      socState.fb = Object.assign({ typing: true, seen: true, online: true }, s.fb || {});
-      socState.zalo = Object.assign({ typing: true, seen: true, online: true }, s.zalo || {});
-      socState.ig = Object.assign({ typing: true, seen: true, activity: true }, s.ig || {});
-      socState.shield = Object.assign({ wa: false, tt: false, dc: false, x: false, tg: false }, s.shield || {});
+      socState.inj = s.inj !== false;
+      socState.injMode = s.injMode === "warn" ? "warn" : "remove";
+      socState.linkClean = s.linkClean !== false;
+      socState.shopClean = !!s.shopClean;
       socState.lastScan = s.lastScan || null;
     }
     socUpdateActiveHost(function () { socUpdateUI(); });
@@ -113,9 +98,8 @@ function socLoadSettings() {
 }
 function socSaveSettings() {
   const payload = {
-    fb: socState.fb, zalo: socState.zalo, ig: socState.ig, shield: socState.shield,
-    lastScan: socState.lastScan,
-    platforms: _socPlatformsPayload().platforms
+    inj: socState.inj, injMode: socState.injMode, linkClean: socState.linkClean,
+    shopClean: socState.shopClean, lastScan: socState.lastScan
   };
   storSet({ sf_social_settings: payload }, function () {
     socUpdateUI();
@@ -132,18 +116,39 @@ function socUpdateActiveHost(cb) {
 }
 function socUpdateUI() {
   const set = function (id, v) { const el = document.getElementById(id); if (el) el.checked = !!v; };
-  set("soc-fb-typing", socState.fb.typing); set("soc-fb-seen", socState.fb.seen); set("soc-fb-online", socState.fb.online);
-  set("soc-zalo-typing", socState.zalo.typing); set("soc-zalo-seen", socState.zalo.seen); set("soc-zalo-online", socState.zalo.online);
-  set("soc-ig-typing", socState.ig.typing); set("soc-ig-seen", socState.ig.seen); set("soc-ig-activity", socState.ig.activity);
-  set("soc-wa-shield", socState.shield.wa); set("soc-tt-shield", socState.shield.tt);
-  set("soc-dc-shield", socState.shield.dc); set("soc-x-shield", socState.shield.x); set("soc-tg-shield", socState.shield.tg);
+  set("soc-inj-shield", socState.inj);
+  set("soc-link-clean", socState.linkClean);
+  set("soc-shop-clean", socState.shopClean);
+  const mode = document.getElementById("soc-inj-mode");
+  if (mode) mode.value = socState.injMode;
   const st = document.getElementById("soc-status");
-  if (st) {
-    const on = function (v) { return v ? "●" : "○"; };
-    st.textContent = "FB " + on(socState.fb.typing) + on(socState.fb.seen) + on(socState.fb.online) +
-      " • IG " + on(socState.ig.typing) + on(socState.ig.seen) + on(socState.ig.activity) +
-      " • Zalo " + on(socState.zalo.typing) + on(socState.zalo.seen) + on(socState.zalo.online);
-  }
+  if (st) st.textContent = socState.inj ? "\u25cf" : "\u25cb";
+  socFetchHostStats();
+}
+function socFetchHostStats() {
+  socSendToActive({ action: "SOC_GET_STATS" }, function (res) {
+    if (!res || !res.ok) return;
+    const st = res.stats || {};
+    const injTotal = (st.extScript || 0) + (st.obfScript || 0) + (st.inlineMal || 0) + (st.extIframe || 0) + (st.jsUri || 0);
+    const status = document.getElementById("soc-status");
+    if (status && socState.inj && injTotal && socState.injMode === "remove") {
+      status.textContent = t("soc_status_blocked").replace("{0}", String(injTotal));
+    }
+    const sl = document.getElementById("soc-inj-stats");
+    if (sl) {
+      const key = socState.injMode === "warn" ? "soc_inj_stats_warn" : "soc_inj_stats";
+      sl.textContent = t(key)
+        .replace("{0}", String(injTotal))
+        .replace("{1}", String(st.linkCleaned || 0))
+        .replace("{2}", String(st.shopLinks || 0));
+    }
+    const tc = document.getElementById("soc-tracker-count");
+    if (tc && res.platform) {
+      socSendToActive({ action: "SOC_SCAN_TRACKERS" }, function (r2) {
+        if (tc && r2 && Array.isArray(r2.trackers)) tc.textContent = "Trackers: " + r2.trackers.length;
+      });
+    }
+  });
 }
 function socPushToActiveTab() {
   socSendToActive({ action: "SOC_REFRESH" }, function () {});
@@ -206,24 +211,43 @@ onReady(function () {
   document.querySelectorAll(".soc-subtab").forEach(function (b) {
     b.addEventListener("click", function () { _socSwitchSub(b.dataset.socSub); });
   });
-  const bindToggle = function (id, set) {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener("change", function () { set(!!el.checked); socSaveSettings(); });
-  };
-  bindToggle("soc-fb-typing", function (v) { socState.fb.typing = v; });
-  bindToggle("soc-fb-seen", function (v) { socState.fb.seen = v; });
-  bindToggle("soc-fb-online", function (v) { socState.fb.online = v; });
-  bindToggle("soc-zalo-typing", function (v) { socState.zalo.typing = v; });
-  bindToggle("soc-zalo-seen", function (v) { socState.zalo.seen = v; });
-  bindToggle("soc-zalo-online", function (v) { socState.zalo.online = v; });
-  bindToggle("soc-ig-typing", function (v) { socState.ig.typing = v; });
-  bindToggle("soc-ig-seen", function (v) { socState.ig.seen = v; });
-  bindToggle("soc-ig-activity", function (v) { socState.ig.activity = v; });
-  bindToggle("soc-wa-shield", function (v) { socState.shield.wa = v; });
-  bindToggle("soc-tt-shield", function (v) { socState.shield.tt = v; });
-  bindToggle("soc-dc-shield", function (v) { socState.shield.dc = v; });
-  bindToggle("soc-x-shield", function (v) { socState.shield.x = v; });
-  bindToggle("soc-tg-shield", function (v) { socState.shield.tg = v; });
+  const injEl = document.getElementById("soc-inj-shield");
+  if (injEl) {
+    injEl.addEventListener("change", function () {
+      socState.inj = !!injEl.checked;
+      socSaveSettings();
+    });
+  }
+  const modeEl = document.getElementById("soc-inj-mode");
+  if (modeEl) {
+    modeEl.addEventListener("change", function () {
+      socState.injMode = modeEl.value === "warn" ? "warn" : "remove";
+      socSaveSettings();
+    });
+  }
+  const linkEl = document.getElementById("soc-link-clean");
+  if (linkEl) {
+    linkEl.addEventListener("change", function () {
+      socState.linkClean = !!linkEl.checked;
+      socSaveSettings();
+    });
+  }
+  const shopEl = document.getElementById("soc-shop-clean");
+  if (shopEl) {
+    shopEl.addEventListener("change", function () {
+      socState.shopClean = !!shopEl.checked;
+      socSaveSettings();
+    });
+  }
+  const resetBtn = document.getElementById("btn-soc-inj-reset");
+  if (resetBtn) {
+    resetBtn.addEventListener("click", function () {
+      socSendToActive({ action: "SOC_RESET_STATS" }, function () {
+        socUpdateUI();
+        showToast(t("soc_inj_reset_done"));
+      });
+    });
+  }
   socLoadSettings();
   try {
     const api = (typeof chrome !== "undefined" && chrome.tabs ? chrome.tabs : typeof browser !== "undefined" && browser.tabs ? browser.tabs : null);

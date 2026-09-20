@@ -14,14 +14,29 @@
           <input type="password" id="ai-key-openai" class="form-control" placeholder="sk-..." style="font-size:11px; margin-bottom:6px;">
           <label class="ai-field-sub" data-i18n="ai_key_claude_label">Claude</label>
           <input type="password" id="ai-key-claude" class="form-control" placeholder="sk-ant-..." style="font-size:11px; margin-bottom:6px;">
-          <label class="ai-field-sub" data-i18n="ai_key_custom_label">Custom URL</label>
-          <input type="text" id="ai-custom-url" class="form-control" placeholder="https://your-api.example.com/v1/chat" style="font-size:11px;">
+          <input type="text" id="ai-custom-url" class="form-control" placeholder="https://your-api.example.com/v1/chat" style="display:none;">
           <input type="password" id="ai-key-input" class="form-control" style="display:none;">
           <input type="password" id="ai-key-input-modal" class="form-control" style="display:none;">
           <div style="display:flex; gap:6px; margin-top:8px;">
             <button type="button" class="btn btn-secondary" id="ai-btn-toggle-key" title="Hiện/ẩn key" data-i18n-title="ai_btn_show_key">👁</button> <button type="button" class="btn btn-primary" id="ai-btn-save-key" style="flex:1;" data-i18n="ai_btn_save_all_keys">Lưu tất cả key</button>
             <button type="button" class="btn btn-secondary" id="ai-btn-clear-key" data-i18n="ai_btn_clear_key2">Xóa</button>
             <button type="button" class="btn btn-secondary" id="ai-btn-open-provider" data-i18n="ai_btn_open_provider">Lấy key ↗</button>
+          </div>
+        </div>
+        <div class="ai-settings-section">
+          <div class="ai-field-label" data-i18n="ai_custom_servers_title">Máy chủ tùy biến (Custom / Local AI)</div>
+          <div id="ai-custom-servers-list" class="ai-custom-servers-list"></div>
+          <div class="ai-custom-server-form" style="margin-top:8px; padding:8px; background:rgba(2,6,23,0.45); border:1px solid rgba(255,255,255,0.08); border-radius:8px;">
+            <div style="font-size:11px; font-weight:700; color:#38bdf8; margin-bottom:6px;" data-i18n="ai_custom_add_server_head">Thêm máy chủ mới (Ollama, LM Studio, vLLM, OpenRouter)</div>
+            <label class="ai-field-sub" data-i18n="ai_custom_server_name_label">Tên máy chủ</label>
+            <input type="text" id="ai-cs-name" class="form-control" placeholder="VD: Ollama Local" style="font-size:11px; margin-bottom:6px;">
+            <label class="ai-field-sub" data-i18n="ai_custom_server_url_label">Endpoint URL</label>
+            <input type="text" id="ai-cs-url" class="form-control" placeholder="http://localhost:11434/v1/chat/completions" style="font-size:11px; margin-bottom:6px;">
+            <label class="ai-field-sub" data-i18n="ai_custom_server_model_label">Tên Model</label>
+            <input type="text" id="ai-cs-model" class="form-control" placeholder="VD: llama3, deepseek-r1..." style="font-size:11px; margin-bottom:6px;">
+            <label class="ai-field-sub" data-i18n="ai_custom_server_key_label">API Key (tùy chọn)</label>
+            <input type="password" id="ai-cs-key" class="form-control" placeholder="Bearer token (nếu có)..." style="font-size:11px; margin-bottom:6px;">
+            <button type="button" class="btn btn-secondary" id="ai-btn-add-server" style="width:100%; margin-top:4px;" data-i18n="ai_btn_add_server">+ Thêm máy chủ</button>
           </div>
         </div>
         <div class="ai-settings-section">
@@ -72,6 +87,11 @@
           </select>
           <label class="ai-check" style="margin-top:8px;"><input type="checkbox" id="ai-opt-websearch" checked> <span data-i18n="ai_opt_websearch">Tự dùng Google Search (Gemini) khi thiếu thông tin</span></label>
           <label class="ai-check" style="margin-top:8px;"><input type="checkbox" id="ai-opt-autovideo" checked> <span data-i18n="ai_opt_autovideo">Hỏi gì cũng tự xem video đang mở (Gemini)</span></label>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+            <label class="ai-check" style="margin-top:0; flex:1;"><input type="checkbox" id="ai-opt-companion" checked> <span data-i18n="ai_opt_reading_companion">Popup AI nhanh khi bôi đen văn bản (Reading Companion)</span></label>
+            <button type="button" class="btn btn-secondary" id="ai-btn-toggle-companion" style="font-size:10px; padding:2px 8px; margin-left:8px; white-space:nowrap;" data-i18n="ai_btn_toggle_companion">Tắt popup</button>
+          </div>
+          <div class="ai-hint" style="margin-left:22px; font-size:10.5px; margin-top:2px;" data-i18n="ai_opt_reading_companion_hint">Bỏ chọn hoặc bấm nút tắt để không hiện popup AI mini khi bôi đen văn bản trên web.</div>
           <div class="ai-temp-row">
             <div class="ai-temp-head"><span class="ai-field-label" data-i18n="ai_temp_label">Temperature</span><span class="ai-temp-badge" id="ai-temp-val">0.7</span></div>
             <input type="range" class="ai-range" id="ai-temp-range" min="0" max="1" step="0.1" value="0.7">

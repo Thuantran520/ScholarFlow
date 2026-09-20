@@ -322,6 +322,45 @@ onReady(() => {
   trustModal?.addEventListener("click", (e) => {
     if (e.target === trustModal) trustModal.style.display = "none";
   });
+
+  // Permissions Transparency Modal
+  const permModal = document.getElementById("permissions-modal");
+  const closePermModal = () => {
+    if (permModal) permModal.style.display = "none";
+  };
+  const ackPermModal = () => {
+    closePermModal();
+    try {
+      if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+        chrome.storage.local.set({ sf_perm_transparency_v250: true });
+      } else if (typeof localStorage !== "undefined") {
+        localStorage.setItem("sf_perm_transparency_v250", "true");
+      }
+    } catch (e) {}
+  };
+
+  document.getElementById("btn-open-permissions")?.addEventListener("click", () => {
+    if (trustModal) trustModal.style.display = "none";
+    if (permModal) permModal.style.display = "block";
+  });
+  document.getElementById("btn-close-permissions")?.addEventListener("click", closePermModal);
+  document.getElementById("btn-ack-permissions")?.addEventListener("click", ackPermModal);
+  permModal?.addEventListener("click", (e) => {
+    if (e.target === permModal) closePermModal();
+  });
+
+  // First-run transparency modal auto-popup
+  try {
+    if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.get(["sf_perm_transparency_v250"], (res) => {
+        if (!res || !res.sf_perm_transparency_v250) {
+          if (permModal) permModal.style.display = "block";
+        }
+      });
+    } else if (typeof localStorage !== "undefined" && !localStorage.getItem("sf_perm_transparency_v250")) {
+      if (permModal) permModal.style.display = "block";
+    }
+  } catch (e) {}
   // -----------------------------------------
   // Cookie Manager: Raw String (Copy / Import)
   // -----------------------------------------
@@ -1488,6 +1527,10 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
       if (authorM && authorM.style.display === "block") {
         authorM.style.display = "none";
       }
+      const permM = document.getElementById("permissions-modal");
+      if (permM && permM.style.display === "block") {
+        permM.style.display = "none";
+      }
     }
   });
 
@@ -2206,9 +2249,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // Switch to tab 1
     const tCite = document.querySelector('[data-target="tab-cite"]');
     if (tCite) tCite.click();
-  } else if (request.action === "COMPANION_QUERY" && request.selectedText) {
-    const text = request.selectedText;
-    const qType = request.queryType || "explain";
+  } else if (request.action === "COMPANION_QUERY" && (request.selectedText || request.text)) {
+    const text = request.selectedText || request.text;
+    const qType = request.queryType || request.mode || "explain";
     const tAi = document.querySelector('[data-target="tab-ai"]');
     if (tAi) tAi.click();
 

@@ -980,7 +980,7 @@ async function main() {
       !!w.document.getElementById("ai-key-openai") && !!w.document.getElementById("ai-key-claude") &&
       !!w.document.getElementById("ai-btn-save-key") && !!w.document.getElementById("ai-btn-toggle-key") &&
       !!w.document.getElementById("ai-opt-images") && !!w.document.getElementById("ai-opt-source") && !!w.document.getElementById("ai-opt-stream") &&
-      !!w.document.getElementById("ai-opt-companion") &&
+      !!w.document.getElementById("ai-opt-companion") && !!w.document.getElementById("ai-btn-toggle-companion") &&
       !!w.document.getElementById("ai-sessions-modal") && !!w.document.getElementById("ai-btn-sessions") && !!w.document.getElementById("ai-current-page"),
       `${htmlFile}: AI settings modal + key inputs + save/toggle + context checkboxes wired`);
     check(!w.document.getElementById("ai-memory-hint"), `${htmlFile}: memory-hint banner removed (chat no longer pushed down)`);
@@ -992,9 +992,22 @@ async function main() {
       `${htmlFile}: chat input is single-row autogrow, +Trang badge removed`);
     check(!!w.document.getElementById("ai-btn-copy-convo"),
       `${htmlFile}: copy-conversation (Markdown) button present in settings modal`);
-    check(!!w.document.querySelector("#tab-ai .ai-chat-top .ai-model-bar .ai-provider-pills") && !!w.document.querySelector("#tab-ai .ai-chat-top .ai-top-actions") && !!w.document.querySelector(".ai-pages-context .ai-pages-label"),
-      `${htmlFile}: merged chat-top (model-bar inside header) + horizontal pages strip markup`);
+    check(!!w.document.querySelector("#tab-ai .ai-chat-top .ai-model-bar .ai-model-select-wrap") && !!w.document.querySelector("#tab-ai .ai-chat-top .ai-top-actions") && !!w.document.querySelector(".ai-pages-context .ai-pages-label"),
+      `${htmlFile}: merged chat-top (model-bar with unified model select inside header) + horizontal pages strip markup`);
+    check(!!w.document.getElementById("soc-inj-shield") && !!w.document.getElementById("soc-inj-stats") && !!w.document.getElementById("btn-soc-inj-reset") &&
+      !!w.document.getElementById("soc-inj-mode") && !!w.document.getElementById("soc-link-clean") && !!w.document.getElementById("soc-shop-clean") &&
+      !w.document.getElementById("soc-fb-typing") && !w.document.getElementById("soc-zalo-typing") &&
+      !w.document.getElementById("soc-ig-typing") && !w.document.getElementById("soc-wa-shield") && !w.document.getElementById("soc-tg-shield"),
+      `${htmlFile}: Social Protect card = injection shield + mode select + link cleaner + shop-link remover toggles, no legacy shields`);
+    check(await w.eval(`typeof _socClearBox === "function" && typeof socSaveSettings === "function" && typeof socSendToActive === "function" && typeof _socSwitchSub === "function" && typeof socFetchHostStats === "function"`),
+      `${htmlFile}: social-protection core exposes shared helpers + host stats fetch to feature modules`);
+    check(await w.eval(`(function(){ var p=document.querySelector('#tab-social [data-i18n="soc_inj_title"]'); _socSwitchSub('recover'); var ok1=document.getElementById('soc-sub-recover').classList.contains('active'); _socSwitchSub('protect'); var ok2=document.getElementById('soc-sub-protect').classList.contains('active') && !!document.getElementById('soc-inj-shield'); return !!p && ok1 && ok2; })()`),
+      `${htmlFile}: anti-injection label is i18n-bound and social sub-tabs switch correctly`);
     if (htmlFile === "sidebar.html") {
+      check(await w.eval(`aiGetModel("gemini") === "gemini-3.5-flash" && AI_PROVIDERS.gemini.defaultModel === "gemini-3.5-flash"`),
+        "sidebar: modern default model gemini-3.5-flash configured");
+      check(await w.eval(`!AI_PROVIDERS.gemini.models.includes("gemini-2.0-flash") && !AI_PROVIDERS.gemini.models.includes("gemini-2.5-flash")`),
+        "sidebar: deprecated Gemini 2.x models removed from active rosters");
       check(await w.eval(`aiT("ai_you", null, "x") !== "x" && aiT("ai_you", null, "x") !== "ai_you"`),
         "sidebar: aiT resolves localized AI strings");
       check(await w.eval(`aiBuildPrompt("QQ", "Tieu de: Z", "","",null,null,"",null,true).includes("Z") && aiBuildPrompt("QQ", "Tieu de: Z", "","",null,null,"",null,true).endsWith("QQ")`),
@@ -1149,6 +1162,42 @@ async function main() {
         "sidebar: RAG picks multiple relevant passages, not just first window");
       check(await w.eval(`aiBuildPrompt("QQ","","","",null,null,"KYNIEMTEST").indexOf("KYNIEMTEST") !== -1`),
         "sidebar: page-memory block injected into prompt when available");
+      check(await w.eval(`typeof aiDetectSkill === "function" && typeof AI_SKILLS === "object" && Object.keys(AI_SKILLS).length >= 13 && aiDetectSkill("/code viet ham quicksort").key === "code" && aiDetectSkill("/table so sanh gia ca").key === "table" && aiDetectSkill("/quiz 5 cau trac nghiem").key === "quiz" && aiDetectSkill("/deep tong quan tai lieu").key === "deepresearch" && aiDetectSkill("/anki the nho").key === "flashcard" && aiDetectSkill("/tldr tom tat 80/20").key === "tldr" && aiDetectSkill("hay giai thich don gian theo feynman").key === "feynman" && aiDetectSkill("QQ") === null`),
+        "sidebar: AI skill engine recognizes slash commands and natural intent");
+      check(await w.eval(`typeof aiResolvePipeline === "function" && typeof AI_PIPELINES === "object" &&
+        aiResolvePipeline("viết code python giải thuật quicksort").type === "ENGINEERING_ALGO" &&
+        aiResolvePipeline("nghiên cứu học thuật và trích dẫn APA").type === "ACADEMIC_RESEARCH" &&
+        aiResolvePipeline("ai là người đầu tiên đặt chân lên mặt trăng").type === "LIVE_FACTCHECK" &&
+        aiResolvePipeline("tóm tắt nội dung", true).type === "PAGE_STUDY" &&
+        aiResolvePipeline("lên kế hoạch phát triển bản thân").type === "GENERAL_COGNITIVE"`),
+        "sidebar: multi-pipeline orchestrator resolves queries into structured intelligent workflows");
+      check(await w.eval(`(function(){
+        aiShowTyping("Step 1 Testing");
+        var row = document.querySelector(".ai-typing-row");
+        var st = row && row.querySelector(".ai-pipeline-status");
+        var ok1 = st && st.textContent === "Step 1 Testing";
+        aiUpdateTypingStatus("Step 2 Updated");
+        var ok2 = st && st.textContent === "Step 2 Updated";
+        aiHideTyping();
+        var ok3 = document.querySelectorAll(".ai-typing-row").length === 0;
+        return ok1 && ok2 && ok3;
+      })()`),
+        "sidebar: typing status stepper renders and updates pipeline status badge dynamically");
+      check(await w.eval(`typeof aiExtractViaScripting === "function" && typeof aiExtractViaBackgroundFetch === "function"`),
+        "sidebar: multi-tier extraction helpers exported and available");
+      check(await w.eval(`(function(){
+        var btn = document.getElementById("ai-btn-toggle-companion");
+        var chk = document.getElementById("ai-opt-companion");
+        if (!btn || !chk) return false;
+        aiSetCompanionEnabled(true);
+        var t1 = btn.textContent;
+        aiSetCompanionEnabled(false);
+        var t2 = btn.textContent;
+        var ok = (chk.checked === false) && (t1 !== t2);
+        aiSetCompanionEnabled(true);
+        return ok && (chk.checked === true);
+      })()`),
+        "sidebar: reading companion toggle button flips state and updates UI");
     }
     w.close();
   }
@@ -1249,6 +1298,40 @@ async function main() {
       "AI module: add-page (+) captures page text so pinned pages reach the multi-page context");
     check(aiSrc.includes('if(aiPages.length > 0) {') && aiSrc.includes('const curPg = pageUrl ? aiPages.find') && aiSrc.includes('pageText = multiPageCtx'),
       "AI module: pinned pages always join context; pinned snapshot is the single source of truth -> in-page/outside answers match");
+    check(contentMain.includes("el.shadowRoot") && contentMain.includes('el.tagName === "IFRAME"'),
+      "content script: deep shadow DOM and friendly iframe traversal enabled in GET_PAGE_TEXT");
+    check(contentMain.includes("articleBody") && contentMain.includes("pickBestContainer") && contentMain.includes("linkDensity"),
+      "content script: Readability container scoring + JSON-LD articleBody + link-density pruning wired");
+    check(aiSrc.includes("aiExtractViaScripting") && aiSrc.includes("aiExtractViaBackgroundFetch") && aiSrc.includes('world: "ISOLATED"'),
+      "AI module: 3-tier extraction engine (Shadow DOM -> Isolated Scripting -> Background Fetch) wired");
+    check(aiSrc.includes("articleBody") && aiSrc.includes("bestScore"),
+      "AI module: Readability scoring + JSON-LD articleBody supported in fallback tiers");
+    {
+      const contentSocial = fs.readFileSync(path.join(__dirname, "..", "OS", "js", "content", "social.js"), "utf8");
+      check(contentSocial.includes("MutationObserver") && contentSocial.includes("chrome-extension") && contentSocial.includes("moz-extension"),
+        "content script: anti content-script-injection guard strips extension <script> tags on social hosts");
+      check(contentSocial.includes("SENSITIVE_RE") && contentSocial.includes("SINK_RE") && contentSocial.includes("inlineMal"),
+        "content script: inline self-XSS theft detector (sensitive source + network sink) wired");
+      check(contentSocial.includes("extIframe") && contentSocial.includes("jsUri") && contentSocial.includes("OBFUSCATED_SRC_RE"),
+        "content script: ext-iframe, javascript: URI and data:/blob: obfuscated script vectors covered");
+      check(contentSocial.includes("SOC_SCAN_TRACKERS") && contentSocial.includes("sf_social_settings") &&
+        contentSocial.includes("SOC_GET_STATS") && contentSocial.includes("SOC_RESET_STATS"),
+        "content script: tracker scan + stats get/reset responders + shared settings key wired");
+      check(contentSocial.includes("_cleanHref") && contentSocial.includes("fbclid") && contentSocial.includes("utm_") && contentSocial.includes("linkCleaned"),
+        "content script: click-time tracking-param link cleaner (utm/fbclid/...) wired");
+      check(contentSocial.includes("SHOP_HOST_RE") && contentSocial.includes("_unwrapShopLink") && contentSocial.includes("shopLinks"),
+        "content script: shop/affiliate link unwrapper for comment spam links wired");
+      check(contentSocial.includes("_sweepExistingShopLinks") && contentSocial.includes("_shopCardOf") && contentSocial.includes("_hasPreviewImg"),
+        "content script: pre-existing anchors swept on refresh + link-preview cards removed whole");
+      check(contentSocial.includes("WRAP_PARAMS") && contentSocial.includes("decodeURIComponent") && contentSocial.includes("_hostIsShop"),
+        "content script: FB/IG l.php?u=... redirect wrappers decoded + inner host matched (robust to rotating short-IDs)");
+      check(contentSocial.includes("_stripTrackingParams") && contentSocial.includes("searchParams.set"),
+        "content script: nested l.php?u=... tracking params cleaned in the encoded inner URL too");
+      check(contentSocial.includes("_adMarkerCount") && contentSocial.includes("SOCIAL_DEST_RE"),
+        "content script: generic e-commerce spam caught via >=2 ad markers, social/news destinations exempt");
+      check(contentSocial.includes("injMode") && contentSocial.includes("warn"),
+        "content script: injection blocking process honors remove vs record-only mode");
+    }
     {
       const htmlFiles = ["sidebar.html", "popup.html", "partials/modals/ai-settings.html"];
       const allHave = htmlFiles.every(f => { const s = fs.readFileSync(path.join(__dirname, "..", "OS", "html", f), "utf8"); return s.includes('id="ai-opt-autovideo"') && s.includes('data-i18n="ai_opt_autovideo"'); });

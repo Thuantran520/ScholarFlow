@@ -1,12 +1,25 @@
 // ---------------------------------------------------------------------------
 // ScholarFlow content: OS/js/content/social.js
-// Social Privacy Shield (Facebook/Messenger, Zalo, Instagram, WhatsApp Web,
-// TikTok, Discord, X, Telegram Web) — best-effort CSS-only hiding of
-// typing/seen/online indicators + social tracker scan on demand.
-// Selectors may need updates when platforms change their UI.
+// Social privacy toolkit (100% local, best-effort DOM heuristics):
+//  A. Anti content-script injection — strips (or, in "warn" mode, only counts)
+//     1) <script src="chrome-extension://|moz-extension://|..."> injected by
+//        other extensions, 2) <script src="data:/blob:"> payloads,
+//        3) late inline <script> pairing a sensitive source (cookie /
+//        localStorage / clipboard / token) with a network sink (fetch / XHR /
+//        WebSocket / sendBeacon) — the classic self-XSS theft paste,
+//     4) extension <iframe>s, 5) javascript: URIs on newly added nodes.
+//     NOTE: inline scripts run synchronously at insertion, so a MutationObserver
+//     can only stop re-execution + report the attempt, not undo the first run.
+//  B. Link cleaner — on click, strips tracking params (utm_*, fbclid, gclid,
+//     igshid, ...) from <a href> before navigation.
+//  C. Shop/ad link remover — unwraps affiliate & marketplace links (Shopee,
+//     Lazada, Tiki, Sendo, TikTok Shop, shp.ee, shope.ee...) added in comment
+//     feeds into plain text so they cannot be clicked.
+// Counters are exposed to the sidebar via SOC_GET_STATS / SOC_RESET_STATS.
+// Also answers SOC_SCAN_TRACKERS.
 // ---------------------------------------------------------------------------
 (function () {
-  const SHIELD_STYLE_ID = "__sf_soc_shield";
+  const SETTINGS_KEY = "sf_social_settings";
   const PLATFORM_HOSTS = {
     facebook: ["facebook.com", "messenger.com"],
     zalo: ["zalo.me", "zaloapp.com"],
@@ -23,7 +36,53 @@
     "hotjar.com", "mixpanel.com", "segment.io", "scorecardresearch.com", "ads-twitter.com",
     "snap.licdn.com", "clarity.ms", "criteo.com", "taboola.com", "outbrain.com"
   ];
+  const EXT_SRC_RE = /^(chrome-extension|moz-extension|safari-web-extension|safari-resource|chrome-untrusted):/i;
+  const OBFUSCATED_SRC_RE = /^(data|blob):/i;
+  const SENSITIVE_RE = /(document\.cookie|localStorage|sessionStorage|indexedDB|navigator\.clipboard|document\.getElementById\([^)]*token|window\.token)/i;
+  const SINK_RE = /(fetch\s*\(|XMLHttpRequest|WebSocket|sendBeacon|EventSource|\.submit\s*\(|@import)/i;
+  const TRACK_PARAMS = [
+    "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "utm_id",
+    "fbclid", "gclid", "dclid", "gbraid", "wbraid", "msclkid", "yclid", "twclid",
+    "igshid", "igsh", "m_st", "mc_cid", "mc_eid", "_hsenc", "_hsmi", "hsa_acc",
+    "hsa_cam", "hsa_grp", "hsa_ad", "spm", "scm", "scene", "from_acquirer",
+    "share_medium", "share_source", "share_url", "share_user_id", "share_to",
+    "tt_medium", "tt_content", "tt_campaign", "ncid", "cmpid", "trk", "trkParam",
+    "trkCampaign", "trkId", "trkOrganic", "trkProduct", "vn_trk", "feature",
+    "ref_src", "refer", "ref_url", "src_app", "channel", "campaign_id", "ad_id",
+    "creative", "placement", "si", "s_kwcid", "ef_id", "gclsrc"
+  ];
+  const SHOP_HOST_RE = /(^|\.)(shopee\.[a-z]{2,3}|shope\.ee|shp\.ee|s\.shopee|lazada\.[a-z]{2,3}|lzd\.[a-z]{2,3}|tiki\.vn|sendo\.vn|tiktok\.com|tiktokv\.com|douyin\.com|temu\.[a-z]{2,3}|aliexpress\.[a-z]{2,3}|phuhuy|hoangha|fptshop|thegioididong|cellphones|maytinhgiaphat|pnj)\.?/i;
+  const AFF_TRACK_RE = /(affiliate|ref=|partner_id|utm|shopeevid|subid|clickid|content_source|fb_content_id|encrypted_payload|channel_type)/i;
+  const BRAND_SUB_RE = /(shopee|lazada|tiktok|tiki|sendo|temu|aliexpress)/i;
+  // Marketing/ad tracking markers. A non-social destination carrying >=2 of
+  // these is an affiliate/ad link even if its domain is not in SHOP_HOST_RE.
+  const AFF_MARKERS = ["encrypted_payload", "fb_content_id", "content_source", "channel_type", "partner_id", "affiliate", "subid", "clickid", "shopeevid", "utm_source", "utm_medium", "utm_campaign"];
+  const SOCIAL_DEST_RE = /(^|\.)(facebook\.com|fb\.com|fb\.me|instagram\.com|messenger\.com|whatsapp\.com|zalo\.me|zaloapp\.com|discord\.com|discord\.gg|x\.com|twitter\.com|t\.co|telegram\.me|telegram\.org|youtube\.com|youtu\.be|google\.com)$/i;
+  function _adMarkerCount(search) {
+    let n = 0;
+    for (let i = 0; i < AFF_MARKERS.length; i++) {
+      if (search.indexOf(AFF_MARKERS[i]) !== -1) n++;
+      if (n >= 2) return n;
+    }
+    return n;
+  }
+  // Query params that FB/IG/other use to wrap the REAL destination URL (l.php?u=...).
+  const WRAP_PARAMS = ["u", "url", "q", "href", "target", "to", "dest"];
+  const STATS_CAP = 300;
 
+  const _settings = { inj: true, injMode: "remove", linkClean: true, shopClean: false };
+  let _observer = null;
+  let _guardActive = false;
+  const _stats = { extScript: 0, obfScript: 0, inlineMal: 0, extIframe: 0, jsUri: 0, linkCleaned: 0, shopLinks: 0 };
+
+  function _runtime() {
+    return (typeof browser !== "undefined" && browser.runtime) ? browser
+      : ((typeof chrome !== "undefined" && chrome.runtime) ? chrome : null);
+  }
+  function _storage() {
+    const api = _runtime();
+    return (api && api.storage && api.storage.local) ? api.storage.local : null;
+  }
   function _detectPlatform() {
     let h = "";
     try { h = (window.location && window.location.hostname) ? window.location.hostname.toLowerCase() : ""; } catch (e) { return null; }
@@ -35,63 +94,239 @@
     }
     return null;
   }
-  function _readSettings(cb) {
-    const api = (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) ? chrome.storage.local : null;
-    if (!api) { cb(null); return; }
-    try {
-      const p = api.get("sf_social_settings");
-      if (p && typeof p.then === "function") p.then(function (r) { cb(r && r.sf_social_settings); }).catch(function () { cb(null); });
-      else api.get("sf_social_settings", function (r) { cb(r && r.sf_social_settings); });
-    } catch (e) { cb(null); }
+  function _abs(src) { try { return new URL(src, location.href).href; } catch (e) { return ""; } }
+  function _isExtSrc(src) { return EXT_SRC_RE.test(_abs(src)); }
+  function _statsTotal() {
+    let n = 0;
+    for (const k in _stats) n += _stats[k];
+    return n;
   }
-  function _cssFor(platform, s) {
-    if (!s) return "";
-    let css = "";
-    const p = (s.platforms && s.platforms[platform]) || {};
-    const typing = !!p.typing, seen = !!p.seen, online = !!p.online;
-    if (platform === "facebook") {
-      css += typing ? '[data-name="typing-indicator"],span[aria-label*="typing"],._1bf ._ak57,._98eh{display:none!important}' : "";
-      css += seen ? '[data-name="message-read-receipt"],#viewport>div:last-child>div:last-child{display:none!important}' : "";
-      css += online ? '[aria-label*="Active Status"] [role="img"],.__c__,._1g9s,a i._3qb,.profilepiccirclepresence{display:none!important}' : "";
-    } else if (platform === "zalo") {
-      css += typing ? '[class*="typing"],[class*="dang-soan"]{display:none!important}' : "";
-      css += seen ? '[class*="read-state"],.icon-eye,[class*="seen"]{display:none!important}' : "";
-      css += online ? '.status-dot,[class*="online-dot"],[class*="activity"]{display:none!important}' : "";
-    } else if (platform === "instagram") {
-      css += typing ? '[data-ix="typing-indicator"],[class*="typing"]{display:none!important}' : "";
-      css += seen ? '[data-name="message-read-receipt"],[class*="seen-indicator"]{display:none!important}' : "";
-      css += online ? 'div[data-presence]:after{display:none!important}' : "";
-    } else if (platform === "whatsapp") {
-      css += typing ? '[data-icon="pencil"]{display:none!important}' : "";
-      css += seen ? '[data-icon="status-dblcheck"],[data-icon="status-check"]{opacity:.25;filter:grayscale(1)}' : "";
-    } else if (platform === "x") {
-      css += typing ? '[data-testid*="typing"]{display:none!important}' : "";
-    } else if (platform === "telegram") {
-      css += typing ? '[class*="typing"]{display:none!important}' : "";
-      css += online ? '[class*="presence"],[class*="online-dot"]{visibility:hidden!important}' : "";
-    } else if (platform === "discord") {
-      css += typing ? '[class*="typing"]{display:none!important}' : "";
-    }
-    return css;
+  function _looksMaliciousInline(text) {
+    const code = String(text || "");
+    if (!code || code.length > 200000) return false;
+    return SENSITIVE_RE.test(code) && SINK_RE.test(code);
   }
-  function _applyShield(css) {
+  // A. injection vectors -------------------------------------------------
+  function _hit(key, el, canRemove) {
+    _stats[key]++;
+    if (canRemove && el && el.remove) el.remove();
+  }
+  function _stripNode(el) {
+    if (!_settings.inj) return;
     try {
-      let st = document.getElementById(SHIELD_STYLE_ID);
-      if (!css) { if (st) st.remove(); return; }
-      if (!st) {
-        st = document.createElement("style");
-        st.id = SHIELD_STYLE_ID;
-        (document.head || document.documentElement).appendChild(st);
+      if (!el || el.nodeType !== 1) return;
+      const remove = _settings.injMode === "remove";
+      const tag = el.tagName;
+      if (tag === "SCRIPT") {
+        const src = el.getAttribute("src");
+        if (src && _isExtSrc(src)) { _hit("extScript", el, remove); return; }
+        if (src && OBFUSCATED_SRC_RE.test(_abs(src))) { _hit("obfScript", el, remove); return; }
+        if (!src && _guardActive && _looksMaliciousInline(el.textContent)) { _hit("inlineMal", el, remove); return; }
+        return;
       }
-      st.textContent = css;
+      if (tag === "IFRAME" && el.getAttribute("src") && _isExtSrc(el.getAttribute("src"))) {
+        _hit("extIframe", el, remove); return;
+      }
+      const href = el.getAttribute && (el.getAttribute("href") || el.getAttribute("src") || "");
+      if (href && /^\s*javascript:/i.test(href)) {
+        if (el.hasAttribute("data-sf-jsuri")) return;
+        el.setAttribute("data-sf-jsuri", "1");
+        if (remove) { el.setAttribute("href", "#"); el.removeAttribute("src"); }
+        _stats.jsUri++;
+      }
+    } catch (e) {}
+  }
+  // B. link cleaner --------------------------------------------------------
+  function _stripTrackingParams(iu) {
+    const keys = [];
+    iu.searchParams.forEach(function (_v, k) {
+      const lk = k.toLowerCase();
+      if (TRACK_PARAMS.indexOf(lk) !== -1 || lk.indexOf("utm_") === 0) keys.push(k);
+    });
+    keys.forEach(function (k) { iu.searchParams.delete(k); });
+    return keys.length > 0;
+  }
+  function _cleanHref(el) {
+    try {
+      const href = el.getAttribute("href") || "";
+      if (!/^https?:/i.test(href)) return false;
+      let u;
+      try { u = new URL(href); } catch (e2) { return false; }
+      let changed = _stripTrackingParams(u);
+      // Wrapper links (l.php?u=...): clean the NESTED destination too so the
+      // fbclid/utm hidden inside the encoded target is gone after redirect.
+      for (let i = 0; i < WRAP_PARAMS.length; i++) {
+        const key = WRAP_PARAMS[i];
+        const val = u.searchParams.get(key);
+        if (!val) continue;
+        let inner = val;
+        try { inner = decodeURIComponent(val); } catch (e2) {}
+        if (!/^https?:/i.test(inner)) continue;
+        let iu;
+        try { iu = new URL(inner); } catch (e2) { continue; }
+        if (_stripTrackingParams(iu)) {
+          u.searchParams.set(key, iu.href);
+          changed = true;
+        }
+      }
+      if (!changed) return false;
+      el.setAttribute("href", u.href);
+      _stats.linkCleaned++;
+      return true;
+    } catch (e) { return false; }
+  }
+  // C. shop/ad link remover -------------------------------------------------
+  function _hostIsShop(host, search) {
+    if (SHOP_HOST_RE.test(host)) return true;
+    if (SOCIAL_DEST_RE.test(host)) return false;
+    if (_adMarkerCount(search) >= 2) return true;
+    return AFF_TRACK_RE.test(search) && BRAND_SUB_RE.test(host + search);
+  }
+  function _isShopHref(el) {
+    try {
+      const href = el.getAttribute("href") || "";
+      if (!/^https?:/i.test(href)) return false;
+      const u = new URL(href);
+      const host = (u.hostname || "").toLowerCase();
+      const cur = location.hostname.toLowerCase();
+      const sameHost = host === cur || host.endsWith("." + cur);
+      // 1) direct host check on the outer URL (skip the platform's own links
+      //    unless it is a link-wrapper like l.php)
+      if (!sameHost && _hostIsShop(host, u.search)) return true;
+      // 2) wrapper decode: l.facebook.com/l.php?u=https%3A%2F%2Fs.shopee.vn%2F...
+      //    (also instagram external/, google url redirects, ...)
+      for (let i = 0; i < WRAP_PARAMS.length; i++) {
+        const val = u.searchParams.get(WRAP_PARAMS[i]);
+        if (!val) continue;
+        let inner = val;
+        try { inner = decodeURIComponent(val); } catch (e2) {}
+        if (!/^https?:/i.test(inner)) continue;
+        try {
+          const iu = new URL(inner);
+          if (_hostIsShop((iu.hostname || "").toLowerCase(), iu.search)) return true;
+        } catch (e2) {}
+      }
+      return false;
+    } catch (e) { return false; }
+  }
+  function _hasPreviewImg(node) {
+    try {
+      const imgs = node.querySelectorAll("img");
+      for (let i = 0; i < imgs.length; i++) {
+        const h = parseInt(imgs[i].getAttribute("height") || "0", 10) || 0;
+        const s = imgs[i].getAttribute("src") || "";
+        if (h >= 50 || /usercontent|emg1|\/t13\/|external\./i.test(s)) return true;
+      }
+    } catch (e) {}
+    return false;
+  }
+  // Walk up from a shop anchor: if a small container holds ONLY shop anchors
+  // and a big link-preview image, it is the link-preview card (product
+  // preview) — remove the whole card, not just the anchor.
+  function _shopCardOf(el) {
+    try {
+      let node = el.parentNode;
+      let hops = 0;
+      while (node && node.nodeType === 1 && hops < 8) {
+        const anchors = node.querySelectorAll ? node.querySelectorAll("a[href]") : [];
+        let shopCount = 0;
+        let hasOther = false;
+        for (let i = 0; i < anchors.length; i++) {
+          if (_isShopHref(anchors[i])) shopCount++; else hasOther = true;
+        }
+        if (hasOther) break;
+        if (shopCount > 0 && _hasPreviewImg(node)) return node;
+        node = node.parentNode;
+        hops++;
+      }
+    } catch (e) {}
+    return null;
+  }
+  function _unwrapShopLink(el) {
+    try {
+      if (!_isShopHref(el)) return;
+      if (!el.parentNode || !el.ownerDocument) return;
+      const card = _shopCardOf(el);
+      if (card) { card.remove(); _stats.shopLinks++; return; }
+      const txt = el.ownerDocument.createTextNode(el.textContent || "");
+      el.parentNode.replaceChild(txt, el);
+      _stats.shopLinks++;
+    } catch (e) {}
+  }
+  function _processAddedNode(root) {
+    try {
+      _stripNode(root);
+      if (_settings.shopClean && root.tagName === "A") _unwrapShopLink(root);
+      if (root.querySelectorAll) {
+        const nodes = root.querySelectorAll("script,iframe,a[href]");
+        const cap = Math.min(nodes.length, STATS_CAP);
+        for (let i = 0; i < cap; i++) {
+          const n = nodes[i];
+          _stripNode(n);
+          if (_settings.shopClean && n.tagName === "A") _unwrapShopLink(n);
+        }
+      }
+    } catch (e) {}
+  }
+  function _startObserver() {
+    if (_observer || !document.documentElement) return;
+    _guardActive = true;
+    try {
+      document.querySelectorAll("script[src]").forEach(function (el) { _stripNode(el); });
+      _observer = new MutationObserver(function (muts) {
+        muts.forEach(function (m) {
+          (m.addedNodes || []).forEach(function (n) {
+            if (n && n.nodeType === 1) _processAddedNode(n);
+          });
+        });
+      });
+      _observer.observe(document.documentElement, { childList: true, subtree: true });
+    } catch (e) {}
+  }
+  function _stopObserver() {
+    _guardActive = false;
+    try {
+      if (_observer) { _observer.disconnect(); _observer = null; }
+    } catch (e) {}
+  }
+  // One-off sweep of anchors that already exist in the DOM (comments rendered
+  // before the observer started). Capped to keep big feeds cheap.
+  function _sweepExistingShopLinks() {
+    try {
+      const links = document.querySelectorAll("a[href]");
+      const cap = Math.min(links.length, 3000);
+      for (let i = cap - 1; i >= 0; i--) {
+        if (links[i] && links[i].nodeType === 1) _unwrapShopLink(links[i]);
+      }
     } catch (e) {}
   }
   function _refresh() {
-    const platform = _detectPlatform();
-    if (!platform) { _applyShield(""); return; }
-    _readSettings(function (s) {
-      _applyShield(s ? _cssFor(platform, s) : "");
-    });
+    const onSocial = !!_detectPlatform();
+    if (onSocial && (_settings.inj || _settings.shopClean)) {
+      _startObserver();
+      if (_settings.shopClean) _sweepExistingShopLinks();
+    } else {
+      _stopObserver();
+    }
+  }
+  function _readSettings(cb) {
+    const api = _storage();
+    if (!api) { cb(); return; }
+    try {
+      const p = api.get(SETTINGS_KEY);
+      const apply = function (r) {
+        const s = r && r[SETTINGS_KEY];
+        if (s) {
+          _settings.inj = s.inj !== false;
+          _settings.injMode = s.injMode === "warn" ? "warn" : "remove";
+          _settings.linkClean = s.linkClean !== false;
+          _settings.shopClean = !!s.shopClean;
+        }
+        cb();
+      };
+      if (p && typeof p.then === "function") p.then(apply).catch(function () { cb(); });
+      else api.get(SETTINGS_KEY, apply);
+    } catch (e) { cb(); }
   }
   function _scanTrackers() {
     const found = [];
@@ -100,27 +335,66 @@
         try {
           const host = new URL(el.src).hostname.toLowerCase();
           for (let i = 0; i < TRACKER_HOSTS.length; i++) {
-            const t = TRACKER_HOSTS[i];
-            if ((host === t || host.endsWith("." + t)) && found.indexOf(t) === -1) found.push(t);
+            const tr = TRACKER_HOSTS[i];
+            if ((host === tr || host.endsWith("." + tr)) && found.indexOf(tr) === -1) found.push(tr);
           }
         } catch (e) {}
       });
     } catch (e) {}
     return found;
   }
-  try { _refresh(); } catch (e) {}
+
+  // Click-time link cleaning (capture phase, before navigation resolves).
   try {
-    const api = (typeof chrome !== "undefined" && chrome.storage && chrome.storage.onChanged) ? chrome.storage.onChanged : null;
-    if (api && api.addListener) api.addListener(function (changes, area) { if (area === "local" && changes && changes.sf_social_settings) _refresh(); });
+    document.addEventListener("click", function (e) {
+      if (!_settings.linkClean || e.button !== 0 || !e.isTrusted) return;
+      if (!_detectPlatform()) return;
+      const t = e.target;
+      const a = t && t.closest ? t.closest("a[href]") : null;
+      if (a) _cleanHref(a);
+    }, true);
+  } catch (e) {}
+
+  try { _readSettings(_refresh); } catch (e) {}
+  try {
+    const api = _storage();
+    if (api && api.onChanged) {
+      api.onChanged.addListener(function (changes, area) {
+        if (area === "local" && changes && changes[SETTINGS_KEY]) _readSettings(_refresh);
+      });
+    }
   } catch (e) {}
   try {
-    const rt = (typeof chrome !== "undefined" && chrome.runtime) ? chrome.runtime : (typeof browser !== "undefined" && browser.runtime) ? browser.runtime : null;
+    const root = _runtime();
+    const rt = root && root.runtime;
     if (rt && rt.onMessage && rt.onMessage.addListener) {
       rt.onMessage.addListener(function (msg, sender, sendResponse) {
         if (!msg || !msg.action) return;
-        if (msg.action === "SOC_REFRESH") { _refresh(); sendResponse({ ok: true, platform: _detectPlatform() }); return true; }
-        if (msg.action === "SOC_SCAN_TRACKERS") { sendResponse({ ok: true, trackers: _scanTrackers() }); return true; }
-        if (msg.action === "SOC_GET_PLATFORM") { sendResponse({ ok: true, platform: _detectPlatform() }); return true; }
+        if (msg.action === "SOC_SCAN_TRACKERS") {
+          try { sendResponse({ ok: true, trackers: _scanTrackers(), platform: _detectPlatform() }); } catch (e) { sendResponse({ ok: false }); }
+          return;
+        }
+        if (msg.action === "SOC_REFRESH") {
+          _readSettings(_refresh);
+          try { sendResponse({ ok: true, protected: _settings.inj, removed: _statsTotal() }); } catch (e) {}
+          return;
+        }
+        if (msg.action === "SOC_GET_STATS") {
+          try {
+            sendResponse({
+              ok: true, platform: _detectPlatform(), enabled: _settings.inj, mode: _settings.injMode,
+              stats: Object.assign({}, _stats), total: _statsTotal()
+            });
+          } catch (e) { sendResponse({ ok: false }); }
+          return;
+        }
+        if (msg.action === "SOC_RESET_STATS") {
+          try {
+            for (const k in _stats) _stats[k] = 0;
+            sendResponse({ ok: true });
+          } catch (e) { sendResponse({ ok: false }); }
+          return;
+        }
       });
     }
   } catch (e) {}

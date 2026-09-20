@@ -7,7 +7,8 @@
     'ai-sessions':  '../html/partials/modals/ai-sessions.html',
     'bibliography': '../html/partials/modals/bibliography.html',
     'author-rules': '../html/partials/modals/author-rules.html',
-    'trust':        '../html/partials/modals/trust.html'
+    'trust':        '../html/partials/modals/trust.html',
+    'permissions':  '../html/partials/modals/permissions.html'
   };
 
   function injectHTML(el, html) {

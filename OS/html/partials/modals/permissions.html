@@ -1,0 +1,84 @@
+<div id="permissions-modal" class="modal-overlay">
+  <div class="modal-header">
+    <div class="modal-title">
+      <span style="display:inline-flex; align-items:center; gap:6px; min-width:0;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+        <span data-i18n="perm_modal_title" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Chào Mừng &amp; Minh Bạch Quyền Hạn</span>
+      </span>
+    </div>
+    <button class="btn btn-secondary" id="btn-close-permissions" style="padding:4px 10px; font-size:12px; flex-shrink:0;" data-i18n="btn_close">✕ Đóng</button>
+  </div>
+
+  <div class="modal-body-scroll">
+    <!-- Intro Card: 100% Client-side Privacy by Design -->
+    <div class="rule-card" style="border-color:rgba(56,189,248,0.4); background:rgba(56,189,248,0.08); margin-bottom:10px;">
+      <div class="rule-card-title" style="color:#38bdf8; font-size:11.5px;" data-i18n="perm_intro_title">🛡️ Cam Kết 100% Cục Bộ — Bảo Mật Theo Thiết Kế</div>
+      <div class="rule-card-body" style="font-size:11px; line-height:1.5;" data-i18n="perm_intro_desc">ScholarFlow hoạt động hoàn toàn cục bộ trên trình duyệt của bạn (Zero Telemetry). Tiện ích không thu thập, không theo dõi và không gửi dữ liệu ra máy chủ bên ngoài. Dưới đây là giải trình minh bạch về lý do ScholarFlow cần các quyền trên trình duyệt:</div>
+    </div>
+
+    <!-- Permission 1: Web Access (<all_urls>) -->
+    <div class="rule-card" style="border-color:rgba(16,185,129,0.35); background:rgba(16,185,129,0.06);">
+      <div class="rule-card-title" style="color:#10b981;">
+        <span data-i18n="perm_card_urls_title">🌐 1. Quyền Truy Cập Trang Web (&lt;all_urls&gt;)</span>
+        <span data-i18n="perm_card_urls_tag" style="font-size:9px; background:rgba(16,185,129,0.2); color:#10b981; padding:2px 6px; border-radius:4px; font-weight:600; white-space:nowrap;">TRÍCH DẪN &amp; GIAO DIỆN</span>
+      </div>
+      <div class="rule-card-body" data-i18n="perm_card_urls_body_html" data-i18n-html="true">
+        • <b>Mục đích:</b> Tự động nhận diện và trích xuất siêu dữ liệu học thuật (DOI, tiêu đề, tác giả, năm xuất bản); kích hoạt chế độ Smart Dark Mode; hỗ trợ chụp cuộn toàn trang và chặn biểu ngữ cookie tự động.<br>• <b>Cam kết:</b> Chỉ phân tích cấu trúc DOM tại chỗ khi bạn yêu cầu. Không bao giờ gửi nội dung trang ra ngoài.
+      </div>
+    </div>
+
+    <!-- Permission 2: Cookie Management (cookies) -->
+    <div class="rule-card" style="border-color:rgba(245,158,11,0.35); background:rgba(245,158,11,0.06);">
+      <div class="rule-card-title" style="color:#f59e0b;">
+        <span data-i18n="perm_card_cookies_title">🍪 2. Quyền Quản Lý Cookie (cookies)</span>
+        <span data-i18n="perm_card_cookies_tag" style="font-size:9px; background:rgba(245,158,11,0.2); color:#f59e0b; padding:2px 6px; border-radius:4px; font-weight:600; white-space:nowrap;">QUẢN LÝ PHIÊN HỌC THUẬT</span>
+      </div>
+      <div class="rule-card-body" data-i18n="perm_card_cookies_body_html" data-i18n-html="true">
+        • <b>Mục đích:</b> Vận hành Trình Quản Lý Cookie (Cookie Manager) giúp bạn sao lưu phiên làm việc, duy trì đăng nhập cổng nghiên cứu/thư viện và xuất file Netscape cookies.txt/JSON cho nghiên cứu.<br>• <b>Cam kết:</b> Cookie chỉ được đọc/ghi khi bạn thao tác chủ động trong tab Cookie. Tuyệt đối không phát tán hay chia sẻ cookie.
+      </div>
+    </div>
+
+    <!-- Permission 3: Clipboard Access (clipboardWrite) -->
+    <div class="rule-card" style="border-color:rgba(129,140,248,0.35); background:rgba(129,140,248,0.06);">
+      <div class="rule-card-title" style="color:#818cf8;">
+        <span data-i18n="perm_card_clipboard_title">📋 3. Quyền Ghi Bảng Tạm (clipboardWrite)</span>
+        <span data-i18n="perm_card_clipboard_tag" style="font-size:9px; background:rgba(129,140,248,0.2); color:#818cf8; padding:2px 6px; border-radius:4px; font-weight:600; white-space:nowrap;">SAO CHÉP 1-CHẠM</span>
+      </div>
+      <div class="rule-card-body" data-i18n="perm_card_clipboard_body_html" data-i18n-html="true">
+        • <b>Mục đích:</b> Cho phép sao chép nhanh 1-chạm trích dẫn chuẩn (IEEE, APA, Harvard, MLA, BibTeX), tóm tắt AI và bảng dữ liệu vào clipboard để dán ngay vào Word/LaTeX/Overleaf.<br>• <b>Cam kết:</b> Chỉ ghi vào bảng tạm khi bạn nhấn nút 'Sao chép'. Tiện ích KHÔNG đọc hoặc quét clipboard của bạn.
+      </div>
+    </div>
+
+    <!-- Permission 4: Storage (storage) -->
+    <div class="rule-card" style="border-color:rgba(56,189,248,0.35); background:rgba(56,189,248,0.06);">
+      <div class="rule-card-title" style="color:#38bdf8;">
+        <span data-i18n="perm_card_storage_title">💾 4. Quyền Lưu Trữ Cục Bộ (storage)</span>
+        <span data-i18n="perm_card_storage_tag" style="font-size:9px; background:rgba(56,189,248,0.2); color:#38bdf8; padding:2px 6px; border-radius:4px; font-weight:600; white-space:nowrap;">DỮ LIỆU CÁ NHÂN OFFLINE</span>
+      </div>
+      <div class="rule-card-body" data-i18n="perm_card_storage_body_html" data-i18n-html="true">
+        • <b>Mục đích:</b> Lưu trữ an toàn danh mục trích dẫn đã lưu, lịch sử hội thoại AI, ghi chú nghiên cứu và cấu hình cá nhân trên chính trình duyệt của bạn.<br>• <b>Cam kết:</b> Dữ liệu hoàn toàn do bạn làm chủ, không bao giờ gửi lên đám mây và được xóa sạch khi bạn gỡ cài đặt tiện ích.
+      </div>
+    </div>
+
+    <!-- Permission 5: Tabs & Scripting (tabs, activeTab, scripting) -->
+    <div class="rule-card" style="border-color:rgba(168,85,247,0.35); background:rgba(168,85,247,0.06);">
+      <div class="rule-card-title" style="color:#c084fc;">
+        <span data-i18n="perm_card_tabs_title">📑 5. Quản Lý Tab &amp; Điều Khiển (tabs, activeTab, scripting)</span>
+        <span data-i18n="perm_card_tabs_tag" style="font-size:9px; background:rgba(168,85,247,0.2); color:#c084fc; padding:2px 6px; border-radius:4px; font-weight:600; white-space:nowrap;">TRỢ LÝ ĐA NHIỆM</span>
+      </div>
+      <div class="rule-card-body" data-i18n="perm_card_tabs_body_html" data-i18n-html="true">
+        • <b>Mục đích:</b> Vận hành tính năng Quản Lý Tab (Tab Manager), nhận diện URL trang đang xem để tự động điền trích dẫn, và kích hoạt công cụ chụp khung hoặc làm mờ thông tin riêng tư.<br>• <b>Cam kết:</b> Chỉ thao tác trên tab khi bạn ra lệnh hoặc mở giao diện tiện ích.
+      </div>
+    </div>
+
+    <!-- Action Button -->
+    <button class="btn btn-primary" id="btn-ack-permissions" style="width:100%; padding:9px 16px; font-size:12.5px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:8px; border-radius:6px; margin-top:8px;" data-i18n="perm_btn_ack">✓ Tôi Đã Hiểu &amp; Bắt Đầu Sử Dụng</button>
+
+    <!-- Footer Note -->
+    <div style="text-align:center; margin-top:8px; margin-bottom:4px; font-size:11px; color:#94a3b8; line-height:1.4;">
+      <span data-i18n="perm_footer_note">Bạn có thể xem lại thông tin minh bạch này bất kỳ lúc nào tại Trung Tâm Uy Tín hoặc</span>
+      <a href="privacy.html" target="_blank" style="color:#38bdf8; text-decoration:underline;" data-i18n="perm_link_privacy">Chính Sách Quyền Riêng Tư</a>
+    </div>
+  </div>
+</div>
+

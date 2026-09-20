@@ -6,14 +6,8 @@
       <span id="ai-key-status" class="ai-status" style="display:none;" aria-hidden="true"></span>
     </div>
     <div class="ai-model-bar">
-      <div class="ai-provider-pills">
-        <button type="button" class="ai-provider-pill active" data-provider="gemini">Gemini</button>
-        <button type="button" class="ai-provider-pill" data-provider="openai">ChatGPT</button>
-        <button type="button" class="ai-provider-pill" data-provider="claude">Claude</button>
-        <button type="button" class="ai-provider-pill" data-provider="custom">Custom</button>
-      </div>
       <div class="ai-model-select-wrap">
-        <select id="ai-model-select-main" class="ai-model-select"></select>
+        <select id="ai-model-select-main" class="ai-model-select" aria-label="Chọn Model"></select>
         <select id="ai-provider-select" style="display:none;" aria-hidden="true"><option value="gemini">Gemini</option><option value="openai">ChatGPT</option><option value="claude">Claude</option><option value="custom">Custom</option></select>
       </div>
     </div>
@@ -68,7 +62,7 @@
     <button type="button" class="btn btn-secondary" id="ai-btn-attach-image" data-i18n="ai_btn_attach_label" title="Đính kèm" data-i18n-title="ai_btn_attach_image">Ảnh</button>
     <input type="file" id="ai-image-input" accept="image/*" style="display:none;">
     <div class="ai-input-wrap">
-      <textarea id="ai-input" class="ai-input" rows="1" placeholder="Hỏi về trang/video này hoặc trò chuyện tự do... (Enter gửi, Shift+Enter xuống dòng)" data-i18n-placeholder="ai_input_placeholder"></textarea>
+      <textarea id="ai-input" class="ai-input" rows="1" placeholder="Hỏi về trang hoặc gõ / dùng kỹ năng (/code, /table, /quiz, /critique, /mindmap, /math)..." data-i18n-placeholder="ai_input_placeholder"></textarea>
     </div>
     <button type="button" class="ai-send-btn" id="ai-btn-send" data-i18n="ai_btn_send">Gửi</button>
   </div>

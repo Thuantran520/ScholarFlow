@@ -123,20 +123,31 @@ function calParseIcs(text) {
   const lines = calUnfoldIcs(text);
   const events = [];
   let cur = null;
+  let inSubComponent = false;
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const ci = line.indexOf(":");
     if (ci === -1) continue;
     const nameRaw = line.slice(0, ci);
-    const value = line.slice(ci + 1);
+    const value = line.slice(ci + 1).trim();
     const name = nameRaw.split(";")[0].toUpperCase();
     const isDate = /;VALUE=DATE$/i.test(nameRaw);
-    if (name === "BEGIN" && value.toUpperCase() === "VEVENT") {
-      cur = { dtstart: "", dtend: "", allday: false, summary: "", location: "", description: "", url: "", uid: "", rrule: "" };
-    } else if (name === "END" && cur) {
-      events.push(cur);
-      cur = null;
-    } else if (cur) {
+    if (name === "BEGIN") {
+      if (value.toUpperCase() === "VEVENT") {
+        cur = { dtstart: "", dtend: "", allday: false, summary: "", location: "", description: "", url: "", uid: "", rrule: "" };
+        inSubComponent = false;
+      } else if (cur) {
+        inSubComponent = true;
+      }
+    } else if (name === "END") {
+      if (value.toUpperCase() === "VEVENT") {
+        if (cur) events.push(cur);
+        cur = null;
+        inSubComponent = false;
+      } else if (inSubComponent) {
+        inSubComponent = false;
+      }
+    } else if (cur && !inSubComponent) {
       if (name === "SUMMARY") cur.summary = value;
       else if (name === "LOCATION") cur.location = value;
       else if (name === "DESCRIPTION") cur.description = value;
@@ -754,20 +765,23 @@ function calRenderFeedList() {
 function calRefreshFeed(id, silent) {
   const feed = calFeeds.find(function (f) { return f.id === id; });
   if (!feed || !feed.url) return;
-  fetch(feed.url)
+  fetch(feed.url, { cache: "no-store", signal: AbortSignal.timeout(12000) })
     .then(function (res) {
       if (!res.ok) throw new Error("HTTP " + res.status);
       return res.text();
     })
     .then(function (text) {
-      calData[id] = calParseIcs(text);
+      const parsed = calParseIcs(text);
+      calData[id] = parsed;
       calPersist();
       calRenderFeedList();
       calRenderCalendar();
-      if (!silent) showToast(window.i18n ? window.i18n.t("cal_toast_updated", null, { name: feed.name }) : "✓ Calendar updated");
+      if (!silent) {
+        showToast(window.i18n ? window.i18n.t("cal_toast_updated", null, { name: feed.name }) : "✓ Calendar updated", "success");
+      }
     })
     .catch(function (err) {
-      showToast(window.i18n ? window.i18n.t("cal_toast_error", null, { name: feed.name }) : "⚠️ Cannot load calendar");
+      showToast(window.i18n ? window.i18n.t("cal_toast_error", null, { name: feed.name }) : "⚠️ Cannot load calendar", "error");
       console.error("ICS fetch failed:", err);
     });
 }
@@ -947,11 +961,16 @@ function calInit() {
   const btnAdd = document.getElementById("btn-cal-add");
   if (btnAdd && input) {
     const addFeed = function () {
-      const url = input.value.trim();
+      let url = input.value.trim();
       if (!/^https?:\/\//i.test(url)) {
         showToast(window.i18n ? window.i18n.t("cal_toast_invalid_url") : "⚠️ Please enter a valid URL", "error");
         input.focus();
         return;
+      }
+      // Auto-normalize GitHub Gist page URL to raw ICS URL
+      const gistWeb = /^https:\/\/gist\.github\.com\/([^\/]+)\/([a-f0-9]+)(?:\/raw.*)?$/i.exec(url);
+      if (gistWeb) {
+        url = "https://gist.githubusercontent.com/" + gistWeb[1] + "/" + gistWeb[2] + "/raw/";
       }
       if (calFeeds.some(function (f) { return f.url === url; })) {
         showToast(window.i18n ? window.i18n.t("cal_toast_exists") : "⚠️ This calendar is already added", "error");

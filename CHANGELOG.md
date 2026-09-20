@@ -5,6 +5,42 @@ Tất cả thay đổi đáng chú ý của dự án đều được ghi tại �
 
 ---
 
+## [2.5.1] - 2026-09-20
+
+### 🛡️ Đại tu tính năng Bảo vệ mạng xã hội (tab Social)
+- **Chống chèn content script (Protect against content script injection)** — mục "Bảo vệ" giờ chỉ giữ 1 tính năng hợp nhất, tự động phát hiện & gỡ trên Facebook/Zalo/Instagram/WhatsApp/TikTok/Discord/X/Telegram:
+  - Script lạ từ extension khác (`chrome-extension://`, `moz-extension://`), script `data:`/`blob:` che giấu, iframe lạ, link `javascript:`.
+  - **Mã inline self-XSS** (chiêu dán code "nhận acc free"): chặn khi code vừa đọc cookie/localStorage/clipboard vừa gọi fetch/XHR/WebSocket/sendBeacon.
+  - 2 quy trình chặn: **Gỡ bỏ ngay** hoặc **Chỉ ghi nhận, không gỡ**.
+- **Làm sạch link theo dõi khi bấm** (bật mặc định): cắt `utm_*`, `fbclid`, `gclid`, `igshid`... khỏi URL trước khi mở — kể cả nested bên trong wrapper `l.facebook.com/l.php?u=...`.
+- **Gỡ link quảng cáo / shop online trong bình luận** (tùy chọn): Shopee/Lazada/Tiki/Sendo/TikTok Shop/Temu/AliExpress (đổi short-ID vẫn chặn nhờ giải mã wrapper), shop lạ mang ≥2 dấu vết tiếp thị FB cũng bị gỡ; link mạng xã hội/báo chí/trang lành bị loại trừ; xóa cả thẻ preview sản phẩm.
+- Dòng thống kê "Đã chặn N lần chèn mã · dọn M link theo dõi · gỡ K link shop" + nút Reset ngay trong tab Social.
+- Gỡ toàn bộ khiên CSS cũ (ẩn typing/đã xem/online) — đã được thay thế bằng các module khác; khôi phục helpers lõi cho Recovery/Vault/Checklist/Creator/Tools.
+- Sửa: `messaging.js` thiếu `security.js`/`social.js` trong danh sách lazy-inject; listener `onMessage` của content script Social tham chiếu sai API.
+
+### 🤖 Trợ lý AI
+- **Skill engine**: 13+ kỹ năng qua `/code /table /quiz /critique /mindmap /math...` + nhận diện ý định tự nhiên; orchestrator 5 pipeline (Engineering, Academic Research, Live Fact-check, Page Study, General Cognitive).
+- **Trích xuất 3 tầng**: Shadow DOM/iframe → scripting isolated → background fetch; chấm điểm container Readability + JSON-LD `articleBody`.
+- **Máy chủ tùy biến (Custom/Local AI)**: thêm Ollama, LM Studio, vLLM, OpenRouter với tên/model/key riêng; selector model hợp nhất; Gemini mặc định đời mới.
+- Popup AI nhanh khi bôi đen (Reading Companion): thêm nút tắt/bật tức thì.
+
+### ⚖️ Trung tâm uy tín
+- Modal **Minh Bạch Quyền Hạn Trình Duyệt** mới (giải trình từng permission <all_urls>/cookies/clipboard/storage/scripting), hiện lần đầu + mở lại từ nút trong Trust Center.
+- Version hiển thị về 2.5.1; `privacy_last_updated` đồng bộ 2.5.1_beta trên cả 5 ngôn ngữ.
+
+---
+
+## So sánh nhanh v2.5.0 → v2.5.1
+
+| Hạng mục | v2.5.0 | v2.5.1 |
+|---|---|---|
+| **Bảo vệ MXH** | Khiên CSS ẩn typing/đã xem/online từng nền tảng | **Engine chống chèn script** (ext/data/inline self-XSS/iframe/javascript:), 2 quy trình chặn, thống kê + reset |
+| **Link an toàn** | - | **Cắt tracking utm/fbclid khi bấm** (giải cả wrapper `l.php?u=`), **gỡ link shop/quảng cáo trong bình luận** (decode wrapper, đổi short-ID vẫn chặn) |
+| **Trợ lý AI** | Gemini/ChatGPT/Claude + grounding | + 13+ skill lệnh `/`, 5 pipeline điều phối, trích xuất 3 tầng + JSON-LD/Readability |
+| **Model tùy biến** | Custom URL đơn lẻ | + Kho máy chủ Ollama/LM Studio/vLLM/OpenRouter (tên + endpoint + model + key), selector hợp nhất |
+| **Minh bạch quyền hạn** | - | + Modal giải trình 5 nhóm permission, hiển thị lần đầu |
+
+---
 ## So sánh nhanh v2.4.2 → v2.4.4
 
 | Hạng mục | v2.4.2 | v2.4.4 |

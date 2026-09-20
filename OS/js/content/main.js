@@ -451,18 +451,118 @@
         case "GET_PAGE_TEXT": {
           let txt2 = "";
           try {
-            const rootSel = document.querySelector("article") || document.querySelector("main") || document.querySelector("[role=main]") || document.body;
-            const skip = { SCRIPT: 1, STYLE: 1, NOSCRIPT: 1, NAV: 1, HEADER: 1, FOOTER: 1, ASIDE: 1, IFRAME: 1, FORM: 1, BUTTON: 1, SELECT: 1 };
-            const blockish = { P: 1, DIV: 1, LI: 1, UL: 1, OL: 1, TABLE: 1, TR: 1, SECTION: 1, H1: 1, H2: 1, H3: 1, H4: 1, H5: 1, BLOCKQUOTE: 1, PRE: 1, FIGCAPTION: 1 };
-            const hidden = (el) => {
-              try { const cs = window.getComputedStyle(el); return cs.display === "none" || cs.visibility === "hidden"; } catch (e) { return false; }
+            // 1. Khai thác dữ liệu cấu trúc ẩn JSON-LD (Schema.org Article / NewsArticle / BlogPosting)
+            let jsonLdBody = "";
+            try {
+              const ldScripts = document.querySelectorAll('script[type="application/ld+json"]');
+              for (let i = 0; i < ldScripts.length; i++) {
+                const raw = (ldScripts[i].textContent || "").trim();
+                if (!raw || !raw.includes("articleBody")) continue;
+                let parsed = null;
+                try { parsed = JSON.parse(raw); } catch (e) { parsed = null; }
+                if (!parsed) continue;
+                const items = Array.isArray(parsed) ? parsed : (Array.isArray(parsed["@graph"]) ? parsed["@graph"] : [parsed]);
+                for (const it of items) {
+                  if (it && typeof it.articleBody === "string" && it.articleBody.trim().length > 150) {
+                    jsonLdBody = it.articleBody.trim();
+                    break;
+                  }
+                }
+                if (jsonLdBody) break;
+              }
+            } catch (e) {}
+
+            // 2. Thuật toán chấm điểm Heuristic chọn vùng nội dung chính (Readability Container Scoring)
+            const pickBestContainer = (doc) => {
+              if (!doc || !doc.body) return null;
+              const selectors = [
+                "article", "main", "[role=main]", "[itemprop='articleBody']",
+                ".post-content", ".entry-content", ".article-body", ".article__content",
+                ".story-body", ".content-body", ".detail-content", ".fck_detail", ".content_detail",
+                "#article-body", "#main-content", "#content"
+              ];
+              const candidates = [];
+              const seen = new Set();
+              selectors.forEach(sel => {
+                try {
+                  doc.querySelectorAll(sel).forEach(el => {
+                    if (el && !seen.has(el) && el !== doc.body) {
+                      seen.add(el);
+                      candidates.push(el);
+                    }
+                  });
+                } catch(e) {}
+              });
+              if (!candidates.length) return doc.querySelector("article") || doc.querySelector("main") || doc.querySelector("[role=main]") || doc.body;
+
+              let bestEl = null;
+              let bestScore = -1;
+              const NOISE_RE = /(comment|sidebar|related|popular|widget|advert|banner|promo|social|share|cookie|popup|modal|dialog|footer|nav|header)/i;
+              const GOOD_RE = /(article|entry|post|story|body|content|text|paratext)/i;
+
+              for (const el of candidates) {
+                let score = 0;
+                const tag = el.tagName;
+                if (tag === "ARTICLE" || tag === "MAIN") score += 25;
+                else if (tag === "DIV" || tag === "SECTION") score += 5;
+
+                const idClass = (el.id || "") + " " + (el.className || "");
+                if (GOOD_RE.test(idClass)) score += 25;
+                if (NOISE_RE.test(idClass)) score -= 35;
+
+                const paras = el.querySelectorAll("p");
+                score += Math.min(50, paras.length * 6);
+
+                const textLen = (el.textContent || "").trim().length;
+                if (textLen < 80) score -= 40;
+                else score += Math.min(60, Math.floor(textLen / 100));
+
+                const linkTextLen = Array.prototype.slice.call(el.querySelectorAll("a")).reduce((acc, a) => acc + (a.textContent || "").length, 0);
+                const linkDensity = textLen > 0 ? (linkTextLen / textLen) : 0;
+                if (linkDensity > 0.6) score -= 60;
+
+                if (score > bestScore) {
+                  bestScore = score;
+                  bestEl = el;
+                }
+              }
+              return (bestScore > 20 && bestEl) ? bestEl : (doc.querySelector("article") || doc.querySelector("main") || doc.querySelector("[role=main]") || doc.body);
             };
+
+            const rootSel = pickBestContainer(document);
+            const skip = { SCRIPT: 1, STYLE: 1, NOSCRIPT: 1, NAV: 1, HEADER: 1, FOOTER: 1, ASIDE: 1, FORM: 1, BUTTON: 1, SELECT: 1 };
+            const blockish = { P: 1, DIV: 1, LI: 1, UL: 1, OL: 1, TABLE: 1, TR: 1, SECTION: 1, H1: 1, H2: 1, H3: 1, H4: 1, H5: 1, H6: 1, BLOCKQUOTE: 1, PRE: 1, FIGCAPTION: 1 };
+            const hidden = (el) => {
+              try { const cs = window.getComputedStyle(el); return cs.display === "none" || cs.visibility === "hidden" || cs.position === "fixed"; } catch (e) { return false; }
+            };
+            const NOISE_CLASS_RE = /(comment|sidebar|related|popular|widget|advert|banner|promo|social|share|cookie|popup|modal|dialog|sponsor|recommend)/i;
+            const GOOD_CLASS_RE = /(article|entry|post|story|body|content|text|paratext)/i;
+
             let out = "";
             const imgNotes = [];
             let guardCount = 0;
             const walk = (el) => {
-              if (!el || guardCount++ > 12000 || out.length > 30000) return;
+              if (!el || guardCount++ > 30000 || out.length > 60000) return;
               if (skip[el.tagName] || (el !== document.body && hidden(el))) return;
+              if (el !== rootSel && el !== document.body) {
+                const idCls = (el.id || "") + " " + (el.className || "");
+                if (NOISE_CLASS_RE.test(idCls) && !GOOD_CLASS_RE.test(idCls)) return;
+                // Lọc bỏ các khối danh sách liên kết/menu có mật độ link cao (Link Density > 0.65)
+                if ((el.tagName === "DIV" || el.tagName === "UL" || el.tagName === "SECTION" || el.tagName === "ASIDE") && el.children && el.children.length > 1) {
+                  const tStr = (el.textContent || "").trim();
+                  if (tStr.length > 120) {
+                    const lStr = Array.prototype.slice.call(el.querySelectorAll("a")).reduce((acc, a) => acc + (a.textContent || "").length, 0);
+                    if ((lStr / tStr.length) > 0.65) return;
+                  }
+                }
+              }
+              if (el.tagName === "IFRAME") {
+                try {
+                  const doc = el.contentDocument || (el.contentWindow && el.contentWindow.document);
+                  if (doc && doc.body) walk(doc.body);
+                } catch (e) {}
+                return;
+              }
               if (el.tagName === "IMG") {
                 const w0 = el.naturalWidth || el.width || 0, h0 = el.naturalHeight || el.height || 0;
                 const alt = (el.getAttribute("alt") || "").trim();
@@ -472,7 +572,13 @@
                 }
                 return;
               }
+              // Traverse Open Shadow DOM (Web Components, Lit, Reddit, YouTube)
+              if (el.shadowRoot && el.shadowRoot.children && el.shadowRoot.children.length) {
+                for (const sc of el.shadowRoot.children) walk(sc);
+              }
               if (el.children && el.children.length) {
+                const isHeading = /^H[1-6]$/.test(el.tagName);
+                if (isHeading) out += "\n\n" + "#".repeat(Number(el.tagName.charAt(1))) + " ";
                 for (const c of el.children) walk(c);
                 if (blockish[el.tagName]) out += "\n";
                 return;
@@ -507,7 +613,18 @@
               } catch (e) {}
             }
             walk(rootSel);
-            txt2 = (ytPrefix + out).replace(/[ \t]+/g, " ").replace(/\n ?/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+            let combined = out;
+            // Nếu có dữ liệu JSON-LD articleBody siêu sạch, ưu tiên kết hợp hoặc bổ sung
+            if (jsonLdBody && jsonLdBody.length > 250) {
+              if (out.length < 300 || !out.includes(jsonLdBody.slice(0, 80))) {
+                combined = "[Nội dung chính bài viết (JSON-LD)]\n" + jsonLdBody + "\n\n" + (out ? "[Chi tiết trang]\n" + out : "");
+              }
+            }
+            txt2 = (ytPrefix + combined).replace(/[ \t]+/g, " ").replace(/\n ?/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+            // Robust fallback to document.body.innerText if custom walk returned sparse text
+            if (txt2.length < 150 && document.body && typeof document.body.innerText === "string" && document.body.innerText.trim().length > txt2.length) {
+              txt2 = (ytPrefix + document.body.innerText).replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+            }
             if (imgNotes.length) txt2 += "\n\n[Danh sách ảnh trên trang]\n" + imgNotes.slice(0, 20).join("\n");
             const max = typeof msg.maxChars === "number" ? Math.min(16000, Math.max(4000, msg.maxChars * 4)) : 12000;
             if (txt2.length > max) txt2 = txt2.slice(0, max);
@@ -726,7 +843,7 @@ case "GET_YT_META": {
 
   document.addEventListener("mouseup", e => {
     if (!_sfCompanionEnabled) return;
-    if (typeof isInspectActive !== "undefined" && isInspectActive) return;
+    if (typeof isInspectMode !== "undefined" && isInspectMode) return;
     if (typeof isElementCaptureMode !== "undefined" && isElementCaptureMode) return;
     if (_sfCompanionEl && _sfCompanionEl.contains(e.target)) return;
 

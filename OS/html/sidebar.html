@@ -550,14 +550,8 @@
           <span id="ai-key-status" class="ai-status" style="display:none;" aria-hidden="true"></span>
         </div>
         <div class="ai-model-bar">
-          <div class="ai-provider-pills">
-            <button type="button" class="ai-provider-pill active" data-provider="gemini">Gemini</button>
-            <button type="button" class="ai-provider-pill" data-provider="openai">ChatGPT</button>
-            <button type="button" class="ai-provider-pill" data-provider="claude">Claude</button>
-            <button type="button" class="ai-provider-pill" data-provider="custom">Custom</button>
-          </div>
           <div class="ai-model-select-wrap">
-            <select id="ai-model-select-main" class="ai-model-select"></select>
+            <select id="ai-model-select-main" class="ai-model-select" aria-label="Chọn Model"></select>
             <select id="ai-provider-select" style="display:none;" aria-hidden="true"><option value="gemini">Gemini</option><option value="openai">ChatGPT</option><option value="claude">Claude</option><option value="custom">Custom</option></select>
           </div>
         </div>
@@ -604,7 +598,7 @@
         <button type="button" class="btn btn-secondary" id="ai-btn-attach-image" data-i18n="ai_btn_attach_label" title="Đính kèm" data-i18n-title="ai_btn_attach_image">Ảnh</button>
         <input type="file" id="ai-image-input" accept="image/*" style="display:none;">
         <div class="ai-input-wrap">
-          <textarea id="ai-input" class="ai-input" rows="1" placeholder="Hỏi về trang/video này hoặc trò chuyện tự do... (Enter gửi, Shift+Enter xuống dòng)" data-i18n-placeholder="ai_input_placeholder"></textarea>
+          <textarea id="ai-input" class="ai-input" rows="1" placeholder="Hỏi về trang hoặc gõ / dùng kỹ năng (/code, /table, /quiz, /critique, /mindmap, /math)..." data-i18n-placeholder="ai_input_placeholder"></textarea>
         </div>
         <button type="button" class="ai-send-btn" id="ai-btn-send" data-i18n="ai_btn_send">Gửi</button>
       </div>
@@ -643,14 +637,29 @@
           <input type="password" id="ai-key-openai" class="form-control" placeholder="sk-..." style="font-size:11px; margin-bottom:6px;">
           <label class="ai-field-sub" data-i18n="ai_key_claude_label">Claude</label>
           <input type="password" id="ai-key-claude" class="form-control" placeholder="sk-ant-..." style="font-size:11px; margin-bottom:6px;">
-          <label class="ai-field-sub" data-i18n="ai_key_custom_label">Custom URL</label>
-          <input type="text" id="ai-custom-url" class="form-control" placeholder="https://your-api.example.com/v1/chat" style="font-size:11px;">
+          <input type="text" id="ai-custom-url" class="form-control" placeholder="https://your-api.example.com/v1/chat" style="display:none;">
           <input type="password" id="ai-key-input" class="form-control" style="display:none;">
           <input type="password" id="ai-key-input-modal" class="form-control" style="display:none;">
           <div style="display:flex; gap:6px; margin-top:8px;">
             <button type="button" class="btn btn-secondary" id="ai-btn-toggle-key" title="Hiện/ẩn key" data-i18n-title="ai_btn_show_key">👁</button> <button type="button" class="btn btn-primary" id="ai-btn-save-key" style="flex:1;" data-i18n="ai_btn_save_all_keys">Lưu tất cả key</button>
             <button type="button" class="btn btn-secondary" id="ai-btn-clear-key" data-i18n="ai_btn_clear_key2">Xóa</button>
             <button type="button" class="btn btn-secondary" id="ai-btn-open-provider" data-i18n="ai_btn_open_provider">Lấy key ↗</button>
+          </div>
+        </div>
+        <div class="ai-settings-section">
+          <div class="ai-field-label" data-i18n="ai_custom_servers_title">Máy chủ tùy biến (Custom / Local AI)</div>
+          <div id="ai-custom-servers-list" class="ai-custom-servers-list"></div>
+          <div class="ai-custom-server-form" style="margin-top:8px; padding:8px; background:rgba(2,6,23,0.45); border:1px solid rgba(255,255,255,0.08); border-radius:8px;">
+            <div style="font-size:11px; font-weight:700; color:#38bdf8; margin-bottom:6px;" data-i18n="ai_custom_add_server_head">Thêm máy chủ mới (Ollama, LM Studio, vLLM, OpenRouter)</div>
+            <label class="ai-field-sub" data-i18n="ai_custom_server_name_label">Tên máy chủ</label>
+            <input type="text" id="ai-cs-name" class="form-control" placeholder="VD: Ollama Local" style="font-size:11px; margin-bottom:6px;">
+            <label class="ai-field-sub" data-i18n="ai_custom_server_url_label">Endpoint URL</label>
+            <input type="text" id="ai-cs-url" class="form-control" placeholder="http://localhost:11434/v1/chat/completions" style="font-size:11px; margin-bottom:6px;">
+            <label class="ai-field-sub" data-i18n="ai_custom_server_model_label">Tên Model</label>
+            <input type="text" id="ai-cs-model" class="form-control" placeholder="VD: llama3, deepseek-r1..." style="font-size:11px; margin-bottom:6px;">
+            <label class="ai-field-sub" data-i18n="ai_custom_server_key_label">API Key (tùy chọn)</label>
+            <input type="password" id="ai-cs-key" class="form-control" placeholder="Bearer token (nếu có)..." style="font-size:11px; margin-bottom:6px;">
+            <button type="button" class="btn btn-secondary" id="ai-btn-add-server" style="width:100%; margin-top:4px;" data-i18n="ai_btn_add_server">+ Thêm máy chủ</button>
           </div>
         </div>
         <div class="ai-settings-section">
@@ -701,7 +710,11 @@
           </select>
           <label class="ai-check" style="margin-top:8px;"><input type="checkbox" id="ai-opt-websearch" checked> <span data-i18n="ai_opt_websearch">Tự dùng Google Search (Gemini) khi thiếu thông tin</span></label>
           <label class="ai-check" style="margin-top:8px;"><input type="checkbox" id="ai-opt-autovideo" checked> <span data-i18n="ai_opt_autovideo">Hỏi gì cũng tự xem video đang mở (Gemini)</span></label>
-          <label class="ai-check" style="margin-top:8px;"><input type="checkbox" id="ai-opt-companion" checked> <span data-i18n="ai_opt_reading_companion">Thanh trợ lý thông minh khi chọn văn bản</span></label>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+            <label class="ai-check" style="margin-top:0; flex:1;"><input type="checkbox" id="ai-opt-companion" checked> <span data-i18n="ai_opt_reading_companion">Popup AI nhanh khi bôi đen văn bản (Reading Companion)</span></label>
+            <button type="button" class="btn btn-secondary" id="ai-btn-toggle-companion" style="font-size:10px; padding:2px 8px; margin-left:8px; white-space:nowrap;" data-i18n="ai_btn_toggle_companion">Tắt popup</button>
+          </div>
+          <div class="ai-hint" style="margin-left:22px; font-size:10.5px; margin-top:2px;" data-i18n="ai_opt_reading_companion_hint">Bỏ chọn hoặc bấm nút tắt để không hiện popup AI mini khi bôi đen văn bản trên web.</div>
           <div class="ai-temp-row">
             <div class="ai-temp-head"><span class="ai-field-label" data-i18n="ai_temp_label">Temperature</span><span class="ai-temp-badge" id="ai-temp-val">0.7</span></div>
             <input type="range" class="ai-range" id="ai-temp-range" min="0" max="1" step="0.1" value="0.7">
@@ -1513,11 +1526,98 @@
       <div class="rule-card" style="border-color:rgba(245,158,11,0.35); background:rgba(245,158,11,0.06);">
         <div class="rule-card-title" style="color:#f59e0b;" data-i18n="trust_card4_title">⚖️ 4. Thông Tin Bản Quyền &amp; Kỹ Thuật</div>
         <div class="rule-card-body" data-i18n="trust_card4_body_html" data-i18n-html="true">
-          • <b>Phiên bản:</b> ScholarFlow v2.5.0_beta<br>
+          • <b>Phiên bản:</b> ScholarFlow v2.5.1<br>
           • <b>Kiến trúc:</b> Manifest V3 (Chromium 114+ &amp; Firefox 109+ Native Gecko)<br>
           • <b>Bản quyền:</b> Bản quyền phần mềm thuộc về Minh Thuận<br>
           • <b>Chính sách bảo mật:</b> <a href="privacy.html" target="_blank" style="color:#38bdf8; text-decoration:underline;">Xem toàn văn Chính Sách Quyền Riêng Tư (Privacy Policy)</a>
         </div>
+      </div>
+
+      <button type="button" class="btn btn-secondary" id="btn-open-permissions" style="margin-top:8px; width:100%; display:flex; align-items:center; justify-content:center; gap:6px; font-size:11.5px; padding:7px 12px; border-radius:6px;" data-i18n="btn_view_permissions">📋 Minh Bạch Quyền Hạn Trình Duyệt</button>
+    </div>
+  </div>
+
+  <!-- Modal: Minh Bạch Quyền Hạn Trình Duyệt (Browser Permissions Transparency Modal) -->
+  <div id="permissions-modal" class="modal-overlay">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span style="display:inline-flex; align-items:center; gap:6px; min-width:0;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          <span data-i18n="perm_modal_title" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Chào Mừng &amp; Minh Bạch Quyền Hạn</span>
+        </span>
+      </div>
+      <button class="btn btn-secondary" id="btn-close-permissions" style="padding:4px 10px; font-size:12px; flex-shrink:0;" data-i18n="btn_close">✕ Đóng</button>
+    </div>
+
+    <div class="modal-body-scroll">
+      <!-- Intro Card: 100% Client-side Privacy by Design -->
+      <div class="rule-card" style="border-color:rgba(56,189,248,0.4); background:rgba(56,189,248,0.08); margin-bottom:10px;">
+        <div class="rule-card-title" style="color:#38bdf8; font-size:11.5px;" data-i18n="perm_intro_title">🛡️ Cam Kết 100% Cục Bộ — Bảo Mật Theo Thiết Kế</div>
+        <div class="rule-card-body" style="font-size:11px; line-height:1.5;" data-i18n="perm_intro_desc">ScholarFlow hoạt động hoàn toàn cục bộ trên trình duyệt của bạn (Zero Telemetry). Tiện ích không thu thập, không theo dõi và không gửi dữ liệu ra máy chủ bên ngoài. Dưới đây là giải trình minh bạch về lý do ScholarFlow cần các quyền trên trình duyệt:</div>
+      </div>
+
+      <!-- Permission 1: Web Access (<all_urls>) -->
+      <div class="rule-card" style="border-color:rgba(16,185,129,0.35); background:rgba(16,185,129,0.06);">
+        <div class="rule-card-title" style="color:#10b981;">
+          <span data-i18n="perm_card_urls_title">🌐 1. Quyền Truy Cập Trang Web (&lt;all_urls&gt;)</span>
+          <span data-i18n="perm_card_urls_tag" style="font-size:9px; background:rgba(16,185,129,0.2); color:#10b981; padding:2px 6px; border-radius:4px; font-weight:600; white-space:nowrap;">TRÍCH DẪN &amp; GIAO DIỆN</span>
+        </div>
+        <div class="rule-card-body" data-i18n="perm_card_urls_body_html" data-i18n-html="true">
+          • <b>Mục đích:</b> Tự động nhận diện và trích xuất siêu dữ liệu học thuật (DOI, tiêu đề, tác giả, năm xuất bản); kích hoạt chế độ Smart Dark Mode; hỗ trợ chụp cuộn toàn trang và chặn biểu ngữ cookie tự động.<br>• <b>Cam kết:</b> Chỉ phân tích cấu trúc DOM tại chỗ khi bạn yêu cầu. Không bao giờ gửi nội dung trang ra ngoài.
+        </div>
+      </div>
+
+      <!-- Permission 2: Cookie Management (cookies) -->
+      <div class="rule-card" style="border-color:rgba(245,158,11,0.35); background:rgba(245,158,11,0.06);">
+        <div class="rule-card-title" style="color:#f59e0b;">
+          <span data-i18n="perm_card_cookies_title">🍪 2. Quyền Quản Lý Cookie (cookies)</span>
+          <span data-i18n="perm_card_cookies_tag" style="font-size:9px; background:rgba(245,158,11,0.2); color:#f59e0b; padding:2px 6px; border-radius:4px; font-weight:600; white-space:nowrap;">QUẢN LÝ PHIÊN HỌC THUẬT</span>
+        </div>
+        <div class="rule-card-body" data-i18n="perm_card_cookies_body_html" data-i18n-html="true">
+          • <b>Mục đích:</b> Vận hành Trình Quản Lý Cookie (Cookie Manager) giúp bạn sao lưu phiên làm việc, duy trì đăng nhập cổng nghiên cứu/thư viện và xuất file Netscape cookies.txt/JSON cho nghiên cứu.<br>• <b>Cam kết:</b> Cookie chỉ được đọc/ghi khi bạn thao tác chủ động trong tab Cookie. Tuyệt đối không phát tán hay chia sẻ cookie.
+        </div>
+      </div>
+
+      <!-- Permission 3: Clipboard Access (clipboardWrite) -->
+      <div class="rule-card" style="border-color:rgba(129,140,248,0.35); background:rgba(129,140,248,0.06);">
+        <div class="rule-card-title" style="color:#818cf8;">
+          <span data-i18n="perm_card_clipboard_title">📋 3. Quyền Ghi Bảng Tạm (clipboardWrite)</span>
+          <span data-i18n="perm_card_clipboard_tag" style="font-size:9px; background:rgba(129,140,248,0.2); color:#818cf8; padding:2px 6px; border-radius:4px; font-weight:600; white-space:nowrap;">SAO CHÉP 1-CHẠM</span>
+        </div>
+        <div class="rule-card-body" data-i18n="perm_card_clipboard_body_html" data-i18n-html="true">
+          • <b>Mục đích:</b> Cho phép sao chép nhanh 1-chạm trích dẫn chuẩn (IEEE, APA, Harvard, MLA, BibTeX), tóm tắt AI và bảng dữ liệu vào clipboard để dán ngay vào Word/LaTeX/Overleaf.<br>• <b>Cam kết:</b> Chỉ ghi vào bảng tạm khi bạn nhấn nút 'Sao chép'. Tiện ích KHÔNG đọc hoặc quét clipboard của bạn.
+        </div>
+      </div>
+
+      <!-- Permission 4: Storage (storage) -->
+      <div class="rule-card" style="border-color:rgba(56,189,248,0.35); background:rgba(56,189,248,0.06);">
+        <div class="rule-card-title" style="color:#38bdf8;">
+          <span data-i18n="perm_card_storage_title">💾 4. Quyền Lưu Trữ Cục Bộ (storage)</span>
+          <span data-i18n="perm_card_storage_tag" style="font-size:9px; background:rgba(56,189,248,0.2); color:#38bdf8; padding:2px 6px; border-radius:4px; font-weight:600; white-space:nowrap;">DỮ LIỆU CÁ NHÂN OFFLINE</span>
+        </div>
+        <div class="rule-card-body" data-i18n="perm_card_storage_body_html" data-i18n-html="true">
+          • <b>Mục đích:</b> Lưu trữ an toàn danh mục trích dẫn đã lưu, lịch sử hội thoại AI, ghi chú nghiên cứu và cấu hình cá nhân trên chính trình duyệt của bạn.<br>• <b>Cam kết:</b> Dữ liệu hoàn toàn do bạn làm chủ, không bao giờ gửi lên đám mây và được xóa sạch khi bạn gỡ cài đặt tiện ích.
+        </div>
+      </div>
+
+      <!-- Permission 5: Tabs & Scripting (tabs, activeTab, scripting) -->
+      <div class="rule-card" style="border-color:rgba(168,85,247,0.35); background:rgba(168,85,247,0.06);">
+        <div class="rule-card-title" style="color:#c084fc;">
+          <span data-i18n="perm_card_tabs_title">📑 5. Quản Lý Tab &amp; Điều Khiển (tabs, activeTab, scripting)</span>
+          <span data-i18n="perm_card_tabs_tag" style="font-size:9px; background:rgba(168,85,247,0.2); color:#c084fc; padding:2px 6px; border-radius:4px; font-weight:600; white-space:nowrap;">TRỢ LÝ ĐA NHIỆM</span>
+        </div>
+        <div class="rule-card-body" data-i18n="perm_card_tabs_body_html" data-i18n-html="true">
+          • <b>Mục đích:</b> Vận hành tính năng Quản Lý Tab (Tab Manager), nhận diện URL trang đang xem để tự động điền trích dẫn, và kích hoạt công cụ chụp khung hoặc làm mờ thông tin riêng tư.<br>• <b>Cam kết:</b> Chỉ thao tác trên tab khi bạn ra lệnh hoặc mở giao diện tiện ích.
+        </div>
+      </div>
+
+      <!-- Action Button -->
+      <button class="btn btn-primary" id="btn-ack-permissions" style="width:100%; padding:9px 16px; font-size:12.5px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:8px; border-radius:6px; margin-top:8px;" data-i18n="perm_btn_ack">✓ Tôi Đã Hiểu &amp; Bắt Đầu Sử Dụng</button>
+
+      <!-- Footer Note -->
+      <div style="text-align:center; margin-top:8px; margin-bottom:4px; font-size:11px; color:#94a3b8; line-height:1.4;">
+        <span data-i18n="perm_footer_note">Bạn có thể xem lại thông tin minh bạch này bất kỳ lúc nào tại Trung Tâm Uy Tín hoặc</span>
+        <a href="privacy.html" target="_blank" style="color:#38bdf8; text-decoration:underline;" data-i18n="perm_link_privacy">Chính Sách Quyền Riêng Tư</a>
       </div>
     </div>
   </div>
@@ -2142,6 +2242,8 @@
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
       <div class="feature-title" style="margin-bottom:0;" data-i18n="soc_title">Social Protection</div>
       <span style="font-size:10px; color:var(--text-muted);" id="soc-status"></span>
+<span style="font-size:10px; color:var(--text-muted);" id="soc-tracker-count">Trackers: --</span>
+<span style="font-size:10px; color:var(--text-muted);" id="soc-usage">Sử dụng: 0p 0m</span>
     </div>
     <p style="color:var(--text-muted); font-size:11.5px; margin-bottom:8px; line-height:1.4;" data-i18n="soc_desc">Bảo vệ & khôi phục tài khoản mạng xã hội: Facebook, Zalo, Instagram, WhatsApp, TikTok, Discord, X, Telegram, Google.</p>
 
@@ -2155,112 +2257,41 @@
     </div>
 
     <div id="soc-sub-protect" class="soc-subpanel active">
-      <div class="feature-card" style="padding:10px 12px; margin-bottom:8px; border-left:3px solid #1877f2;">
-        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="#1877f2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
-          <span class="feature-title" style="margin-bottom:0; color:#1877f2;" data-i18n="soc_fb_title">Facebook</span>
+      <div class="feature-card" style="padding:10px 12px; border-left:3px solid rgba(56,189,248,0.55);">
+        <label class="switch-row" for="soc-inj-shield">
+          <div class="switch-row-left">
+            <span class="switch-row-title" data-i18n="soc_inj_title">Protect against content script injection</span>
+            <span class="switch-row-desc" data-i18n="soc_inj_desc">Tự động gỡ bỏ và cảnh báo các script lạ (từ tiện ích khác hoặc mã lừa đảo) chèn âm thầm vào trang Facebook, Zalo, Instagram, WhatsApp, TikTok, Discord, X, Telegram.</span>
+          </div>
+          <span class="custom-switch"><input type="checkbox" id="soc-inj-shield"><span class="switch-slider"></span></span>
+        </label>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin:0 0 8px 2px;">
+          <span style="font-size:10.5px; color:var(--text-muted); font-weight:600;" data-i18n="soc_inj_mode_label">Quy trình chặn</span>
+          <select class="form-control" id="soc-inj-mode" style="width:180px; font-size:10.5px; padding:4px 6px;">
+            <option value="remove" data-i18n="soc_inj_mode_remove">Gỡ bỏ ngay</option>
+            <option value="warn" data-i18n="soc_inj_mode_warn">Chỉ ghi nhận, không gỡ</option>
+          </select>
         </div>
-        <label class="switch-row" for="soc-fb-typing">
+        <label class="switch-row" for="soc-link-clean">
           <div class="switch-row-left">
-            <span class="switch-row-title" data-i18n="soc_fb_typing">Ẩn đang gõ (Typing Indicator)</span>
-            <span class="switch-row-desc" data-i18n="soc_fb_typing_desc">Ngăn hiển thị biểu tượng 'đang gõ tin nhắn' khi bạn nhập liệu</span>
+            <span class="switch-row-title" data-i18n="soc_link_clean_title">Làm sạch link theo dõi khi bấm</span>
+            <span class="switch-row-desc" data-i18n="soc_link_clean_desc">Trước khi mở link, tự cắt các tham số định danh (utm_*, fbclid, gclid, igshid...) khỏi URL.</span>
           </div>
-          <span class="custom-switch"><input type="checkbox" id="soc-fb-typing"><span class="switch-slider"></span></span>
+          <span class="custom-switch"><input type="checkbox" id="soc-link-clean"><span class="switch-slider"></span></span>
         </label>
-        <label class="switch-row" for="soc-fb-seen">
+        <label class="switch-row" for="soc-shop-clean" style="margin-bottom:0;">
           <div class="switch-row-left">
-            <span class="switch-row-title" data-i18n="soc_fb_seen">Ẩn đã xem (Read Receipts)</span>
-            <span class="switch-row-desc" data-i18n="soc_fb_seen_desc">Tắt biểu tượng 'đã xem' trên Messenger</span>
+            <span class="switch-row-title" data-i18n="soc_shop_clean_title">Gỡ link quảng cáo / shop online trong bình luận</span>
+            <span class="switch-row-desc" data-i18n="soc_shop_clean_desc">Biến link tiếp thị Shopee, Lazada, Tiki, Sendo, TikTok Shop... trong phần bình luận thành chữ thường, không bấm được.</span>
           </div>
-          <span class="custom-switch"><input type="checkbox" id="soc-fb-seen"><span class="switch-slider"></span></span>
+          <span class="custom-switch"><input type="checkbox" id="soc-shop-clean"><span class="switch-slider"></span></span>
         </label>
-        <label class="switch-row" for="soc-fb-online" style="margin-bottom:0;">
-          <div class="switch-row-left">
-            <span class="switch-row-title" data-i18n="soc_fb_online">Ẩn trạng thái Online</span>
-            <span class="switch-row-desc" data-i18n="soc_fb_online_desc">Ngăn hiển thị chấm xanh 'Active now' trên hồ sơ</span>
-          </div>
-          <span class="custom-switch"><input type="checkbox" id="soc-fb-online"><span class="switch-slider"></span></span>
-        </label>
-      </div>
-      <div class="feature-card" style="padding:10px 12px; margin-bottom:8px; border-left:3px solid #0068ff;">
-        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="#0068ff"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
-          <span class="feature-title" style="margin-bottom:0; color:#0068ff;" data-i18n="soc_zalo_title">Zalo</span>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.06);">
+          <span id="soc-inj-stats" style="font-size:10.5px; color:var(--text-muted); line-height:1.4;">Chưa phát hiện lần chèn mã nào trên tab này.</span>
+          <button type="button" id="btn-soc-inj-reset" class="btn-text-small" data-i18n="soc_inj_reset" style="white-space:nowrap;">Reset</button>
         </div>
-        <label class="switch-row" for="soc-zalo-typing">
-          <div class="switch-row-left">
-            <span class="switch-row-title" data-i18n="soc_zalo_typing">Ẩn đang gõ</span>
-            <span class="switch-row-desc" data-i18n="soc_zalo_typing_desc">Ngăn hiển thị 'đang soạn tin' trên Zalo</span>
-          </div>
-          <span class="custom-switch"><input type="checkbox" id="soc-zalo-typing"><span class="switch-slider"></span></span>
-        </label>
-        <label class="switch-row" for="soc-zalo-seen">
-          <div class="switch-row-left">
-            <span class="switch-row-title" data-i18n="soc_zalo_seen">Ẩn đã xem</span>
-            <span class="switch-row-desc" data-i18n="soc_zalo_seen_desc">Tắt thông báo 'đã đọc' tin nhắn</span>
-          </div>
-          <span class="custom-switch"><input type="checkbox" id="soc-zalo-seen"><span class="switch-slider"></span></span>
-        </label>
-        <label class="switch-row" for="soc-zalo-online" style="margin-bottom:0;">
-          <div class="switch-row-left">
-            <span class="switch-row-title" data-i18n="soc_zalo_online">Ẩn trực tuyến</span>
-            <span class="switch-row-desc" data-i18n="soc_zalo_online_desc">Ngăn hiển thị trạng thái 'Đang hoạt động'</span>
-          </div>
-          <span class="custom-switch"><input type="checkbox" id="soc-zalo-online"><span class="switch-slider"></span></span>
-        </label>
       </div>
-      <div class="feature-card" style="padding:10px 12px; margin-bottom:8px; border-left:3px solid #e4405f;">
-        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="#e4405f"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
-          <span class="feature-title" style="margin-bottom:0; color:#e4405f;" data-i18n="soc_ig_title">Instagram</span>
-        </div>
-        <label class="switch-row" for="soc-ig-typing">
-          <div class="switch-row-left">
-            <span class="switch-row-title" data-i18n="soc_ig_typing">Ẩn đang gõ</span>
-            <span class="switch-row-desc" data-i18n="soc_ig_typing_desc">Ngăn hiển thị 'đang nhập...' trên DM</span>
-          </div>
-          <span class="custom-switch"><input type="checkbox" id="soc-ig-typing"><span class="switch-slider"></span></span>
-        </label>
-        <label class="switch-row" for="soc-ig-seen">
-          <div class="switch-row-left">
-            <span class="switch-row-title" data-i18n="soc_ig_seen">Ẩn đã xem</span>
-            <span class="switch-row-desc" data-i18n="soc_ig_seen_desc">Tắt 'Seen' trên tin nhắn trực tiếp</span>
-          </div>
-          <span class="custom-switch"><input type="checkbox" id="soc-ig-seen"><span class="switch-slider"></span></span>
-        </label>
-        <label class="switch-row" for="soc-ig-activity" style="margin-bottom:0;">
-          <div class="switch-row-left">
-            <span class="switch-row-title" data-i18n="soc_ig_activity">Ẩn trạng thái hoạt động</span>
-            <span class="switch-row-desc" data-i18n="soc_ig_activity_desc">Tắt 'Active now' và 'Active today'</span>
-          </div>
-          <span class="custom-switch"><input type="checkbox" id="soc-ig-activity"><span class="switch-slider"></span></span>
-        </label>
-      </div>
-      <div class="feature-card" style="padding:10px 12px; border-left:3px solid #64748b;">
-        <div class="feature-title" style="margin-bottom:2px;" data-i18n="soc_sh_more">Khiên riêng tư nền tảng khác</div>
-        <p style="color:var(--text-muted); font-size:10.5px; margin-bottom:8px; line-height:1.4;" data-i18n="soc_sh_desc">Bật để tự ẩn typing/online trên web app của nền tảng đó (best-effort, tự cập nhật khi load lại trang).</p>
-        <label class="switch-row" for="soc-wa-shield">
-          <div class="switch-row-left"><span class="switch-row-title">WhatsApp Web</span></div>
-          <span class="custom-switch"><input type="checkbox" id="soc-wa-shield"><span class="switch-slider"></span></span>
-        </label>
-        <label class="switch-row" for="soc-tt-shield">
-          <div class="switch-row-left"><span class="switch-row-title">TikTok Web</span></div>
-          <span class="custom-switch"><input type="checkbox" id="soc-tt-shield"><span class="switch-slider"></span></span>
-        </label>
-        <label class="switch-row" for="soc-dc-shield">
-          <div class="switch-row-left"><span class="switch-row-title">Discord</span></div>
-          <span class="custom-switch"><input type="checkbox" id="soc-dc-shield"><span class="switch-slider"></span></span>
-        </label>
-        <label class="switch-row" for="soc-x-shield">
-          <div class="switch-row-left"><span class="switch-row-title">X (Twitter)</span></div>
-          <span class="custom-switch"><input type="checkbox" id="soc-x-shield"><span class="switch-slider"></span></span>
-        </label>
-        <label class="switch-row" for="soc-tg-shield" style="margin-bottom:0;">
-          <div class="switch-row-left"><span class="switch-row-title">Telegram Web</span></div>
-          <span class="custom-switch"><input type="checkbox" id="soc-tg-shield"><span class="switch-slider"></span></span>
-        </label>
-      </div>
-      <div id="soc-protect-note" style="font-size:10px; color:var(--text-muted); margin-top:6px; line-height:1.45;" data-i18n="soc_protect_note">Lưu ý: biện pháp CSS best-effort — nền tảng đổi giao diện có thể cần cập nhật selector.</div>
+      <div id="soc-protect-note" style="font-size:10px; color:var(--text-muted); margin-top:6px; line-height:1.45;">Đang theo dõi bảo vễ &amp; thống kê tracker...</div>
     </div>
 
     <div id="soc-sub-recover" class="soc-subpanel">
@@ -2784,7 +2815,7 @@
   <div class="footer-trust-bar">
     <div class="trust-pill" title="Phiên bản hiện tại" data-i18n-title="tip_trust_version">
       <span class="trust-dot dot-green"></span>
-      <span id="app-version-display">v2.5.0</span>
+      <span id="app-version-display">v2.5.1</span>
     </div>
     <div class="trust-divider">•</div>
     <div class="trust-pill" title="Được phát triển bởi Minh Thuận" data-i18n-title="tip_trust_author">
