@@ -35,13 +35,64 @@
   function _safeColor(c, fb) {
     return /^#[0-9a-fA-F]{6}$/.test(String(c || "")) ? c : fb;
   }
+  function _rgbToHsl(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+    let h = 0, s = 0; const l = (mx + mn) / 2;
+    if (mx !== mn) {
+      const d = mx - mn;
+      s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+      if (mx === r) h = (g - b) / d + (g < b ? 6 : 0);
+      else if (mx === g) h = (b - r) / d + 2;
+      else h = (r - g) / d + 4;
+      h *= 60;
+    }
+    return [h, s, l];
+  }
+  function _hslToRgb(h, s, l) {
+    h = ((h % 360) + 360) % 360;
+    const c = (1 - Math.abs(2 * l - 1)) * s;
+    const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+    const m = l - c / 2;
+    let r = 0, g = 0, b = 0;
+    if (h < 60) { r = c; g = x; } else if (h < 120) { r = x; g = c; }
+    else if (h < 180) { g = c; b = x; } else if (h < 240) { g = x; b = c; }
+    else if (h < 300) { r = x; b = c; } else { r = c; b = x; }
+    return [(r + m) * 255, (g + m) * 255, (b + m) * 255];
+  }
+  // Given the FINAL desired color (what the user should see), compute the source
+  // color that survives the page-wide `invert(1) hue-rotate(180deg)` filter.
+  function _accentToSource(hex) {
+    const rgb = _hexToRgb(hex);
+    if (!rgb) return hex;
+    const inv = [255 - rgb[0], 255 - rgb[1], 255 - rgb[2]];
+    const hsl = _rgbToHsl(inv[0], inv[1], inv[2]);
+    const back = _hslToRgb(hsl[0] + 180, hsl[1], hsl[2]);
+    return _rgbToHex(back);
+  }
+  // Tone = extra filters layered AFTER invert: warm cream text + deeper blacks.
+  function _toneParts(r) {
+    const warm = Math.max(0, Math.min(100, Number(r.warm) || 0)) / 100;
+    const dark = Math.max(0, Math.min(60, Number(r.dark) || 0)) / 100;
+    let top = "", img = "";
+    if (warm > 0) {
+      top += " sepia(" + (0.5 * warm).toFixed(3) + ") saturate(" + (1 + 0.9 * warm).toFixed(3) + ") hue-rotate(" + (-14 * warm).toFixed(1) + "deg)";
+      img += " saturate(" + (1 / Math.max(0.5, 1 + 0.9 * warm)).toFixed(3) + ")";
+    }
+    if (dark > 0) {
+      const dim = 1 - 0.55 * dark;
+      top += " brightness(" + dim.toFixed(3) + ")";
+      img += " brightness(" + (1 / dim).toFixed(3) + ")";
+    }
+    return { top: top, img: img };
+  }
   function _readerCss(r) {
     const txt = _safeColor(r.txt, "#e8dcc3");
     const accent = _safeColor(r.accent, "#f0a860");
     const bg = _mixToBlack(_safeColor(r.bg, "#16130e"), r.dark == null ? 35 : r.dark);
     return [
       "html,body{background:" + bg + "!important;color:" + txt + "!important}",
-      "*:not(img):not(video):not(iframe):not(canvas):not(picture):not(source):not(embed):not(object){",
+      "*:not(img):not(video):not(iframe):not(canvas):not(picture):not(source):not(embed):not(object):not([style*='background-image']){",
       "  background:transparent!important;color:" + txt + "!important;",
       "  border-color:rgba(255,255,255,0.14)!important;box-shadow:none!important;text-shadow:none!important}",
       "code,pre,kbd,samp{background:rgba(255,255,255,0.08)!important}",
@@ -52,11 +103,12 @@
       "img,video,iframe,canvas{background:transparent!important}"
     ].join("");
   }
-  function _applyReader(s) {
+  // Flat reader REPLACES the invert engine entirely (opt-in; can flatten pages).
+  function _applyFlatReader(s) {
     try {
       const r = s && s.reader;
       let st = document.getElementById(READER_ID);
-      if (!r || !r.on) { if (st) st.remove(); return false; }
+      if (!r || !r.on || !r.flat) { if (st) st.remove(); return false; }
       if (!st) {
         st = document.createElement("style");
         st.id = READER_ID;
@@ -114,13 +166,29 @@
     } else if (s.theme === "dim") { top += " brightness(0.86)"; }
     else if (s.theme === "warm") { top += " sepia(0.14) saturate(1.08)"; img += " sepia(0.06)"; }
     else if (s.theme === "contrast") { top += " contrast(1.22) saturate(1.06)"; }
+    const r = s.reader;
+    if (r && r.on && !r.flat) {
+      const tp = _toneParts(r);
+      top += tp.top; img += tp.img;
+    }
     return { top: top, img: img };
   }
   function _cssFor(s) {
+    const r = s.reader;
+    let extra = "::selection{background:#38bdf8;color:#0b1220}";
+    try {
+      if (r && r.on && !r.flat) {
+        const acc = _safeColor(r.accent, "");
+        if (acc) extra += "a,a *,[role='link'],[role='link'] *{color:" + _accentToSource(acc) + "!important}";
+      }
+    } catch (e) {}
+    if (r && r.on && !r.flat && s.__toneOnly) {
+      const tp = _toneParts(r);
+      return "html{filter:" + tp.top + ";background:#000000!important}" + IMG_SEL + "{filter:" + tp.img + "}" + extra;
+    }
     const f = _filters(s);
     return "html{filter:" + f.top + ";background:#ffffff!important}" +
-      IMG_SEL + "{filter:" + f.img + "}" +
-      "::selection{background:#38bdf8;color:#0b1220}";
+      IMG_SEL + "{filter:" + f.img + "}" + extra;
   }
   function _injectFilter(s) {
     try {
@@ -151,18 +219,24 @@
   function _decide() {
     const host = _host();
     const s = _s;
-    if (!s || !host) { _removeFilter(); _applyReader(s); _applyExtras(); return; }
-    if (!_baseWanted(host, s)) { _removeFilter(); _applyReader(s); _applyExtras(); return; }
-    if (_applyReader(s)) { _removeFilter(); _applyExtras(); return; }
+    if (!s || !host) { _removeFilter(); _applyFlatReader(s); _applyExtras(); return; }
+    if (!_baseWanted(host, s)) { _removeFilter(); _applyFlatReader(s); _applyExtras(); return; }
+    if (_applyFlatReader(s)) { _removeFilter(); _applyExtras(); return; }
+    const toneOn = !!(s.reader && s.reader.on);
+    const toneS = Object.assign({}, s, { __toneOnly: true });
     if (s.auto !== false && !(s.forceSites && s.forceSites[host])) {
       const known = (s.darkKnown && host in s.darkKnown) ? s.darkKnown[host] : undefined;
-      if (known === true) { _removeFilter(); _applyExtras(); return; }
+      if (known === true) {
+        if (toneOn) _injectFilter(toneS); else _removeFilter();
+        _applyExtras(); return;
+      }
       if (known === undefined) {
         // first visit: can't measure pre-paint — defer ~1 frame, then cache
         setTimeout(function () {
           const dark = _pageIsDark();
           _remember(host, dark);
-          if (dark) _removeFilter(); else _injectFilter(s);
+          if (dark) { if (toneOn) _injectFilter(toneS); else _removeFilter(); }
+          else _injectFilter(s);
           _applyExtras();
         }, 16);
         return;

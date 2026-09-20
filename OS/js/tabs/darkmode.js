@@ -7,7 +7,7 @@
 let dmState = { enabled: false, mode: "all", auto: true, bright: 100, theme: "std", onSites: {}, offSites: {}, forceSites: {}, siteTune: {},
   paper: { mode: "none", custom: "#f6ecd9", alpha: 18 },
   typo: { on: false, family: "", size: 100, line: 1.6, ls: 0, ws: 0, width: 0, justify: false },
-  reader: { on: false, txt: "#e8dcc3", accent: "#f0a860", bg: "#16130e", dark: 35 }, darkKnown: {} };
+  reader: { on: false, preset: "news", warm: 55, dark: 20, accent: "#f0a860", txt: "#e8dcc3", bg: "#16130e", flat: false }, darkKnown: {} };
 const DM_PAPERS = [
   { id: "none",     color: "transparent", key: "dm_paper_none" },
   { id: "paper",    color: "#f6ecd9",     key: "dm_paper_paper" },
@@ -36,23 +36,10 @@ const DM_FONTS = [
 ];
 const DM_READER_PRESETS = [
   { id: "none", key: "dm_r_none", sw: "transparent" },
-  { id: "news", key: "dm_r_news", txt: "#e8dcc3", accent: "#f0a860", bg: "#16130e", dark: 0 },
-  { id: "amoled", key: "dm_r_amoled", txt: "#d7dde6", accent: "#6cb6ff", bg: "#000000", dark: 0 },
-  { id: "ocean", key: "dm_r_ocean", txt: "#cfe6e0", accent: "#4fd1c5", bg: "#0b1a22", dark: 0 }
+  { id: "news", key: "dm_r_news", sw: "#2a2318", warm: 55, dark: 10, accent: "#f0a860", txt: "#e8dcc3", bg: "#16130e" },
+  { id: "amoled", key: "dm_r_amoled", sw: "#000000", warm: 0, dark: 55, accent: "#6cb6ff", txt: "#d7dde6", bg: "#000000" },
+  { id: "ocean", key: "dm_r_ocean", sw: "#0b1a22", warm: 25, dark: 20, accent: "#4fd1c5", txt: "#cfe6e0", bg: "#0b1a22" }
 ];
-function _dmHexRgb(h) {
-  const m = /^#?([0-9a-f]{6})$/i.exec(String(h || "").trim());
-  if (!m) return null;
-  const n = parseInt(m[1], 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-}
-function _dmMixToBlack(hex, pct) {
-  const rgb = _dmHexRgb(hex);
-  if (!rgb) return hex;
-  const k = Math.max(0, Math.min(100, Number(pct) || 0)) / 100;
-  const h = function (v) { const x = Math.max(0, Math.min(255, Math.round(v))).toString(16); return x.length === 1 ? "0" + x : x; };
-  return "#" + h(rgb[0] * (1 - k)) + h(rgb[1] * (1 - k)) + h(rgb[2] * (1 - k));
-}
 let _dmCurrentHost = "";
 
 function _dmRefreshHost(cb) {
@@ -212,34 +199,36 @@ function dmRender() {
     DM_READER_PRESETS.forEach(function (pr) {
       const cb = document.createElement("button");
       cb.type = "button";
-      const active = pr.id === "none" ? !dmState.reader.on : dmState.reader.on &&
-        dmState.reader.bg === pr.bg && dmState.reader.txt === pr.txt;
+      const active = pr.id === "none" ? !dmState.reader.on : (!!dmState.reader.on && dmState.reader.preset === pr.id);
       cb.className = "dm-paper-chip" + (active ? " is-active" : "");
       const sw = document.createElement("span");
       sw.className = "dm-sw";
       if (pr.id === "none") sw.classList.add("dm-sw-none");
-      else { sw.style.background = pr.bg; sw.style.color = pr.txt; sw.textContent = "Aa"; sw.style.display = "flex"; sw.style.alignItems = "center"; sw.style.justifyContent = "center"; sw.style.fontSize = "8px"; }
+      else sw.style.background = pr.sw;
       cb.appendChild(sw);
       cb.appendChild(document.createTextNode(t(pr.key)));
       cb.addEventListener("click", function () {
-        if (pr.id === "none") { dmState.reader.on = false; }
-        else {
-          dmState.reader.on = true;
-          dmState.reader.txt = pr.txt; dmState.reader.accent = pr.accent; dmState.reader.bg = pr.bg; dmState.reader.dark = pr.dark || 0;
-        }
+        if (pr.id === "none") { dmState.reader.on = false; dmSave(); return; }
+        dmState.reader.on = true; dmState.reader.flat = false; dmState.reader.preset = pr.id;
+        dmState.reader.warm = pr.warm; dmState.reader.dark = pr.dark; dmState.reader.accent = pr.accent;
+        dmState.reader.txt = pr.txt; dmState.reader.bg = pr.bg;
         dmSave();
       });
       rChips.appendChild(cb);
     });
   }
-  [["dm-r-txt", "txt"], ["dm-r-accent", "accent"], ["dm-r-bg", "bg"]].forEach(function (row) {
-    const el = document.getElementById(row[0]);
-    if (el) el.value = dmState.reader[row[1]] || "#000000";
-  });
+  const rwEl = document.getElementById("dm-r-warm");
+  const rwvEl = document.getElementById("dm-r-warm-val");
+  if (rwEl) rwEl.value = String(dmState.reader.warm || 0);
+  if (rwvEl) rwvEl.textContent = (dmState.reader.warm || 0) + "%";
   const rdEl = document.getElementById("dm-r-dark");
   const rdvEl = document.getElementById("dm-r-dark-val");
-  if (rdEl) rdEl.value = String(dmState.reader.dark == null ? 35 : dmState.reader.dark);
-  if (rdvEl) rdvEl.textContent = (dmState.reader.dark == null ? 35 : dmState.reader.dark) + "% \u2192 " + _dmMixToBlack(dmState.reader.bg, dmState.reader.dark);
+  if (rdEl) rdEl.value = String(dmState.reader.dark == null ? 20 : dmState.reader.dark);
+  if (rdvEl) rdvEl.textContent = (dmState.reader.dark == null ? 20 : dmState.reader.dark) + "%";
+  const raEl = document.getElementById("dm-r-accent");
+  if (raEl) raEl.value = dmState.reader.accent || "#f0a860";
+  const rfEl = document.getElementById("dm-r-flat");
+  if (rfEl) rfEl.checked = !!dmState.reader.flat;
   const wEl = document.getElementById("dm-font-width");
   const wvEl = document.getElementById("dm-font-width-val");
   if (wEl) wEl.value = String(dmState.typo.width || 0);
@@ -365,18 +354,34 @@ onReady(function () {
     if (rp) rp.classList.toggle("is-open", !!dmState.reader.on);
     dmSave();
   });
-  [["dm-r-txt", "txt"], ["dm-r-accent", "accent"], ["dm-r-bg", "bg"]].forEach(function (row) {
-    const el = document.getElementById(row[0]);
-    if (el) el.addEventListener("change", function () { dmState.reader[row[1]] = el.value; dmSave(); });
-  });
+  const rwInp = document.getElementById("dm-r-warm");
+  if (rwInp) {
+    rwInp.addEventListener("input", function () {
+      const v = document.getElementById("dm-r-warm-val");
+      if (v) v.textContent = rwInp.value + "%";
+    });
+    rwInp.addEventListener("change", function () {
+      dmState.reader.warm = Math.max(0, Math.min(100, parseInt(rwInp.value, 10) || 0));
+      dmState.reader.preset = "custom";
+      dmSave();
+    });
+  }
   const rdInp = document.getElementById("dm-r-dark");
   if (rdInp) {
     rdInp.addEventListener("input", function () {
       const v = document.getElementById("dm-r-dark-val");
-      if (v) v.textContent = rdInp.value + "% \u2192 " + _dmMixToBlack(dmState.reader.bg, parseInt(rdInp.value, 10));
+      if (v) v.textContent = rdInp.value + "%";
     });
-    rdInp.addEventListener("change", function () { dmState.reader.dark = Math.max(0, Math.min(85, parseInt(rdInp.value, 10) || 0)); dmSave(); });
+    rdInp.addEventListener("change", function () {
+      dmState.reader.dark = Math.max(0, Math.min(60, parseInt(rdInp.value, 10) || 0));
+      dmState.reader.preset = "custom";
+      dmSave();
+    });
   }
+  const raInp = document.getElementById("dm-r-accent");
+  if (raInp) raInp.addEventListener("change", function () { dmState.reader.accent = raInp.value; dmState.reader.preset = "custom"; dmSave(); });
+  const rfInp = document.getElementById("dm-r-flat");
+  if (rfInp) rfInp.addEventListener("change", function () { dmState.reader.flat = !!rfInp.checked; if (dmState.reader.flat && !dmState.reader.on) dmState.reader.on = true; dmSave(); });
   const wInp = document.getElementById("dm-font-width");
   if (wInp) {
     wInp.addEventListener("input", function () {

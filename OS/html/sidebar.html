@@ -2774,23 +2774,27 @@
       </label>
       <div class="dm-typo-panel" id="dm-reader-panel">
         <div class="dm-paper-chips" id="dm-reader-presets" style="margin:6px 0;"></div>
-        <div class="dm-grid">
-          <div class="dm-cell" style="grid-column:1/-1;">
-            <div class="dm-slider" style="--dm-acc:#94a3b8;">
-              <span class="dm-sl-l" data-i18n="dm_r_txt">Mau chu</span>
-              <input type="color" id="dm-r-txt" value="#e8dcc3" aria-label="txt">
-              <span class="dm-sl-l" data-i18n="dm_r_accent">Lien ket</span>
-              <input type="color" id="dm-r-accent" value="#f0a860" aria-label="accent">
-              <span class="dm-sl-l" data-i18n="dm_r_bg">Mau nen</span>
-              <input type="color" id="dm-r-bg" value="#16130e" aria-label="bg">
-            </div>
-            <div class="dm-slider" style="--dm-acc:#94a3b8;">
-              <span class="dm-sl-l" data-i18n="dm_r_dark">Nam den nen</span>
-              <input type="range" id="dm-r-dark" min="0" max="85" value="35">
-              <span id="dm-r-dark-val" class="dm-sl-v">35%</span>
-            </div>
-          </div>
+        <div class="dm-slider" style="--dm-acc:#94a3b8;">
+          <span class="dm-sl-l" data-i18n="dm_r_warm">Ấm nóng chữ</span>
+          <input type="range" id="dm-r-warm" min="0" max="100" value="55">
+          <span id="dm-r-warm-val" class="dm-sl-v">55%</span>
         </div>
+        <div class="dm-slider" style="--dm-acc:#94a3b8;">
+          <span class="dm-sl-l" data-i18n="dm_r_dark">Nền tối thêm</span>
+          <input type="range" id="dm-r-dark" min="0" max="60" value="20">
+          <span id="dm-r-dark-val" class="dm-sl-v">20%</span>
+        </div>
+        <div class="dm-slider" style="--dm-acc:#94a3b8;">
+          <span class="dm-sl-l" data-i18n="dm_r_accent">Màu liên kết</span>
+          <input type="color" id="dm-r-accent" value="#f0a860" aria-label="accent">
+        </div>
+        <label class="switch-row" for="dm-r-flat" style="margin-top:4px;">
+          <div class="switch-row-left">
+            <span class="switch-row-title" data-i18n="dm_r_flat">Tô màu phẳng (tức thời)</span>
+            <span class="switch-row-desc" data-i18n="dm_r_flat_desc">Thay toàn bộ màu trang bằng màu bạn chọn — đặc biệt sạch nhưng có thể làm phẳng bộ để một số trang</span>
+          </div>
+          <span class="custom-switch"><input type="checkbox" id="dm-r-flat"><span class="switch-slider"></span></span>
+        </label>
       </div>
     </div>
 

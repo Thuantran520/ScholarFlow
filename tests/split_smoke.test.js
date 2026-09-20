@@ -1021,19 +1021,17 @@ async function main() {
         "Lingua bridge: sidebar answers in-page write-check via graded prompt + async sendResponse");
     }
     check(!!w.document.getElementById("sec-dm-reader") && !!w.document.getElementById("dm-reader-presets") &&
-      !!w.document.getElementById("dm-r-txt") && !!w.document.getElementById("dm-r-accent") && !!w.document.getElementById("dm-r-bg") &&
-      !!w.document.getElementById("dm-r-dark") && !!w.document.getElementById("dm-font-width") && !!w.document.getElementById("dm-font-justify"),
-      `${htmlFile}: Dark Mode studio gains Night Reader (text/accent/bg colors + dim slider) + reading column + justify`);
-    check(await w.eval(`typeof _dmMixToBlack === "function" && _dmMixToBlack("#808080", 100) === "#000000" && _dmMixToBlack("#808080", 0) === "#808080" && _dmMixToBlack("#ffffff", 50) === "#808080"`),
-      `${htmlFile}: background dim-to-black math (golden) wired for reader slider`);
+      !!w.document.getElementById("dm-r-warm") && !!w.document.getElementById("dm-r-dark") && !!w.document.getElementById("dm-r-accent") &&
+      !!w.document.getElementById("dm-r-flat") && !!w.document.getElementById("dm-font-width") && !!w.document.getElementById("dm-font-justify"),
+      `${htmlFile}: Dark Mode Night Reader = safe tone sliders (warmth / deeper black / link color) + opt-in flat recolor + reading column + justify`);
     {
       const dmContent = fs.readFileSync(path.join(__dirname, "..", "OS", "js", "content", "darkmode.js"), "utf8");
-      check(dmContent.includes("_readerCss") && dmContent.includes("_applyReader") && dmContent.includes("*:not(img)") && dmContent.includes("[role='link']"),
-        "content darkmode: reader recolor CSS overrides text/bg/links directly (no invert) when active");
+      check(dmContent.includes("_toneParts") && dmContent.includes("_accentToSource") && dmContent.includes("__toneOnly"),
+        "content darkmode: reader tone layers on top of invert (warm sepia, deeper black, pre-inverted link color) - layout-safe");
+      check(dmContent.includes("_applyFlatReader") && dmContent.includes("_readerCss") && dmContent.includes("[style*='background-image']"),
+        "content darkmode: aggressive flat recolor is opt-in only and keeps background-image elements (avatars/thumbnails) intact");
       check(dmContent.includes("text-align:justify") && dmContent.includes("max-width:"),
         "content darkmode: reading-column width + justify applied via typography extras");
-      check(dmContent.indexOf("_applyReader(s)) { _removeFilter") !== -1 || dmContent.includes("{ _removeFilter(); _applyExtras(); return; }"),
-        "content darkmode: reader mode suppresses the invert filter to avoid double recoloring");
     }
     check(await w.eval(`typeof lingSm2 === "function" && lingSm2({e:2.5,i:0,r:0},4).i === 1 && lingSm2({e:2.5,i:1,r:1},4).i === 6 && lingSm2({e:2.5,i:12,r:3},1).i === 1 && lingSm2({e:2.5,i:6,r:2},5).e > 2.5`),
       `${htmlFile}: Lingua SM-2 spaced repetition (golden transitions incl. lapse reset & easiness bump)`);
