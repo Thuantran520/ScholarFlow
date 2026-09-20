@@ -18,6 +18,14 @@ Tất cả thay đổi đáng chú ý của dự án đều được ghi tại �
 - Gỡ toàn bộ khiên CSS cũ (ẩn typing/đã xem/online) — đã được thay thế bằng các module khác; khôi phục helpers lõi cho Recovery/Vault/Checklist/Creator/Tools.
 - Sửa: `messaging.js` thiếu `security.js`/`social.js` trong danh sách lazy-inject; listener `onMessage` của content script Social tham chiếu sai API.
 
+### 🌐 Tab mới "Lingua Lab" — học ngoại ngữ (P0)
+- Xây trên 5 trụ cột SLA (thông lệ nghiên cứu ngôn ngữ học): **đầu vào dễ hiểu i+1** (học từ chính trang đang đọc), **spaced repetition SM-2** + active recall, **output hypothesis** (bắt viết), **targeted corrective feedback** (sửa lỗi phân loại), **lexical approach** (học collocation).
+- **Sentence mining mọi website**: bôi đen → "Lấy đoạn bôi đen" → AI tạo thẻ chuẩn **L2→L2** (nghĩa giải thích bằng ngôn ngữ đích, KHÔNG dịch tiếng mẹ đẻ — không còn là Google Translate) + ví dụ + cloze + collocations.
+- **Grammar coach + Sổ lỗi**: chấm bài viết, phân loại lỗi (linking words, mạo từ, giới từ, thì, hòa hợp, collocation, chính tả...), mỗi lỗi vào ledger đếm tần suất → bấm 1 nút sinh thẻ drill từ chính lỗi của bạn.
+- **Ngân hàng 30 liên từ học thuật** (however/therefore/moreover/although...) theo nhóm tương phản–kết quả–tăng cường–nhượng bộ..., drill điền chỗ trống offline.
+- **Nghe**: đọc thẻ bằng TTS cục bộ của trình duyệt; streak + mục tiêu ôn/ngày; deck tách riêng theo từng ngôn ngữ đích (EN/ES/FR/DE/JA/KO/ZH/RU).
+- AI call chỉ chạy khi bấm nút; hỗ trợ Ollama/LM Studio local → có thể học 100% offline.
+
 ### 🤖 Trợ lý AI
 - **Skill engine**: 13+ kỹ năng qua `/code /table /quiz /critique /mindmap /math...` + nhận diện ý định tự nhiên; orchestrator 5 pipeline (Engineering, Academic Research, Live Fact-check, Page Study, General Cognitive).
 - **Trích xuất 3 tầng**: Shadow DOM/iframe → scripting isolated → background fetch; chấm điểm container Readability + JSON-LD `articleBody`.
@@ -39,6 +47,7 @@ Tất cả thay đổi đáng chú ý của dự án đều được ghi tại �
 | **Trợ lý AI** | Gemini/ChatGPT/Claude + grounding | + 13+ skill lệnh `/`, 5 pipeline điều phối, trích xuất 3 tầng + JSON-LD/Readability |
 | **Model tùy biến** | Custom URL đơn lẻ | + Kho máy chủ Ollama/LM Studio/vLLM/OpenRouter (tên + endpoint + model + key), selector hợp nhất |
 | **Minh bạch quyền hạn** | - | + Modal giải trình 5 nhóm permission, hiển thị lần đầu |
+| **Ngoại ngữ** | - | **+ tab Lingua Lab**: sentence mining mọi trang, SRS SM-2 thẻ L2→L2, grammar coach + sổ lỗi phân loại, drill liên từ, TTS nghe |
 
 ---
 ## So sánh nhanh v2.4.2 → v2.4.4

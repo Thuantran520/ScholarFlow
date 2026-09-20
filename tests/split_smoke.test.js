@@ -246,10 +246,10 @@ async function main() {
     const navCount = w.document.querySelectorAll(".main-nav-btn").length;
     const tabCount = w.document.querySelectorAll(".tab-section").length;
     const ids = [...w.document.querySelectorAll(".main-nav-btn")].map(b => b.dataset.target);
-    check(navCount === 16, `16 nav buttons (found ${navCount})`);
-    check(tabCount === 16, `16 tab sections (found ${tabCount})`);
-    check(["tab-cite", "tab-ai", "tab-flow", "tab-redact", "tab-capture", "tab-cookie", "tab-autofill", "tab-todo", "tab-pomo", "tab-cal", "tab-tabmgr", "tab-testhelper", "tab-security", "tab-social", "tab-dm", "tab-qr"].every(t => ids.includes(t)),
-      `all 16 targets present in nav: ${ids.join(",")}`);
+    check(navCount === 17, `17 nav buttons (found ${navCount})`);
+    check(tabCount === 17, `17 tab sections (found ${tabCount})`);
+    check(["tab-cite", "tab-ai", "tab-flow", "tab-redact", "tab-capture", "tab-cookie", "tab-autofill", "tab-todo", "tab-pomo", "tab-cal", "tab-tabmgr", "tab-testhelper", "tab-security", "tab-social", "tab-lingua", "tab-dm", "tab-qr"].every(t => ids.includes(t)),
+      `all 17 targets present in nav: ${ids.join(",")}`);
   }
 
   // 2. Unified i18n: upgraded t() supports positional {0} and function fallback
@@ -1003,6 +1003,16 @@ async function main() {
       `${htmlFile}: social-protection core exposes shared helpers + host stats fetch to feature modules`);
     check(await w.eval(`(function(){ var p=document.querySelector('#tab-social [data-i18n="soc_inj_title"]'); _socSwitchSub('recover'); var ok1=document.getElementById('soc-sub-recover').classList.contains('active'); _socSwitchSub('protect'); var ok2=document.getElementById('soc-sub-protect').classList.contains('active') && !!document.getElementById('soc-inj-shield'); return !!p && ok1 && ok2; })()`),
       `${htmlFile}: anti-injection label is i18n-bound and social sub-tabs switch correctly`);
+    check(!!w.document.getElementById("lng-target") && !!w.document.getElementById("lng-level") && !!w.document.getElementById("lng-review-area") &&
+      !!w.document.getElementById("lng-mine-input") && !!w.document.getElementById("btn-lng-grab") && !!w.document.getElementById("lng-write-input") &&
+      !!w.document.getElementById("btn-lng-drill") && !!w.document.getElementById("lng-err-list"),
+      `${htmlFile}: Lingua tab markup (profile + 5 panels: review/mine/write/conn/err)`);
+    check(await w.eval(`typeof lingSm2 === "function" && lingSm2({e:2.5,i:0,r:0},4).i === 1 && lingSm2({e:2.5,i:1,r:1},4).i === 6 && lingSm2({e:2.5,i:12,r:3},1).i === 1 && lingSm2({e:2.5,i:6,r:2},5).e > 2.5`),
+      `${htmlFile}: Lingua SM-2 spaced repetition (golden transitions incl. lapse reset & easiness bump)`);
+    check(await w.eval(`typeof lingJsonParse === "function" && lingJsonParse('noise {\\"a\\":7} more').a === 7 && lingJsonParse('\`\`\`json\\n{\\"b\\":true}\\n\`\`\`').b === true && lingJsonParse('nope') === null`),
+      `${htmlFile}: Lingua robust AI-JSON extractor (fence + brace slicing) wired`);
+    check(await w.eval(`typeof lingErrCat === "function" && lingErrCat('Linking Words') === 'linking' && lingErrCat('word choice') === 'collocation' && lingErrCat('subject-verb') === 'agreement' && lingErrCat('zzz') === 'other'`),
+      `${htmlFile}: Lingua targeted-feedback error categories normalize (Bitchener/Storch style ledger)`);
     if (htmlFile === "sidebar.html") {
       check(await w.eval(`aiGetModel("gemini") === "gemini-3.5-flash" && AI_PROVIDERS.gemini.defaultModel === "gemini-3.5-flash"`),
         "sidebar: modern default model gemini-3.5-flash configured");

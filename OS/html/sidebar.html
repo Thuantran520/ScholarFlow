@@ -30,6 +30,7 @@
   <link rel="stylesheet" href="../css/tabs/test-helper.css">
   <link rel="stylesheet" href="../css/tabs/security.css">
   <link rel="stylesheet" href="../css/tabs/social-protection.css">
+  <link rel="stylesheet" href="../css/tabs/lingua.css">
   <link rel="stylesheet" href="../css/tabs/darkmode.css">
   <link rel="stylesheet" href="../css/tabs/dual-tabs.css">
   <!-- Layout -->
@@ -162,7 +163,11 @@
         <span class="nav-icon" id="icon-tab-social"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg></span>
         <span class="nav-label" data-i18n="nav_social">Social</span>
       </button>
-      <button class="main-nav-btn" data-target="tab-dm" title="Dark Mode cho mọi trang web" data-i18n-title="tip_tab_dm">
+            <button class="main-nav-btn" data-target="tab-lingua" title="Lingua Lab - hoc ngoai ngu tren moi trang web" data-i18n-title="tip_tab_lingua">
+        <span class="nav-icon" id="icon-tab-lingua"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h7a5 5 0 0 1 5 5v11a4 4 0 0 0-4-4H2z"></path><path d="M22 4h-7a5 5 0 0 0-5 5v11a4 4 0 0 1 4-4h8z"></path></svg></span>
+        <span class="nav-label" data-i18n="nav_lingua">Lingua</span>
+      </button>
+<button class="main-nav-btn" data-target="tab-dm" title="Dark Mode cho mọi trang web" data-i18n-title="tip_tab_dm">
         <span class="nav-icon" id="icon-tab-dm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></span>
 <span class="nav-label" data-i18n="nav_dm">Dark</span>
       </button>
@@ -2510,6 +2515,73 @@
     </div>
   </div>
 
+  <div id="tab-lingua" class="tab-section">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+      <div class="feature-title" style="margin-bottom:0;" data-i18n="lng_title">Lingua Lab</div>
+      <span style="font-size:10px; color:var(--text-muted);" id="lng-streak"></span>
+    </div>
+    <p style="color:var(--text-muted); font-size:11.5px; margin-bottom:8px; line-height:1.4;" data-i18n="lng_desc">Hoc ngoai ngu theo LAP (thong hieu dau vao + lap lai gian cach + phan hoi loi co phan loai).</p>
+    <div style="display:flex; gap:6px; margin-bottom:8px;">
+      <select class="form-control" id="lng-target" style="flex:1; font-size:11px; padding:4px 6px;">
+        <option value="en">English</option><option value="es">Espanol</option><option value="fr">Francais</option><option value="de">Deutsch</option><option value="ja">日本語</option><option value="ko">한국어</option><option value="zh">中文</option><option value="ru">Русский</option>
+      </select>
+      <select class="form-control" id="lng-level" style="width:74px; font-size:11px; padding:4px 6px;">
+        <option>A1</option><option>A2</option><option selected>B1</option><option>B2</option><option>C1</option>
+      </select>
+    </div>
+    <div class="lng-subtabs" role="tablist">
+      <button type="button" class="lng-subtab active" data-lng-sub="review" data-i18n="lng_st_review">On tap</button>
+      <button type="button" class="lng-subtab" data-lng-sub="mine" data-i18n="lng_st_mine">Them the</button>
+      <button type="button" class="lng-subtab" data-lng-sub="write" data-i18n="lng_st_write">Viet &amp; sua</button>
+      <button type="button" class="lng-subtab" data-lng-sub="conn" data-i18n="lng_st_conn">Lien tu</button>
+      <button type="button" class="lng-subtab" data-lng-sub="err" data-i18n="lng_st_err">So loi</button>
+    </div>
+    <div id="lng-sub-review" class="lng-subpanel active">
+      <div class="feature-card" style="padding:10px 12px;">
+        <div style="display:flex; justify-content:space-between; gap:6px; margin-bottom:6px;">
+          <span id="lng-stats-line" style="font-size:10.5px; color:var(--text-muted);"></span>
+          <span id="lng-today" style="font-size:10.5px; color:#38bdf8; font-weight:700;"></span>
+        </div>
+        <div id="lng-review-area"></div>
+        <p style="font-size:10px; color:#64748b; margin-top:8px; line-height:1.4;" data-i18n="lng_method_hint">The hoc theo chuan L2-&gt;L2 (nghia giai thich bang ngon ngu dang hoc, khong dich ve tieng me).</p>
+      </div>
+    </div>
+    <div id="lng-sub-mine" class="lng-subpanel">
+      <div class="feature-card" style="padding:10px 12px;">
+        <textarea class="form-control" id="lng-mine-input" rows="3" style="font-size:11px; padding:6px 8px; margin-bottom:6px;" placeholder="Du an tu / cau / doan van ban..." data-i18n-placeholder="lng_mine_ph"></textarea>
+        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:6px;">
+          <button type="button" class="btn-text-small" id="btn-lng-grab" data-i18n="lng_btn_grab">Lay doan boi den tren trang</button>
+          <button type="button" class="btn-text-small" id="btn-lng-create" style="background:rgba(56,189,248,0.12); border-color:rgba(56,189,248,0.4); color:#38bdf8; font-weight:700;" data-i18n="lng_btn_ai">AI tao the hoc</button>
+        </div>
+        <div id="lng-mine-preview" style="font-size:11px; color:#cbd5e1;"></div>
+      </div>
+    </div>
+    <div id="lng-sub-write" class="lng-subpanel">
+      <div class="feature-card" style="padding:10px 12px;">
+        <textarea class="form-control" id="lng-write-input" rows="5" style="font-size:11px; padding:6px 8px; margin-bottom:6px;" placeholder="Viet doan van bang ngon ngu dang hoc..." data-i18n-placeholder="lng_write_ph"></textarea>
+        <button type="button" class="btn-text-small" id="btn-lng-grade" style="background:rgba(52,211,153,0.1); border-color:rgba(52,211,153,0.4); color:#34d399; font-weight:700; margin-bottom:6px;" data-i18n="lng_btn_grade">Cham bai &amp; phan loai loi</button>
+        <div id="lng-write-out" style="font-size:11px;"></div>
+      </div>
+    </div>
+    <div id="lng-sub-conn" class="lng-subpanel">
+      <div class="feature-card" style="padding:10px 12px;">
+        <p style="font-size:10.5px; color:var(--text-muted); margin-bottom:6px;" data-i18n="lng_conn_intro">Ngon ngu lien ket hoc thuat - drill dien cho.</p>
+        <button type="button" class="btn-text-small" id="btn-lng-drill" data-i18n="lng_btn_drill">Luyen 1 cau</button>
+        <div id="lng-conn-drill" style="margin-top:6px;"></div>
+        <div id="lng-conn-list" style="margin-top:8px;"></div>
+      </div>
+    </div>
+    <div id="lng-sub-err" class="lng-subpanel">
+      <div class="feature-card" style="padding:10px 12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <span class="feature-title" style="margin-bottom:0; font-size:11.5px;" data-i18n="lng_err_title">So loi cua ban</span>
+          <button type="button" class="btn-text-small" id="btn-lng-clear-err" style="color:#94a3b8;" data-i18n="lng_btn_clear">Xoa</button>
+        </div>
+        <div id="lng-err-list"></div>
+      </div>
+    </div>
+  </div>
+
   <div id="tab-dm" class="tab-section">
     <div class="dm-hero">
       <svg class="dm-hero-moon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
@@ -2868,6 +2940,7 @@
   <script src="../js/tabs/social-checklist.js"></script>
   <script src="../js/tabs/social-tools.js"></script>
   <script src="../js/tabs/social-creator.js"></script>
+  <script src="../js/tabs/lingua.js"></script>
   <script src="../js/tabs/darkmode.js"></script>
   <script src="../js/libs/peer.min.js"></script>
   <script src="../js/libs/qrious.min.js"></script>

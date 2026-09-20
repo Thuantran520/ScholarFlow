@@ -1,0 +1,30 @@
+/* Lingua tab (language learning) — subtab strip + panels, mirrors social styles */
+#tab-lingua .lng-subtabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 8px;
+  scrollbar-width: none;
+}
+#tab-lingua .lng-subtabs::-webkit-scrollbar { display: none; }
+#tab-lingua .lng-subtab {
+  flex: 1 0 auto;
+  padding: 5px 10px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 7px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+#tab-lingua .lng-subtab:hover { color: #e2e8f0; }
+#tab-lingua .lng-subtab.active {
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.1);
+  border-color: rgba(56, 189, 248, 0.35);
+}
+#tab-lingua .lng-subpanel { display: none; }
+#tab-lingua .lng-subpanel.active { display: block; }
