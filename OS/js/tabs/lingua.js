@@ -446,13 +446,163 @@ function lngRenderStats() {
   const prog = document.getElementById("lng-today");
   if (prog) prog.textContent = t("lng_today").replace("{0}", String(lngLog[lngToday()] || 0)).replace("{1}", String(lngProfile.dailyGoal));
 }
-function lngSpeak(text) {
+function lngSpeak(text, rate) {
   try {
     if (!window.speechSynthesis) { showToast(t("lng_no_tts")); return; }
     const u = new SpeechSynthesisUtterance(String(text || ""));
-    u.lang = lngProfile.target; u.rate = 0.95;
+    u.lang = lngProfile.target; u.rate = rate || 0.95;
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(u);
+  } catch (e) {}
+}
+
+// ── P1a: dictation (listening + spelling in one, 100% local) ──────────────
+function lingWordDiff(target, typed) {
+  const strip = function (s) { return String(s || "").toLowerCase().replace(/[.,;:!?'"\u2018\u2019\u201c\u201d()\[\]]/g, " ").split(/\s+/).filter(Boolean); };
+  const T = strip(target); const G = strip(typed);
+  const cells = [];
+  for (let i = 0; i < Math.max(T.length, G.length); i++) {
+    if (i < T.length && i < G.length) cells.push({ w: T[i], got: G[i], ok: T[i] === G[i] });
+    else if (i < T.length) cells.push({ w: T[i], got: "", ok: false });
+    else cells.push({ w: "", got: G[i], ok: false, extra: true });
+  }
+  const okc = cells.filter(function (x) { return x.ok; }).length;
+  return { cells: cells, score: T.length ? Math.round(okc * 100 / T.length) : 0 };
+}
+function lngDictSentence() {
+  const pool = [];
+  lngCards.forEach(function (c) {
+    if (c.kind === "gram" && c.fixed) pool.push(c.fixed);
+    else if (c.cloze && c.cloze.q) pool.push(String(c.cloze.q).replace("____", c.cloze.a || c.term || "___"));
+    else if (c.ex && c.ex[0]) pool.push(c.ex[0]);
+  });
+  (LINGUA_BANK[lngProfile.target] || []).forEach(function (it) { pool.push(it.ex.replace("____", it.w)); });
+  return pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
+}
+function lngDictStart(slow) {
+  const area = document.getElementById("lng-dict-area");
+  if (!area) return;
+  const sentence = lngDictSentence();
+  if (!sentence) { showToast(t("lng_dict_none")); return; }
+  area.textContent = "";
+  const row = document.createElement("div");
+  row.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;";
+  const play = document.createElement("button");
+  play.type = "button"; play.className = "btn-text-small";
+  play.textContent = (slow ? "\ud83d\udca2 " : "\ud83d\udd0a ") + t("lng_dict_play");
+  play.addEventListener("click", function () { lngSpeak(sentence, slow ? 0.6 : 0.95); });
+  const next = document.createElement("button");
+  next.type = "button"; next.className = "btn-text-small"; next.textContent = t("lng_dict_again");
+  next.addEventListener("click", function () { lngDictStart(slow); });
+  row.appendChild(play); row.appendChild(next);
+  area.appendChild(row);
+  const inp = document.createElement("input");
+  inp.type = "text"; inp.className = "form-control";
+  inp.placeholder = t("lng_dict_ph");
+  inp.style.cssText = "font-size:11.5px;padding:5px 8px;margin-bottom:6px;width:100%;box-sizing:border-box;";
+  area.appendChild(inp);
+  const chk = document.createElement("button");
+  chk.type = "button"; chk.className = "btn-text-small"; chk.textContent = t("lng_check");
+  const finish = function () {
+    const d = lingWordDiff(sentence, inp.value);
+    const out = document.createElement("div");
+    out.style.cssText = "margin-top:6px;font-size:11.5px;line-height:1.8;";
+    d.cells.forEach(function (c) {
+      const w = document.createElement("span");
+      w.style.cssText = "margin-right:6px;padding:1px 4px;border-radius:4px;color:" + (c.ok ? "#34d399" : "#f87171") + ";background:" + (c.ok ? "rgba(52,211,153,0.08)" : "rgba(248,113,113,0.1)") + ";";
+      w.textContent = c.ok ? c.w : (c.extra ? (c.got + "\u2715") : (c.got || "\u2205") + "\u2192" + c.w);
+      if (!c.ok && !c.extra) {
+        const cat = "spelling";
+        lngErrors.counts[cat] = (lngErrors.counts[cat] || 0) + 1;
+        if (lngErrors.samples.length < 200) lngErrors.samples.push({ cat: cat, o: c.got, f: c.w, n: "dictation", d: lngToday() });
+      }
+      out.appendChild(w);
+    });
+    const sc = document.createElement("div");
+    sc.style.cssText = "font-weight:800;margin-top:4px;color:" + (d.score >= 80 ? "#34d399" : "#fbbf24") + ";";
+    sc.textContent = t("lng_dict_score").replace("{0}", String(d.score)) + " \u00b7 " + d.cells.length + " \u00b7";
+    out.appendChild(sc);
+    area.appendChild(out);
+    lngSave("errors", lngErrors); lngRenderErr();
+    lngAddLog(); lngRenderStats();
+    if (d.score < 100) lngSpeak(sentence, 0.85);
+  };
+  chk.addEventListener("click", finish);
+  inp.addEventListener("keydown", function (e) { if (e.key === "Enter") finish(); });
+  area.appendChild(chk);
+  setTimeout(function () { inp.focus(); lngSpeak(sentence, slow ? 0.6 : 0.95); }, 350);
+}
+
+// ── P1b: linking-words rewriter ───────────────────────────────────────────
+function lngLinkPrompt(text) {
+  const L2 = lngProfile.target.toUpperCase();
+  return "You are a writing coach for a " + L2 + " learner (CEFR ~" + lngProfile.level + "). Rewrite the text joining short/choppy sentences with academic linking words. Return STRICT JSON: {\"joins\":[{\"w\":\"the linker used\",\"t\":\"the rewritten text in " + L2 + "\"}]} with 2-4 alternatives, each using DIFFERENT linkers (e.g. however, therefore, although, moreover). Keep meaning identical, do not translate.\nTEXT: " + text;
+}
+async function lngLinkJoin() {
+  const inp = document.getElementById("lng-write-input");
+  const out = document.getElementById("lng-link-out");
+  if (!inp || !out) return;
+  if (!inp.value.trim()) { showToast(t("lng_no_input")); return; }
+  out.textContent = t("lng_link_working");
+  const txt = await lngAi(lngLinkPrompt(inp.value.trim()));
+  const j = txt ? lingJsonParse(txt) : null;
+  if (!j || !Array.isArray(j.joins) || !j.joins.length) { out.textContent = t("lng_bad_ai"); return; }
+  out.textContent = "";
+  j.joins.slice(0, 4).forEach(function (o) {
+    const row = document.createElement("div");
+    row.style.cssText = "border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:6px 8px;margin-bottom:6px;font-size:11px;";
+    const chip = document.createElement("span");
+    chip.style.cssText = "background:rgba(56,189,248,0.12);color:#38bdf8;border-radius:99px;padding:1px 8px;font-weight:700;margin-right:6px;";
+    chip.textContent = String(o.w || "").slice(0, 30);
+    row.appendChild(chip);
+    const body = document.createElement("span");
+    body.style.cssText = "color:#cbd5e1;white-space:pre-wrap;";
+    body.textContent = String(o.t || "").slice(0, 800);
+    row.appendChild(body);
+    const use = document.createElement("button");
+    use.type = "button"; use.className = "btn-text-small"; use.style.cssText = "display:block;margin-top:4px;";
+    use.textContent = t("lng_link_use");
+    use.addEventListener("click", function () { inp.value = o.t; showToast(t("lng_applied")); });
+    row.appendChild(use);
+    out.appendChild(row);
+  });
+}
+
+// ── P1c: in-page writing assistant backend (content/lingua.js asks here) ──
+function lngStartWriteBridge() {
+  try {
+    const rt = (typeof browser !== "undefined" && browser.runtime) ? browser.runtime
+      : ((typeof chrome !== "undefined" && chrome.runtime) ? chrome.runtime : null);
+    if (!rt || !rt.onMessage || !rt.onMessage.addListener) return;
+    rt.onMessage.addListener(function (msg, sender, sendResponse) {
+      if (!msg || msg.action !== "LINGUA_WRITE_CHECK") return;
+      (async function () {
+        try {
+          if (typeof aiHasKey !== "function" || typeof aiProvider === "undefined" || !aiHasKey(aiProvider)) {
+            try { sendResponse({ ok: false, reason: "noai" }); } catch (e) {}
+            return;
+          }
+          const raw = await lngAi(lngGradePrompt(String(msg.text || "").slice(0, 2000)));
+          const j = raw ? lingJsonParse(raw) : null;
+          if (!j || !Array.isArray(j.corrections)) {
+            try { sendResponse({ ok: false, reason: "bad" }); } catch (e) {}
+            return;
+          }
+          const clean = j.corrections.slice(0, 10).map(function (c) {
+            const cat = lingErrCat(c.c);
+            lngErrors.counts[cat] = (lngErrors.counts[cat] || 0) + 1;
+            if (lngErrors.samples.length < 200) lngErrors.samples.push({ cat: cat, o: String(c.o || "").slice(0, 300), f: String(c.f || "").slice(0, 300), n: String(c.n || "").slice(0, 200), d: lngToday() });
+            return { o: String(c.o || ""), f: String(c.f || ""), c: cat };
+          });
+          lngSave("errors", lngErrors);
+          lngRenderErr();
+          try { sendResponse({ ok: true, corrections: clean }); } catch (e) {}
+        } catch (e) {
+          try { sendResponse({ ok: false, reason: "bad" }); } catch (e2) {}
+        }
+      })();
+      return true;
+    });
   } catch (e) {}
 }
 function lngRenderAll() {
@@ -493,5 +643,12 @@ onReady(function () {
     lngErrors = { counts: {}, samples: [] };
     lngSave("errors", lngErrors, function () { lngRenderErr(); });
   });
+  const dictBtn = document.getElementById("btn-lng-dict");
+  if (dictBtn) dictBtn.addEventListener("click", function () { lngDictStart(false); });
+  const dictSlowBtn = document.getElementById("btn-lng-dict-slow");
+  if (dictSlowBtn) dictSlowBtn.addEventListener("click", function () { lngDictStart(true); });
+  const linkBtn = document.getElementById("btn-lng-link");
+  if (linkBtn) linkBtn.addEventListener("click", function () { lngLinkJoin(); });
+  lngStartWriteBridge();
   lngLoad();
 });

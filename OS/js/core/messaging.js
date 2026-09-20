@@ -64,7 +64,7 @@ async function ensureContentScriptInjected(tabId) {
     "OS/js/content/scroll.js",
     "OS/js/content/citation.js",
     "OS/js/content/security.js",
-    "OS/js/content/social.js",
+    "OS/js/content/social.js", "OS/js/content/lingua.js",
     "OS/js/content/main.js"
   ];
 

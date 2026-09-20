@@ -56,6 +56,10 @@
       companion_translate: "Dịch",
       companion_summary: "Tóm tắt",
       companion_ask: "Hỏi sâu",
+      lingua_wait: "AI đang chấm bài...",
+      lingua_off: "Mở thanh bên ScholarFlow → tab Lingua rồi bấm lại",
+      lingua_noai: "Chưa có API key AI (xem Cài đặt AI)",
+      lingua_clean: "✓ Không phát hiện lỗi ngữ pháp!",
     },
     en: {
       img_prefix: "Image",
@@ -87,6 +91,10 @@
       companion_translate: "Translate",
       companion_summary: "Summarize",
       companion_ask: "Ask AI",
+      lingua_wait: "Checking...",
+      lingua_off: "Open the ScholarFlow sidebar → Lingua tab, then retry",
+      lingua_noai: "No AI key configured (see AI Settings)",
+      lingua_clean: "✓ No grammar errors found!",
     },
     zh: {
       img_prefix: "图片",
@@ -118,6 +126,10 @@
       companion_translate: "翻译",
       companion_summary: "总结",
       companion_ask: "追问",
+      lingua_wait: "AI 正在批改……",
+      lingua_off: "请打开 ScholarFlow 侧边栏 → Lingua 标签后重试",
+      lingua_noai: "未配置 AI API key（见 AI 设置）",
+      lingua_clean: "✓ 未发现语法错误！",
     },
     ru: {
       img_prefix: "Изображение",
@@ -149,6 +161,10 @@
       companion_translate: "Перевести",
       companion_summary: "Кратко",
       companion_ask: "Спросить",
+      lingua_wait: "ИИ проверяет...",
+      lingua_off: "Откройте боковую панель ScholarFlow → вкладку Lingua и повторите",
+      lingua_noai: "Не задан API-ключ ИИ (настройки ИИ)",
+      lingua_clean: "✓ Ошибок не найдено!",
     },
     ja: {
       img_prefix: "画像",
@@ -180,6 +196,10 @@
       companion_translate: "翻訳",
       companion_summary: "要約",
       companion_ask: "質問",
+      lingua_wait: "AI が添削中……",
+      lingua_off: "ScholarFlow サイドバーの Lingua タブを開いて再試行してください",
+      lingua_noai: "AI API キー未設定（AI 設定）",
+      lingua_clean: "✓ 文法エラーなし！",
     },
   };
 

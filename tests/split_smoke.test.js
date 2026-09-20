@@ -265,8 +265,8 @@ async function main() {
     const viCount = w.Object.keys(w.I18N_DATA.vi).filter(k => k.startsWith("content_")).length;
     const enCount = w.Object.keys(w.I18N_DATA.en).filter(k => k.startsWith("content_")).length;
     const prCount = w.Object.keys(w.I18N_DATA.vi).filter(k => k.startsWith("privacy_")).length;
-    check(viCount === 29 && enCount === 29 && prCount === 43,
-      `namespace keys present in locale dumps (content_*=29, privacy_*=43; got ${viCount}/${enCount}/${prCount})`);
+    check(viCount === 33 && enCount === 33 && prCount === 43,
+      `namespace keys present in locale dumps (content_*=33, privacy_*=43; got ${viCount}/${enCount}/${prCount})`);
   }
 
   // 3. privacy.html standalone page uses the unified i18n engine
@@ -300,7 +300,7 @@ async function main() {
     w.browser = w.chrome;
     const contentFiles = [
       "OS/js/content/i18n.js", "OS/js/content/inspect.js", "OS/js/content/snip.js",
-      "OS/js/content/scroll.js", "OS/js/content/citation.js", "OS/js/content/main.js"
+      "OS/js/content/scroll.js", "OS/js/content/citation.js", "OS/js/content/lingua.js", "OS/js/content/main.js"
     ];
     let injectErr = "";
     for (const f of contentFiles) {
@@ -308,7 +308,7 @@ async function main() {
       try { w.eval(fs.readFileSync(p, "utf8")); }
       catch (e) { injectErr += `${f}: ${e.message} `; }
     }
-    check(!injectErr, "all 6 content scripts evaluated without error" + (injectErr ? ` -> ${injectErr}` : ""));
+    check(!injectErr, "all 7 content scripts evaluated without error" + (injectErr ? ` -> ${injectErr}` : ""));
 
     // Bug: a 'var tContent' shim in snip.js/inspect.js leaks onto window.tContent in the
     // Chromium isolated world, so tContent calls itself -> RangeError "Maximum call stack
@@ -1005,8 +1005,22 @@ async function main() {
       `${htmlFile}: anti-injection label is i18n-bound and social sub-tabs switch correctly`);
     check(!!w.document.getElementById("lng-target") && !!w.document.getElementById("lng-level") && !!w.document.getElementById("lng-review-area") &&
       !!w.document.getElementById("lng-mine-input") && !!w.document.getElementById("btn-lng-grab") && !!w.document.getElementById("lng-write-input") &&
-      !!w.document.getElementById("btn-lng-drill") && !!w.document.getElementById("lng-err-list"),
-      `${htmlFile}: Lingua tab markup (profile + 5 panels: review/mine/write/conn/err)`);
+      !!w.document.getElementById("btn-lng-drill") && !!w.document.getElementById("lng-err-list") &&
+      !!w.document.getElementById("btn-lng-dict") && !!w.document.getElementById("lng-dict-area") && !!w.document.getElementById("btn-lng-link") && !!w.document.getElementById("lng-link-out"),
+      `${htmlFile}: Lingua tab markup (profile + 5 panels + dictation + linker rewriter)`);
+    check(await w.eval(`typeof lingWordDiff === "function" && lingWordDiff("The cat sat.", "the cat set").score === 67 && lingWordDiff("a b", "a b").score === 100 && lingWordDiff("", "").score === 0`),
+      `${htmlFile}: Lingua dictation word-diff scorer (golden)`);
+    check(await w.eval(`typeof lngStartWriteBridge === "function" && typeof lngLinkJoin === "function" && typeof lngDictStart === "function"`),
+      `${htmlFile}: Lingua P1 wired (in-page check bridge, linker rewriter, dictation)`);
+    {
+      const contentLingua = fs.readFileSync(path.join(__dirname, "..", "OS", "js", "content", "lingua.js"), "utf8");
+      check(contentLingua.includes("LINGUA_WRITE_CHECK") && contentLingua.includes("isEditable") && contentLingua.includes("looksLatin") &&
+        contentLingua.includes("createElement") && !/innerHTML/.test(contentLingua),
+        "content script: Lingua writing pill on editable fields, user-triggered, textContent-only DOM");
+      const tabLingua = fs.readFileSync(path.join(__dirname, "..", "OS", "js", "tabs", "lingua.js"), "utf8");
+      check(tabLingua.includes("LINGUA_WRITE_CHECK") && tabLingua.includes("lngGradePrompt") && tabLingua.includes("sendResponse"),
+        "Lingua bridge: sidebar answers in-page write-check via graded prompt + async sendResponse");
+    }
     check(await w.eval(`typeof lingSm2 === "function" && lingSm2({e:2.5,i:0,r:0},4).i === 1 && lingSm2({e:2.5,i:1,r:1},4).i === 6 && lingSm2({e:2.5,i:12,r:3},1).i === 1 && lingSm2({e:2.5,i:6,r:2},5).e > 2.5`),
       `${htmlFile}: Lingua SM-2 spaced repetition (golden transitions incl. lapse reset & easiness bump)`);
     check(await w.eval(`typeof lingJsonParse === "function" && lingJsonParse('noise {\\"a\\":7} more').a === 7 && lingJsonParse('\`\`\`json\\n{\\"b\\":true}\\n\`\`\`').b === true && lingJsonParse('nope') === null`),

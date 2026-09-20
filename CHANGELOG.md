@@ -25,6 +25,9 @@ Tất cả thay đổi đáng chú ý của dự án đều được ghi tại �
 - **Ngân hàng 30 liên từ học thuật** (however/therefore/moreover/although...) theo nhóm tương phản–kết quả–tăng cường–nhượng bộ..., drill điền chỗ trống offline.
 - **Nghe**: đọc thẻ bằng TTS cục bộ của trình duyệt; streak + mục tiêu ôn/ngày; deck tách riêng theo từng ngôn ngữ đích (EN/ES/FR/DE/JA/KO/ZH/RU).
 - AI call chỉ chạy khi bấm nút; hỗ trợ Ollama/LM Studio local → có thể học 100% offline.
+- **P1 — Chíp "✍ Lingua?" trên mọi website**: hiện khi bạn gõ tiếng Anh vào comment/textarea/contenteditable (≥40 ký tự, chỉ kiểm tra khi bấm) → sidebar chấm, lỗi vào Sổ lỗi, kết quả trả về bong bóng tại chỗ (không auto-gửi; sidebar đóng thì báo rõ).
+- **Dictation 100% offline**: TTS đọc câu ngẫu nhiên từ deck/liên từ → gõ lại → diff từng từ tô màu + % điểm, từ sai tự ghi vào ledger lỗi `spelling`.
+- **Linker rewriter**: nút "Nối câu bằng liên từ (AI)" biến mấy câu cụt thành văn học thuật với however/therefore/although... kèm nút "Dùng bản này".
 
 ### 🤖 Trợ lý AI
 - **Skill engine**: 13+ kỹ năng qua `/code /table /quiz /critique /mindmap /math...` + nhận diện ý định tự nhiên; orchestrator 5 pipeline (Engineering, Academic Research, Live Fact-check, Page Study, General Cognitive).

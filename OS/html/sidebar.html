@@ -2543,6 +2543,13 @@
           <span id="lng-today" style="font-size:10.5px; color:#38bdf8; font-weight:700;"></span>
         </div>
         <div id="lng-review-area"></div>
+        <div style="margin-top:10px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.08);">
+          <div style="display:flex; gap:6px; margin-bottom:4px;">
+            <button type="button" class="btn-text-small" id="btn-lng-dict" style="background:rgba(56,189,248,0.1); border-color:rgba(56,189,248,0.35); color:#38bdf8; font-weight:700;" data-i18n="lng_btn_dict">Chep chinh ta (nghe)</button>
+            <button type="button" class="btn-text-small" id="btn-lng-dict-slow" data-i18n="lng_btn_dict_slow">Tuoc cham</button>
+          </div>
+          <div id="lng-dict-area"></div>
+        </div>
         <p style="font-size:10px; color:#64748b; margin-top:8px; line-height:1.4;" data-i18n="lng_method_hint">The hoc theo chuan L2-&gt;L2 (nghia giai thich bang ngon ngu dang hoc, khong dich ve tieng me).</p>
       </div>
     </div>
@@ -2560,6 +2567,8 @@
       <div class="feature-card" style="padding:10px 12px;">
         <textarea class="form-control" id="lng-write-input" rows="5" style="font-size:11px; padding:6px 8px; margin-bottom:6px;" placeholder="Viet doan van bang ngon ngu dang hoc..." data-i18n-placeholder="lng_write_ph"></textarea>
         <button type="button" class="btn-text-small" id="btn-lng-grade" style="background:rgba(52,211,153,0.1); border-color:rgba(52,211,153,0.4); color:#34d399; font-weight:700; margin-bottom:6px;" data-i18n="lng_btn_grade">Cham bai &amp; phan loai loi</button>
+                <button type="button" class="btn-text-small" id="btn-lng-link" style="margin-left:6px; margin-bottom:6px;" data-i18n="lng_btn_link">Noi cau bang lien tu (AI)</button>
+        <div id="lng-link-out" style="font-size:11px; margin-bottom:6px;"></div>
         <div id="lng-write-out" style="font-size:11px;"></div>
       </div>
     </div>
