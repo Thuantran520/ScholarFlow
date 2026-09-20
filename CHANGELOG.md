@@ -36,7 +36,8 @@ Tất cả thay đổi đáng chú ý của dự án đều được ghi tại �
 - Popup AI nhanh khi bôi đen (Reading Companion): thêm nút tắt/bật tức thì.
 
 - **Lá chắn cờ bạc (mặc định BẬT)**: dùng `declarativeNetRequest` chặn ngay từ tầng mạng ~65 domain cá độ / casino / game bài hướng VN (kubet, 88bet, bong88, w88, iwin, nohu, b52...) + mọi domain chứa `casino`, kể cả iframe quảng cáo cờ bạc nhúng trong trang khác. Không fetch danh sách — tất cả nằm trong máy.
-- Trang chặn **bản địa hóa 5 ngôn ngữ** (`gamble-block.html`): hiện tên miền bị chặn, cảnh báo chiêu lure "kèo sạch/tài xỉu 100%", nút Quay lại và **Bỏ chặn tên miền này** (lưu vào allowlist trong `sf_social_settings`, background dựng lại rule loại trừ).
+- **Quét vân tay nội dung + TỰ HỌC domain mới (chống rotation)**: `gamble-fp.js` chấm điểm trang bằng chính ngôn ngữ cờ bạc (nhà cái, tài xỉu, xúc xóc, bắn cá, nạp/rút, đại lý...) qua 2 lớp gate rẻ (TLD hiểm + tên miền số) trước khi đọc text; trang bị nhận diện → chặn tại chỗ + gửi domain về danh sách học cục bộ (`sf_gmbl_learned`, cap 400) → background dựng rule mạng riêng: **lần sau bị chặn từ tầng network**. Nhà cái đổi sang brand mới tinh cũng chỉ "dính" 1 lần duy nhất.
+- Trang chặn **bản địa hóa 5 ngôn ngữ** (`gamble-block.html`): hiện tên miền bị chặn, cảnh báo chiêu lure "kèo sạch/tài xỉu 100%", nút Quay lại và **Bỏ chặn tên miền này** (allowlist theo brand-token hoặc domain gốc, tự xóa entry đã học).
 - Bật/tắt trong Social → Bảo vệ; lời từ nền tảng mạng xã hội (bấm link từ comment) được chuyển hướng vào trang giải thích thay vì "ERR_BLOCKED".
 
 ### 🌙 Dark Mode Studio — bản "tinh chỉnh an toàn"

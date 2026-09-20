@@ -66,6 +66,16 @@
         "OS/js/content/pomoMusicConfirm.js"
       ],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "OS/js/content/gamble-fp.js",
+        "OS/js/content/gamble-scan.js"
+      ],
+      "run_at": "document_idle"
     }
   ],
   "action": {

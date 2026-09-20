@@ -215,7 +215,7 @@ function _gmblStor() {
 function _gmblEscape(t) {
   return String(t).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
-function _gmblBuildRules(allow) {
+function _gmblBuildRules(allow, learned) {
   const blockUrl = ((typeof browser !== "undefined" && browser.runtime) || chrome.runtime)
     .getURL("OS/html/gamble-block.html");
   const isFF = typeof browser !== "undefined" && !!browser.declarativeNetRequest;
@@ -245,6 +245,23 @@ function _gmblBuildRules(allow) {
       }
     });
   }
+  // Self-learned exact hosts (caught by the fingerprint scanner earlier):
+  // priority 2 so they beat nothing but stay independent of the brand list.
+  Object.keys(learned || {}).forEach(function (host) {
+    const h = String(host || "").toLowerCase().replace(/^www\./, "");
+    if (!h || !/^[a-z0-9.\-_]+$/.test(h)) return;
+    const root = h.split(".").slice(-2).join(".");
+    if (allow && (allow[root] || allow[h] || allow[host])) return;
+    rules.push({
+      id: id++,
+      priority: 2,
+      action: { type: "redirect", redirect: { regexSubstitution: blockUrl + "?h={{encodingHost}}" } },
+      condition: {
+        regexFilter: "^https?://(?:www\\.)?" + _gmblEscape(h) + "(?::\\d+)?(?:/|$|\\?)",
+        resourceTypes: rt
+      }
+    });
+  });
   return rules;
 }
 function _gmblApply() {
@@ -266,23 +283,49 @@ function _gmblApply() {
       else api.getDynamicRules(after);
     } catch (e) { after([]); }
   };
-  const onSettings = function (res) {
+  const onData = function (res) {
     const s = (res && res.sf_social_settings) || {};
     const on = s.gamble !== false;
-    installRules(on ? _gmblBuildRules(s.gambleAllow || {}) : []);
+    const learned = (res && res.sf_gmbl_learned) || {};
+    installRules(on ? _gmblBuildRules(s.gambleAllow || {}, learned) : []);
   };
   try {
-    const p = stor.get("sf_social_settings");
-    if (p && p.then) p.then(onSettings, function () {});
-    else stor.get("sf_social_settings", onSettings);
+    const p = stor.get(["sf_social_settings", "sf_gmbl_learned"]);
+    if (p && p.then) p.then(onData, function () {});
+    else stor.get(["sf_social_settings", "sf_gmbl_learned"], onData);
+  } catch (e) {}
+}
+function _gmblLearnHost(host) {
+  const stor = _gmblStor();
+  const h = String(host || "").toLowerCase().replace(/^www\./, "");
+  if (!stor || !h || !/^[a-z0-9.\-_]+$/.test(h) || h.length > 100) return;
+  const put = function (learned) {
+    learned[h] = Date.now();
+    const keys = Object.keys(learned);
+    if (keys.length > 400) {
+      keys.sort(function (a, b) { return (learned[a] || 0) - (learned[b] || 0); });
+      keys.slice(0, keys.length - 400).forEach(function (k) { delete learned[k]; });
+    }
+    try {
+      const p = stor.set({ sf_gmbl_learned: learned });
+      if (p && p.then) p.then(function () { _gmblApply(); }, function () {});
+      else stor.set({ sf_gmbl_learned: learned }, _gmblApply);
+    } catch (e) {}
+  };
+  try {
+    const g = stor.get("sf_gmbl_learned");
+    if (g && g.then) { g.then(function (res) { put((res && res.sf_gmbl_learned) || {}); }, function () {}); return; }
+    stor.get("sf_gmbl_learned", function (res) { put((res && res.sf_gmbl_learned) || {}); });
   } catch (e) {}
 }
 function _gmblTokenForHost(host) {
-  const h = String(host || "").toLowerCase();
+  const h = String(host || "").toLowerCase().replace(/^www\./, "");
   for (let i = 0; i < GMBL_LIST.length; i++) {
     if (h.indexOf(GMBL_LIST[i]) !== -1) return GMBL_LIST[i];
   }
-  return h.indexOf("casino") !== -1 ? "__casino" : "";
+  if (h.indexOf("casino") !== -1) return "__casino";
+  const parts = h.split(".");
+  return parts.length >= 2 ? parts.slice(-2).join(".") : h;
 }
 function _gmblAllowHost(token) {
   const stor = _gmblStor();
@@ -292,8 +335,30 @@ function _gmblAllowHost(token) {
     s.gambleAllow[token] = true;
     try {
       const p = stor.set({ sf_social_settings: s });
-      if (p && p.then) p.then(function () { _gmblApply(); }, function () {});
-      else stor.set({ sf_social_settings: s }, _gmblApply);
+      const after = function () {
+        // drop self-learned entries the user just allowed
+        try {
+          const lp = stor.get("sf_gmbl_learned");
+          const clean = function (res) {
+            const learned = (res && res.sf_gmbl_learned) || {};
+            let dirty = false;
+            Object.keys(learned).forEach(function (h) {
+              const root = h.split(".").slice(-2).join(".");
+              if (h.indexOf(token) !== -1 || root === token || h === token) { delete learned[h]; dirty = true; }
+            });
+            if (dirty) {
+              const sp = stor.set({ sf_gmbl_learned: learned });
+              if (sp && sp.then) sp.then(_gmblApply, function () {});
+              else stor.set({ sf_gmbl_learned: learned }, _gmblApply);
+            }
+          };
+          if (lp && lp.then) lp.then(clean, function () {});
+          else stor.get("sf_gmbl_learned", clean);
+        } catch (e) {}
+        _gmblApply();
+      };
+      if (p && p.then) p.then(after, function () {});
+      else stor.set({ sf_social_settings: s }, after);
     } catch (e) {}
   };
   try {
@@ -310,16 +375,23 @@ try {
   const storG = _gmblStor();
   if (storG && storG.onChanged) {
     storG.onChanged.addListener(function (c, area) {
-      if (area === "local" && c && c.sf_social_settings) _gmblApply();
+      if (area === "local" && c && (c.sf_social_settings || c.sf_gmbl_learned)) _gmblApply();
     });
   }
   const rtG = (typeof browser !== "undefined" && browser.runtime) ? browser.runtime
     : ((typeof chrome !== "undefined" && chrome.runtime) ? chrome.runtime : null);
   if (rtG && rtG.onMessage && rtG.onMessage.addListener) {
     rtG.onMessage.addListener(function (msg, sender, sendResponse) {
-      if (!msg || msg.action !== "GMBL_ALLOW_HOST") return;
-      _gmblAllowHost(_gmblTokenForHost(msg.host));
-      try { sendResponse({ ok: true }); } catch (e) {}
+      if (!msg) return;
+      if (msg.action === "GMBL_LEARN") {
+        _gmblLearnHost(msg.host || (sender && sender.tab && sender.tab.url ? (function () { try { return new URL(sender.tab.url).hostname; } catch (e) { return ""; } })() : ""));
+        try { sendResponse({ ok: true }); } catch (e) {}
+        return;
+      }
+      if (msg.action === "GMBL_ALLOW_HOST") {
+        _gmblAllowHost(_gmblTokenForHost(msg.host));
+        try { sendResponse({ ok: true }); } catch (e) {}
+      }
     });
   }
   _gmblApply();

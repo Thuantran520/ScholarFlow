@@ -84,7 +84,28 @@ async function main() {
   }
   check(exists("OS/html/gamble-block.html") && exists("OS/js/gamble-block.js") && exists("OS/css/gamble-block.css"),
     "gamble block page assets exist (html/js/css)");
+  for (const [name, m] of [["ffRoot", ffRoot], ["ffShip", ffShip], ["chrome", chrome]]) {
+    const allJs = (m.content_scripts || []).flatMap((cs) => cs.js || []);
+    check(allJs.includes("OS/js/content/gamble-fp.js") && allJs.includes("OS/js/content/gamble-scan.js"),
+      `${name}: fingerprint scripts wired in content_scripts`);
+  }
+  const fpSrc = fs.readFileSync(path.join(ROOT, "OS/js/content/gamble-fp.js"), "utf8");
+  const vmMod = require("node:vm");
+  const fpWin = {};
+  vmMod.runInNewContext(fpSrc, { window: fpWin });
+  const FP = fpWin.GMBL_FP;
+  check(!!FP && FP.safeHost("www.facebook.com") === true && FP.riskyTld("kubet88.vip") === true &&
+    FP.hostSpinny("nov88.top") === true && FP.hostSpinny("suckhoedaily.com") === false,
+    "GMBL_FP gate primitives (safe hosts / risky TLD / spinny host) correct");
+  check(FP.score("newbrand77.vip", "NEWBRAND 77 | Nha Cai Uy Tin - Tai Xiu - Ban Ca", "").block === true,
+    "GMBL_FP blocks a never-seen brand from language fingerprint alone (title >= 2 markers + risky TLD + numeric host)");
+  check(FP.score("suckhoelamdep.vn", "Review 10 nha cai lon nhat 2026 - casino online", "").block === false,
+    "GMBL_FP does NOT block news-style content on clean host (no risky TLD / no numeric brand)");
+  check(FP.score("www.facebook.com", "Nhà cái kubet tặng 88k tài xỉu bắn cá đổi thưởng", "nạp tiền rút tiền đại lý").block === false,
+    "GMBL_FP never blocks platform-safe hosts even with gambling keywords");
   const bgSrc = fs.readFileSync(path.join(ROOT, "OS/js/background.js"), "utf8");
+  check(bgSrc.includes("sf_gmbl_learned") && bgSrc.includes("GMBL_LEARN"),
+    "background: self-learning domain store + GMBL_LEARN handler wired (domain rotation survives)");
   check(bgSrc.includes("GMBL_LIST") && bgSrc.includes("updateDynamicRules") && bgSrc.includes("{{encodingHost}}") &&
     bgSrc.includes("gamble-block.html"),
     "background: gambling DNR rules redirect to localized block page");
