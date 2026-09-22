@@ -1718,6 +1718,8 @@ window.I18N_VI = {
     "tabmgr_media_tabs": "Chuyển tab đang phát",
     "tabmgr_media_tab_prev": "Tab trước",
     "tabmgr_media_tab_next": "Tab tiếp theo",
+    "tabmgr_media_popout_open": "Mở video trong cửa sổ nổi",
+    "tabmgr_media_popout_close": "Đóng cửa sổ nổi video",
     "cookie_badge_httponly": "HttpOnly",
     "cookie_badge_secure": "Secure",
     "cookie_badge_session": "Phiên",

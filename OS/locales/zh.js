@@ -1718,6 +1718,8 @@ window.I18N_ZH = {
     "tabmgr_media_tabs": "切换播放标签页",
     "tabmgr_media_tab_prev": "上一个标签页",
     "tabmgr_media_tab_next": "下一个标签页",
+    "tabmgr_media_popout_open": "在浮动窗口（画中画）中打开视频",
+    "tabmgr_media_popout_close": "关闭浮动的视频窗口",
     "cookie_badge_httponly": "HttpOnly",
     "cookie_badge_secure": "Secure",
     "cookie_badge_session": "会话",

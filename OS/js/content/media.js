@@ -148,9 +148,21 @@
     if (!el) return { hasMedia: false, playing: false, title: "", artist: "", artwork: "", currentTime: 0, duration: 0 };
     let playing = false;
     try { playing = !el.paused && !el.ended; } catch (e) {}
-    // Live streams report duration = Infinity (and _num() flattens that to 0).
+    // Live detection: once metadata is loaded (readyState > 0), a live stream
+    // reports a duration that is NOT a positive finite number — HTML5 native
+    // live is Infinity (flattened to 0 by _num), but MSE/HLS live players often
+    // report a plain 0 while playing. Treating any such duration as live catches
+    // both cases; a normal track always has a finite positive duration here.
     let isLive = false;
-    try { isLive = Number(el.duration) === Infinity; } catch (e) {}
+    try {
+      const d = Number(el.duration);
+      isLive = el.readyState > 0 && !(isFinite(d) && d > 0);
+    } catch (e) {}
+    // Video sources can open a floating popup (Picture-in-Picture), audio cannot.
+    let isVideo = false;
+    try { isVideo = el.tagName === "VIDEO"; } catch (e) {}
+    let pipActive = false;
+    try { pipActive = isVideo && document.pictureInPictureElement === el; } catch (e) {}
     return {
       hasMedia: true,
       playing: playing,
@@ -159,7 +171,9 @@
       artwork: _metaArt(el),
       currentTime: _num(el.currentTime),
       duration: _num(el.duration),
-      isLive: isLive
+      isLive: isLive,
+      isVideo: isVideo,
+      pip: pipActive
     };
   }
 
@@ -254,23 +268,45 @@
     return null;
   }
 
-  // YouTube-style previous: if the track is past the restart gate, "previous"
-  // restarts the current track; only near the beginning does it go back a track.
+  // YouTube-style previous would restart the current track; only used as a FALLBACK
+  // when the page exposes no native previous control (see _skip below).
   const _PREV_RESTART_SECONDS = 3;
 
   function _skip(dir) {
     const el = _getActive();
+    // Prefer the site's OWN previous/next control: on any page that exposes one,
+    // "Previous" truly steps back to the previous video/track instead of just
+    // restarting the current one (the site itself applies any restart-gate). Only
+    // when no such control exists do we fall back to a local restart-to-start.
+    const btn = el ? _skipFind(el, dir > 0 ? 1 : -1) : null;
+    if (btn && typeof btn.click === "function") {
+      try { btn.click(); } catch (e) {}
+      return getState();
+    }
     if (el && dir < 0) {
       const ct = _num(el.currentTime);
       if (ct > _PREV_RESTART_SECONDS) {
         try { el.currentTime = 0; } catch (e) {}
-        return getState();
       }
     }
-    const btn = el ? _skipFind(el, dir > 0 ? 1 : -1) : null;
-    if (btn && typeof btn.click === "function") {
-      try { btn.click(); } catch (e) {}
-    }
+    return getState();
+  }
+
+  // Picture-in-Picture toggle: opens/closes the web-native floating "popup"
+  // window for the currently watched video. 100% local — the browser renders
+  // it, the extension just flips the flag; audio sources have nothing to pop.
+  function _pip() {
+    const el = _getActive();
+    if (!el || el.tagName !== "VIDEO") return getState();
+    try {
+      if (document.pictureInPictureElement === el) {
+        const p = document.exitPictureInPicture();
+        if (p && typeof p.catch === "function") p.catch(function () {});
+      } else if (typeof el.requestPictureInPicture === "function") {
+        const p = el.requestPictureInPicture();
+        if (p && typeof p.catch === "function") p.catch(function () {});
+      }
+    } catch (e) {}
     return getState();
   }
 
@@ -282,7 +318,8 @@
       play: _play,
       pause: _pause,
       seek: _seek,
-      skip: _skip
+      skip: _skip,
+      pip: _pip
     };
   } catch (e) {}
 
@@ -302,6 +339,11 @@
         if (msg.action === "MEDIA_SKIP") {
           const s = _skip(msg.dir);
           if (s) sendResponse({ ok: s.hasMedia, state: s });
+          return;
+        }
+        if (msg.action === "MEDIA_PIP") {
+          const s = _pip();
+          sendResponse({ ok: s.hasMedia, state: s });
           return;
         }
       } catch (e) {}

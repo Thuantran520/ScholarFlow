@@ -508,6 +508,62 @@ async function main() {
     }
   }
 
+  // 1c-iv. Video popup (Picture-in-Picture) toggle: shown for VIDEO sources and
+  // opens/closes the floating window; absent entirely for audio sources.
+  console.log("\nRegressing video popup (PiP) toggle button:");
+  {
+    const { window: w } = await loadPage("sidebar.html");
+    const pips = [];
+    let pipOn = false;
+    const videoState = () => ({ hasMedia: true, playing: true, title: "Watch Me", artist: "Creator", artwork: "https://example.com/v.jpg", currentTime: 5, duration: 120, isVideo: true, pip: pipOn });
+    w.chrome.tabs.query = () => Promise.resolve([{ id: 7, url: "https://youtu.be/abc", title: "Watch Me", audible: true, windowId: 1 }]);
+    w.chrome.tabs.sendMessage = (t, msg, cb) => {
+      if (msg && msg.action === "MEDIA_PIP") { pips.push(1); pipOn = !pipOn; }
+      const res = { ok: true, state: videoState() };
+      if (typeof cb === "function") cb(res);
+      return Promise.resolve(res);
+    };
+    w.tabmgrMediaRefresh();
+    await new Promise((r) => setTimeout(r, 80));
+    const getPip = () => w.document.querySelector(".tabmgr-mp-pip");
+    const pip0 = getPip();
+    check(!!pip0, "video source renders the popup (PiP) toggle button");
+    check(pip0 && pip0.getAttribute("title") === w.i18n.t("tabmgr_media_popout_open", "vi"),
+      `PiP button labelled to OPEN the popup (got: ${pip0 && pip0.getAttribute("title")})`);
+    if (pip0) {
+      pip0.click();
+      await new Promise((r) => setTimeout(r, 80));
+    }
+    check(pips.length === 1, "clicking the popup button sends MEDIA_PIP to the source tab");
+    const pipOpen = getPip();
+    check(!!pipOpen && pipOpen.classList.contains("is-active"),
+      "PiP button lights up while the floating window is open");
+    check(pipOpen && pipOpen.getAttribute("title") === w.i18n.t("tabmgr_media_popout_close", "vi"),
+      `PiP button re-labels to CLOSE the popup (got: ${pipOpen && pipOpen.getAttribute("title")})`);
+    if (pipOpen) {
+      pipOpen.click();
+      await new Promise((r) => setTimeout(r, 80));
+    }
+    check(pips.length === 2, "clicking again toggles the popup closed (MEDIA_PIP sent twice)");
+    const pipClosed = getPip();
+    check(!!pipClosed && !pipClosed.classList.contains("is-active"),
+      "PiP button dims once the floating window is closed");
+  }
+  {
+    const { window: w } = await loadPage("sidebar.html");
+    const audioState = { hasMedia: true, playing: true, title: "Song A", artist: "Artist A", artwork: "https://example.com/a.jpg", currentTime: 10, duration: 200, isVideo: false, pip: false };
+    w.chrome.tabs.query = () => Promise.resolve([{ id: 8, url: "https://music.youtube.com/watch?v=a", title: "Song A", audible: true, windowId: 1 }]);
+    w.chrome.tabs.sendMessage = (t, msg, cb) => {
+      const res = { ok: true, state: audioState };
+      if (typeof cb === "function") cb(res);
+      return Promise.resolve(res);
+    };
+    w.tabmgrMediaRefresh();
+    await new Promise((r) => setTimeout(r, 80));
+    check(!w.document.querySelector(".tabmgr-mp-pip"),
+      "audio source renders NO popup (PiP) toggle — video-only control");
+  }
+
   // 1d. Multi-tab carousel: several tabs playing at once -> queue, click/wheel to rotate
   console.log("\nRegressing multi-tab media carousel:");
   {
@@ -668,6 +724,27 @@ async function main() {
         await new Promise((r) => setTimeout(r, 60));
         check(w.document.querySelector(".tabmgr-mp-title").textContent === "Song C",
           "clicking the card right of the poster advances to the NEXT tab (Song C)");
+        // Mount lock: the rebuilt deck sits under the cursor, but the fan must
+        // NOT re-open here — otherwise every poster click replays the fan
+        // animation (the "blink"). Swallow pointerenter while locked.
+        const freshCover = w.document.querySelector(".tabmgr-mp-cover");
+        check(freshCover && freshCover.classList.contains("is-mounting"),
+          "re-rendered deck is mount-locked right after a poster click");
+        check(freshCover && !freshCover.classList.contains("is-open"),
+          "poster click does not instantly re-open the fan (no blink)");
+        if (freshCover) {
+          freshCover.dispatchEvent(new w.Event("pointerenter"));
+          check(!freshCover.classList.contains("is-open"),
+            "cursor-still-on-deck pointerenter is swallowed while mount-locked");
+        }
+        await new Promise((r) => setTimeout(r, 320));
+        check(!(freshCover && freshCover.classList.contains("is-mounting")),
+          "mount lock clears after the settle window");
+        if (freshCover) {
+          freshCover.dispatchEvent(new w.Event("pointerenter"));
+          check(freshCover.classList.contains("is-open"),
+            "fan reopens on a real hover once the mount lock is gone");
+        }
       }
     }
   }
@@ -880,8 +957,9 @@ async function main() {
       check(!!sv3 && sv3.artwork === "https://example.com/og-art.jpg",
         `og:image used as artwork fallback (got: ${sv3 && sv3.artwork})`);
     }
-    // YouTube-style "previous": past 3s -> restart the track (no prev click),
-    // at the very beginning -> click the site's actual Previous button.
+    // "previous" must step back a track: it prefers the page's OWN Previous control
+    // (even mid-track — the site applies any restart-gate itself), and only falls
+    // back to restart-to-start when no such control exists on the page.
     {
       w.document.querySelectorAll("video, audio").forEach(function (m) { m.remove(); });
       const prevBtn = w.document.createElement("button");
@@ -894,14 +972,65 @@ async function main() {
       v.src = "https://example.com/song.mp4";
       w.document.body.appendChild(v);
       v.currentTime = 0;
-      Object.defineProperty(v, "duration", { value: 240 });
-      const stDeep = w.__sfMedia.skip(-1);
-      check(prevClicks === 1 && stDeep && stDeep.currentTime === 0,
-        `YouTube-style previous at the start clicks the real Previous button (clicks: ${prevClicks})`);
+      Object.defineProperty(v, "duration", { value: 240, configurable: true });
+      const stStart = w.__sfMedia.skip(-1);
+      check(prevClicks === 1 && stStart && stStart.currentTime === 0,
+        `previous at the start clicks the real Previous button (clicks: ${prevClicks})`);
       v.currentTime = 50;
-      const stRestart = w.__sfMedia.skip(-1);
-      check(prevClicks === 1 && stRestart && stRestart.currentTime === 0,
-        `YouTube-style previous mid-track restarts the song instead of switching (clicks: ${prevClicks})`);
+      const stMid = w.__sfMedia.skip(-1);
+      check(prevClicks === 2 && stMid && stMid.currentTime === 50,
+        `previous mid-track steps BACK via the site control instead of restarting (clicks: ${prevClicks}, time: ${stMid && stMid.currentTime})`);
+      // No native previous control at all -> local restart-to-start fallback.
+      prevBtn.remove();
+      v.currentTime = 50;
+      const stFallback = w.__sfMedia.skip(-1);
+      check(prevClicks === 2 && stFallback && stFallback.currentTime === 0,
+        `with no page control, previous falls back to restarting from the start (clicks: ${prevClicks}, time: ${stFallback && stFallback.currentTime})`);
+    }
+    // Live detection: native live streams report a non-finite duration, MSE/HLS
+    // live players often report a plain 0 — both must flag isLive once metadata
+    // (readyState) is present; a normal finite-positive duration must not.
+    {
+      w.document.querySelectorAll("video, audio").forEach(function (m) { m.remove(); });
+      const lv = w.document.createElement("video");
+      w.document.body.appendChild(lv);
+      Object.defineProperty(lv, "readyState", { value: 1, configurable: true });
+      Object.defineProperty(lv, "duration", { value: Infinity, configurable: true });
+      const stInf = w.__sfMedia.getState();
+      check(stInf && stInf.isLive === true,
+        `duration=Infinity (native live) flagged isLive (got: ${stInf && stInf.isLive})`);
+      Object.defineProperty(lv, "duration", { value: 0, configurable: true });
+      const stZero = w.__sfMedia.getState();
+      check(stZero && stZero.isLive === true,
+        `duration=0 while metadata loaded (MSE/HLS live) flagged isLive (got: ${stZero && stZero.isLive})`);
+      Object.defineProperty(lv, "duration", { value: 300, configurable: true });
+      const stNorm = w.__sfMedia.getState();
+      check(stNorm && stNorm.isLive === false,
+        `finite positive duration is NOT live (got: ${stNorm && stNorm.isLive})`);
+      check(stNorm && stNorm.isVideo === true && stNorm.pip === false,
+        `video source reports isVideo/pip for the popup toggle (got isVideo: ${stNorm && stNorm.isVideo}, pip: ${stNorm && stNorm.pip})`);
+      // No metadata yet (readyState 0): never claim live, whatever the duration.
+      Object.defineProperty(lv, "readyState", { value: 0, configurable: true });
+      Object.defineProperty(lv, "duration", { value: 0, configurable: true });
+      const stNoMeta = w.__sfMedia.getState();
+      check(stNoMeta && stNoMeta.isLive === false,
+        `a not-yet-loaded element is not flagged live (readyState 0, got: ${stNoMeta && stNoMeta.isLive})`);
+      // Audio source cannot open a popup window.
+      lv.remove();
+      const au = w.document.createElement("audio");
+      w.document.body.appendChild(au);
+      Object.defineProperty(au, "readyState", { value: 4, configurable: true });
+      Object.defineProperty(au, "duration", { value: 90, configurable: true });
+      const stAu = w.__sfMedia.getState();
+      check(stAu && stAu.isVideo === false && stAu.isLive === false,
+        `audio source reports isVideo=false (no popup toggle, got isVideo: ${stAu && stAu.isVideo})`);
+      // PiP toggle surface is safe when the browser API is unavailable (JSDOM).
+      try {
+        const pipSt = w.__sfMedia.pip();
+        check(pipSt && pipSt.hasMedia === true, "pip() is a safe no-op without a Picture-in-Picture API");
+      } catch (e) {
+        check(false, `pip() threw: ${e.message}`);
+      }
     }
     dom2.window.close();
   }

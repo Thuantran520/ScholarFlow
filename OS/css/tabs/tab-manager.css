@@ -735,6 +735,12 @@
   z-index: 10;
 }
 
+/* Freshly re-rendered deck: hold all card transitions while the mount lock is
+   active so a queue step under the cursor cannot replay the fan animation. */
+.tabmgr-mp-cover.is-mounting .tabmgr-mp-card {
+  transition: none;
+}
+
 .tabmgr-mp-title.is-preview {
   color: #7dd3fc;
   font-style: italic;
@@ -1120,6 +1126,16 @@
    evenly sized so the left transport reads as three beads. */
 .tabmgr-mp-tools .tabmgr-mp-prev,
 .tabmgr-mp-tools .tabmgr-mp-next {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  justify-content: center;
+}
+
+/* Video popup (Picture-in-Picture) toggle joins the round controls. */
+.tabmgr-mp-tools .tabmgr-mp-pip {
   width: 24px;
   height: 24px;
   padding: 0;

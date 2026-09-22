@@ -1718,6 +1718,8 @@ window.I18N_EN = {
     "tabmgr_media_tabs": "Switch playing tab",
     "tabmgr_media_tab_prev": "Previous tab",
     "tabmgr_media_tab_next": "Next tab",
+    "tabmgr_media_popout_open": "Open video in a floating popup window",
+    "tabmgr_media_popout_close": "Close floating video popup",
     "cookie_badge_httponly": "HttpOnly",
     "cookie_badge_secure": "Secure",
     "cookie_badge_session": "Session",

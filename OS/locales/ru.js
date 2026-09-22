@@ -1718,6 +1718,8 @@ window.I18N_RU = {
     "tabmgr_media_tabs": "Переключить вкладку",
     "tabmgr_media_tab_prev": "Предыдущая вкладка",
     "tabmgr_media_tab_next": "Следующая вкладка",
+    "tabmgr_media_popout_open": "Открыть видео во всплывающем окне",
+    "tabmgr_media_popout_close": "Закрыть всплывающее окно видео",
     "cookie_badge_httponly": "HttpOnly",
     "cookie_badge_secure": "Secure",
     "cookie_badge_session": "Сессия",

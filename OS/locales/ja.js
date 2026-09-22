@@ -1718,6 +1718,8 @@ window.I18N_JA = {
     "tabmgr_media_tabs": "再生タブを切り替え",
     "tabmgr_media_tab_prev": "前のタブ",
     "tabmgr_media_tab_next": "次のタブ",
+    "tabmgr_media_popout_open": "動画をフローティングウィンドウで開く",
+    "tabmgr_media_popout_close": "動画のフローティングウィンドウを閉じる",
     "cookie_badge_httponly": "HttpOnly",
     "cookie_badge_secure": "Secure",
     "cookie_badge_session": "セッション",

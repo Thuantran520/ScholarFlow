@@ -879,7 +879,7 @@ function _tabmgrMediaSeekEl(state) {
 }
 
 function _tabmgrMediaSignature(tab, state) {
-  return (tab ? tab.id : 0) + "|" + (state ? state.title : "") + "|" + (state ? state.artist : "") + "|" + (state ? state.duration : 0) + "|" + (state ? state.playing : false) + "|" + _tabmgrMediaArtWork(state) + "|#" + tabmgrMedia.index + "|Q" + ((tabmgrMedia.sources || []).length) + "|L" + (state ? !!state.isLive : false);
+  return (tab ? tab.id : 0) + "|" + (state ? state.title : "") + "|" + (state ? state.artist : "") + "|" + (state ? state.duration : 0) + "|" + (state ? state.playing : false) + "|" + _tabmgrMediaArtWork(state) + "|#" + tabmgrMedia.index + "|Q" + ((tabmgrMedia.sources || []).length) + "|L" + (state ? !!state.isLive : false) + "|V" + (state ? ((state.isVideo ? 1 : 0) + ":" + (state.pip ? 1 : 0)) : "0:0");
 }
 
 // Poster flicker guard: reuse the same <img> element per artwork URL across
@@ -1193,7 +1193,19 @@ function _tabmgrMediaCoverStack(cover) {
   });
 
   // Visual fan: opens on enter, closes only after leaving for 130ms (debounce).
+  // Fresh-mount lock: after a re-render (user clicked a card / stepped the queue)
+  // the rebuilt cover sits exactly where the cursor is, so pointerenter would
+  // re-fire instantly and replay the fan-open animation — a visible "blink".
+  // Lock the fan for a beat on mount and suppress card transitions meanwhile so
+  // the new deck appears settled; the fan only reopens on a real leave/re-enter.
+  cover.classList.add("is-mounting");
+  cover._mpOpenLock = true;
+  setTimeout(function () {
+    cover._mpOpenLock = false;
+    cover.classList.remove("is-mounting");
+  }, 260);
   cover.addEventListener("pointerenter", function () {
+    if (cover._mpOpenLock) return;
     cover.classList.add("is-open");
   });
   cover.addEventListener("pointerleave", function () {
@@ -1374,6 +1386,20 @@ function _tabmgrMediaOnMute() {
   tabmgrToggleMute(tabmgrMedia.sourceTabId, !muted);
 }
 
+// Open/close the floating popup window (Picture-in-Picture) for the playing video.
+function _tabmgrMediaOnPip() {
+  const tabId = tabmgrMedia.sourceTabId;
+  if (!tabId) return;
+  safeSendTabMessage(tabId, { action: "MEDIA_PIP" }).then(function (res) {
+    if (res && res.state) {
+      tabmgrMedia.state = res.state;
+      tabmgrMedia.signature = "";
+      tabmgrMedia.lastPlay = null;
+      _tabmgrMediaPoll();
+    }
+  }).catch(function () {});
+}
+
 function _tabmgrMediaRenderPlayer() {
   const body = _tabmgrMediaBody();
   const box = _tabmgrMediaBox();
@@ -1498,6 +1524,19 @@ function _tabmgrMediaRenderPlayer() {
   const openBtn = _tabmgrMediaSvgBtn("M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3", t("tabmgr_media_open_tab"), "tabmgr-mp-tbtn");
   openBtn.addEventListener("click", function () { if (tabmgrMedia.sourceTabId) tabmgrActivateTab(tabmgrMedia.sourceTabId); });
   toolsR.appendChild(muteBtn);
+  // PiP "popup window" toggle — only a VIDEO source can float its own window.
+  if (state && state.isVideo) {
+    const pipBtn = document.createElement("button");
+    pipBtn.type = "button";
+    pipBtn.className = "tabmgr-mp-tbtn tabmgr-mp-pip" + (state.pip ? " is-active" : "");
+    pipBtn.title = state.pip ? t("tabmgr_media_popout_close") : t("tabmgr_media_popout_open");
+    pipBtn.appendChild(_tabmgrSvgWithExtra([
+      { tag: "rect", attrs: { x: "3", y: "5", width: "18", height: "14", rx: "2" } },
+      { tag: "rect", attrs: { x: "12", y: "10", width: "7", height: "7", rx: "1" } }
+    ]));
+    pipBtn.addEventListener("click", _tabmgrMediaOnPip);
+    toolsR.appendChild(pipBtn);
+  }
   toolsR.appendChild(openBtn);
   tools.appendChild(toolsL);
   tools.appendChild(toolsR);
@@ -1550,6 +1589,13 @@ function _tabmgrMediaPatchPlayer() {
   if (muteBtn) {
     muteBtn.classList.toggle("is-active", muted);
     muteBtn.title = muted ? t("tabmgr_media_unmute") : t("tabmgr_media_mute");
+  }
+
+  const pipBtn = mp.querySelector(".tabmgr-mp-pip");
+  if (pipBtn) {
+    const pipOn = !!(state && state.isVideo && state.pip);
+    pipBtn.classList.toggle("is-active", pipOn);
+    pipBtn.title = pipOn ? t("tabmgr_media_popout_close") : t("tabmgr_media_popout_open");
   }
 
   const countBtn = mp.querySelector(".tabmgr-mp-count");

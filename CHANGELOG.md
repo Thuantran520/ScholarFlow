@@ -16,16 +16,19 @@ Tất cả thay đổi đáng chú ý của dự án đều được ghi tại �
 - **Reorder nav làm quên tab đang mở**: `saveNav` chỉ ghi `{order}` — phần `active` bị xoá, mở lại sidebar tự nhảy về tab đầu tiên dù trước đó đang ở tab khác. Nay `active` luôn được lưu kèm mỗi lần sắp thứ tự/reorder/reset.
 - **Media player: sau fan-preview, tiêu đề nhảy về "Unknown"**: `_tabmgrMediaPreviewReset` chỉ đọc từ bản đồ `known` (chỉ lưu tab có agent state) — tab nghe được nhưng không có agent state bị mất tiêu đề. Nay đọc thẳng `sourceTab`/`state` đang hiển thị.
 - **Media player: phím seek dùng mốc thời gian cũ**: base của phím ←/→ lấy `state.currentTime` chụp tại lúc vẽ (poll không làm mới) và `dragTime` không bao giờ được xoá sau drag → sau khi kéo thanh, các lần bấm phím sau nhảy về vị trí cũ thay vì thời gian thực đang phát. Nay base lấy từ đồng hồ live đang extrapolate trên thanh (được poll làm mới mỗi lần) và mốc drag được giải phóng ngay sau khi gửi seek.
+- **Media player: chưa nhận diện được video đang phát trực tiếp**: trước chỉ xét `duration === Infinity` — player sống kiểu MSE/HLS (nhiều trang video phổ biến) báo `duration = 0` khi có metadata nhưng có nhiều hơn chỉ số của stream, nên badge LIVE/thanh đỏ không bao giờ bật. Nay nhận diện là `readyState > 0` và `duration` KHÔNG phải số hữu hạn dương (Infinity, 0, NaN) — bắt đủ cả native lẫn MSE/HLS, và không nhầm video chưa nạp metadata (readyState 0) thành live.
+- **Media player: bấm đổi poster bị "nháy" lại hiệu ứng quạt**: sau khi đổi bài, deck bìa vừa dựng lại nằm ngay dưới con trỏ nên `pointerenter` bắn tức thì → chạy lại animation mở quạt một lượt (nhấp nháy thấy được). Nay deck mới có **khóa mount** 260ms: bỏ qua lần `pointerenter` đầu + tắt `transition` của các thẻ trong quãng đó, deck hiện ra tĩnh ngay; quạt chỉ mở lại khi thực sự rê ra rồi rê vào.
+- **Media player: nút prev chỉ "phát lại từ đầu" chứ chưa tua về video trước**: trước ưu tiên restart khi đang phát giữa bài (>3s) nên bấm prev quanh quẩn phát lại chính bài đó. Nay đổi thứ tự — ưu tiên bấm nút **Previous của chính trang web** (trang tự áp ngưỡng restart của nó, ví dụ chính YouTube quay đầu khi đang giữa video); chỉ khi trang không hề có nút đó mới fallback tua về đầu bài.
 
 **Nâng cấp Media player (UI/UX)**
 - **Đổi tên banner "Player nhạc" → "Trình phát media"**: phản ánh đúng cả video lẫn nhạc; dịch đủ 5 ngôn ngữ + cập nhật chuỗi fallback trong `sidebar.html`, `popup.html`.
-- **Phát trực tiếp (live stream): thanh tiến trình đỏ full + nhãn LIVE**: agent `media.js` ghi nhận `duration = Infinity` là live (`isLive`) → thanh đỏ chạy 100% toàn thanh, thời gian thay bằng badge **● LIVE** nhấp nháy đỏ thay vì `00:00 / 00:00` gây hiểu nhầm; và tắt hoàn toàn khả năng seek (kéo chuột, phím ←/→) vì stream trực tiếp không seek được.
+- **Phát trực tiếp (live stream): thanh tiến trình đỏ full + nhãn LIVE**: agent `media.js` nhận diện live khi `readyState > 0` và `duration` không phải số hữu hạn dương (native = `Infinity`, MSE/HLS live = `0`) → thanh đỏ chạy 100% toàn thanh, thời gian thay bằng badge **● LIVE** nhấp nháy đỏ thay vì `00:00 / 00:00` gây hiểu nhầm; và tắt hoàn toàn khả năng seek (kéo chuột, phím ←/→) vì stream trực tiếp không seek được.
 - **Bấm poster không còn "loạn"/giật về bài trước**: thứ tự lớp ảnh bìa phía sau giờ xoay **tiến từ bài hiện tại** (`hiện tại → kế tiếp → sau kế tiếp`, vòng quanh) thay vì xếp theo chỉ số bắt đầu phát cũ — trước đây thẻ ngay bên phải poster là BÀI TRƯỚC, vô tình bấm vào là nhảy giật lùi. Giờ deck đọc trái→phải = "đang phát → kế tiếp", nút bấm nào cũng đi tới.
-- **Cụm nút điều khiển bên trái: tròn đều + đúng thứ tự ‹ | play/pause | ›**: trước đây thứ tự render là play → prev → next gây nhảy lung tung; nay sắp `prev (chevron ‹)` → `play/pause` → `next (chevron ›)` và toàn bộ 3 nút điều khiển đều là hình tròn đường kính 24px khớp nhau.
+- **Nút tròn điều khiển ‹ | play/pause | › + nút cửa sổ nổi (popup) cho video**: cụm trái sắp `prev ‹` → `play/pause` → `next ›`, 3 nút điều khiển đều hình tròn 24px khớp nhau; thêm **nút PiP tròn** trong cụm phải — bấm mở/đóng **cửa sổ nổi động (Picture-in-Picture)** cho video đang xem, 100% local (trình duyệt tự render, không mở tab/cửa sổ mới), nút chỉ hiện với nguồn **video** (`isVideo`) và sáng đỏ khi cửa sổ đang mở.
 
 **Kỹ thuật & tuân thủ**
 - Đồng bộ phiên bản **2.5.2** ở `package.json` + 3 `manifest*` + chuỗi hiển thị `OS/html/sidebar.html`, `OS/html/popup.html`, `OS/html/privacy.html` + `trust_card4_body_html` / `privacy_last_updated` trên cả 5 ngôn ngữ (vi/en/zh/ru/ja) — parity pass theo `tests/manifest.test.js`.
-- Mở rộng test: `split_smoke.test.js` phủ header (ẩn item phải, reorder trùng order, giữ `active` khi reorder nav), media player (keyboard seek dùng đồng hồ live, reset fan-preview giữ tiêu đề) và `social-upgrade.test.js` phủ việc bảo toàn `gambleAllow` khi lưu cài đặt.
+- Mở rộng test: `split_smoke.test.js` phủ header (ẩn item phải, reorder trùng order, giữ `active` khi reorder nav), media player (keyboard seek dùng đồng hồ live, reset fan-preview giữ tiêu đề, detect live `Infinity`/`0`/finite, prev ưu tiên nút của trang, khóa mount chống "nháy" quạt, nút PiP mở/đóng cửa sổ nổi video — chỉ hiện với nguồn video) và `social-upgrade.test.js` phủ việc bảo toàn `gambleAllow` khi lưu cài đặt.
 
 ---
 
@@ -37,7 +40,10 @@ Tất cả thay đổi đáng chú ý của dự án đều được ghi tại �
 | **Header custom** | Cụm phải + ▲▼ reorder lỗi khi ẩn/trùng order | **Anchor item hiển thị đầu tiên + đánh số lại thứ tự** |
 | **Nav reorder** | Mất tab đang active khi bấm ▲▼/reset | **Lưu kèm `active`**, mở lại đúng tab đã dùng |
 | **Media player** | Fan-preview mất tiêu đề, phím seek nhảy về thời gian cũ | **Khôi phục tiêu đề từ nguồn live + base từ đồng hồ realtime** |
-| **Media player (UI)** | "Player nhạc", seek được với stream trực tiếp, poster gây giật lùi, nút play/prev/next xáo thứ tự | **Banner "Trình phát media" + thanh đỏ full/LIVE (chặn seek) + deck xoay tiến + nút tròn ‹▶› bên trái** |
+| **Media player (live)** | Chỉ nhận `duration=Infinity`, bỏ sót live HLS/MSE | **Bắt mọi `duration` không hữu hạn dương khi có metadata** |
+| **Media player (prev)** | Nút prev chỉ phát lại bài từ đầu | **Ưu tiên nút Previous của trang**, chỉ fallback tua đầu khi không có nút |
+| **Media player (poster)** | Bấm đổi bài bị "nháy" lại hiệu ứng quạt | **Khóa mount 260ms** (bỏ qua pointerenter + tắt transition) — deck hiện tĩnh |
+| **Media player (UI)** | "Player nhạc", seek được với stream trực tiếp, poster gây giật lùi, nút play/prev/next xáo thứ tự | **Banner "Trình phát media" + thanh đỏ full/LIVE (chặn seek) + deck xoay tiến + nút tròn ‹▶› bên trái + nút PiP mở/đóng cửa sổ nổi video** |
 | **Phiên bản** | 2.5.1 | **2.5.2** (5 ngôn ngữ, parity check ✓) |
 
 ---
