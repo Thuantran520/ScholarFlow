@@ -1410,22 +1410,25 @@ function _tabmgrMediaOnMute() {
 function _tabmgrMediaOnPip() {
   const tabId = tabmgrMedia.sourceTabId;
   if (!tabId) return;
-  // A sidebar button click is NOT a user gesture on the video page, and both
-  // Chrome and Firefox refuse to OPEN Picture-in-Picture outside one. Bring the
-  // tab to the front so the media agent can try the direct API — and on
-  // rejection it drops its own tiny PiP button ON the video, which a single
-  // real tap (a genuine gesture) uses to complete the pop-out. CLOSING PiP is
-  // gesture-free, so don't yank the user to the tab just to turn the window off.
   const entering = !(tabmgrMedia.state && tabmgrMedia.state.pip);
-  if (entering) tabmgrActivateTab(tabId);
-  safeSendTabMessage(tabId, { action: "MEDIA_PIP" }).then(function (res) {
+  // Try the native Picture-in-Picture API on the video's tab WITHOUT bringing it
+  // forward first. On browsers that don't demand a fresh user gesture for the open
+  // (Edge does this today) the window pops out instantly from whatever tab you're
+  // on. On Chrome/Firefox a background open is usually refused for lack of a
+  // gesture; only then do we switch to the tab, where the agent has already grown
+  // its own pulsing PiP button (one real tap = a valid gesture). Closing PiP is
+  // always gesture-free, so it never needs the tab either way.
+  safeSendTabMessage(tabId, { action: "MEDIA_PIP" }, 1500).then(function (res) {
     if (res && res.state) {
       tabmgrMedia.state = res.state;
       tabmgrMedia.signature = "";
       tabmgrMedia.lastPlay = null;
       _tabmgrMediaPoll();
     }
-  }).catch(function () {});
+    if (entering && res && res.pipOutcome === "needs-gesture") tabmgrActivateTab(tabId);
+  }).catch(function () {
+    if (entering) tabmgrActivateTab(tabId);
+  });
 }
 
 function _tabmgrMediaRenderPlayer() {

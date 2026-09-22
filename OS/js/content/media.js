@@ -438,17 +438,30 @@
   function _skip(dir) {
     const el = _getActive();
     const rootDoc = (el && el.ownerDocument) || document;
+    // A control YouTube keeps RENDERED but DISABLED (e.g. .ytp-prev-button on a
+    // video with no previous) is a no-op when clicked, yet _skipFind still finds
+    // it — clicking it and returning is exactly what made "previous" look dead
+    // until the tab was re-focused. Treat a disabled control as absent so we fall
+    // through to the queue/restart path.
+    const _enabled = function (n) {
+      if (!n) return false;
+      try { if (n.disabled === true) return false; } catch (e) {}
+      try { if (n.getAttribute && (n.getAttribute("aria-disabled") === "true" || n.hasAttribute("disabled"))) return false; } catch (e) {}
+      try { if (n.classList && (n.classList.contains("disabled") || n.classList.contains("ytp-button-disabled"))) return false; } catch (e) {}
+      return true;
+    };
     // Prefer the site's OWN previous/next control: on any page that exposes one,
     // "Previous" truly steps back to the previous video/track instead of just
     // restarting the current one (the site itself applies any restart-gate). Only
     // when no such control exists do we fall back to a local restart-to-start.
     const btn = el ? _skipFind(el, dir > 0 ? 1 : -1) : null;
-    if (btn && typeof btn.click === "function") {
+    if (btn && _enabled(btn) && typeof btn.click === "function") {
       try { btn.click(); } catch (e) {}
       return getState();
     }
-    // YouTube-specific: no prev control in the player, so click the previous item
-    // in the visible queue/playlist (if one exists) — a real "previous video".
+    // YouTube-specific: no (enabled) prev control in the player, so click the
+    // previous item in the visible queue/playlist (if one exists) — a real
+    // "previous video".
     if (el && dir < 0) {
       const yp = _ytPreviousItem(rootDoc);
       if (yp && typeof yp.click === "function") {
@@ -500,6 +513,42 @@
       _pipPulse();
     }
     return getState();
+  }
+
+  // Asynchronous PiP request for the SIDEBAR path. It tries the native API
+  // directly on whichever tab the video lives in WITHOUT switching to it: on
+  // browsers that don't demand a fresh user gesture to open (e.g. Edge) the
+  // window pops out immediately; on Chrome/Firefox the open is usually refused
+  // for lack of a gesture and we report "needs-gesture" so the caller can decide
+  // whether to bring the tab forward (where the pulsing in-page button is one
+  // real tap). Resolves { state, outcome } with outcome ∈
+  //   "opened" | "closed" | "needs-gesture" | "unsupported".
+  function _pipRequest() {
+    const el = _getActive();
+    if (!el || el.tagName !== "VIDEO") {
+      return Promise.resolve({ state: getState(), outcome: "unsupported" });
+    }
+    const entering = document.pictureInPictureElement !== el;
+    if (!entering) {
+      let p = null;
+      try { p = document.exitPictureInPicture(); } catch (e) { p = null; }
+      const done = function () { try { _pipRefresh(); } catch (e) {} return { state: getState(), outcome: "closed" }; };
+      if (p && typeof p.then === "function") return p.then(done, done);
+      return Promise.resolve(done());
+    }
+    if (typeof el.requestPictureInPicture !== "function") {
+      return Promise.resolve({ state: getState(), outcome: "unsupported" });
+    }
+    const onOk = function () { try { _pipRefresh(); } catch (e) {} return { state: getState(), outcome: "opened" }; };
+    const onFail = function () {
+      _pipAcquire(); _pipPulse(); try { _pipRefresh(); } catch (e) {}
+      return { state: getState(), outcome: "needs-gesture" };
+    };
+    try {
+      const p = el.requestPictureInPicture();
+      if (p && typeof p.then === "function") return p.then(onOk, onFail);
+    } catch (e) { return Promise.resolve(onFail()); }
+    return Promise.resolve({ state: getState(), outcome: "unsupported" });
   }
 
   // ---- In-page PiP button (the trusted-gesture path) ----
@@ -644,7 +693,8 @@
       pause: _pause,
       seek: _seek,
       skip: _skip,
-      pip: _pip
+      pip: _pip,
+      pipRequest: _pipRequest
     };
   } catch (e) {}
 
@@ -667,8 +717,13 @@
           return;
         }
         if (msg.action === "MEDIA_PIP") {
-          const s = _pip();
-          sendResponse({ ok: s.hasMedia, state: s });
+          const pr = _pipRequest();
+          if (pr && typeof pr.then === "function") {
+            pr.then(function (r) {
+              try { sendResponse({ ok: r.state.hasMedia, state: r.state, pipOutcome: r.outcome }); } catch (e) {}
+            });
+            return true; // hold the message channel open for the async reply
+          }
           return;
         }
       } catch (e) {}

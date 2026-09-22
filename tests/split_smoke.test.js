@@ -598,6 +598,34 @@ async function main() {
     check(!w.document.querySelector(".tabmgr-mp-pip"),
       "video WITHOUT the native Picture-in-Picture API renders NO popup toggle (Firefox case)");
   }
+  // 1c-v. Sidebar PiP is BACKGROUND-FIRST: when the browser can open the window
+  // without a fresh gesture (Edge does), we must NOT switch tabs; only a
+  // gesture-refused open (Chrome/Firefox) brings the tab forward for the in-page
+  // button. Both branches report the outcome via pipOutcome.
+  console.log("\nRegressing sidebar PiP background-first:");
+  {
+    const { window: w } = await loadPage("sidebar.html");
+    let activated = 0;
+    w.tabmgrActivateTab = function () { activated++; };
+    let outcome = "opened";
+    const vst = { hasMedia: true, playing: true, title: "V", artist: "A", artwork: "https://example.com/p.jpg", currentTime: 5, duration: 100, isVideo: true, pip: false, pipSupported: true };
+    w.chrome.tabs.query = () => Promise.resolve([{ id: 7, url: "https://youtu.be/x", title: "V", audible: true, windowId: 1 }]);
+    w.chrome.tabs.sendMessage = (t, msg, cb) => {
+      const res = { ok: true, state: vst, pipOutcome: outcome };
+      if (typeof cb === "function") cb(res);
+      return Promise.resolve(res);
+    };
+    w.tabmgrMediaRefresh();
+    await new Promise((r) => setTimeout(r, 80));
+    const pip0 = w.document.querySelector(".tabmgr-mp-pip");
+    check(!!pip0, "background-first block renders the PiP toggle");
+    if (pip0) { pip0.click(); await new Promise((r) => setTimeout(r, 120)); }
+    check(activated === 0, "a PiP open that succeeds directly (Edge-style) does NOT switch to the video tab");
+    outcome = "needs-gesture"; activated = 0;
+    const pip1 = w.document.querySelector(".tabmgr-mp-pip");
+    if (pip1) { pip1.click(); await new Promise((r) => setTimeout(r, 120)); }
+    check(activated === 1, "a gesture-refused PiP open brings the video tab forward exactly once (fallback button)");
+  }
 
   // 1d. Multi-tab carousel: several tabs playing at once -> queue, click/wheel to rotate
   console.log("\nRegressing multi-tab media carousel:");
@@ -1021,6 +1049,27 @@ async function main() {
       const stFallback = w.__sfMedia.skip(-1);
       check(prevClicks === 2 && stFallback && stFallback.currentTime === 0,
         `with no page control, previous falls back to restarting from the start (clicks: ${prevClicks}, time: ${stFallback && stFallback.currentTime})`);
+      // A RENDERED-but-DISABLED prev control (YouTube keeps .ytp-prev-button in the
+      // bar yet disabled when there is no previous video) is a no-op to click, but
+      // the old code found it, clicked it and returned — so "previous" looked dead
+      // until the tab was re-focused. A disabled control must be skipped so the
+      // real step-back (queue item) still happens.
+      const deadPrev = w.document.createElement("button");
+      deadPrev.className = "ytp-prev-button";
+      deadPrev.setAttribute("aria-disabled", "true");
+      let deadPrevClicks = 0;
+      deadPrev.addEventListener("click", function () { deadPrevClicks++; });
+      w.document.body.appendChild(deadPrev);
+      const dq1 = w.document.createElement("div"); dq1.className = "ytp-playlist-menu-item";
+      const dq2 = w.document.createElement("div"); dq2.className = "ytp-playlist-menu-item"; dq2.classList.add("selected");
+      let dq1Clicks = 0;
+      dq1.addEventListener("click", function () { dq1Clicks++; });
+      w.document.body.appendChild(dq1); w.document.body.appendChild(dq2);
+      v.currentTime = 50;
+      w.__sfMedia.skip(-1);
+      check(deadPrevClicks === 0 && dq1Clicks === 1,
+        `prev skips a disabled .ytp-prev-button and steps back via the queue (dead:${deadPrevClicks}, queue:${dq1Clicks})`);
+      deadPrev.remove(); dq1.remove(); dq2.remove();
       // YouTube-style queue/playlist: when the player exposes NO native Previous
       // control (YouTube's chrome has none), stepping back selects the item that
       // sits BEFORE the currently-playing row instead of restarting. The CURRENT
@@ -1260,6 +1309,16 @@ async function main() {
         check(pipSt && pipSt.hasMedia === true, "pip() is a safe no-op without a Picture-in-Picture API");
       } catch (e) {
         check(false, `pip() threw: ${e.message}`);
+      }
+      // Async PiP request (background-first path) always resolves {state,outcome}
+      // and never throws; with no native API on the active source it is "unsupported".
+      try {
+        const pr = await w.__sfMedia.pipRequest();
+        check(pr && pr.state && typeof pr.outcome === "string" &&
+          ["opened", "closed", "needs-gesture", "unsupported"].indexOf(pr.outcome) !== -1,
+          `pipRequest() resolves {state,outcome} (got: ${pr && pr.outcome})`);
+      } catch (e) {
+        check(false, `pipRequest() threw: ${e.message}`);
       }
     }
     dom2.window.close();
