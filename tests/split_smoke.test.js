@@ -1567,8 +1567,8 @@ async function main() {
     check(await w.eval(`typeof lingErrCat === "function" && lingErrCat('Linking Words') === 'linking' && lingErrCat('word choice') === 'collocation' && lingErrCat('subject-verb') === 'agreement' && lingErrCat('zzz') === 'other'`),
       `${htmlFile}: Lingua targeted-feedback error categories normalize (Bitchener/Storch style ledger)`);
     if (htmlFile === "sidebar.html") {
-      check(await w.eval(`aiGetModel("gemini") === "gemini-3.5-flash" && AI_PROVIDERS.gemini.defaultModel === "gemini-3.5-flash"`),
-        "sidebar: modern default model gemini-3.5-flash configured");
+      check(await w.eval(`aiGetModel("gemini") === "gemini-3.5-flash-lite" && AI_PROVIDERS.gemini.defaultModel === "gemini-3.5-flash-lite"`),
+        "sidebar: modern default model gemini-3.5-flash-lite configured");
       check(await w.eval(`!AI_PROVIDERS.gemini.models.includes("gemini-2.0-flash") && !AI_PROVIDERS.gemini.models.includes("gemini-2.5-flash")`),
         "sidebar: deprecated Gemini 2.x models removed from active rosters");
       check(await w.eval(`aiT("ai_you", null, "x") !== "x" && aiT("ai_you", null, "x") !== "ai_you"`),
@@ -1619,8 +1619,8 @@ async function main() {
         "sidebar: agentic video gated to the 3.5/3.6/3.7/3.8 family only");
       check(await w.eval(`(function(){var A=aiVideoContents("vid1","h\u1ecfi",[],false,true); var a=A[A.length-1].parts[0]; var B=aiVideoContents("vid1","h\u1ecfi",[],false,false); var b=B[B.length-1].parts[0]; return a.mediaProcessing==="AGENTIC" && b.mediaProcessing===undefined && a.fileData.fileUri.indexOf("vid1")!==-1;})()`),
         "sidebar: agentic mode tags the video part mediaProcessing=AGENTIC (static/short leaves it off)");
-      check(await w.eval(`(function(){var AG=["gemini-3.8-flash","gemini-3.7-flash","gemini-3.1-flash-lite","gemini-2.5-flash"]; var L=aiPickVideoModel(1740,AG); var S=aiPickVideoModel(60,AG); var NONE=aiPickVideoModel(1740,["gemini-2.5-flash","gemini-2.5-flash-lite"]); return L.agentic===true && L.model==="gemini-3.8-flash" && S.agentic===false && S.model===aiGetModel("gemini") && NONE.agentic===false && NONE.model===aiGetModel("gemini");})()`),
-        "sidebar: long video auto-picks a CONFIRMED agentic model; short or unsupported keys keep the user's model");
+      check(await w.eval(`(function(){var AG=["gemini-3.8-flash","gemini-3.7-flash","gemini-3.1-flash-lite","gemini-2.5-flash"]; var L=aiPickVideoModel(1740,AG); var S=aiPickVideoModel(60,AG); var NONE=aiPickVideoModel(1740,["gemini-2.5-flash","gemini-2.5-flash-lite"]); return L.agentic===true && L.model==="gemini-3.5-flash-lite" && S.agentic===false && S.model==="gemini-3.5-flash-lite" && NONE.agentic===true && NONE.model==="gemini-3.5-flash-lite";})()`),
+        `sidebar: long video auto-picks the agentic-capable default (gemini-3.5-flash-lite); short / unsupported-avail cases keep the user's model`);
       check(await w.eval(`aiSettings.autoVideo===true && !!document.getElementById("ai-opt-autovideo")`),
         "sidebar: 'auto-watch open video' is on by default and its checkbox is wired");
       check(await w.eval(`(function(){var c=aiHistoryToGeminiContents([{role:"user",content:"hi"},{role:"assistant",content:"yo"}],"NOW",[]); return c.length===3 && c[1].role==="model" && c[2].role==="user" && c[2].parts[0].text==="NOW";})()`),

@@ -1,14 +1,14 @@
 // ScholarFlow AI Assistant — minimal, isolated, no layout break
 /* global storGet, storSet, showToast, currentTabUrl, currentTabObj, currentMeta, sendTabMessage, getI18nText */
 const AI_PROVIDERS = {
-  gemini: { label: "Gemini", apiHost: "generativelanguage.googleapis.com", apiUrlBase: "https://generativelanguage.googleapis.com/v1beta/models/", models: ["gemini-3.5-flash","gemini-3.1-pro","gemini-3-flash","gemini-3.1-flash-lite","gemini-3.8-flash","gemini-3.7-flash"], defaultModel: "gemini-3.5-flash", keyPlaceholder: "AIza...", webUrl: "https://gemini.google.com/app", loginUrl: "https://aistudio.google.com/apikey" },
+  gemini: { label: "Gemini", apiHost: "generativelanguage.googleapis.com", apiUrlBase: "https://generativelanguage.googleapis.com/v1beta/models/", models: ["gemini-3.5-flash","gemini-3.5-flash-lite","gemini-3-flash","gemini-3.1-flash-lite","gemini-3.8-flash","gemini-3.7-flash"], defaultModel: "gemini-3.5-flash-lite", keyPlaceholder: "AIza...", webUrl: "https://gemini.google.com/app", loginUrl: "https://aistudio.google.com/apikey" },
   openai: { label: "ChatGPT", apiHost: "api.openai.com", apiUrl: "https://api.openai.com/v1/chat/completions", models: ["gpt-4o","gpt-4o-mini","o3-mini","o1","o3","o4-mini","gpt-4.1"], defaultModel: "gpt-4o", webUrl: "https://chatgpt.com/" },
   claude: { label: "Claude", apiHost: "api.anthropic.com", apiUrl: "https://api.anthropic.com/v1/messages", models: ["claude-3-7-sonnet","claude-sonnet-5","claude-opus-4-8","claude-3-5-sonnet-20241022","claude-3-5-haiku-20241022"], defaultModel: "claude-3-7-sonnet", webUrl: "https://claude.ai/" },
   custom: { label: "Custom", models: [], defaultModel: "", webUrl: "" }
 };
 const AI_MODEL_LABELS = {
   "gemini-3.5-flash": "Gemini 3.5 Flash",
-  "gemini-3.1-pro": "Gemini 3.1 Pro",
+  "gemini-3.5-flash-lite": "Gemini 3.5 Flash-Lite",
   "gemini-3-flash": "Gemini 3 Flash",
   "gemini-3.1-flash-lite": "Gemini 3.1 Flash-Lite",
   "gemini-3.8-flash": "Gemini 3.8 Flash",
