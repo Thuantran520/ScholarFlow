@@ -99,6 +99,41 @@
     return isFinite(n) && n >= 0 ? n : 0;
   }
 
+  // ---- Platform-agnostic LIVE detector (the general "toolkit") ----
+  // The single most reliable signal that a stream is LIVE — independent of the
+  // site — is that the DVR window SLIDES: on a live broadcast the LEFT edge of
+  // el.seekable advances at ~real wall-clock time (you can never seek older than
+  // the retention window), whereas for ordinary video-on-demand seekable.start is
+  // pinned at 0 forever and just grows the right edge. Sampling that edge across
+  // polls therefore flags live streams that report a FINITE duration (Twitch,
+  // Facebook/Instagram Live, generic HLS.js / dash.js, Kick, etc.) without any
+  // per-site DOM hack, and cannot mislabel a VOD.
+  var _edgeRef = null;
+  // Pure, time-parameterised seam so it is unit-testable; returns true when the
+  // seekable left edge advanced at roughly real time since the reference sample.
+  function _liveEdgeAdvanced(el, nowMs) {
+    let start = null;
+    try {
+      const s = el && el.seekable;
+      if (s && typeof s.length === "number" && s.length > 0) {
+        const a = s.start(0);
+        if (isFinite(a)) start = a;
+      }
+    } catch (e) {}
+    if (start == null) { _edgeRef = null; return false; }
+    if (!_edgeRef || _edgeRef.el !== el || !(_edgeRef.t <= nowMs)) {
+      _edgeRef = { el: el, t: nowMs, start: start };
+      return false;
+    }
+    const dt = (nowMs - _edgeRef.t) / 1000;
+    // Wait for a wide-enough window; keep the reference pinned until we sample.
+    if (dt < 5) return false;
+    const dStart = start - _edgeRef.start;
+    _edgeRef = { el: el, t: nowMs, start: start };
+    if (dt > 180) return false;          // too long a gap to trust the ratio
+    return dStart >= dt * 0.5 && dStart <= dt * 3;
+  }
+
   // Is a node ACTUALLY painted on screen? Content-script getComputedStyle resolves
   // the PAGE's CSS, so a .ytp-live-badge that YouTube hides on VOD via display:none
   // reports display "none" here, while the red LIVE chip on a real 24/7 stream
@@ -273,11 +308,18 @@
         }
       } catch (e) {}
     }
-    // YouTube (and any player that self-declares live) is decided here: only a
-    // marker on THIS video's own .html5-video-player shell — .ytp-live or an
-    // ENABLED (not [disabled]/[hidden]) .ytp-live-badge — or the /live/ URL.
+    // YouTube (and any player that self-declares live) is decided here: the
+    // .html5-video-player.ytp-live root class, a RENDERED .ytp-live-badge, or the
+    // /live/ URL (see _pageSaysLive).
     if (el.tagName === "VIDEO" && _pageSaysLive(el)) {
       isLive = true;
+    }
+    // Generic, site-independent fallback for EVERY platform: a live stream's DVR
+    // seekable window slides forward at ~real time while playing (a VOD's left
+    // edge never moves). This catches finite-duration live on Twitch, Facebook /
+    // Instagram Live, generic HLS.js / dash.js, Kick, etc. — no per-site hack.
+    if (!isLive && el.tagName === "VIDEO" && playing && el.readyState > 0) {
+      try { if (_liveEdgeAdvanced(el, Date.now())) isLive = true; } catch (e) {}
     }
     // Elapsed-clock source ONLY: a live stream's getStartDate() is the broadcast
     // start used to render ● mm:ss. We deliberately NEVER let getStartDate() DECIDE
@@ -300,7 +342,14 @@
     let pipActive = false;
     try { pipActive = isVideo && document.pictureInPictureElement === el; } catch (e) {}
     let pipSupported = false;
-    try { pipSupported = isVideo && typeof el.requestPictureInPicture === "function" && !!(document.pictureInPictureEnabled); } catch (e) {}
+    // Support is decided by the presence of the native method alone. Firefox now
+    // implements requestPictureInPicture but gates it behind the pref
+    // dom.media-pip.enabled, and while the method exists document
+    // .pictureInPictureEnabled can still report false — requiring BOTH hid the
+    // PiP control on those Firefox builds even though it can actually work (the
+    // call itself throws NotSupportedError when truly unavailable, which we
+    // handle below, so trusting the method is the safer, more permissive gate).
+    try { pipSupported = isVideo && typeof el.requestPictureInPicture === "function"; } catch (e) {}
     return {
       hasMedia: true,
       playing: playing,
@@ -678,7 +727,9 @@
       const el = _getActive();
       if (!el || el.tagName !== "VIDEO") return;
       if (typeof el.requestPictureInPicture !== "function") return;
-      if (!(document.pictureInPictureEnabled)) return;
+      // NOTE: intentionally NOT gated on document.pictureInPictureEnabled — on
+      // Firefox that flag can be false while requestPictureInPicture still works
+      // (pref-gated), and gating here was hiding the in-page button entirely.
       _pipEnsureUi();
       _pipRefresh();
     } catch (e) {}
@@ -694,7 +745,9 @@
       seek: _seek,
       skip: _skip,
       pip: _pip,
-      pipRequest: _pipRequest
+      pipRequest: _pipRequest,
+      _liveEdge: _liveEdgeAdvanced,
+      _resetLiveEdge: function () { _edgeRef = null; }
     };
   } catch (e) {}
 

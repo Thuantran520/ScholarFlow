@@ -1320,6 +1320,49 @@ async function main() {
       } catch (e) {
         check(false, `pipRequest() threw: ${e.message}`);
       }
+      // Generic, site-independent LIVE detection (the "toolkit" for non-YouTube):
+      // a live stream's DVR seekable LEFT edge slides forward at ~real time, a VOD's
+      // stays pinned at 0. Test the time-parameterised seam directly.
+      w.__sfMedia._resetLiveEdge();
+      const t0 = 1000000;
+      let edgeS = 1000;
+      const liveEl = { tagName: "VIDEO", readyState: 4, seekable: { length: 1, start: function () { return edgeS; }, end: function () { return edgeS + 60; } } };
+      w.__sfMedia._liveEdge(liveEl, t0);          // establishes reference
+      edgeS = 1000 + 6;
+      const edgeLive = w.__sfMedia._liveEdge(liveEl, t0 + 6000);   // +6s over 6s ~ real time
+      check(edgeLive === true, `sliding DVR left edge (~real-time) detected as LIVE generically (got: ${edgeLive})`);
+      w.__sfMedia._resetLiveEdge();
+      const vodEl = { tagName: "VIDEO", readyState: 4, seekable: { length: 1, start: function () { return 0; }, end: function () { return 1200; } } };
+      w.__sfMedia._liveEdge(vodEl, t0);
+      const vodLive = w.__sfMedia._liveEdge(vodEl, t0 + 30000);    // edge stays 0
+      check(vodLive === false, `a pinned seekable edge (VOD) is NOT flagged by the DVR detector (got: ${vodLive})`);
+      w.__sfMedia._resetLiveEdge();
+      // And confirm getState wires it up: a FINITE-duration, non-YouTube feed whose
+      // seekable slides is flagged live (Twitch/Facebook/HLS style).
+      w.document.querySelectorAll("video, audio, .html5-video-player").forEach(function (m) { m.remove(); });
+      const realNow = w.Date.now;
+      let fakeT = 4000000;
+      w.Date.now = function () { return fakeT; };
+      try {
+        const feed = w.document.createElement("video");
+        w.document.body.appendChild(feed);
+        Object.defineProperty(feed, "readyState", { value: 4, configurable: true });
+        Object.defineProperty(feed, "duration", { value: 600, configurable: true });
+        Object.defineProperty(feed, "paused", { value: false, configurable: true });
+        Object.defineProperty(feed, "ended", { value: false, configurable: true });
+        let fs = 5000;
+        Object.defineProperty(feed, "seekable", { value: { length: 1, start: function () { return fs; }, end: function () { return fs + 60; } }, configurable: true });
+        Object.defineProperty(feed, "currentTime", { value: fs + 55, configurable: true });
+        w.__sfMedia._resetLiveEdge();
+        w.__sfMedia.getState();                 // set reference
+        fakeT += 8000; fs += 8;                 // real time + 8s, edge advanced 8s
+        const stFeed = w.__sfMedia.getState();
+        check(stFeed && stFeed.isLive === true,
+          `a finite-duration non-YouTube feed with a sliding seekable window is flagged LIVE by getState (got: ${stFeed && stFeed.isLive})`);
+      } finally {
+        w.Date.now = realNow;
+        w.__sfMedia._resetLiveEdge();
+      }
     }
     dom2.window.close();
   }
