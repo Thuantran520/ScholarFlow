@@ -5,7 +5,42 @@ Tất cả thay đổi đáng chú ý của dự án đều được ghi tại �
 
 ---
 
-## [2.5.1] - 2026-09-20
+## [2.5.2] - 2026-09-22
+
+### 🐛 Bản vá lỗi (Patch) — sửa logic lõi & đồng bộ phiên bản
+
+**Sửa lỗi**
+- **Không còn mất danh sách "đã bỏ chặn" domain cờ bạc khi chỉnh cài đặt Social**: `gambleAllow` chỉ lưu trong storage (background ghi khi bấm "Bỏ chặn tên miền này") nhưng `socSaveSettings` ghi đè `sf_social_settings` mà không gộp lại — bật/tắt bất kỳ công tắc nào (chống chèn, dọn link, cờ bạc...) cũng âm thầm xoá allowlist → domain đã cho phép bị chặn lại ở cả tầng DNR lẫn content scan. Nay mỗi lần lưu sẽ merge `gambleAllow` cũ vào payload.
+- **Header sai lệch khi ẩn item bên phải đầu tiên**: `margin-left:auto` (đẩy cụm phải sát lề) gán vào phần tử `display:none` nên các item phải + bánh răng cài đặt dồn sát bên trái thay vì nằm bên phải. Nay anchor lấy item hợp lệ ĐẦU TIÊN chưa bị ẩn.
+- **Nút ▲▼ reorder header "chết" khi hai item cùng giá trị order**: swap hai giá trị order bằng nhau là no-op (mặc định `brand:0`/`lang:0` trùng nhau ngay sau khi đổi side). Nay mỗi lần đổi side / di chuyển đều đánh số lại thứ tự theo nhóm (0,1,2…) nên nút luôn có tác dụng.
+- **Reorder nav làm quên tab đang mở**: `saveNav` chỉ ghi `{order}` — phần `active` bị xoá, mở lại sidebar tự nhảy về tab đầu tiên dù trước đó đang ở tab khác. Nay `active` luôn được lưu kèm mỗi lần sắp thứ tự/reorder/reset.
+- **Media player: sau fan-preview, tiêu đề nhảy về "Unknown"**: `_tabmgrMediaPreviewReset` chỉ đọc từ bản đồ `known` (chỉ lưu tab có agent state) — tab nghe được nhưng không có agent state bị mất tiêu đề. Nay đọc thẳng `sourceTab`/`state` đang hiển thị.
+- **Media player: phím seek dùng mốc thời gian cũ**: base của phím ←/→ lấy `state.currentTime` chụp tại lúc vẽ (poll không làm mới) và `dragTime` không bao giờ được xoá sau drag → sau khi kéo thanh, các lần bấm phím sau nhảy về vị trí cũ thay vì thời gian thực đang phát. Nay base lấy từ đồng hồ live đang extrapolate trên thanh (được poll làm mới mỗi lần) và mốc drag được giải phóng ngay sau khi gửi seek.
+
+**Nâng cấp Media player (UI/UX)**
+- **Đổi tên banner "Player nhạc" → "Trình phát media"**: phản ánh đúng cả video lẫn nhạc; dịch đủ 5 ngôn ngữ + cập nhật chuỗi fallback trong `sidebar.html`, `popup.html`.
+- **Phát trực tiếp (live stream): thanh tiến trình đỏ full + nhãn LIVE**: agent `media.js` ghi nhận `duration = Infinity` là live (`isLive`) → thanh đỏ chạy 100% toàn thanh, thời gian thay bằng badge **● LIVE** nhấp nháy đỏ thay vì `00:00 / 00:00` gây hiểu nhầm; và tắt hoàn toàn khả năng seek (kéo chuột, phím ←/→) vì stream trực tiếp không seek được.
+- **Bấm poster không còn "loạn"/giật về bài trước**: thứ tự lớp ảnh bìa phía sau giờ xoay **tiến từ bài hiện tại** (`hiện tại → kế tiếp → sau kế tiếp`, vòng quanh) thay vì xếp theo chỉ số bắt đầu phát cũ — trước đây thẻ ngay bên phải poster là BÀI TRƯỚC, vô tình bấm vào là nhảy giật lùi. Giờ deck đọc trái→phải = "đang phát → kế tiếp", nút bấm nào cũng đi tới.
+- **Cụm nút điều khiển bên trái: tròn đều + đúng thứ tự ‹ | play/pause | ›**: trước đây thứ tự render là play → prev → next gây nhảy lung tung; nay sắp `prev (chevron ‹)` → `play/pause` → `next (chevron ›)` và toàn bộ 3 nút điều khiển đều là hình tròn đường kính 24px khớp nhau.
+
+**Kỹ thuật & tuân thủ**
+- Đồng bộ phiên bản **2.5.2** ở `package.json` + 3 `manifest*` + chuỗi hiển thị `OS/html/sidebar.html`, `OS/html/popup.html`, `OS/html/privacy.html` + `trust_card4_body_html` / `privacy_last_updated` trên cả 5 ngôn ngữ (vi/en/zh/ru/ja) — parity pass theo `tests/manifest.test.js`.
+- Mở rộng test: `split_smoke.test.js` phủ header (ẩn item phải, reorder trùng order, giữ `active` khi reorder nav), media player (keyboard seek dùng đồng hồ live, reset fan-preview giữ tiêu đề) và `social-upgrade.test.js` phủ việc bảo toàn `gambleAllow` khi lưu cài đặt.
+
+---
+
+## So sánh nhanh v2.5.1 → v2.5.2
+
+| Hạng mục | v2.5.1 | v2.5.2 |
+|---|---|---|
+| **Allowlist "bỏ chặn" cờ bạc** | Bị xoá khi chỉnh bất kỳ công tắc Social | **Giữ nguyên** (merge `gambleAllow` khi lưu) |
+| **Header custom** | Cụm phải + ▲▼ reorder lỗi khi ẩn/trùng order | **Anchor item hiển thị đầu tiên + đánh số lại thứ tự** |
+| **Nav reorder** | Mất tab đang active khi bấm ▲▼/reset | **Lưu kèm `active`**, mở lại đúng tab đã dùng |
+| **Media player** | Fan-preview mất tiêu đề, phím seek nhảy về thời gian cũ | **Khôi phục tiêu đề từ nguồn live + base từ đồng hồ realtime** |
+| **Media player (UI)** | "Player nhạc", seek được với stream trực tiếp, poster gây giật lùi, nút play/prev/next xáo thứ tự | **Banner "Trình phát media" + thanh đỏ full/LIVE (chặn seek) + deck xoay tiến + nút tròn ‹▶› bên trái** |
+| **Phiên bản** | 2.5.1 | **2.5.2** (5 ngôn ngữ, parity check ✓) |
+
+---
 
 ### 🛡️ Đại tu tính năng Bảo vệ mạng xã hội (tab Social)
 - **Chống chèn content script (Protect against content script injection)** — mục "Bảo vệ" giờ chỉ giữ 1 tính năng hợp nhất, tự động phát hiện & gỡ trên Facebook/Zalo/Instagram/WhatsApp/TikTok/Discord/X/Telegram:

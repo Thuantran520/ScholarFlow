@@ -686,7 +686,21 @@ function _tabmgrMediaFmtDigital(sec) {
 }
 
 // Push state into the video-style progress bar (--e elapsed, overlay time text).
-function _tabmgrMediaSeekUI(vpb, timeEl, current, duration) {
+function _tabmgrMediaSeekUI(vpb, timeEl, current, duration, live) {
+  if (live) {
+    // Live stream: the track has no finite duration, so the bar is permanently
+    // FULL RED and the time text switches to a pulsing LIVE badge.
+    const ct = Math.max(0, Math.round(Number(current) || 0));
+    if (vpb) {
+      vpb.classList.add("is-live");
+      vpb.style.setProperty("--e", "100%");
+      vpb.setAttribute("aria-valuemax", "0");
+      vpb.setAttribute("aria-valuenow", String(ct));
+    }
+    if (timeEl) timeEl.textContent = t("tabmgr_media_live");
+    return;
+  }
+  if (vpb) vpb.classList.remove("is-live");
   const maxD = Math.max(1, Math.round(Number(duration) || 0));
   const ct = Math.max(0, Math.round(Number(current) || 0));
   if (vpb) {
@@ -697,14 +711,18 @@ function _tabmgrMediaSeekUI(vpb, timeEl, current, duration) {
   if (timeEl) timeEl.textContent = _tabmgrMediaFmtDigital(ct) + " / " + _tabmgrMediaFmtDigital(maxD);
 }
 
+function _tabmgrMediaIsLive(state) {
+  return !!(state && state.isLive);
+}
+
 // Baseline for the live clock: the last authoritative (polled / seeked) position.
 // Between polls the rAF loop extrapolates this forward in realtime so the red bar
 // glides smoothly instead of teleporting every ~900ms (which read as lag).
-function _tabmgrMediaSeekSetBase(vpb, current, duration, playing) {
+function _tabmgrMediaSeekSetBase(vpb, current, duration, playing, live) {
   if (!vpb) return;
-  const maxD = Math.max(1, Math.round(Number(duration) || 0));
+  const maxD = live ? 0 : Math.max(1, Math.round(Number(duration) || 0));
   const ct = Math.max(0, Number(current) || 0);
-  vpb._sfBase = { at: Date.now(), time: ct, dur: maxD, play: !!playing };
+  vpb._sfBase = { at: Date.now(), time: ct, dur: maxD, play: !!playing, live: !!live };
 }
 
 let _tabmgrMediaRafOn = false;
@@ -742,12 +760,12 @@ function _tabmgrMediaSeekTick() {
   let ct = b.time;
   if (b.play) {
     ct = b.time + Math.max(0, (Date.now() - b.at) / 1000);
-    if (ct > b.dur) ct = b.dur;
+    if (!b.live && ct > b.dur) ct = b.dur;
   }
   const cur = Math.round(ct);
   if (vpb._sfLast === cur) return;
   vpb._sfLast = cur;
-  _tabmgrMediaSeekUI(vpb, mp.querySelector(".tabmgr-vpb-time"), cur, b.dur);
+  _tabmgrMediaSeekUI(vpb, mp.querySelector(".tabmgr-vpb-time"), cur, b.live ? 0 : b.dur, !!b.live);
 }
 
 // Build the Video Playback Progress Bar (slim):
@@ -782,20 +800,23 @@ function _tabmgrMediaSeekEl(state) {
   vpb.appendChild(timeEl);
   seek.appendChild(vpb);
 
-  _tabmgrMediaSeekUI(vpb, timeEl, state.currentTime, state.duration);
-  _tabmgrMediaSeekSetBase(vpb, state.currentTime, state.duration, !!state.playing);
+  _tabmgrMediaSeekUI(vpb, timeEl, state.currentTime, state.duration, _tabmgrMediaIsLive(state));
+  _tabmgrMediaSeekSetBase(vpb, state.currentTime, state.duration, !!state.playing, _tabmgrMediaIsLive(state));
   _tabmgrMediaSeekStart();
 
+  const live = _tabmgrMediaIsLive(state);
   const seekFromPointer = function (clientX) {
+    if (live) return;
     const rect = vpb.getBoundingClientRect();
     if (!rect || !rect.width) return;
     const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
     const target = Math.round(ratio * Math.max(1, Math.round(Number(state.duration) || 0)));
     tabmgrMedia.dragTime = target;
-    _tabmgrMediaSeekUI(vpb, timeEl, target, state.duration);
+    _tabmgrMediaSeekUI(vpb, timeEl, target, state.duration, false);
   };
 
   vpb.addEventListener("pointerdown", function (e) {
+    if (live) return;
     tabmgrMedia.dragging = true;
     tabmgrMedia.dragTime = null;
     vpb.classList.add("is-dragging");
@@ -812,17 +833,35 @@ function _tabmgrMediaSeekEl(state) {
     if (tabmgrMedia.dragTime != null && tabmgrMedia.state) {
       // Repoint the live clock at the released position so the bar continues
       // smoothly from the drag point instead of snapping back to the stale poll.
-      _tabmgrMediaSeekSetBase(vpb, tabmgrMedia.dragTime, state.duration, !!state.playing);
+      _tabmgrMediaSeekSetBase(vpb, tabmgrMedia.dragTime, state.duration, !!state.playing, live);
       safeSendTabMessage(tabmgrMedia.sourceTabId, { action: "MEDIA_SEEK", time: tabmgrMedia.dragTime });
     }
+    // dragTime is only a mid-gesture anchor. Left set, it would outlive the
+    // drag and become the stale base for later keyboard seeks.
+    tabmgrMedia.dragTime = null;
   };
   vpb.addEventListener("pointerup", endSeek);
   vpb.addEventListener("pointercancel", endSeek);
 
   vpb.addEventListener("keydown", function (e) {
+    if (live) return;
     const stepp = (e.shiftKey ? 10 : 5);
-    const base = (tabmgrMedia.dragTime != null ? tabmgrMedia.dragTime : Math.round(state.currentTime || 0));
-    const maxD = Math.max(1, Math.round(state.duration || 0));
+    // Base = the position the user actually SEES: the mid-drag anchor if a
+    // gesture is live, otherwise the extrapolated live clock (_sfBase is
+    // refreshed by every poll). The render-time `state.currentTime` closure is
+    // frozen at build time and made arrow keys jump back to it.
+    const b = vpb._sfBase;
+    let base;
+    if (tabmgrMedia.dragTime != null) {
+      base = tabmgrMedia.dragTime;
+    } else if (b) {
+      base = b.play ? b.time + Math.max(0, (Date.now() - b.at) / 1000) : b.time;
+      if (base > b.dur) base = b.dur;
+    } else {
+      base = (tabmgrMedia.state && tabmgrMedia.state.currentTime) || 0;
+    }
+    base = Math.round(base);
+    const maxD = Math.max(1, Math.round((b && b.dur) || state.duration || 0));
     let next = null;
     if (e.key === "ArrowRight") next = base + stepp;
     else if (e.key === "ArrowLeft") next = base - stepp;
@@ -830,17 +869,17 @@ function _tabmgrMediaSeekEl(state) {
     else if (e.key === "End") next = maxD;
     if (next == null) return;
     e.preventDefault();
-    tabmgrMedia.dragTime = Math.max(0, Math.min(maxD, next));
-    _tabmgrMediaSeekUI(vpb, timeEl, tabmgrMedia.dragTime, state.duration);
-    _tabmgrMediaSeekSetBase(vpb, tabmgrMedia.dragTime, state.duration, !!(state && state.playing));
-    safeSendTabMessage(tabmgrMedia.sourceTabId, { action: "MEDIA_SEEK", time: tabmgrMedia.dragTime });
+    next = Math.max(0, Math.min(maxD, next));
+    _tabmgrMediaSeekUI(vpb, timeEl, next, maxD);
+    _tabmgrMediaSeekSetBase(vpb, next, maxD, !!(state && state.playing));
+    safeSendTabMessage(tabmgrMedia.sourceTabId, { action: "MEDIA_SEEK", time: next });
   });
 
   return seek;
 }
 
 function _tabmgrMediaSignature(tab, state) {
-  return (tab ? tab.id : 0) + "|" + (state ? state.title : "") + "|" + (state ? state.artist : "") + "|" + (state ? state.duration : 0) + "|" + (state ? state.playing : false) + "|" + _tabmgrMediaArtWork(state) + "|#" + tabmgrMedia.index + "|Q" + ((tabmgrMedia.sources || []).length);
+  return (tab ? tab.id : 0) + "|" + (state ? state.title : "") + "|" + (state ? state.artist : "") + "|" + (state ? state.duration : 0) + "|" + (state ? state.playing : false) + "|" + _tabmgrMediaArtWork(state) + "|#" + tabmgrMedia.index + "|Q" + ((tabmgrMedia.sources || []).length) + "|L" + (state ? !!state.isLive : false);
 }
 
 // Poster flicker guard: reuse the same <img> element per artwork URL across
@@ -1110,16 +1149,15 @@ function _tabmgrMediaCoverStack(cover) {
   const n = sources.length;
   if (n < 2) return;
   const maxCards = Math.min(n, 4);
-  // Front card = current tab; the cards BEHIND follow the queue's source order
-  // (index ascending == whoever started playing first comes first). No re-rotation
-  // from the current index, so the fanned deck keeps a stable, chronological look.
+  // Front card = current tab; the cards BEHIND follow the queue FORWARD from the
+  // current source (current, next, next-after, ... wrapping) so the fanned deck
+  // reads left-to-right as "now -> next", matching the sleeve-front click which
+  // also advances. Old code stacked them by ascending (chronological) index,
+  // which put an OLDER tab directly to the right of the poster — a click there
+  // yanked the player backwards. Now the deck is rotation-consistent.
   const show = [tabmgrMedia.index];
-  const seen = {};
-  seen[tabmgrMedia.index] = true;
-  for (let k = 0; k < n && show.length < maxCards; k++) {
-    if (seen[k]) continue;
-    seen[k] = true;
-    show.push(k);
+  for (let k = 1; k < maxCards && k < n; k++) {
+    show.push((tabmgrMedia.index + k) % n);
   }
   show.forEach(function (qidx, pos) {
     const c = sources[qidx];
@@ -1197,9 +1235,9 @@ function _tabmgrMediaPreviewReset() {
   if (cover) cover.classList.remove("is-open");
   const titleEl = _tabmgrMediaTitleEl();
   if (titleEl) {
-    const k = tabmgrMedia.known && tabmgrMedia.known[tabmgrMedia.sourceTabId];
-    const st = (tabmgrMedia.sourceTabId && k) ? k : null;
-    titleEl.textContent = _tabmgrMediaTitleText(st && st.tab, st && st.state);
+    // Read the live source directly: `known` only caches tabs that reported
+    // agent state, so audible-but-stateless tabs fell back to "Unknown" here.
+    titleEl.textContent = _tabmgrMediaTitleText(tabmgrMedia.sourceTab, tabmgrMedia.state);
     titleEl.classList.remove("is-preview");
   }
 }
@@ -1410,13 +1448,16 @@ function _tabmgrMediaRenderPlayer() {
     mp.appendChild(_tabmgrMediaSeekEl(state));
   }
 
-  // --- tools (MUSIC): left [play + prev-track + next-track] | right [pause-all + mute + open] ---
+  // --- tools (MUSIC): left [prev-track + play/pause + next-track] | right [pause-all + mute + open] ---
   const tools = document.createElement("div");
   tools.className = "tabmgr-mp-tools";
   const toolsL = document.createElement("div");
   toolsL.className = "tabmgr-mp-tools-group";
   const toolsR = document.createElement("div");
   toolsR.className = "tabmgr-mp-tools-group";
+  const prevBtn = _tabmgrMediaSvgBtn("M15 18l-6-6 6-6", t("tabmgr_media_prev"), "tabmgr-mp-tbtn tabmgr-mp-prev");
+  prevBtn.addEventListener("click", function () { _tabmgrMediaSkip(-1); });
+  toolsL.appendChild(prevBtn);
   if (state) {
     const playBtn = document.createElement("button");
     playBtn.type = "button";
@@ -1428,11 +1469,8 @@ function _tabmgrMediaRenderPlayer() {
     playBtn.addEventListener("click", _tabmgrMediaOnPlay);
     toolsL.appendChild(playBtn);
   }
-  const prevBtn = _tabmgrMediaSvgBtn("M15 18l-6-6 6-6", t("tabmgr_media_prev"), "tabmgr-mp-tbtn tabmgr-mp-prev");
-  prevBtn.addEventListener("click", function () { _tabmgrMediaSkip(-1); });
   const nextBtn = _tabmgrMediaSvgBtn("M9 18l6-6-6-6", t("tabmgr_media_next"), "tabmgr-mp-tbtn tabmgr-mp-next");
   nextBtn.addEventListener("click", function () { _tabmgrMediaSkip(1); });
-  toolsL.appendChild(prevBtn);
   toolsL.appendChild(nextBtn);
   if (_tabmgrMediaIsMulti()) {
     const pauseAllBtn = _tabmgrMediaSvgBtn(
@@ -1503,8 +1541,8 @@ function _tabmgrMediaPatchPlayer() {
   const vpb = mp.querySelector(".tabmgr-vpb");
   const timeEl = mp.querySelector(".tabmgr-vpb-time");
   if (vpb && timeEl && !tabmgrMedia.dragging) {
-    _tabmgrMediaSeekUI(vpb, timeEl, state ? state.currentTime : 0, state ? state.duration : 0);
-    _tabmgrMediaSeekSetBase(vpb, state ? state.currentTime : 0, state ? state.duration : 0, playing);
+    _tabmgrMediaSeekUI(vpb, timeEl, state ? state.currentTime : 0, state ? state.duration : 0, _tabmgrMediaIsLive(state));
+    _tabmgrMediaSeekSetBase(vpb, state ? state.currentTime : 0, state ? state.duration : 0, playing, _tabmgrMediaIsLive(state));
     _tabmgrMediaSeekStart();
   }
 

@@ -92,10 +92,24 @@ function socSaveSettings() {
     trackerBlockAll: socState.trackerBlockAll, trackerBlock: socState.trackerBlock.slice(0, 50),
     scamWarn: socState.scamWarn, lastScan: socState.lastScan
   };
-  storSet({ sf_social_settings: payload }, function () {
-    socUpdateUI();
-    socPushToActiveTab();
-  });
+  // `gambleAllow` lives ONLY in storage (written by the background unblock
+  // flow, never held in socState). Merge it back on every save so toggling
+  // any switch here cannot wipe the user's unblocked-domain allowlist.
+  const write = function (prev) {
+    const cur = prev && prev.sf_social_settings;
+    if (cur && cur.gambleAllow && typeof cur.gambleAllow === "object") {
+      payload.gambleAllow = cur.gambleAllow;
+    }
+    storSet({ sf_social_settings: payload }, function () {
+      socUpdateUI();
+      socPushToActiveTab();
+    });
+  };
+  try {
+    storGet("sf_social_settings", write);
+  } catch (e) {
+    write({});
+  }
 }
 function socUpdateActiveHost(cb) {
   try {

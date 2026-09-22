@@ -356,6 +356,19 @@ async function main() {
         "black vinyl half-out disc spins while playing");
     }
 
+    // transport order (left group): prev < | play/pause | next >
+    const leftGroup = mp2 && mp2.querySelectorAll(".tabmgr-mp-tools-group:first-child > button");
+    if (leftGroup) {
+      const classes = Array.prototype.slice.call(leftGroup).map(function (b) { return b.className || ""; });
+      check(classes.length >= 3 &&
+        /(^| )tabmgr-mp-prev($| )/.test(classes[0]) &&
+        /(^| )tabmgr-mp-playbtn($| )/.test(classes[1]) &&
+        /(^| )tabmgr-mp-next($| )/.test(classes[2]),
+        `left transport reads prev | play/pause | next (got: ${classes.join(" | ")})`);
+      check(/tabmgr-mp-prev/.test(classes[0]) && /tabmgr-mp-next/.test(classes[2]),
+        "prev/next keep their med-trailing chevron glyphs");
+    }
+
     // pointer drag on the video-style bar seeks: release commits MEDIA_SEEK at the ratio
     const vpbDrag = mp2 && mp2.querySelector(".tabmgr-vpb");
     if (vpbDrag) {
@@ -392,6 +405,107 @@ async function main() {
       !(mp3.querySelector(".tabmgr-mp-cover") || {}).classList?.contains("is-artwork"),
       "unsafe artwork URL is not put on the sleeve (javascript: rejected)");
     check(!!(mp3 && mp3.querySelector(".tabmgr-mp-vinyl")), "vinyl still renders when artwork is rejected");
+  }
+
+  // 1c-ii. Keyboard seek follows the LIVE clock + fan-preview title restore
+  console.log("\nRegressing media keyboard-seek base + fan-preview title restore:");
+  {
+    const { window: w } = await loadPage("sidebar.html");
+    const seeksSeen = [];
+    // agent reports 100s on MEDIA_GET_STATE polls (playback advanced well past the
+    // 42s the player would have been rendered with on the very first frame)
+    w.chrome.tabs.query = () => Promise.resolve([{ id: 7, url: "https://music.youtube.com/watch?v=x", title: "Some Song", audible: true, windowId: 1 }]);
+    w.chrome.tabs.sendMessage = (t, msg, cb) => {
+      if (msg && msg.action === "MEDIA_SEEK") seeksSeen.push(msg.time);
+      const res = { ok: true, state: { hasMedia: true, playing: true, title: "Some Song", artist: "Some Artist", artwork: "https://example.com/art.jpg", currentTime: 100, duration: 210 } };
+      if (typeof cb === "function") cb(res);
+      return Promise.resolve(res);
+    };
+    w.tabmgrMediaRefresh();
+    await new Promise((r) => setTimeout(r, 80));
+    const mpK = w.document.querySelector("#tabmgr-media-body .tabmgr-mp");
+    check(!!mpK, "player rendered for keyboard-seek regression");
+    const vpbK = mpK && mpK.querySelector(".tabmgr-vpb");
+    if (vpbK) {
+      const kd = new w.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, cancelable: true });
+      vpbK.dispatchEvent(kd);
+      await new Promise((r) => setTimeout(r, 30));
+      check(seeksSeen.length === 1 && seeksSeen[0] >= 100 && seeksSeen[0] <= 112,
+        `ArrowRight seeks from the live clock, not the render-time snapshot (got: ${seeksSeen[0]})`);
+      check(seeksSeen.length === 1,
+        "a single ArrowRight fires exactly one seek (no extra committed seek)");
+      // a second press keeps stacking from the live base (no freeze at 42)
+      const kd2 = new w.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, cancelable: true });
+      vpbK.dispatchEvent(kd2);
+      await new Promise((r) => setTimeout(r, 10));
+      check(seeksSeen.length === 2 && seeksSeen[1] >= seeksSeen[0] + 4 && seeksSeen[1] <= seeksSeen[0] + 6,
+        `consecutive arrow builds on the latest seek, not a stale base (2nd got: ${seeksSeen[1]})`);
+    }
+
+    // fan-preview: a stateless (audible, no agent) source must get its REAL title
+    // back after the fan closes — not "Unknown" (old code only looked in `known`).
+    w.chrome.tabs.query = () => Promise.resolve([{ id: 8, url: "https://cdn.example/song.mp3", title: "Stateless Title", audible: true, windowId: 1 }]);
+    w.chrome.tabs.sendMessage = (t, msg, cb) => {
+      const res = { ok: false };
+      if (typeof cb === "function") cb(res);
+      return Promise.resolve(res);
+    };
+    w.tabmgrMediaRefresh();
+    await new Promise((r) => setTimeout(r, 80));
+    const tBefore = w.document.querySelector(".tabmgr-mp-title");
+    check(tBefore && (tBefore.textContent || "").trim() === "Stateless Title",
+      `stateless source renders its tab title (got: ${tBefore ? tBefore.textContent : "none"})`);
+    w.eval('_tabmgrMediaPreviewTo(0, "Preview Song")');
+    const tDuring = w.document.querySelector(".tabmgr-mp-title");
+    check(tDuring && (tDuring.textContent || "").trim() === "Preview Song",
+      `fan-preview shows the hovered title (got: ${tDuring ? tDuring.textContent : "none"})`);
+    w.eval("_tabmgrMediaPreviewReset()");
+    const tPost = w.document.querySelector(".tabmgr-mp-title");
+    check(tPost && (tPost.textContent || "").trim() === "Stateless Title",
+      `fan-preview reset restores the committed title for a stateless source (got: ${tPost ? tPost.textContent : "none"})`);
+  }
+
+  // 1c-iii. Live stream: full-red bar + LIVE badge, seek disabled
+  console.log("\nRegressing live-stream progress (full red + LIVE, no seek):");
+  {
+    const { window: w } = await loadPage("sidebar.html");
+    const seeks = [];
+    const liveState = { hasMedia: true, playing: true, title: "Live Radio", artist: "Artist", artwork: "https://example.com/live.jpg", currentTime: 12, duration: 0, isLive: true };
+    w.chrome.tabs.query = () => Promise.resolve([{ id: 7, url: "https://radio.example/live", title: "Live Radio", audible: true, windowId: 1 }]);
+    w.chrome.tabs.sendMessage = (t, msg, cb) => {
+      if (msg && msg.action === "MEDIA_SEEK") seeks.push(msg.time);
+      const res = { ok: true, state: liveState };
+      if (typeof cb === "function") cb(res);
+      return Promise.resolve(res);
+    };
+    w.tabmgrMediaRefresh();
+    await new Promise((r) => setTimeout(r, 80));
+    const mpL = w.document.querySelector("#tabmgr-media-body .tabmgr-mp");
+    check(!!mpL, "live agent state renders the player");
+    const vpbL = mpL && mpL.querySelector(".tabmgr-vpb");
+    const timeL = mpL && mpL.querySelector(".tabmgr-vpb-time");
+    if (vpbL && timeL) {
+      check(vpbL.classList.contains("is-live"),
+        "live bar carries .is-live (full red + pulsing badge)");
+      check((vpbL.style.getPropertyValue("--e") || "") === "100%",
+        "live bar forces --e to 100% (full red), not a fractional fill");
+      check(!!timeL.textContent && timeL.textContent !== "00:00 / 00:00" && timeL.textContent.indexOf("/") === -1,
+        `live time text is a LIVE badge, not a 0-duration ratio (got: ${timeL.textContent})`);
+      vpbL.getBoundingClientRect = () => ({ left: 0, right: 100, width: 100, top: 0, bottom: 40, x: 0, y: 0, height: 40 });
+      const pd = new w.Event("pointerdown", { bubbles: true });
+      pd.clientX = 50; pd.pointerId = 1;
+      vpbL.dispatchEvent(pd);
+      const pu = new w.Event("pointerup", { bubbles: true });
+      pu.clientX = 50;
+      vpbL.dispatchEvent(pu);
+      check(seeks.length === 0, "drag on a live bar does not commit a seek");
+      check(!vpbL.classList.contains("is-dragging"),
+        "live bar never enters the dragging state");
+      const kd = new w.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, cancelable: true });
+      vpbL.dispatchEvent(kd);
+      await new Promise((r) => setTimeout(r, 20));
+      check(seeks.length === 0, "arrow key on a live bar does not commit a seek");
+    }
   }
 
   // 1d. Multi-tab carousel: several tabs playing at once -> queue, click/wheel to rotate
@@ -512,6 +626,50 @@ async function main() {
     check(w.document.querySelector(".tabmgr-mp-count").textContent === "3/3" &&
       w.document.querySelector(".tabmgr-mp-title").textContent === "Song C",
       "carousel still rotates through the sticky queue (count -> Song C, 3/3)");
+  }
+
+  // 1d-ii. Deck fans FORWARD from the current tab: poster click must not jump back
+  console.log("\nRegressing forward deck order (poster click never jumps backwards):");
+  {
+    const { window: w } = await loadPage("sidebar.html");
+    const states = {
+      7: { hasMedia: true, playing: true, title: "Song A", artist: "Artist A", artwork: "https://example.com/a.jpg", currentTime: 10, duration: 200 },
+      8: { hasMedia: true, playing: true, title: "Song B", artist: "Artist B", artwork: "https://example.com/b.jpg", currentTime: 20, duration: 180 },
+      9: { hasMedia: true, playing: false, title: "Song C", artist: "Artist C", artwork: "https://example.com/c.jpg", currentTime: 5, duration: 150 }
+    };
+    w.chrome.tabs.query = () => Promise.resolve([
+      { id: 7, url: "https://music.youtube.com/watch?v=a", title: "Song A", audible: true, windowId: 1 },
+      { id: 8, url: "https://music.youtube.com/watch?v=b", title: "Song B", audible: true, windowId: 1 },
+      { id: 9, url: "https://deezer.com/track/c", title: "Song C", audible: true, windowId: 1 }
+    ]);
+    w.chrome.tabs.sendMessage = (t, msg, cb) => {
+      const res = states[t] ? { ok: true, state: states[t] } : { ok: false };
+      if (typeof cb === "function") cb(res);
+      return Promise.resolve(res);
+    };
+    w.tabmgrMediaRefresh();
+    await new Promise((r) => setTimeout(r, 80));
+    // rotate the queue to the middle source (Song B, index 1) via the counter pill
+    w.document.querySelector(".tabmgr-mp-count").click();
+    await new Promise((r) => setTimeout(r, 60));
+    const mpD = w.document.querySelector("#tabmgr-media-body .tabmgr-mp");
+    const titleD = mpD && mpD.querySelector(".tabmgr-mp-title");
+    check(titleD && (titleD.textContent || "").trim() === "Song B",
+      `deck test starts on Song B (middle source, got: ${titleD ? titleD.textContent : "none"})`);
+    const cards = mpD && mpD.querySelectorAll(".tabmgr-mp-cover .tabmgr-mp-card");
+    if (cards && cards.length) {
+      const order = Array.prototype.slice.call(cards).map(function (c) { return c.dataset.idx; });
+      check(order.join(",") === "1,2,0",
+        `deck fans now -> next -> after (got: ${order.join(",")}) -- old code stacked 1,0,2 (a click on the right card jumped BACK to Song A)`);
+      let behindNext = null;
+      for (const c of cards) { if (c.dataset.idx === "2") behindNext = c; }
+      if (behindNext) {
+        behindNext.click();
+        await new Promise((r) => setTimeout(r, 60));
+        check(w.document.querySelector(".tabmgr-mp-title").textContent === "Song C",
+          "clicking the card right of the poster advances to the NEXT tab (Song C)");
+      }
+    }
   }
 
   // 1e. Realtime queue: pause-others button + onRemoved drops a closed tab immediately
@@ -2010,7 +2168,21 @@ async function main() {
       `hidden trust hidden via display:none (trust=${trustEl.style.display}, brand=${brandEl.style.display})`);
     check(langEl.style.marginLeft === "auto" && brandEl.style.marginLeft === "",
       `first right item carries margin-left:auto (lang=${langEl.style.marginLeft}, brand=${brandEl.style.marginLeft})`);
+    // hiding the FIRST right item must re-anchor margin-left:auto on the next
+    // visible right item so the right group stays flush against the edge
+    w.sfHeaderApply({
+      position: "top",
+      hidden: { lang: true },
+      side: { brand: "left", lang: "right", trust: "right", badge: "right" },
+      order: { brand: 0, lang: 0, trust: 1, badge: 2 }
+    });
+    check(trustEl.style.marginLeft === "auto" && brandEl.style.marginLeft === "" &&
+      langEl.style.display === "none",
+      `hiding the first right item re-anchors auto-margin on the next visible one (trust=${trustEl.style.marginLeft})`);
 
+    // the sfHeaderApply above re-rendered the modal rows with its ad-hoc state,
+    // so re-apply the injected custom layout before asserting the modal reflects it
+    w.sfHeaderApply(custom);
     const gear = w.document.getElementById("btn-header-settings");
     check(!!gear, "gear button present in header");
     gear.click();
@@ -2050,6 +2222,29 @@ async function main() {
     const domOrder = [...header.children].map(c => c.dataset && c.dataset.headerItem).filter(Boolean);
     check(domOrder.indexOf("trust") < domOrder.indexOf("lang"),
       `header DOM order follows the reorder (got ${domOrder.join(",")})`);
+
+    // moving an item to the other side can leave two items sharing one order
+    // value; ▲/▼ must STILL re-order (swapping equal values used to be a no-op)
+    const tieStart = w.sfHeaderApply({
+      position: "top",
+      hidden: {},
+      side: { brand: "left", lang: "left", trust: "right", badge: "right" },
+      order: { brand: 0, lang: 0, trust: 1, badge: 2 }
+    });
+    check(tieStart && tieStart.side.lang === "left", "lang moved to the left side creates a tied order");
+    const langRow = w.document.querySelector('#hdrs-item-list [data-hdrs-item="lang"]');
+    // row buttons in DOM order: eye(0), to-left(1), to-right(2), UP(3), down(4)
+    const langUp = langRow ? [...langRow.querySelectorAll(".hdrs-ico-btn")][3] : null;
+    check(!!langUp && !langUp.disabled, "tied item exposes an enabled up button");
+    if (langUp) {
+      langUp.click();
+      await new Promise(r => setTimeout(r, 30));
+    }
+    const afterTie = w.sfGetHeaderSettings();
+    const domAfterTie = [...header.children].map(c => c.dataset && c.dataset.headerItem).filter(Boolean);
+    check(afterTie.order.lang === 0 && afterTie.order.brand === 1 &&
+      domAfterTie.indexOf("lang") < domAfterTie.indexOf("brand"),
+      `tied orders are renumbered so ▲/▼ always work (lang=${afterTie.order.lang}, brand=${afterTie.order.brand})`);
 
     const defs = w.sfHeaderReset();
     check(defs && defs.position === "top" && defs.side.brand === "left" && defs.side.badge === "right" &&

@@ -148,6 +148,9 @@
     if (!el) return { hasMedia: false, playing: false, title: "", artist: "", artwork: "", currentTime: 0, duration: 0 };
     let playing = false;
     try { playing = !el.paused && !el.ended; } catch (e) {}
+    // Live streams report duration = Infinity (and _num() flattens that to 0).
+    let isLive = false;
+    try { isLive = Number(el.duration) === Infinity; } catch (e) {}
     return {
       hasMedia: true,
       playing: playing,
@@ -155,7 +158,8 @@
       artist: _metaArtist(),
       artwork: _metaArt(el),
       currentTime: _num(el.currentTime),
-      duration: _num(el.duration)
+      duration: _num(el.duration),
+      isLive: isLive
     };
   }
 

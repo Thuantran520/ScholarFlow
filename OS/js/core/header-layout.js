@@ -112,7 +112,13 @@
     });
 
     var gear = document.getElementById('btn-header-settings');
-    var firstRight = right.length ? items[right[0]] : null;
+    // The auto-margin anchor must be the first VISIBLE right-side item:
+    // margin-left:auto on a display:none element never pushes the rest right.
+    var firstRightKey = null;
+    for (var fi = 0; fi < right.length; fi++) {
+      if (!state.hidden[right[fi]]) { firstRightKey = right[fi]; break; }
+    }
+    var firstRight = firstRightKey ? items[firstRightKey] : null;
     if (firstRight) firstRight.style.marginLeft = 'auto';
     if (gear) {
       gear.style.marginLeft = firstRight ? '' : 'auto';
@@ -124,6 +130,16 @@
     return HEADER_ITEMS
       .filter(function (i) { return state.side[i] === state.side[k]; })
       .sort(function (a, b) { return state.order[a] - state.order[b]; });
+  }
+
+  // Give every item of one side a unique sequential order. Defaults (and side
+  // changes) can leave two items sharing the same order value — a positional
+  // swap of equal values is a no-op, which used to make ▲/▼ buttons dead.
+  function renumberSide(side) {
+    HEADER_ITEMS
+      .filter(function (i) { return state.side[i] === side; })
+      .sort(function (a, b) { return state.order[a] - state.order[b]; })
+      .forEach(function (item, i) { state.order[item] = i; });
   }
 
   function commit() {
@@ -142,6 +158,7 @@
   function setSide(k, side) {
     if (!state || (side !== 'left' && side !== 'right')) return;
     state.side[k] = side;
+    renumberSide(side);
     commit();
   }
 
@@ -151,10 +168,12 @@
     var idx = grp.indexOf(k);
     var target = idx + dir;
     if (target < 0 || target >= grp.length) return;
+    // Swap positions in the group array, then renumber — swapping raw order
+    // values would be a no-op whenever the two neighbours share a value.
     var other = grp[target];
-    var tmp = state.order[k];
-    state.order[k] = state.order[other];
-    state.order[other] = tmp;
+    grp[idx] = other;
+    grp[target] = k;
+    grp.forEach(function (item, i) { state.order[item] = i; });
     commit();
   }
 
@@ -287,13 +306,9 @@
   }
 
   function saveNav() {
-    if (!navOrder) return;
-    if (typeof storSet === 'function') {
-      storSet((function (obj) { obj[NAV_STORE_KEY] = { order: navOrder.slice() }; return obj; })({}), function () {});
-    } else if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-      var p = chrome.storage.local.set((function (obj) { obj[NAV_STORE_KEY] = { order: navOrder.slice() }; return obj; })({}));
-      if (p && typeof p.then === 'function') p.catch(function () {});
-    }
+    // Always persist the active tab alongside the order: writing {order} alone
+    // wiped `active`, so a reorder reset the sidebar to navOrder[0] on reopen.
+    saveNavWithActive();
   }
 
   function applyNavActive(target) {
@@ -401,7 +416,7 @@
     resetSettings();
     if (!navOrder) return;
     navOrder = DEFAULT_NAV_ORDER.slice();
-    saveNav();
+    saveNavWithActive(navOrder[0]);
     applyNavOrder();
     applyNavActive(navOrder[0]);
     renderNavRows();
@@ -516,7 +531,7 @@
   window.sfNavReset = function () {
     if (!navOrder) return null;
     navOrder = DEFAULT_NAV_ORDER.slice();
-    saveNav();
+    saveNavWithActive(navOrder[0]);
     applyNavOrder();
     applyNavActive(navOrder[0]);
     renderNavRows();

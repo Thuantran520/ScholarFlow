@@ -202,6 +202,27 @@ async function main() {
     check(Array.isArray(st.sf_social_settings.trackerBlock), "trackerBlock array in payload");
   }
 
+  // --- gambleAllow survives a settings save (no allowlist wipe on toggle) ---
+  console.log("\n7b. gambleAllow preserved across a settings save:");
+  {
+    await w.chrome.storage.local.set({ sf_social_settings: {
+      inj: true, injMode: "remove", linkClean: true, shopClean: false, gamble: true,
+      trackerBlockAll: false, trackerBlock: [], scamWarn: true, lastScan: null,
+      gambleAllow: { "kubet.net": true, "__casino": true }
+    }});
+    w.socLoadSettings();
+    await new Promise((r) => setTimeout(r, 30));
+    const scLink = w.document.getElementById("soc-link-clean");
+    scLink.checked = false;
+    scLink.dispatchEvent(new w.Event("change", { bubbles: true }));
+    await new Promise((r) => setTimeout(r, 40));
+    const st2 = await w.chrome.storage.local.get("sf_social_settings");
+    check(!!(st2.sf_social_settings && st2.sf_social_settings.gambleAllow &&
+      st2.sf_social_settings.gambleAllow["kubet.net"] === true &&
+      st2.sf_social_settings.gambleAllow["__casino"] === true),
+      `gambleAllow preserved after toggling a switch (got ${JSON.stringify(st2.sf_social_settings && st2.sf_social_settings.gambleAllow)})`);
+  }
+
   // --- vault backup guards ---
   console.log("\n8. Vault backup/restore guards (locked vault):");
   {
