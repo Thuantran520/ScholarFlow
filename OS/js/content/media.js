@@ -689,12 +689,17 @@
   }
 
   function _pipCss() {
-    return "__sf-media-pip{position:fixed;z-index:2147483000;width:44px;height:44px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;background:rgba(10,15,25,.78);border:1px solid rgba(255,255,255,.28);box-shadow:0 4px 14px rgba(0,0,0,.55);color:#fff;padding:0;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .18s ease,transform .18s ease;font:14px/1 system-ui,Segoe UI,Arial,sans-serif}" +
-      "__sf-media-pip.is-visible{opacity:1;visibility:visible;pointer-events:auto}" +
-      "__sf-media-pip.is-pip{background:rgba(220,38,38,.92);border-color:rgba(255,255,255,.5);box-shadow:0 0 0 4px rgba(220,38,38,.28)}" +
-      "__sf-media-pip.is-pulse{animation:sfPipPulse .7s ease 2}" +
+    // NOTE: every rule MUST be prefixed with "." — the button is created as
+    // <button class="__sf-media-pip">, so a bare `__sf-media-pip{...}` selector
+    // would match a <__sf-media-pip> ELEMENT and never style the button (this was
+    // the silent bug that made the in-page PiP button invisible/unclickable while
+    // classList-only JSDOM tests still passed).
+    return ".__sf-media-pip{position:fixed;z-index:2147483000;width:44px;height:44px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;background:rgba(10,15,25,.78);border:1px solid rgba(255,255,255,.28);box-shadow:0 4px 14px rgba(0,0,0,.55);color:#fff;padding:0;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .18s ease,transform .18s ease;font:14px/1 system-ui,Segoe UI,Arial,sans-serif}" +
+      ".__sf-media-pip.is-visible{opacity:1;visibility:visible;pointer-events:auto}" +
+      ".__sf-media-pip.is-pip{background:rgba(220,38,38,.92);border-color:rgba(255,255,255,.5);box-shadow:0 0 0 4px rgba(220,38,38,.28)}" +
+      ".__sf-media-pip.is-pulse{animation:sfPipPulse .7s ease 2}" +
       "@keyframes sfPipPulse{0%{transform:scale(1)}50%{transform:scale(1.22)}100%{transform:scale(1)}}" +
-      "__sf-media-pip svg{width:22px;height:22px}";
+      ".__sf-media-pip svg{width:22px;height:22px}";
   }
 
   function _pipEnsureUi() {

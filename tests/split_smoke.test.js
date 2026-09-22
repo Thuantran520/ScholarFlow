@@ -1204,6 +1204,17 @@ async function main() {
         pipOv.click();
         check(true, "in-page PiP button click handler does not throw in a gesture-less test harness");
       }
+      // Regression guard for the silent CSS bug: the injected stylesheet MUST target
+      // the button as a CLASS (.__sf-media-pip), not as a bare element selector — a
+      // missing leading dot meant none of the visibility/pointer-events rules applied
+      // and the PiP button never showed (while classList-only checks still passed).
+      const pipStyleText = Array.prototype.map.call(w.document.querySelectorAll("style"), function (s) { return s.textContent || ""; }).join("\n");
+      check(pipStyleText.indexOf(".__sf-media-pip{") !== -1,
+        "PiP overlay CSS uses a class selector for the button base rule (.__sf-media-pip{)");
+      check(pipStyleText.indexOf(".__sf-media-pip.is-visible") !== -1,
+        "PiP overlay CSS shows the button via a class selector (.__sf-media-pip.is-visible)");
+      check(!/(^|[^.\w])__sf-media-pip[.{ ]/.test(pipStyleText),
+        "PiP overlay CSS has no element-form (dotless) __sf-media-pip selector that would never match the button");
       w.document.pictureInPictureEnabled = undefined;
       vp.remove();
       // MSE clamps "duration" of a live feed at an absurd huge finite value —
