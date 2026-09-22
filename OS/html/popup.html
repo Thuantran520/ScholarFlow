@@ -41,8 +41,8 @@
 <body class="is-popup">
 
   <!-- Top Bar: Clean, Unified & Modern -->
-  <div class="header">
-    <div class="header-left">
+  <div class="header" id="sf-header">
+    <div class="header-item" data-header-item="brand">
       <div class="header-icon-wrap">
         <img src="../../icon.svg" alt="Icon" class="header-icon">
       </div>
@@ -51,7 +51,7 @@
         <span class="version-tag">PRO</span>
       </div>
     </div>
-    <div class="header-right">
+    <div class="header-item" data-header-item="lang">
       <div class="custom-dropdown-wrap" id="lang-dropdown-wrap">
         <button type="button" class="custom-dropdown-btn lang-dropdown-btn" id="lang-dropdown-trigger" title="Language / Ngôn ngữ" data-i18n-title="tip_lang">
           <span class="lang-btn-flag" id="lang-active-flag">🇻🇳</span>
@@ -93,12 +93,19 @@
           <option value="ja">🇯🇵 日本語</option>
         </select>
       </div>
+    </div>
+    <div class="header-item" data-header-item="trust">
       <button class="header-btn btn-trust-pill" id="btn-open-trust" title="Trung tâm uy tín, bảo mật & chuẩn" data-i18n-title="tip_trust_center">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
         <span class="header-btn-text" data-i18n="btn_trust">Uy tín</span>
       </button>
+    </div>
+    <div class="header-item" data-header-item="badge">
       <span class="badge is-detected" id="source-badge" data-i18n="badge_web">Web</span>
     </div>
+    <button type="button" class="header-btn btn-header-settings" id="btn-header-settings" title="Cài đặt giao diện ứng dụng" data-i18n-title="hdrs_gear_tip">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+    </button>
   </div>
 
   <!-- Main Navigation Segmented Controller -->
@@ -606,7 +613,7 @@
         <button type="button" class="btn btn-secondary" id="ai-btn-attach-image" data-i18n="ai_btn_attach_label" title="Đính kèm" data-i18n-title="ai_btn_attach_image">Ảnh</button>
         <input type="file" id="ai-image-input" accept="image/*" style="display:none;">
         <div class="ai-input-wrap">
-          <textarea id="ai-input" class="ai-input" rows="1" placeholder="Hỏi về trang hoặc gõ / dùng kỹ năng (/code, /table, /quiz, /critique, /mindmap, /math)..." data-i18n-placeholder="ai_input_placeholder"></textarea>
+          <textarea id="ai-input" class="ai-input" rows="1"></textarea>
         </div>
         <button type="button" class="ai-send-btn" id="ai-btn-send" data-i18n="ai_btn_send">Gửi</button>
       </div>
@@ -1555,6 +1562,52 @@
     </div>
   </div>
 
+  <!-- Modal: Tùy Chỉnh Giao Diện Thanh Tiêu Đề (Header Layout Settings Modal) -->
+  <div id="header-settings-modal" class="modal-overlay">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span style="display:inline-flex; align-items:center; gap:6px; min-width:0;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          <span data-i18n="hdrs_modal_title" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Tùy Chỉnh Giao Diện Ứng Dụng</span>
+        </span>
+      </div>
+      <button class="btn btn-secondary" id="btn-close-header-settings" style="padding:4px 10px; font-size:12px; flex-shrink:0;" data-i18n="btn_close">✕ Đóng</button>
+    </div>
+
+    <div class="modal-body-scroll">
+      <!-- Card 1: Header Position (top / bottom) -->
+      <div class="rule-card" style="border-color:rgba(56,189,248,0.35); background:rgba(56,189,248,0.06);">
+        <div class="rule-card-title" style="color:#38bdf8;" data-i18n="hdrs_pos_title">Vị Trí Thanh Tiêu Đề</div>
+        <div class="rule-card-body">
+          <div class="hdrs-seg" id="hdrs-position-seg">
+            <button type="button" class="hdrs-seg-btn" data-hdrs-pos="top" data-i18n="hdrs_pos_top">Đầu trang</button>
+            <button type="button" class="hdrs-seg-btn" data-hdrs-pos="bottom" data-i18n="hdrs_pos_bottom">Cuối trang</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Items order / side / visibility -->
+      <div class="rule-card" style="border-color:rgba(129,140,248,0.35); background:rgba(129,140,248,0.06); margin-top:8px;">
+        <div class="rule-card-title" style="color:#818cf8;" data-i18n="hdrs_items_title">Phần Tử, Vị Trí Trái/Phải &amp; Thứ Tự</div>
+        <div class="rule-card-body">
+          <div id="hdrs-item-list"></div>
+          <div class="hdrs-hint" data-i18n="hdrs_hint">Bấm để ẩn/hiện, chuyển trái/phải hoặc đổi thứ tự từng phần tử. Thay đổi được lưu tự động.</div>
+        </div>
+      </div>
+
+      <!-- Card 3: Tab order in the main nav -->
+      <div class="rule-card" style="border-color:rgba(251,191,36,0.35); background:rgba(251,191,36,0.06); margin-top:8px;">
+        <div class="rule-card-title" style="color:#fbbf24;" data-i18n="hdrs_nav_title">Thứ Tự Các Tab</div>
+        <div class="rule-card-body">
+          <div id="hdrs-nav-list"></div>
+          <div class="hdrs-hint" data-i18n="hdrs_nav_hint">Dùng ▲ ▼ để sắp xếp lại thứ tự các tab. Thay đổi được lưu tự động.</div>
+        </div>
+      </div>
+
+      <button type="button" class="btn btn-secondary" id="btn-reset-header-settings" style="margin-top:10px; width:100%; display:flex; align-items:center; justify-content:center; gap:6px; font-size:11.5px; padding:7px 12px; border-radius:6px;" data-i18n="hdrs_reset">Khôi phục vị trí mặc định</button>
+    </div>
+  </div>
+
   <!-- Modal: Minh Bạch Quyền Hạn Trình Duyệt (Browser Permissions Transparency Modal) -->
   <div id="permissions-modal" class="modal-overlay">
     <div class="modal-header">
@@ -2076,8 +2129,20 @@
       </div>
     </div>
 
-    <!-- Active Tab Live Tracker Bar -->
-    <div id="tabmgr-active-live" class="tabmgr-card-url" style="font-size:10px; color:#94a3b8; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:4px 8px; margin-bottom:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">--:--:--</div>
+    <!-- Music Player Banner (toggleable via sf_tabmgr_media_player) -->
+    <div id="tabmgr-media" class="tabmgr-media">
+      <div class="tabmgr-media-bar">
+        <span class="tabmgr-media-bar-icon">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+        </span>
+        <span class="tabmgr-media-bar-title" data-i18n="tabmgr_media_title">Music player</span>
+        <label class="tabmgr-media-switch" title="Hide music player" data-i18n-title="tabmgr_media_toggle_hide">
+          <input type="checkbox" id="tabmgr-media-check" checked>
+          <span class="tabmgr-media-switch-slider"></span>
+        </label>
+      </div>
+      <div id="tabmgr-media-body" class="tabmgr-media-body"></div>
+    </div>
 
     <!-- Search & Filters -->
     <div class="tabmgr-control-row">
@@ -2087,18 +2152,18 @@
       </button>
     </div>
     <div class="tabmgr-control-row" style="flex-wrap:wrap;">
-      <select id="tabmgr-sort" class="tabmgr-select" style="flex:1; min-width:110px;">
+      <select id="tabmgr-sort" class="tabmgr-select" style="flex:1; min-width:130px;">
         <option value="title_asc" data-i18n="tabmgr_sort_title_asc">Tên A→Z</option>
         <option value="title_desc" data-i18n="tabmgr_sort_title_desc">Tên Z→A</option>
         <option value="domain" data-i18n="tabmgr_sort_domain">Theo domain</option>
         <option value="url_asc" data-i18n="tabmgr_sort_url">Theo URL</option>
       </select>
-      <select id="tabmgr-group-mode" class="tabmgr-select" style="flex:1; min-width:110px;">
+      <select id="tabmgr-group-mode" class="tabmgr-select" style="flex:1; min-width:130px;">
         <option value="none" data-i18n="tabmgr_group_none">Không nhóm</option>
         <option value="domain" data-i18n="tabmgr_group_domain">Nhóm domain</option>
         <option value="function" data-i18n="tabmgr_group_function">Nhóm chức năng</option>
       </select>
-      <span style="font-size:10.5px; color:#64748b; margin-left:auto;"><span id="tabmgr-domain-count">0</span> domain</span>
+      <span class="tabmgr-domain-chip"><strong id="tabmgr-domain-count">0</strong> domain</span>
     </div>
 
     <!-- Batch Actions Grid -->
@@ -2203,6 +2268,13 @@
           <span class="switch-row-desc" data-i18n="sec_toggle_phishing_desc">Scan pages against phishing ruleset</span>
         </div>
         <span class="custom-switch"><input type="checkbox" id="sec-toggle-phishing"><span class="switch-slider"></span></span>
+      </label>
+      <label class="switch-row" for="sec-toggle-phishclick">
+        <div class="switch-row-left">
+          <span class="switch-row-title" data-i18n="sec_toggle_phishclick">Block phishing links on click</span>
+          <span class="switch-row-desc" data-i18n="sec_toggle_phishclick_desc">Warn before a flagged link opens — press 'Continue to site' to allow it</span>
+        </div>
+        <span class="custom-switch"><input type="checkbox" id="sec-toggle-phishclick"><span class="switch-slider"></span></span>
       </label>
       <label class="switch-row" for="sec-toggle-clickjack">
         <div class="switch-row-left">
@@ -2322,10 +2394,76 @@
       <button type="button" class="soc-subtab" data-soc-sub="vault" data-i18n="soc_st_vault">Két sắt</button>
       <button type="button" class="soc-subtab" data-soc-sub="checklist" data-i18n="soc_st_checklist">Checklist</button>
       <button type="button" class="soc-subtab" data-soc-sub="creator" data-i18n="soc_st_creator">Creator</button>
-      <button type="button" class="soc-subtab" data-soc-sub="tools" data-i18n="soc_st_tools">Công cụ</button>
+    </div>
+
+    <div id="soc-pin-overlay" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(2,6,23,0.88); align-items:center; justify-content:center; flex-direction:column; gap:10px;">
+      <div style="font-size:15px; font-weight:800;" data-i18n="soc_pin_overlay_t">Đã khóa</div>
+      <div style="font-size:10.5px; color:#94a3b8; max-width:260px; text-align:center; line-height:1.5;" data-i18n="soc_pin_overlay_desc">Tab Social đang khóa bằng mã PIN. Nhập PIN để mở lại.</div>
+      <input type="password" class="form-control" id="soc-pin-unlock" maxlength="6" inputmode="numeric" autocomplete="off" placeholder="PIN" data-i18n-placeholder="soc_pin_input_ph" style="width:140px; text-align:center; font-size:16px; letter-spacing:6px; padding:8px 10px;">
+      <button type="button" id="btn-soc-pin-unlock" class="btn-text-small soc-btn-cyan" data-i18n="soc_pin_unlock_btn">Mở khóa</button>
+      <div id="soc-pin-msg" style="font-size:10.5px; min-height:14px;"></div>
     </div>
 
     <div id="soc-sub-protect" class="soc-subpanel active">
+      <div class="feature-card soc-up-card" style="padding:10px 12px; border-left:3px solid #34d399; margin-bottom:8px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+          <div>
+            <div class="feature-title" style="margin-bottom:2px;" data-i18n="soc_score_title">Điểm phòng thủ</div>
+            <div style="font-size:10px; color:var(--text-muted); line-height:1.4;" data-i18n="soc_score_desc">Chấm tổng từ lá chắn, checklist, két sắt và các tùy chọn của bạn.</div>
+          </div>
+          <div style="text-align:right; min-width:78px;">
+            <div id="soc-score-num" style="font-size:22px; font-weight:800; line-height:1.1;">--/100</div>
+            <div id="soc-score-tier" style="font-size:10px; font-weight:700;"></div>
+          </div>
+        </div>
+        <div style="height:7px; background:rgba(255,255,255,0.08); border-radius:6px; margin:8px 0; overflow:hidden;">
+          <div id="soc-score-bar" style="height:100%; width:0%; background:#34d399; border-radius:6px; transition:width .3s;"></div>
+        </div>
+        <button type="button" id="btn-soc-score-ck" class="btn-text-small" data-i18n="soc_score_open_ck">Mở checklist</button>
+      </div>
+
+      <div class="feature-card soc-up-card" style="padding:10px 12px; margin-bottom:8px;">
+        <div class="feature-title" style="margin-bottom:3px;" data-i18n="soc_ql_title">Mở trang bảo mật nhanh</div>
+        <div id="soc-quicklinks" style="display:flex; gap:6px; flex-wrap:wrap; min-height:26px;"></div>
+      </div>
+
+      <div class="feature-card soc-up-card" style="padding:10px 12px; margin-bottom:8px;">
+        <label class="switch-row" for="soc-tracker-all">
+          <div class="switch-row-left">
+            <span class="switch-row-title" data-i18n="soc_tr_title">Chặn tracker đã biết</span>
+            <span class="switch-row-desc" data-i18n="soc_tr_desc">Tự gỡ script / iframe / img tải từ các domain theo dõi (facebook.net, doubleclick, analytics...) khi lá chắn bật.</span>
+          </div>
+          <span class="custom-switch"><input type="checkbox" id="soc-tracker-all"><span class="switch-slider"></span></span>
+        </label>
+        <div style="font-size:10px; color:var(--text-muted); font-weight:600; margin:6px 2px 4px;" data-i18n="soc_tr_found">Tracker đang thấy trên tab</div>
+        <div id="soc-tracker-list" style="display:flex; flex-direction:column; gap:3px;"></div>
+      </div>
+
+      <div class="feature-card soc-up-card" style="padding:10px 12px; margin-bottom:8px;">
+        <label class="switch-row" for="soc-scam-warn">
+          <div class="switch-row-left">
+            <span class="switch-row-title" data-i18n="soc_sc_title">Cảnh báo link scam 'mở khóa'</span>
+            <span class="switch-row-desc" data-i18n="soc_sc_desc">Nhận diện link lừa đảo kiểu "mở khóa tài khoản", quà tặng / thẻ cào trục lợi trong bài đăng.</span>
+          </div>
+          <span class="custom-switch"><input type="checkbox" id="soc-scam-warn"><span class="switch-slider"></span></span>
+        </label>
+        <div id="soc-scam-out" style="display:flex; flex-direction:column; gap:3px; margin:6px 2px 4px; font-size:10.5px;"></div>
+        <button type="button" id="btn-soc-scam-rescan" class="btn-text-small" data-i18n="soc_sc_rescan">Quét lại</button>
+      </div>
+
+      <div class="feature-card soc-up-card" style="padding:10px 12px; margin-bottom:8px;">
+        <div class="feature-title" style="margin-bottom:3px;" data-i18n="soc_pin_title">Khóa nhanh bằng PIN</div>
+        <p style="color:var(--text-muted); font-size:10px; margin:0 0 6px; line-height:1.45;" data-i18n="soc_pin_desc">Đặt mã PIN 4-6 số để khóa toàn bộ tab Social khi rời tiện ích — lớp bảo vệ thứ hai phía trên thông tin khôi phục.</p>
+        <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+          <input type="password" class="form-control" id="soc-pin-input" maxlength="6" inputmode="numeric" autocomplete="off" placeholder="PIN 4-6 số" data-i18n-placeholder="soc_pin_input_ph" style="width:120px; font-size:11px; padding:5px 8px;">
+          <button type="button" id="btn-soc-pin-set" class="btn-text-small soc-btn-green" data-i18n="soc_pin_set">Đặt PIN</button>
+          <button type="button" id="btn-soc-pin-change" class="btn-text-small" style="display:none;" data-i18n="soc_pin_change">Đổi PIN</button>
+          <button type="button" id="btn-soc-pin-locknow" class="btn-text-small soc-btn-red" style="display:none;" data-i18n="soc_pin_locknow">Khóa ngay</button>
+          <button type="button" id="btn-soc-pin-off" class="btn-text-small soc-btn-ghost" style="display:none;" data-i18n="soc_pin_off">Tắt PIN</button>
+        </div>
+        <div id="soc-pin-state" style="margin-top:5px; font-size:10px; color:#94a3b8;"></div>
+      </div>
+
       <div class="feature-card" style="padding:10px 12px; border-left:3px solid rgba(56,189,248,0.55);">
         <label class="switch-row" for="soc-inj-shield">
           <div class="switch-row-left">
@@ -2401,7 +2539,7 @@
           </select>
         </div>
         <div style="display:flex; gap:6px; flex-wrap:wrap;">
-          <button id="btn-soc-wz-start" class="btn-text-small" style="background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.18); color:#f1f5f9; font-weight:600;" data-i18n="soc_wz_btn_start">Bắt đầu hướng dẫn</button>
+          <button id="btn-soc-wz-start" class="btn-text-small soc-btn-red" data-i18n="soc_wz_btn_start">Bắt đầu hướng dẫn</button>
           <button id="btn-soc-wz-export" class="btn-text-small" data-i18n="soc_wz_export">Tải hướng dẫn (.txt)</button>
         </div>
         <div id="soc-wz-out" style="margin-top:8px;"></div>
@@ -2410,7 +2548,7 @@
         <div class="feature-title" style="margin-bottom:6px;" data-i18n="soc_rp_title">Báo cáo hacker / unlock service lừa đảo</div>
         <div style="display:flex; gap:6px; flex-wrap:wrap;">
           <button id="btn-soc-rp-phish" class="btn-text-small" data-i18n="soc_rp_phish">Báo phishing Google</button>
-          <button id="btn-soc-rp-meta" class="btn-text-small" style="background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.18); color:#f1f5f9;" data-i18n="soc_rp_meta">Báo tài khoản bị chiếm</button>
+          <button id="btn-soc-rp-meta" class="btn-text-small soc-btn-fb" data-i18n="soc_rp_meta">Báo tài khoản bị chiếm</button>
           <button id="btn-soc-rp-copy" class="btn-text-small" data-i18n="soc_rp_copy">Copy mẫu bằng chứng</button>
         </div>
         <p style="color:var(--text-muted); font-size:10.5px; margin:6px 0 0; line-height:1.45;" data-i18n="soc_rp_hint">Dán mẫu bằng chứng (kèm screenshot) vào đơn trình báo Cảnh sát mạng A05 và form Meta.</p>
@@ -2430,8 +2568,15 @@
           </div>
           <div style="display:flex; gap:6px; flex-wrap:wrap;">
             <button id="btn-soc-vt-create" class="btn-text-small" style="display:none;" data-i18n="soc_vt_create">Tạo két sắt</button>
-            <button id="btn-soc-vt-unlock" class="btn-text-small" style="background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.18); color:#f1f5f9; font-weight:600;" data-i18n="soc_vt_unlock">Mở khóa</button>
+            <button id="btn-soc-vt-unlock" class="btn-text-small soc-btn-violet" data-i18n="soc_vt_unlock">Mở khóa</button>
           </div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.06);">
+            <input type="file" id="soc-vt-bakfile" accept=".json,application/json" style="display:none;">
+            <button id="btn-soc-vt-importpick" class="btn-text-small soc-btn-ghost" data-i18n="soc_vt_import_pick">Chọn file backup</button>
+            <input type="password" class="form-control" id="soc-vt-imbakpw" placeholder="Mật khẩu bản sao" data-i18n-placeholder="soc_vt_bakpw_ph" style="flex:1; min-width:100px; font-size:11px; padding:5px 8px;">
+            <button id="btn-soc-vt-import" class="btn-text-small soc-btn-green" data-i18n="soc_vt_import">Khôi phục</button>
+          </div>
+          <div id="soc-vt-bakname" style="margin-top:4px; font-size:10px; color:var(--text-muted);"></div>
           <div id="soc-vt-msg" style="margin-top:6px; font-size:10.5px; min-height:14px;"></div>
         </div>
         <div id="soc-vt-editview" style="display:none;">
@@ -2456,10 +2601,14 @@
             <textarea class="form-control" id="soc-vt-notes" rows="2" style="font-size:11px; padding:5px 8px;"></textarea>
           </div>
           <div style="display:flex; gap:6px; flex-wrap:wrap;">
-            <button id="btn-soc-vt-save" class="btn-text-small" style="background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.18); color:#f1f5f9; font-weight:600;" data-i18n="soc_vt_save">Lưu & khóa</button>
+            <button id="btn-soc-vt-save" class="btn-text-small soc-btn-green" data-i18n="soc_vt_save">Lưu & khóa</button>
             <button id="btn-soc-vt-copy" class="btn-text-small" data-i18n="soc_vt_copy">Copy tất cả</button>
             <button id="btn-soc-vt-lock" class="btn-text-small" data-i18n="soc_vt_lock">Khóa lại</button>
-            <button id="btn-soc-vt-clear" class="btn-text-small" style="color:#94a3b8; border-color:rgba(255,255,255,0.08);" data-i18n="soc_vt_clear">Xóa két</button>
+            <button id="btn-soc-vt-clear" class="btn-text-small soc-btn-ghost" data-i18n="soc_vt_clear">Xóa két</button>
+          </div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-top:6px;">
+            <input type="password" class="form-control" id="soc-vt-bakpw" placeholder="Mật khẩu bản sao" data-i18n-placeholder="soc_vt_bakpw_ph" style="flex:1; min-width:110px; font-size:11px; padding:5px 8px;">
+            <button id="btn-soc-vt-export" class="btn-text-small" data-i18n="soc_vt_export">Xuất bản sao (file mã hóa)</button>
           </div>
           <div id="soc-vt-savedat" style="margin-top:6px; font-size:10px; color:var(--text-muted);"></div>
         </div>
@@ -2476,7 +2625,7 @@
         <div id="soc-ck-list" style="display:flex; flex-direction:column; gap:4px; margin-bottom:8px;"></div>
         <div style="display:flex; gap:6px; flex-wrap:wrap;">
           <button id="btn-soc-ck-export" class="btn-text-small" data-i18n="soc_ck_export">Tải checklist</button>
-          <button id="btn-soc-ck-reset" class="btn-text-small" style="color:#94a3b8; border-color:rgba(255,255,255,0.08);" data-i18n="soc_ck_reset">Reset</button>
+          <button id="btn-soc-ck-reset" class="btn-text-small soc-btn-ghost" data-i18n="soc_ck_reset">Reset</button>
         </div>
       </div>
     </div>
@@ -2506,7 +2655,7 @@
             <option value="scheduled" data-i18n="soc_cr_status_scheduled">Đã hẹn lịch</option>
             <option value="posted" data-i18n="soc_cr_status_posted">Đã đăng</option>
           </select>
-          <button id="btn-soc-cr-add" class="btn-text-small" style="background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.18); color:#f1f5f9; font-weight:600;" data-i18n="soc_cr_add">＋ Thêm</button>
+          <button id="btn-soc-cr-add" class="btn-text-small soc-btn-pink" data-i18n="soc_cr_add">＋ Thêm</button>
         </div>
         <div style="display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap;">
           <select class="form-control" id="soc-cr-f-platform" style="width:96px; font-size:10.5px; padding:4px 6px;">
@@ -2538,52 +2687,13 @@
         </div>
         <div style="display:flex; gap:6px; margin-bottom:8px;">
           <input type="text" class="form-control" id="soc-cr-gurl-in" placeholder="https://nhom..." data-i18n-placeholder="soc_cr_gurl_ph" style="flex:1; font-size:11px; padding:5px 8px;">
-          <button id="btn-soc-cr-gadd" class="btn-text-small" style="background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.18); color:#f1f5f9; font-weight:600;" data-i18n="soc_cr_gadd">＋ Nhóm</button>
+          <button id="btn-soc-cr-gadd" class="btn-text-small soc-btn-cyan" data-i18n="soc_cr_gadd">＋ Nhóm</button>
         </div>
         <button id="btn-soc-cr-gopenall" class="btn-text-small" style="margin-bottom:8px;" data-i18n="soc_cr_gopen_all">Mở tất cả nhóm</button>
         <div id="soc-cr-glist" style="display:flex; flex-direction:column; gap:6px;"></div>
       </div>
     </div>
 
-    <div id="soc-sub-tools" class="soc-subpanel">
-      <div class="feature-card" style="padding:10px 12px; margin-bottom:8px; border-left:3px solid rgba(255,255,255,0.18);">
-        <div class="feature-title" style="margin-bottom:6px;" data-i18n="soc_tl_phish">Kiểm tra link lừa đảo</div>
-        <div style="display:flex; gap:6px; margin-bottom:6px;">
-          <input type="text" class="form-control" id="soc-ph-url" placeholder="https://..." data-i18n-placeholder="soc_tl_phish_ph" style="flex:1; font-size:11px; padding:5px 8px;">
-          <button id="btn-soc-ph-check" class="cal-tool-btn" title="Check" data-i18n-title="soc_tl_phish_btn">→</button>
-        </div>
-        <div id="soc-ph-out" style="background:rgba(15,23,42,0.5); border:1px solid var(--card-border); border-radius:8px; padding:8px; min-height:32px; font-size:11px; color:#94a3b8;"></div>
-      </div>
-      <div class="feature-card" style="padding:10px 12px; margin-bottom:8px; border-left:3px solid rgba(255,255,255,0.18);">
-        <div class="feature-title" style="margin-bottom:6px;" data-i18n="soc_ss_title">Phiên đăng nhập của trình duyệt</div>
-        <p style="color:var(--text-muted); font-size:10.5px; margin-bottom:6px; line-height:1.4;" data-i18n="soc_ss_desc">Kiểm tra bạn còn đang đăng nhập nền tảng nào trên trình duyệt này → thiết bị này là 'phao cứu sinh' khi bị hack.</p>
-        <div style="display:flex; gap:6px; margin-bottom:6px;">
-          <button id="btn-soc-ss-check" class="btn-text-small" style="background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.18); color:#f1f5f9; font-weight:600;" data-i18n="soc_ss_btn">Kiểm tra ngay</button>
-        </div>
-        <div id="soc-ss-out" style="background:rgba(15,23,42,0.5); border:1px solid var(--card-border); border-radius:8px; padding:8px; min-height:32px; font-size:11px; color:#94a3b8;"></div>
-      </div>
-      <div class="feature-card" style="padding:10px 12px; margin-bottom:8px; border-left:3px solid rgba(255,255,255,0.18);">
-        <div class="feature-title" style="margin-bottom:6px;" data-i18n="soc_tl_unread">Hộp thư chưa đọc (mở đúng chỗ)</div>
-        <div style="display:flex; gap:6px; flex-wrap:wrap;">
-          <button id="btn-soc-un-fb" class="btn-text-small">FB</button>
-          <button id="btn-soc-un-ig" class="btn-text-small">IG</button>
-          <button id="btn-soc-un-zalo" class="btn-text-small">Zalo</button>
-          <button id="btn-soc-un-x" class="btn-text-small">X</button>
-          <button id="btn-soc-un-tt" class="btn-text-small">TikTok</button>
-          <button id="btn-soc-un-dc" class="btn-text-small">Discord</button>
-          <button id="btn-soc-un-tg" class="btn-text-small" style="margin-bottom:0;">Telegram</button>
-        </div>
-      </div>
-      <div class="feature-card" style="padding:10px 12px; border-left:3px solid rgba(255,255,255,0.18);">
-        <div class="feature-title" style="margin-bottom:6px;" data-i18n="soc_tools_title">Công cụ quét & dọn</div>
-        <div style="display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap;">
-          <button id="btn-soc-scan-trackers" class="btn-text-small" style="background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.18); color:#f1f5f9;" data-i18n="soc_scan_trackers">Quét tracker</button>
-          <button id="btn-soc-clean-cookies" class="btn-text-small" style="background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.18); color:#f1f5f9;" data-i18n="soc_clean_cookies">Dọn cookie xã hội</button>
-          <button id="btn-soc-unlock-mk" class="btn-text-small" data-i18n="soc_unlock_session">Mở trang bảo mật</button>
-        </div>
-        <div id="soc-tools-out" style="background:rgba(15,23,42,0.5); border:1px solid var(--card-border); border-radius:8px; padding:8px; min-height:36px; font-size:11px; color:#94a3b8;"></div>
-      </div>
-    </div>
   </div>
 
   <div id="tab-lingua" class="tab-section">
@@ -2753,6 +2863,15 @@
             <input type="range" id="dm-tune-color" min="0" max="160" value="100">
             <span id="dm-tune-color-val" class="dm-sl-v">100%</span>
           </div>
+          <div class="dm-slider" style="--dm-acc:#94a3b8;">
+            <span class="dm-sl-l" data-i18n="dm_tune_size">Cỡ chữ trang</span>
+            <input type="range" id="dm-tune-size" min="80" max="160" value="100">
+            <span id="dm-tune-size-val" class="dm-sl-v">100%</span>
+          </div>
+          <div class="dm-slider" style="--dm-acc:#94a3b8;">
+            <span class="dm-sl-l" data-i18n="dm_tune_text">Màu chữ trang</span>
+            <input type="color" id="dm-tune-text" value="#e2e8f0" aria-label="page-text-color">
+          </div>
         </div>
       </div>
       <button id="btn-dm-tune-reset" class="dm-mini" data-i18n="dm_tune_reset">↺ Mặc định</button>
@@ -2858,6 +2977,14 @@
         <div class="dm-slider" style="--dm-acc:#94a3b8;">
           <span class="dm-sl-l" data-i18n="dm_r_accent">Màu liên kết</span>
           <input type="color" id="dm-r-accent" value="#f0a860" aria-label="accent">
+        </div>
+        <div class="dm-slider" style="--dm-acc:#94a3b8;">
+          <span class="dm-sl-l" data-i18n="dm_r_txt">Màu chữ</span>
+          <input type="color" id="dm-r-txt" value="#e8dcc3" aria-label="text-color">
+        </div>
+        <div class="dm-slider" style="--dm-acc:#94a3b8;">
+          <span class="dm-sl-l" data-i18n="dm_r_bg">Màu nền</span>
+          <input type="color" id="dm-r-bg" value="#16130e" aria-label="bg-color">
         </div>
         <label class="switch-row" for="dm-r-flat" style="margin-top:4px;">
           <div class="switch-row-left">
@@ -3057,6 +3184,7 @@
   <script src="../js/tabs/capture.js"></script>
   <script src="../js/tabs/video.js"></script>
   <script src="../js/init.js"></script>
+  <script src="../js/core/header-layout.js"></script>
   <script src="../js/tabs/calendar.js"></script>
   <script src="../js/tabs/pomodoro.js"></script>
   <script src="../js/tabs/ai.js"></script>
@@ -3067,7 +3195,6 @@
   <script src="../js/tabs/social-recovery.js"></script>
   <script src="../js/tabs/social-vault.js"></script>
   <script src="../js/tabs/social-checklist.js"></script>
-  <script src="../js/tabs/social-tools.js"></script>
   <script src="../js/tabs/social-creator.js"></script>
   <script src="../js/tabs/lingua.js"></script>
   <script src="../js/tabs/darkmode.js"></script>

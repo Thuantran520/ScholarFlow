@@ -640,7 +640,910 @@ function tabmgrRenderSessions() {
   });
 }
 
+// ==========================================================================
+// Music Player Banner: now-playing across audible tabs (local media agent)
+// ==========================================================================
+const TABMGR_MEDIA_KEY = "sf_tabmgr_media_player";
+let tabmgrMedia = {
+  enabled: true,
+  checking: false,
+  sources: [],
+  known: {},
+  index: 0,
+  sourceTabId: 0,
+  sourceTab: null,
+  state: null,
+  dragging: false,
+  lastPlay: null,
+  signature: "",
+  wheelAt: 0,
+  timer: null,
+  evPending: false
+};
+
+function _tabmgrMediaFmt(sec) {
+  const s = Math.max(0, Math.floor(Number(sec) || 0));
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return m + ":" + (r < 10 ? "0" : "") + r;
+}
+
+function _tabmgrMediaPct(v, max) {
+  const m = Number(max) || 1;
+  const val = Number(v) || 0;
+  return String(Math.max(0, Math.min(100, (val / m) * 100)));
+}
+
+// Digital (video-player style) clock text: 00:42 / 01:40, zero-padded minutes.
+function _tabmgrMediaFmtDigital(sec) {
+  const s = Math.max(0, Math.floor(Number(sec) || 0));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const r = s % 60;
+  const mm = (m < 10 ? "0" : "") + m;
+  const ss = (r < 10 ? "0" : "") + r;
+  return (h ? h + ":" + mm : mm) + ":" + ss;
+}
+
+// Push state into the video-style progress bar (--e elapsed, overlay time text).
+function _tabmgrMediaSeekUI(vpb, timeEl, current, duration) {
+  const maxD = Math.max(1, Math.round(Number(duration) || 0));
+  const ct = Math.max(0, Math.round(Number(current) || 0));
+  if (vpb) {
+    vpb.style.setProperty("--e", _tabmgrMediaPct(ct, maxD) + "%");
+    vpb.setAttribute("aria-valuemax", String(maxD));
+    vpb.setAttribute("aria-valuenow", String(ct));
+  }
+  if (timeEl) timeEl.textContent = _tabmgrMediaFmtDigital(ct) + " / " + _tabmgrMediaFmtDigital(maxD);
+}
+
+// Baseline for the live clock: the last authoritative (polled / seeked) position.
+// Between polls the rAF loop extrapolates this forward in realtime so the red bar
+// glides smoothly instead of teleporting every ~900ms (which read as lag).
+function _tabmgrMediaSeekSetBase(vpb, current, duration, playing) {
+  if (!vpb) return;
+  const maxD = Math.max(1, Math.round(Number(duration) || 0));
+  const ct = Math.max(0, Number(current) || 0);
+  vpb._sfBase = { at: Date.now(), time: ct, dur: maxD, play: !!playing };
+}
+
+let _tabmgrMediaRafOn = false;
+let _tabmgrMediaRafId = 0;
+
+function _tabmgrMediaSeekStart() {
+  if (_tabmgrMediaRafOn) return;
+  if (typeof requestAnimationFrame !== "function") return;
+  _tabmgrMediaRafOn = true;
+  function step() {
+    if (!_tabmgrMediaRafOn) return;
+    _tabmgrMediaSeekTick();
+    _tabmgrMediaRafId = requestAnimationFrame(step);
+  }
+  _tabmgrMediaRafId = requestAnimationFrame(step);
+}
+
+function _tabmgrMediaSeekStop() {
+  _tabmgrMediaRafOn = false;
+  if (typeof cancelAnimationFrame === "function" && _tabmgrMediaRafId) {
+    try { cancelAnimationFrame(_tabmgrMediaRafId); } catch (e) {}
+  }
+}
+
+// Live clock: advance --e and the time text continuously while playing, without
+  // waiting for the next poll. Skip while dragging (the drag UI owns the bar) and
+  // while the sidebar is hidden (avoid a wall-clock jump that overshoots audio).
+function _tabmgrMediaSeekTick() {
+  if (tabmgrMedia.dragging || document.hidden) return;
+  const mp = document.querySelector("#tabmgr-media-body .tabmgr-mp");
+  const vpb = mp && mp.querySelector(".tabmgr-vpb");
+  if (!vpb) return;
+  const b = vpb._sfBase;
+  if (!b) return;
+  let ct = b.time;
+  if (b.play) {
+    ct = b.time + Math.max(0, (Date.now() - b.at) / 1000);
+    if (ct > b.dur) ct = b.dur;
+  }
+  const cur = Math.round(ct);
+  if (vpb._sfLast === cur) return;
+  vpb._sfLast = cur;
+  _tabmgrMediaSeekUI(vpb, mp.querySelector(".tabmgr-vpb-time"), cur, b.dur);
+}
+
+// Build the Video Playback Progress Bar (slim):
+//   black pill container -> single red elapsed track (--e).
+//   Time text is an OVERLAY (always visible, never clipped by the red width);
+//   the playhead dot is a child of the red track and floats above its right edge.
+// Dragging: pointer down/move scales clientX to seconds; seek is committed on
+// pointerup. Keyboard (Left/Right/Home/End) keeps it accessible.
+function _tabmgrMediaSeekEl(state) {
+  const seek = document.createElement("div");
+  seek.className = "tabmgr-mp-seek";
+
+  const vpb = document.createElement("div");
+  vpb.className = "tabmgr-vpb";
+  vpb.tabIndex = 0;
+  vpb.setAttribute("role", "slider");
+  vpb.setAttribute("aria-label", t("tabmgr_media_seek"));
+  vpb.setAttribute("aria-valuemin", "0");
+
+  const elapsed = document.createElement("div");
+  elapsed.className = "tabmgr-vpb-elapsed";
+  // The playhead is a CHILD of the elapsed layer so it always tracks the right
+  // edge of the red track (left:100%), independent of any other layer.
+  const playhead = document.createElement("div");
+  playhead.className = "tabmgr-vpb-playhead";
+  elapsed.appendChild(playhead);
+
+  const timeEl = document.createElement("span");
+  timeEl.className = "tabmgr-vpb-time";
+
+  vpb.appendChild(elapsed);
+  vpb.appendChild(timeEl);
+  seek.appendChild(vpb);
+
+  _tabmgrMediaSeekUI(vpb, timeEl, state.currentTime, state.duration);
+  _tabmgrMediaSeekSetBase(vpb, state.currentTime, state.duration, !!state.playing);
+  _tabmgrMediaSeekStart();
+
+  const seekFromPointer = function (clientX) {
+    const rect = vpb.getBoundingClientRect();
+    if (!rect || !rect.width) return;
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    const target = Math.round(ratio * Math.max(1, Math.round(Number(state.duration) || 0)));
+    tabmgrMedia.dragTime = target;
+    _tabmgrMediaSeekUI(vpb, timeEl, target, state.duration);
+  };
+
+  vpb.addEventListener("pointerdown", function (e) {
+    tabmgrMedia.dragging = true;
+    tabmgrMedia.dragTime = null;
+    vpb.classList.add("is-dragging");
+    seekFromPointer(e.clientX);
+    if (vpb.setPointerCapture) { try { vpb.setPointerCapture(e.pointerId); } catch (err) {} }
+  });
+  vpb.addEventListener("pointermove", function (e) {
+    if (tabmgrMedia.dragging) seekFromPointer(e.clientX);
+  });
+  const endSeek = function () {
+    if (!tabmgrMedia.dragging) return;
+    tabmgrMedia.dragging = false;
+    vpb.classList.remove("is-dragging");
+    if (tabmgrMedia.dragTime != null && tabmgrMedia.state) {
+      // Repoint the live clock at the released position so the bar continues
+      // smoothly from the drag point instead of snapping back to the stale poll.
+      _tabmgrMediaSeekSetBase(vpb, tabmgrMedia.dragTime, state.duration, !!state.playing);
+      safeSendTabMessage(tabmgrMedia.sourceTabId, { action: "MEDIA_SEEK", time: tabmgrMedia.dragTime });
+    }
+  };
+  vpb.addEventListener("pointerup", endSeek);
+  vpb.addEventListener("pointercancel", endSeek);
+
+  vpb.addEventListener("keydown", function (e) {
+    const stepp = (e.shiftKey ? 10 : 5);
+    const base = (tabmgrMedia.dragTime != null ? tabmgrMedia.dragTime : Math.round(state.currentTime || 0));
+    const maxD = Math.max(1, Math.round(state.duration || 0));
+    let next = null;
+    if (e.key === "ArrowRight") next = base + stepp;
+    else if (e.key === "ArrowLeft") next = base - stepp;
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = maxD;
+    if (next == null) return;
+    e.preventDefault();
+    tabmgrMedia.dragTime = Math.max(0, Math.min(maxD, next));
+    _tabmgrMediaSeekUI(vpb, timeEl, tabmgrMedia.dragTime, state.duration);
+    _tabmgrMediaSeekSetBase(vpb, tabmgrMedia.dragTime, state.duration, !!(state && state.playing));
+    safeSendTabMessage(tabmgrMedia.sourceTabId, { action: "MEDIA_SEEK", time: tabmgrMedia.dragTime });
+  });
+
+  return seek;
+}
+
+function _tabmgrMediaSignature(tab, state) {
+  return (tab ? tab.id : 0) + "|" + (state ? state.title : "") + "|" + (state ? state.artist : "") + "|" + (state ? state.duration : 0) + "|" + (state ? state.playing : false) + "|" + _tabmgrMediaArtWork(state) + "|#" + tabmgrMedia.index + "|Q" + ((tabmgrMedia.sources || []).length);
+}
+
+// Poster flicker guard: reuse the same <img> element per artwork URL across
+// re-renders so a queue change (new tab starts playing) doesn't re-decode and
+// flash the artwork. A single shared node is moved with appendChild, not rebuilt.
+const _tabmgrMediaArtCache = {};
+function _tabmgrMediaArtEl(artwork) {
+  const cached = artwork && _tabmgrMediaArtCache[artwork];
+  if (cached && !cached._bad) {
+    cached.setAttribute("src", artwork);
+    return cached;
+  }
+  const img = document.createElement("img");
+  img.className = "tabmgr-mp-art";
+  img.alt = "";
+  img.setAttribute("aria-hidden", "true");
+  img.referrerPolicy = "no-referrer";
+  img.src = artwork;
+  img.addEventListener("error", function () {
+    img._bad = true;
+    if (artwork) delete _tabmgrMediaArtCache[artwork];
+    const cover = img.closest ? img.closest(".tabmgr-mp-cover") : null;
+    if (cover) cover.classList.remove("is-artwork");
+    try { if (img.parentNode) img.parentNode.removeChild(img); } catch (e) {}
+  });
+  if (artwork) _tabmgrMediaArtCache[artwork] = img;
+  return img;
+}
+
+function _tabmgrMediaArtWork(state) {
+  const a = state && state.artwork ? String(state.artwork) : "";
+  return /^(https?:|data:image\/)/.test(a) ? a : "";
+}
+
+function _tabmgrMediaBox() { return document.getElementById("tabmgr-media"); }
+function _tabmgrMediaBody() { return document.getElementById("tabmgr-media-body"); }
+function _tabmgrMediaClear(child) { while (child && child.firstChild) child.removeChild(child.firstChild); }
+
+function _tabmgrMediaTitleText(tab, state) {
+  if (state) {
+    const ttl = (state.title || "").trim();
+    if (ttl) return ttl;
+    return t("tabmgr_media_unknown");
+  }
+  return (tab && tab.title) ? tab.title : t("tabmgr_media_unknown");
+}
+
+function _tabmgrMediaArtistText(tab, state) {
+  const artist = state && state.artist ? state.artist.trim() : "";
+  if (artist) return artist;
+  const dom = tab && tab.url ? _tabmgrDomain(tab.url) : "";
+  return dom || " ";
+}
+
+function _tabmgrMediaApplyUI() {
+  const box = _tabmgrMediaBox();
+  if (!box) return;
+  box.classList.toggle("is-off", !tabmgrMedia.enabled);
+  const check = document.getElementById("tabmgr-media-check");
+  if (check) check.checked = tabmgrMedia.enabled;
+  const lab = box.querySelector(".tabmgr-media-switch");
+  const titleKey = tabmgrMedia.enabled ? "tabmgr_media_toggle_hide" : "tabmgr_media_toggle_show";
+  if (lab) {
+    const msg = t(titleKey);
+    lab.setAttribute("title", msg);
+    lab.setAttribute("data-i18n-title", titleKey);
+  }
+  if (!tabmgrMedia.enabled) _tabmgrMediaClear(_tabmgrMediaBody());
+}
+
+function tabmgrMediaGetPref() { return tabmgrMedia.enabled; }
+
+function tabmgrMediaSetPref(enabled) {
+  tabmgrMedia.enabled = !!enabled;
+  storSet({ sf_tabmgr_media_player: tabmgrMedia.enabled });
+  tabmgrMedia.signature = "";
+  _tabmgrMediaApplyUI();
+  if (tabmgrMedia.enabled) _tabmgrMediaPoll();
+  else _tabmgrMediaStop();
+}
+
+function _tabmgrMediaSchedule(ms) {
+  _tabmgrMediaStop();
+  tabmgrMedia.timer = setTimeout(function () {
+    tabmgrMedia.timer = null;
+    _tabmgrMediaPoll();
+  }, ms);
+}
+
+function _tabmgrMediaStop() {
+  if (tabmgrMedia.timer) { clearTimeout(tabmgrMedia.timer); tabmgrMedia.timer = null; }
+}
+
+function _tabmgrMediaQueryAudible() {
+  const api = _getTabsApi();
+  if (!api || !api.query) return Promise.resolve([]);
+  return new Promise(function (resolve) {
+    let settled = false;
+    const done = function (tbs) { if (!settled) { settled = true; resolve(tbs || []); } };
+    try {
+      const p = api.query({ audible: true });
+      if (p && typeof p.then === "function") p.then(done).catch(function () { done([]); });
+      else api.query({ audible: true }, done);
+    } catch (e) { done([]); }
+    setTimeout(function () { done([]); }, 1500);
+  });
+}
+
+function tabmgrMediaRefresh() {
+  _tabmgrMediaPoll();
+}
+
+async function _tabmgrMediaPoll() {
+  const box = _tabmgrMediaBox();
+  if (!box || !tabmgrMedia.enabled || document.hidden) return;
+  if (tabmgrMedia.checking) return;
+  tabmgrMedia.checking = true;
+  try {
+    const audible = await _tabmgrMediaQueryAudible();
+    const full = [];
+    const titled = [];
+    const limit = Math.min(audible.length, 6);
+    for (let i = 0; i < limit; i++) {
+      const tab = audible[i];
+      if (!tab || tab.discarded || !tab.id) continue;
+      titled.push(tab);
+      try {
+        const res = await safeSendTabMessage(tab.id, { action: "MEDIA_GET_STATE" }, 600);
+        if (res && res.ok && res.state && res.state.hasMedia) {
+          full.push({ tab: tab, state: res.state });
+        }
+      } catch (e) {}
+    }
+    const playingSrc = full.filter(function (c) { return c.state.playing; });
+    const ordered = [];
+    const seen = {};
+    playingSrc.forEach(function (c) { if (!seen[c.tab.id]) { seen[c.tab.id] = 1; ordered.push(c); } });
+    full.forEach(function (c) { if (!seen[c.tab.id]) { seen[c.tab.id] = 1; ordered.push(c); } });
+    titled.forEach(function (tab) { if (!seen[tab.id]) { seen[tab.id] = 1; ordered.push({ tab: tab, state: null }); } });
+
+    // Sticky queue: a tab that briefly stops being "audible" (pause, mute blip,
+    // buffer gap) stays in the carousel for a grace period instead of vanishing
+    // mid-session and collapsing the prev/next controls.
+    const now = Date.now();
+    const KNOWN_TTL = 20000;
+    const known = tabmgrMedia.known || (tabmgrMedia.known = {});
+    const merged = ordered.slice();
+    Object.keys(known).forEach(function (id) {
+      const k = known[id];
+      if (now - k.ts >= KNOWN_TTL) { delete known[id]; return; }
+      if (!seen[id]) {
+        seen[id] = 1;
+        merged.push({ tab: k.tab, state: k.state });
+      }
+    });
+    ordered.forEach(function (c) { if (c.state) known[c.tab.id] = { ts: now, tab: c.tab, state: c.state }; });
+    if (merged.length > 6) merged.length = 6;
+
+    if (merged.length === 0) {
+      tabmgrMedia.sources = [];
+      tabmgrMedia.index = 0;
+      tabmgrMedia.sourceTabId = 0;
+      tabmgrMedia.sourceTab = null;
+      tabmgrMedia.state = null;
+      _tabmgrMediaRenderEmpty();
+      _tabmgrMediaSchedule(4000);
+      return;
+    }
+
+    const prevId = tabmgrMedia.sourceTabId;
+    let keptIndex = tabmgrMedia.index;
+    const stillThere = tabmgrMedia.sources.findIndex(function (c) { return c.tab.id === prevId; });
+    if (stillThere < 0) {
+      keptIndex = Math.min(tabmgrMedia.index, merged.length - 1);
+      keptIndex = Math.max(0, keptIndex);
+    }
+    tabmgrMedia.sources = merged;
+    tabmgrMedia.index = Math.min(keptIndex, merged.length - 1);
+    _tabmgrMediaApplyIndex();
+
+    const source = { tab: tabmgrMedia.sourceTab, state: tabmgrMedia.state };
+    const sig = _tabmgrMediaSignature(source.tab, source.state);
+    if (tabmgrMedia.signature !== sig) {
+      tabmgrMedia.signature = sig;
+      tabmgrMedia.lastPlay = null;
+      _tabmgrMediaRenderPlayer();
+    } else {
+      _tabmgrMediaPatchPlayer();
+    }
+    const interval = (tabmgrMedia.state && tabmgrMedia.state.playing) ? 900 : 2000;
+    _tabmgrMediaSchedule(interval);
+  } catch (e) {
+    _tabmgrMediaSchedule(4000);
+  } finally {
+    tabmgrMedia.checking = false;
+  }
+}
+
+function _tabmgrMediaApplyIndex() {
+  const list = tabmgrMedia.sources || [];
+  if (!list.length) {
+    tabmgrMedia.sourceTabId = 0;
+    tabmgrMedia.sourceTab = null;
+    tabmgrMedia.state = null;
+    return;
+  }
+  let idx = tabmgrMedia.index;
+  if (idx < 0 || idx >= list.length) idx = 0;
+  tabmgrMedia.index = idx;
+  const cur = list[idx];
+  tabmgrMedia.sourceTabId = cur.tab.id;
+  tabmgrMedia.sourceTab = cur.tab;
+  tabmgrMedia.state = cur.state;
+}
+
+function _tabmgrMediaIsMulti() {
+  return (tabmgrMedia.sources || []).length > 1;
+}
+
+function _tabmgrMediaStep(dir) {
+  const n = (tabmgrMedia.sources || []).length;
+  if (n < 2) return;
+  tabmgrMedia.index = (tabmgrMedia.index + dir + n) % n;
+  _tabmgrMediaApplyIndex();
+  tabmgrMedia.signature = "";
+  tabmgrMedia.lastPlay = null;
+  _tabmgrMediaRenderPlayer();
+}
+
+// Track-skip: prev/next buttons ask the CURRENT playing tab to change track on
+// its own page (site's next/prev control, via MEDIA_SKIP). The tab queue itself
+// is only rotated by the sleeve click / wheel / counter, never by these buttons.
+function _tabmgrMediaSkip(dir) {
+  const tabId = tabmgrMedia.sourceTabId;
+  if (!tabId) return;
+  safeSendTabMessage(tabId, { action: "MEDIA_SKIP", dir: dir }).then(function (res) {
+    if (res && res.state) {
+      tabmgrMedia.state = res.state;
+      tabmgrMedia.signature = "";
+      tabmgrMedia.lastPlay = null;
+      _tabmgrMediaPoll();
+    }
+  }).catch(function () {});
+}
+
+// Jump straight to a queued tab (used by the stacked-cover cards on hover/click).
+function _tabmgrMediaStepTo(idx) {
+  const n = (tabmgrMedia.sources || []).length;
+  if (n < 2 || idx < 0 || idx >= n || idx === tabmgrMedia.index) return;
+  if (tabmgrMedia.stepToAt > Date.now() - 220) return;
+  tabmgrMedia.stepToAt = Date.now();
+  tabmgrMedia.index = idx;
+  _tabmgrMediaApplyIndex();
+  tabmgrMedia.signature = "";
+  tabmgrMedia.lastPlay = null;
+  _tabmgrMediaRenderPlayer();
+}
+
+// Multi-source sleeve: stack the queued tabs as overlapping poster cards (front =
+// current tab). Hover fans them out in 3D; previewed cards keep their FIXED
+// --fan offsets (only z-order/highlight changes), so sweeping across the deck is
+// stable; a click is what actually switches the tab. A position pill (1/2) rides
+// on the sleeve. The fan opens via a debounced .is-open class so micro-crossings
+// along the rim cannot flap it open/closed.
+function _tabmgrMediaCoverStack(cover) {
+  const sources = tabmgrMedia.sources || [];
+  const n = sources.length;
+  if (n < 2) return;
+  const maxCards = Math.min(n, 4);
+  // Front card = current tab; the cards BEHIND follow the queue's source order
+  // (index ascending == whoever started playing first comes first). No re-rotation
+  // from the current index, so the fanned deck keeps a stable, chronological look.
+  const show = [tabmgrMedia.index];
+  const seen = {};
+  seen[tabmgrMedia.index] = true;
+  for (let k = 0; k < n && show.length < maxCards; k++) {
+    if (seen[k]) continue;
+    seen[k] = true;
+    show.push(k);
+  }
+  show.forEach(function (qidx, pos) {
+    const c = sources[qidx];
+    const art = _tabmgrMediaArtWork(c.state);
+    const card = document.createElement("div");
+    card.className = "tabmgr-mp-card" + (pos === 0 ? " is-front" : " is-behind");
+    card.dataset.idx = String(qidx);
+    card.style.setProperty("--fan", String(pos));
+    const title = (c.state && c.state.title) ? String(c.state.title)
+      : (c.tab && c.tab.title) ? String(c.tab.title) : "";
+    card.title = title || " ";
+    if (art) {
+      card.appendChild(_tabmgrMediaArtEl(art));
+    } else {
+      const ph = document.createElement("span");
+      ph.className = "tabmgr-mp-card-ph";
+      ph.textContent = (title || "?").charAt(0).toUpperCase();
+      card.appendChild(ph);
+    }
+    card.addEventListener("click", function (ev) {
+      ev.stopPropagation();
+      if (pos === 0) _tabmgrMediaStep(1);
+      else _tabmgrMediaStepTo(qidx);
+    });
+    if (pos > 0) {
+      // Hover only PREVIEWS the hovered card's title (no re-render, no movement);
+      // a click is what actually switches the tab.
+      card.addEventListener("pointerenter", function () {
+        _tabmgrMediaPreviewTo(qidx, title);
+      });
+    }
+    cover.appendChild(card);
+  });
+
+  // Visual fan: opens on enter, closes only after leaving for 130ms (debounce).
+  cover.addEventListener("pointerenter", function () {
+    cover.classList.add("is-open");
+  });
+  cover.addEventListener("pointerleave", function () {
+    clearTimeout(cover._mpCloseT);
+    cover._mpCloseT = setTimeout(function () {
+      if (cover.matches(":hover")) return;
+      cover.classList.remove("is-open");
+      _tabmgrMediaPreviewReset();
+    }, 130);
+  });
+
+  const badge = document.createElement("button");
+  badge.type = "button";
+  badge.className = "tabmgr-mp-count";
+  badge.title = t("tabmgr_media_list");
+  badge.textContent = (tabmgrMedia.index + 1) + "/" + n;
+  badge.addEventListener("click", function (ev) {
+    ev.stopPropagation();
+    _tabmgrMediaStep(1);
+  });
+  cover.appendChild(badge);
+}
+
+// Open the fan + preview the hovered card's title. Purely cosmetic: cards never
+// move and tabmgrMedia.index is untouched (no render, no thrash).
+function _tabmgrMediaPreviewTo(qidx, title) {
+  const cover = _tabmgrMediaCoverEl();
+  if (cover) cover.classList.add("is-open");
+  const titleEl = _tabmgrMediaTitleEl();
+  if (titleEl) {
+    titleEl.textContent = title || " ";
+    titleEl.classList.add("is-preview");
+  }
+}
+
+// Collapse the fan and restore the committed tab's real title.
+function _tabmgrMediaPreviewReset() {
+  const cover = _tabmgrMediaCoverEl();
+  if (cover) cover.classList.remove("is-open");
+  const titleEl = _tabmgrMediaTitleEl();
+  if (titleEl) {
+    const k = tabmgrMedia.known && tabmgrMedia.known[tabmgrMedia.sourceTabId];
+    const st = (tabmgrMedia.sourceTabId && k) ? k : null;
+    titleEl.textContent = _tabmgrMediaTitleText(st && st.tab, st && st.state);
+    titleEl.classList.remove("is-preview");
+  }
+}
+
+function _tabmgrMediaCoverEl() {
+  const mp = document.querySelector(".tabmgr-mp");
+  return mp ? mp.querySelector(".tabmgr-mp-cover") : null;
+}
+
+function _tabmgrMediaTitleEl() {
+  const mp = document.querySelector(".tabmgr-mp");
+  if (!mp) return null;
+  const info = mp.querySelector(".tabmgr-mp-info");
+  return info ? info.querySelector(".tabmgr-mp-title") : null;
+}
+
+function _tabmgrMediaOnWheel(n) {
+  if (tabmgrMedia.wheelAt > Date.now() - 240) return;
+  tabmgrMedia.wheelAt = Date.now();
+  const step = n > 0 ? 1 : -1;
+  _tabmgrMediaStep(step);
+}
+
+// Event-driven media refresh: tab open/close/activate/audible changes must show
+// up in the ‹n/m› counter quickly, not on the next slow poll. Coalesces bursts.
+function _tabmgrMediaEventRefresh() {
+  if (tabmgrMedia.evPending) return;
+  tabmgrMedia.evPending = true;
+  setTimeout(function () {
+    tabmgrMedia.evPending = false;
+    tabmgrMediaRefresh();
+  }, 260);
+}
+
+// Realtime removal: when a sourced tab is closed browser-side, drop it from the
+// queue immediately (and from the sticky known map) instead of waiting for the
+// next poll; step to a neighbour if it was the current source.
+function _tabmgrMediaEvRemoved(tabId) {
+  if (tabmgrMedia.known) delete tabmgrMedia.known[tabId];
+  const list = tabmgrMedia.sources || [];
+  const idx = list.findIndex(function (c) { return c.tab.id === tabId; });
+  if (idx < 0) return;
+  list.splice(idx, 1);
+  if (list.length === 0) {
+    tabmgrMedia.sources = [];
+    tabmgrMedia.index = 0;
+    tabmgrMedia.sourceTabId = 0;
+    tabmgrMedia.sourceTab = null;
+    tabmgrMedia.state = null;
+    _tabmgrMediaRenderEmpty();
+    return;
+  }
+  if (tabmgrMedia.index >= list.length) tabmgrMedia.index = list.length - 1;
+  tabmgrMedia.signature = "";
+  tabmgrMedia.lastPlay = null;
+  _tabmgrMediaApplyIndex();
+  _tabmgrMediaRenderPlayer();
+}
+
+// Pause every queued tab that is actually playing (or unmuted fallback), keeping
+// only the currently displayed tab's audio — analog to a "pause others" shortcut.
+function _tabmgrMediaPauseOthers() {
+  const curId = tabmgrMedia.sourceTabId;
+  let sent = 0;
+  (tabmgrMedia.sources || []).forEach(function (c) {
+    if (!c.tab || c.tab.id === curId) return;
+    if (c.state && c.state.hasMedia) {
+      sent++;
+      safeSendTabMessage(c.tab.id, { action: "MEDIA_TOGGLE" }).then(function (res) {
+        if (res && res.state && tabmgrMedia.known) {
+          tabmgrMedia.known[c.tab.id] = { ts: Date.now(), tab: c.tab, state: res.state };
+        }
+      }).catch(function () {});
+    } else {
+      const muted = !!(c.tab.mutedInfo && c.tab.mutedInfo.muted);
+      if (!muted) { sent++; tabmgrToggleMute(c.tab.id, true); }
+    }
+  });
+  if (sent > 0) _tabmgrMediaEventRefresh();
+}
+
+function _tabmgrMediaRenderEmpty() {
+  const body = _tabmgrMediaBody();
+  const box = _tabmgrMediaBox();
+  if (!body || !box) return;
+  _tabmgrMediaSeekStop();
+  box.classList.remove("has-source");
+  if (body.dataset.empty === "1") return;
+  body.dataset.empty = "1";
+  _tabmgrMediaClear(body);
+  const line = document.createElement("div");
+  line.className = "tabmgr-mp-empty";
+  const dot = document.createElement("span");
+  dot.className = "tabmgr-mp-empty-dot";
+  const txt = document.createElement("span");
+  txt.textContent = t("tabmgr_media_no_source");
+  line.appendChild(dot);
+  line.appendChild(txt);
+  body.appendChild(line);
+}
+
+function _tabmgrMediaSvgBtn(pathD, title, className) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = className || "tabmgr-mp-tbtn";
+  b.title = title;
+  b.appendChild(_tabmgrSvg(pathD));
+  return b;
+}
+
+function _tabmgrMediaOnPlay() {
+  if (tabmgrMedia.sourceTabId && !tabmgrMedia.state) {
+    const tab = tabmgrMedia.sourceTab;
+    const muted = !!(tab && tab.mutedInfo && tab.mutedInfo.muted);
+    tabmgrToggleMute(tabmgrMedia.sourceTabId, !muted);
+    return;
+  }
+  if (tabmgrMedia.sourceTabId) {
+    safeSendTabMessage(tabmgrMedia.sourceTabId, { action: "MEDIA_TOGGLE" }).then(function (res) {
+      if (res && res.state) {
+        tabmgrMedia.state = res.state;
+        tabmgrMedia.signature = "";
+        tabmgrMedia.lastPlay = null;
+        _tabmgrMediaPoll();
+      }
+    });
+  }
+}
+
+function _tabmgrMediaOnMute() {
+  if (!tabmgrMedia.sourceTabId) return;
+  const tab = tabmgrMedia.sourceTab;
+  const muted = !!(tab && tab.mutedInfo && tab.mutedInfo.muted);
+  tabmgrToggleMute(tabmgrMedia.sourceTabId, !muted);
+}
+
+function _tabmgrMediaRenderPlayer() {
+  const body = _tabmgrMediaBody();
+  const box = _tabmgrMediaBox();
+  if (!body || !box) return;
+  delete body.dataset.empty;
+  box.classList.add("has-source");
+  _tabmgrMediaClear(body);
+
+  const tab = tabmgrMedia.sourceTab;
+  const state = tabmgrMedia.state;
+  const playing = !!(state && state.playing);
+
+  const mp = document.createElement("div");
+  mp.className = "tabmgr-mp";
+
+  // --- top: sleeve (cover + thumbnail) + vinyl half-out + info + play/pause ---
+  const top = document.createElement("div");
+  top.className = "tabmgr-mp-top";
+
+  const vinyl = document.createElement("div");
+  vinyl.className = "tabmgr-mp-vinyl" + (playing ? " is-spin" : "");
+
+  const cover = document.createElement("div");
+  cover.className = "tabmgr-mp-cover";
+  if (_tabmgrMediaIsMulti()) {
+    cover.classList.add("is-multi");
+    cover.title = t("tabmgr_media_list");
+    cover.addEventListener("click", function () { _tabmgrMediaStep(1); });
+    _tabmgrMediaCoverStack(cover);
+  } else {
+    const artwork = _tabmgrMediaArtWork(state);
+    if (artwork) {
+      cover.classList.add("is-artwork");
+      cover.appendChild(_tabmgrMediaArtEl(artwork));
+    }
+  }
+
+  const info = document.createElement("div");
+  info.className = "tabmgr-mp-info";
+
+  const now = document.createElement("div");
+  now.className = "tabmgr-mp-now";
+  const eq = document.createElement("span");
+  eq.className = "tabmgr-mp-eq" + (playing ? "" : " is-stop");
+  for (let i = 0; i < 4; i++) {
+    const bar = document.createElement("span");
+    eq.appendChild(bar);
+  }
+  const nowTxt = document.createElement("span");
+  nowTxt.textContent = playing ? t("tabmgr_media_now_playing") : t("tabmgr_media_pause");
+  now.appendChild(eq);
+  now.appendChild(nowTxt);
+
+  const titleEl = document.createElement("div");
+  titleEl.className = "tabmgr-mp-title";
+  titleEl.textContent = _tabmgrMediaTitleText(tab, state);
+
+  const artistEl = document.createElement("div");
+  artistEl.className = "tabmgr-mp-artist";
+  artistEl.textContent = _tabmgrMediaArtistText(tab, state);
+
+  info.appendChild(now);
+  info.appendChild(titleEl);
+  info.appendChild(artistEl);
+
+  top.appendChild(vinyl);
+  top.appendChild(cover);
+  top.appendChild(info);
+
+  // --- seek row: video-style playback progress bar (agent-backed only) ---
+  if (state) {
+    mp.appendChild(_tabmgrMediaSeekEl(state));
+  }
+
+  // --- tools (MUSIC): left [play + prev-track + next-track] | right [pause-all + mute + open] ---
+  const tools = document.createElement("div");
+  tools.className = "tabmgr-mp-tools";
+  const toolsL = document.createElement("div");
+  toolsL.className = "tabmgr-mp-tools-group";
+  const toolsR = document.createElement("div");
+  toolsR.className = "tabmgr-mp-tools-group";
+  if (state) {
+    const playBtn = document.createElement("button");
+    playBtn.type = "button";
+    playBtn.className = "tabmgr-mp-playbtn";
+    playBtn.title = playing ? t("tabmgr_media_pause") : t("tabmgr_media_play");
+    playBtn.appendChild(playing
+      ? _tabmgrSvgWithExtra([{ tag: "rect", attrs: { x: "6", y: "4", width: "4", height: "16", rx: "1" } }, { tag: "rect", attrs: { x: "14", y: "4", width: "4", height: "16", rx: "1" } }])
+      : _tabmgrSvg("M8 5v14l11-7z"));
+    playBtn.addEventListener("click", _tabmgrMediaOnPlay);
+    toolsL.appendChild(playBtn);
+  }
+  const prevBtn = _tabmgrMediaSvgBtn("M15 18l-6-6 6-6", t("tabmgr_media_prev"), "tabmgr-mp-tbtn tabmgr-mp-prev");
+  prevBtn.addEventListener("click", function () { _tabmgrMediaSkip(-1); });
+  const nextBtn = _tabmgrMediaSvgBtn("M9 18l6-6-6-6", t("tabmgr_media_next"), "tabmgr-mp-tbtn tabmgr-mp-next");
+  nextBtn.addEventListener("click", function () { _tabmgrMediaSkip(1); });
+  toolsL.appendChild(prevBtn);
+  toolsL.appendChild(nextBtn);
+  if (_tabmgrMediaIsMulti()) {
+    const pauseAllBtn = _tabmgrMediaSvgBtn(
+      "M8 5v14h3V5H8zM13 5v14h3V5h-3z",
+      t("tabmgr_media_pause_all"),
+      "tabmgr-mp-tbtn tabmgr-mp-pause-all"
+    );
+    const pauseAllLabel = document.createElement("span");
+    pauseAllLabel.className = "tabmgr-mp-pause-all-label";
+    pauseAllLabel.textContent = t("tabmgr_media_pause_all_short");
+    pauseAllBtn.appendChild(pauseAllLabel);
+    pauseAllBtn.addEventListener("click", _tabmgrMediaPauseOthers);
+    toolsR.appendChild(pauseAllBtn);
+    top.addEventListener("wheel", function (e) {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) return;
+      _tabmgrMediaOnWheel(e.deltaX > 0 ? 1 : -1);
+    });
+  }
+  const muteBtn = _tabmgrMediaSvgBtn("M11 5L6 9H2v6h4l5 5V5z", t("tabmgr_media_mute"), "tabmgr-mp-tbtn tabmgr-mp-mute");
+  if (tab && tab.mutedInfo && tab.mutedInfo.muted) {
+    muteBtn.classList.add("is-active");
+    muteBtn.title = t("tabmgr_media_unmute");
+  }
+  muteBtn.addEventListener("click", _tabmgrMediaOnMute);
+  const openBtn = _tabmgrMediaSvgBtn("M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3", t("tabmgr_media_open_tab"), "tabmgr-mp-tbtn");
+  openBtn.addEventListener("click", function () { if (tabmgrMedia.sourceTabId) tabmgrActivateTab(tabmgrMedia.sourceTabId); });
+  toolsR.appendChild(muteBtn);
+  toolsR.appendChild(openBtn);
+  tools.appendChild(toolsL);
+  tools.appendChild(toolsR);
+
+  mp.appendChild(top);
+  mp.appendChild(tools);
+  body.appendChild(mp);
+
+  _tabmgrMediaPatchPlayer();
+}
+
+function _tabmgrMediaPatchPlayer() {
+  const mp = document.querySelector("#tabmgr-media-body .tabmgr-mp");
+  if (!mp) return;
+  const state = tabmgrMedia.state;
+  const muted = !!(tabmgrMedia.sourceTab && tabmgrMedia.sourceTab.mutedInfo && tabmgrMedia.sourceTab.mutedInfo.muted);
+  // fallback (no agent state): audible == playing until muted
+  const playing = state ? !!(state.playing) : !muted;
+
+  const vinyl = mp.querySelector(".tabmgr-mp-vinyl");
+  if (vinyl) vinyl.classList.toggle("is-spin", !!playing);
+
+  const eq = mp.querySelector(".tabmgr-mp-eq");
+  if (eq) eq.classList.toggle("is-stop", !playing);
+
+  const nowTxt = mp.querySelector(".tabmgr-mp-now > span:last-child");
+  if (nowTxt) nowTxt.textContent = playing ? t("tabmgr_media_now_playing") : t("tabmgr_media_pause");
+
+  const playBtn = mp.querySelector(".tabmgr-mp-playbtn");
+  if (playBtn) {
+    if (playing !== tabmgrMedia.lastPlay) {
+      tabmgrMedia.lastPlay = playing;
+      _tabmgrMediaClear(playBtn);
+      playBtn.title = playing ? t("tabmgr_media_pause") : t("tabmgr_media_play");
+      playBtn.appendChild(playing
+        ? _tabmgrSvgWithExtra([{ tag: "rect", attrs: { x: "6", y: "4", width: "4", height: "16", rx: "1" } }, { tag: "rect", attrs: { x: "14", y: "4", width: "4", height: "16", rx: "1" } }])
+        : _tabmgrSvg("M8 5v14l11-7z"));
+    }
+  }
+
+  const vpb = mp.querySelector(".tabmgr-vpb");
+  const timeEl = mp.querySelector(".tabmgr-vpb-time");
+  if (vpb && timeEl && !tabmgrMedia.dragging) {
+    _tabmgrMediaSeekUI(vpb, timeEl, state ? state.currentTime : 0, state ? state.duration : 0);
+    _tabmgrMediaSeekSetBase(vpb, state ? state.currentTime : 0, state ? state.duration : 0, playing);
+    _tabmgrMediaSeekStart();
+  }
+
+  const muteBtn = mp.querySelector(".tabmgr-mp-mute");
+  if (muteBtn) {
+    muteBtn.classList.toggle("is-active", muted);
+    muteBtn.title = muted ? t("tabmgr_media_unmute") : t("tabmgr_media_mute");
+  }
+
+  const countBtn = mp.querySelector(".tabmgr-mp-count");
+  const n = (tabmgrMedia.sources || []).length;
+  if (countBtn) countBtn.textContent = (tabmgrMedia.index + 1) + "/" + n;
+  const cover = mp.querySelector(".tabmgr-mp-cover");
+  if (cover) cover.classList.toggle("is-multi", n > 1);
+
+  // Pause-others active state: lit up while ANY other queued source is silent
+  // (paused via MEDIA or muted fallback) — a clear "your pause is in effect" cue.
+  const pauseAllBtn = mp.querySelector(".tabmgr-mp-pause-all");
+  if (pauseAllBtn) {
+    const othersSilent = (tabmgrMedia.sources || []).some(function (c) {
+      if (!c.tab || c.tab.id === tabmgrMedia.sourceTabId) return false;
+      if (c.state && c.state.hasMedia) return !c.state.playing;
+      return !!(c.tab.mutedInfo && c.tab.mutedInfo.muted);
+    });
+    pauseAllBtn.classList.toggle("is-active", othersSilent);
+  }
+}
+
 onReady(function () {
+  // Music player banner: restore pref + bind the on/off switch
+  storGet(TABMGR_MEDIA_KEY, function (res) {
+    const v = res && res.sf_tabmgr_media_player;
+    tabmgrMedia.enabled = v === undefined ? true : !!v;
+    _tabmgrMediaApplyUI();
+    if (tabmgrMedia.enabled) _tabmgrMediaPoll();
+  });
+  const mediaCheck = document.getElementById("tabmgr-media-check");
+  if (mediaCheck) mediaCheck.addEventListener("change", function () { tabmgrMediaSetPref(mediaCheck.checked); });
+
   const searchInput = document.getElementById("tabmgr-search");
   if (searchInput) searchInput.addEventListener("input", function () { tabmgrState.filter = searchInput.value; tabmgrRenderList(); });
   const sortSel = document.getElementById("tabmgr-sort");
@@ -669,30 +1572,21 @@ onReady(function () {
   if (btnSaveSess) btnSaveSess.addEventListener("click", tabmgrSaveSession);
   const btnGroupBrowser = document.getElementById("btn-tabmgr-group-browser");
   if (btnGroupBrowser) btnGroupBrowser.addEventListener("click", tabmgrGroupInBrowser);
-  // refresh active-live display via events only (no ping)
-  function _tabmgrUpdateActiveLive() {
-    const activeInfo = document.getElementById("tabmgr-active-live");
-    if (!activeInfo) return;
-    const active = tabmgrState.tabs.find(function (x) { return x.active; });
-    if (active) activeInfo.textContent = (active.title || active.url || "").slice(0, 50);
-    else if (tabmgrState.tabs.length) activeInfo.textContent = tabmgrState.tabs.length + " tabs";
-    else activeInfo.textContent = t("tabmgr_empty");
-  }
-  const _origRender = tabmgrRenderList;
-  tabmgrRenderList = function () { _origRender(); _tabmgrUpdateActiveLive(); };
+  // refresh active-tab display rides on tabmgrRenderList itself (no dedicated hook)
   tabmgrLoadTabs();
   tabmgrLoadSessions();
-  document.addEventListener("visibilitychange", function () { if (!document.hidden) tabmgrLoadTabs(); });
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) { tabmgrLoadTabs(); tabmgrMediaRefresh(); } });
   // Debounced event refresh: onUpdated fires many times per page-load; coalesce bursts.
   let _tabmgrEvT = null;
   function _tabmgrEventRefresh() {
     if (_tabmgrEvT) return;
-    _tabmgrEvT = setTimeout(function () { _tabmgrEvT = null; tabmgrLoadTabs(); }, 200);
+    _tabmgrEvT = setTimeout(function () { _tabmgrEvT = null; tabmgrLoadTabs(); _tabmgrMediaEventRefresh(); }, 200);
   }
   try {
     const api = _getTabsApi();
     if (api && api.onUpdated && api.onUpdated.addListener) api.onUpdated.addListener(_tabmgrEventRefresh);
     if (api && api.onRemoved && api.onRemoved.addListener) api.onRemoved.addListener(_tabmgrEventRefresh);
+    if (api && api.onRemoved && api.onRemoved.addListener) api.onRemoved.addListener(function (tabId) { _tabmgrMediaEvRemoved(tabId); });
     if (api && api.onCreated && api.onCreated.addListener) api.onCreated.addListener(_tabmgrEventRefresh);
     if (api && api.onActivated && api.onActivated.addListener) api.onActivated.addListener(_tabmgrEventRefresh);
     if (api && api.onHighlighted && api.onHighlighted.addListener) api.onHighlighted.addListener(_tabmgrEventRefresh);

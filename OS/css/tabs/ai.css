@@ -292,19 +292,25 @@ body.is-popup .ai-chat-wrapper {
   display: flex;
   gap: 6px;
   align-items: center;
-  padding: 6px;
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 10px;
+  padding: 4px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
   position: sticky;
   bottom: 0;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ai-input-row:focus-within {
+  border-color: rgba(56, 189, 248, 0.55);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.12);
 }
 
 .ai-input {
   flex: 1;
   background: transparent;
   border: none;
-  padding: 7px 6px;
+  padding: 6px 4px;
   font-size: 12px;
   color: #f1f5f9;
   resize: none;
@@ -351,15 +357,37 @@ body.is-popup .ai-chat-wrapper {
   background-clip: padding-box;
 }
 
+/* Compact composer: attach button, input field & send button share the same slim height */
+#ai-btn-attach-image {
+  flex: 0 0 auto;
+  height: 30px;
+  padding: 0 10px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  border-radius: 9px;
+}
+
 .ai-send-btn {
-  background: #0ea5e9;
+  background: linear-gradient(135deg, #7c3aed, #0ea5e9);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 9px;
   padding: 0 14px;
-  height: 34px;
+  height: 30px;
+  font-size: 12px;
   font-weight: 700;
+  letter-spacing: 0.2px;
   cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.1s ease;
+}
+
+.ai-send-btn:hover {
+  opacity: 0.92;
+}
+
+.ai-send-btn:active {
+  transform: scale(0.98);
 }
 
 .ai-msg {
@@ -732,33 +760,85 @@ body.is-popup .ai-chat-wrapper {
 
 .ai-typing-row .ai-typing {
   display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  min-width: 0;
+}
+
+.ai-dots {
+  display: flex;
   gap: 6px;
   align-items: center;
-  padding: 10px 14px;
 }
 
 .ai-pipeline-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: 8px;
-  padding: 2px 10px;
-  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  gap: 7px;
+  min-width: 0;
+  padding: 9px 12px;
+  border-radius: 9px;
   font-size: 11px;
-  font-weight: 600;
-  color: #38bdf8;
-  background: linear-gradient(90deg, rgba(56, 189, 248, 0.12) 0%, rgba(124, 58, 237, 0.22) 50%, rgba(56, 189, 248, 0.12) 100%);
-  background-size: 200% 100%;
-  border: 1px solid rgba(56, 189, 248, 0.35);
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
-  animation: aiStatusGlow 2.5s infinite linear;
-  line-height: 1.4;
+  line-height: 1.45;
   letter-spacing: 0.2px;
+  color: #cbd5f5;
+  background: linear-gradient(180deg, rgba(30, 27, 75, 0.55), rgba(30, 27, 75, 0.35));
+  border: 1px solid rgba(124, 58, 237, 0.35);
+  border-left: 3px solid #8b5cf6;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
 }
 
-@keyframes aiStatusGlow {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+.ai-pipe-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ai-pipe-label {
+  font-weight: 700;
+  font-size: 11px;
+  color: #c4b5fd;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-pipe-step {
+  flex-shrink: 0;
+  min-width: 34px;
+  text-align: center;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #bfdbfe;
+  background: rgba(56, 189, 248, 0.18);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+}
+
+.ai-pipe-track {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.09);
+  overflow: hidden;
+}
+
+.ai-pipe-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #38bdf8, #8b5cf6);
+  transition: width 0.3s ease;
+}
+
+.ai-pipe-text {
+  color: rgba(203, 213, 245, 0.88);
+  font-size: 11px;
+  font-weight: 500;
 }
 
 .ai-dot {
@@ -1152,15 +1232,7 @@ body.is-popup .ai-chat-wrapper {
   align-items: center;
   flex: 1;
   min-width: 0;
-  background: rgba(2, 6, 23, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
   padding: 0 8px;
-  transition: border-color 0.15s ease;
-}
-
-.ai-input-wrap:focus-within {
-  border-color: rgba(56, 189, 248, 0.5);
 }
 
 .ai-input-wrap .ai-input {

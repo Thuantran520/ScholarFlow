@@ -347,22 +347,27 @@ body.is-popup .ai-chip {
 
 body.is-popup .ai-input-row {
   border-radius: 12px;
-  padding: 8px;
+  padding: 4px;
   background: rgba(2, 6, 23, 0.6);
   border-color: rgba(124, 58, 237, 0.25);
 }
 
+body.is-popup .ai-input-row:focus-within {
+  border-color: rgba(124, 58, 237, 0.55);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+}
+
 body.is-popup .ai-input {
-  font-size: 12.5px;
+  font-size: 12px;
   min-height: 0;
-  padding: 11px 8px;
+  padding: 6px 0;
   line-height: 1.5;
 }
 
 body.is-popup .ai-send-btn {
-  height: 38px;
-  padding: 0 16px;
-  border-radius: 10px;
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 9px;
   background: linear-gradient(135deg, #7c3aed, #0ea5e9);
 }
 

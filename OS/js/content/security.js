@@ -118,24 +118,141 @@
     return rep;
   }
 
+  let _phishAllowed = {};
+  function _phishHost() {
+    try { return (window && window.location && window.location.hostname ? window.location.hostname : "").toLowerCase(); } catch (e) { return ""; }
+  }
+  function _phishAllowHost(host) {
+    if (!host) return;
+    const h = String(host).toLowerCase();
+    _phishAllowed[h] = true;
+    try {
+      const getS = (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) ? chrome.storage.local
+        : (typeof browser !== "undefined" && browser.storage && browser.storage.local) ? browser.storage.local : null;
+      if (!getS) return;
+      const write = function (res) {
+        const arr = Array.isArray(res && res.sf_phish_allow) ? res.sf_phish_allow.slice() : [];
+        if (arr.indexOf(h) === -1) arr.push(h);
+        try {
+          const sp = getS.set({ sf_phish_allow: arr });
+          if (sp && typeof sp.then === "function") sp.then(function () {}, function () {});
+          else getS.set({ sf_phish_allow: arr }, function () {});
+        } catch (e) {}
+      };
+      const p = getS.get("sf_phish_allow");
+      if (p && typeof p.then === "function") p.then(write, function () { write({}); });
+      else getS.get("sf_phish_allow", write);
+    } catch (e) {}
+  }
+  function _buildPhishingOverlay(info, onGo) {
+    let msg = "";
+    if (typeof tContent === "function") {
+      if (info.type === "typo") msg = tContent("phish_typo", info.host || "", info.typo || "");
+      else if (info.type === "punycode") msg = tContent("phish_puny", info.host || "");
+      else msg = tContent("phish_block", info.rule || info.host || "");
+    }
+    if (!msg) {
+      if (info.type === "typo") msg = "ScholarFlow: possible typo-squat '" + info.host + "' looks like '" + info.typo + "' — check URL carefully.";
+      else if (info.type === "punycode") msg = "ScholarFlow: punycode host '" + info.host + "' — possible homograph attack.";
+      else msg = "ScholarFlow Real-Time Protection: phishing pattern (" + (info.rule || info.host) + ")";
+    }
+    const ov = document.createElement("div");
+    ov.id = "__sf_phishing_banner";
+    ov.setAttribute("role", "alertdialog");
+    ov.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;background:rgba(12,3,3,0.74);backdrop-filter:blur(2px);font-family:system-ui,sans-serif;";
+    const card = document.createElement("div");
+    card.setAttribute("role", "document");
+    card.style.cssText = "max-width:520px;width:92%;background:#fff;color:#1f2937;border-radius:14px;padding:26px 28px;box-shadow:0 12px 44px rgba(0,0,0,0.55);border-top:6px solid #ef4444;text-align:center;";
+    const icon = document.createElement("div");
+    icon.textContent = "⚠️";
+    icon.style.cssText = "font-size:42px;line-height:1;";
+    const title = document.createElement("div");
+    const titleLabel = typeof tContent === "function" ? tContent("phish_title") : "";
+    title.textContent = titleLabel || "Phishing warning";
+    title.style.cssText = "font-size:18px;font-weight:800;color:#dc2626;margin-top:12px;text-transform:uppercase;";
+    const body = document.createElement("div");
+    body.textContent = "⚠️ " + msg;
+    body.style.cssText = "font-size:13px;line-height:1.55;color:#374151;margin-top:12px;word-break:break-word;";
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex;gap:10px;justify-content:center;margin-top:20px;flex-wrap:wrap;";
+    const goLabel = (typeof tContent === "function" ? tContent("phish_continue") : "") || "Continue to site";
+    const go = document.createElement("button");
+    go.textContent = goLabel;
+    go.style.cssText = "background:#16a34a;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;";
+    go.addEventListener("click", function () { try { if (typeof onGo === "function") onGo(); } catch (e) {} ov.remove(); });
+    const dismissLabel = (typeof tContent === "function" ? tContent("phish_dismiss") : "") || "Dismiss";
+    const x = document.createElement("button");
+    x.textContent = dismissLabel;
+    x.style.cssText = "background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer;";
+    x.addEventListener("click", function () { ov.remove(); });
+    row.appendChild(go);
+    row.appendChild(x);
+    card.appendChild(icon);
+    card.appendChild(title);
+    card.appendChild(body);
+    card.appendChild(row);
+    ov.appendChild(card);
+    return ov;
+  }
   function _showPhishingBanner(info) {
+    const host = _phishHost();
+    if (host && _phishAllowed[host]) return;
     if (document.getElementById("__sf_phishing_banner")) return;
-    const b = document.createElement("div");
-    b.id = "__sf_phishing_banner";
-    b.setAttribute("role", "alert");
-    b.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:2147483647;background:#7f1d1d;color:#fff;padding:10px 14px;font-family:system-ui,sans-serif;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 2px 12px rgba(0,0,0,0.4);border-bottom:2px solid #ef4444;";
-    const t = document.createElement("span");
-    let msg = "ScholarFlow Real-Time Protection: phishing pattern (" + (info.rule || info.host) + ")";
-    if (info.type === "typo") msg = "ScholarFlow: possible typo-squat '" + info.host + "' looks like '" + info.typo + "' — check URL carefully.";
-    if (info.type === "punycode") msg = "ScholarFlow: punycode host '" + info.host + "' — possible homograph attack.";
-    t.textContent = "⚠️ " + msg;
-    const c = document.createElement("button");
-    c.textContent = "×";
-    c.style.cssText = "background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:6px;padding:2px 8px;cursor:pointer;font-size:14px;";
-    c.addEventListener("click", function () { b.remove(); });
-    b.appendChild(t);
-    b.appendChild(c);
-    (document.documentElement || document.body).appendChild(b);
+    const ov = _buildPhishingOverlay(info, function () { if (host) _phishAllowHost(host); });
+    (document.documentElement || document.body).appendChild(ov);
+  }
+  function _showPhishLinkOverlay(info, onGo) {
+    if (document.getElementById("__sf_phishing_banner")) return;
+    const ov = _buildPhishingOverlay(info, onGo);
+    (document.documentElement || document.body).appendChild(ov);
+  }
+  let _phishClickHandler = null;
+  function _phishFindAnchor(t) {
+    let el = t;
+    while (el && el.nodeType === 1 && String(el.tagName || "").toUpperCase() !== "A") el = el.parentElement;
+    return el && String(el.tagName || "").toUpperCase() === "A" ? el : null;
+  }
+  function _phishClickCap(e) {
+    try {
+      const a = _phishFindAnchor(e.target);
+      if (!a) return;
+      let href = a.getAttribute("href");
+      if (!href || /^(javascript:)/i.test(href)) return;
+      let abs = "";
+      try { abs = a.href ? String(a.href) : ""; } catch (err) { abs = ""; }
+      if (!abs) return;
+      let info = null;
+      try { info = _isPhishing(abs); } catch (err) { info = null; }
+      if (!info) return;
+      let h = "";
+      try { h = new URL(abs).hostname.toLowerCase(); } catch (err) { h = ""; }
+      if (h && _phishAllowed[h]) return;
+      e.preventDefault();
+      try { e.stopPropagation(); } catch (err) {}
+      const newTab = e.button === 1 || !!e.ctrlKey || !!e.metaKey || /^_blank$/i.test(a.target || "");
+      const url = abs;
+      _showPhishLinkOverlay(info, function () {
+        if (h) _phishAllowHost(h);
+        try { if (newTab) window.open(url, "_blank"); else window.location.href = url; } catch (e2) {}
+      });
+    } catch (e) {}
+  }
+  function _enablePhishClickBlock() {
+    try {
+      if (_phishClickHandler || typeof document === "undefined" || !document.addEventListener) return;
+      const handler = function (e) { _phishClickCap(e); };
+      document.addEventListener("click", handler, true);
+      document.addEventListener("auxclick", handler, true);
+      _phishClickHandler = handler;
+    } catch (e) {}
+  }
+  function _disablePhishClickBlock() {
+    try {
+      if (!_phishClickHandler || typeof document === "undefined" || !document.removeEventListener) return;
+      document.removeEventListener("click", _phishClickHandler, true);
+      document.removeEventListener("auxclick", _phishClickHandler, true);
+      _phishClickHandler = null;
+    } catch (e) {}
   }
 
   function scanPhishing() {
@@ -144,7 +261,10 @@
       const href = (window._document !== null && window.location && window.location.href) ? window.location.href : "";
       if (!href) return null;
       const info = _isPhishing(href);
-      if (info) _showPhishingBanner(info);
+      if (info) {
+        const h = _phishHost();
+        if (!(h && _phishAllowed[h])) _showPhishingBanner(info);
+      }
       return info;
     } catch (e) { return null; }
   }
@@ -259,44 +379,60 @@
     } catch (e) { return false; }
   }
 
-  window.__sfSecurity = { scanPhishing: scanPhishing, scanClickjacking: scanClickjacking, unlockPage: unlockPage, lockPage: lockPage, isPhishing: _isPhishing, isTypoSquat: _isTypoSquat };
+  window.__sfSecurity = { scanPhishing: scanPhishing, scanClickjacking: scanClickjacking, unlockPage: unlockPage, lockPage: lockPage, isPhishing: _isPhishing, isTypoSquat: _isTypoSquat,
+    enablePhishClickBlock: _enablePhishClickBlock, disablePhishClickBlock: _disablePhishClickBlock, isPhishClickEnabled: function () { return !!_phishClickHandler; } };
 
   // auto-run based on storage
   try {
-    const key = "sf_security_settings";
     const get = (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) ? chrome.storage.local : (typeof browser !== "undefined" && browser.storage && browser.storage.local) ? browser.storage.local : null;
-    const read = function (cb) {
+    const readStor = function (key, cb) {
       if (!get) return cb({});
       try {
         const p = get.get(key);
-        if (p && typeof p.then === "function") p.then(cb).catch(function () { cb({}); });
-        else get.get(key, cb);
+        if (p && typeof p.then === "function") p.then(function (r) { cb(r || {}); }).catch(function () { cb({}); });
+        else get.get(key, function (r) { cb(r || {}); });
       } catch (e) { cb({}); }
     };
-    read(function (res) {
+    readStor("sf_phish_allow", function (allowRes) {
       try {
-        const s = (res && res[key]) || { phishing: true, clickjack: true, autoBlock: true, unlockSites: {} };
-        if (s.phishing) scanPhishing();
-        if (s.clickjack) {
-          setTimeout(function () { try { scanClickjacking(!!s.autoBlock); } catch (e2) {} }, 1200);
-          try {
-            if (typeof window !== "undefined" && window && window._document !== null && window.document && window.document.documentElement) {
-              const obs = new MutationObserver(function () { try { scanClickjacking(!!s.autoBlock); } catch (e2) {} });
-              obs.observe(document.documentElement, { childList: true, subtree: true });
-              setTimeout(function () { try { obs.disconnect(); } catch (e2) {} }, 15000);
-            }
-          } catch (e2) {}
-        }
-        let host = "";
-        try { host = (typeof window !== "undefined" && window && window._document !== null && window.location && window.location.hostname ? window.location.hostname : "").toLowerCase(); } catch (e2) { host = ""; }
-        if (host && s.unlockSites && s.unlockSites[host]) unlockPage(true);
-        else if (s.unlock) unlockPage(false);
-      } catch (e2) {}
+        const arr = (allowRes && allowRes.sf_phish_allow) || [];
+        if (Array.isArray(arr)) arr.forEach(function (h) { if (h) _phishAllowed[String(h).toLowerCase()] = true; });
+      } catch (e) {}
+      readStor("sf_security_settings", function (res) {
+        try {
+          const s = (res && res.sf_security_settings) || { phishing: true, clickjack: true, autoBlock: true, unlockSites: {} };
+          if (s.phishing) scanPhishing();
+          if (s.clickBlock !== false) _enablePhishClickBlock();
+          if (s.clickjack) {
+            setTimeout(function () { try { scanClickjacking(!!s.autoBlock); } catch (e2) {} }, 1200);
+            try {
+              if (typeof window !== "undefined" && window && window._document !== null && window.document && window.document.documentElement) {
+                const obs = new MutationObserver(function () { try { scanClickjacking(!!s.autoBlock); } catch (e2) {} });
+                obs.observe(document.documentElement, { childList: true, subtree: true });
+                setTimeout(function () { try { obs.disconnect(); } catch (e2) {} }, 15000);
+              }
+            } catch (e2) {}
+          }
+          let host = "";
+          try { host = (typeof window !== "undefined" && window && window._document !== null && window.location && window.location.hostname ? window.location.hostname : "").toLowerCase(); } catch (e2) { host = ""; }
+          if (host && s.unlockSites && s.unlockSites[host]) unlockPage(true);
+          else if (s.unlock) unlockPage(false);
+        } catch (e2) {}
+      });
     });
   } catch (e2) {
     scanPhishing();
     setTimeout(function () { scanClickjacking(true); }, 1200);
   }
+
+  try {
+    const rtv = (typeof chrome !== "undefined" && chrome.storage && chrome.storage.onChanged) ? chrome.storage : null;
+    if (rtv) chrome.storage.onChanged.addListener(function (ch, area) {
+      if (area === "local" && ch && ch.sf_security_settings && ch.sf_security_settings.newValue) {
+        try { if (ch.sf_security_settings.newValue.clickBlock === false) _disablePhishClickBlock(); else _enablePhishClickBlock(); } catch (e3) {}
+      }
+    });
+  } catch (e2) {}
 
   try {
     const rt = (typeof chrome !== "undefined" && chrome.runtime) ? chrome.runtime : (typeof browser !== "undefined" && browser.runtime) ? browser.runtime : null;

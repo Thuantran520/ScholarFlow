@@ -134,6 +134,86 @@ function socVaultClear() {
   try { storRemove("sf_social_vault"); } catch (e) {}
   _socVaultSetLockView(false);
   socVaultMsg(t("soc_vt_cleared"), "#34d399");
+  const socScoreFn = window.socScoreRefresh;
+  if (socScoreFn) socScoreFn();
+}
+// Backup / restore: encrypted off-device file (independent passphrase).
+function socVaultExport() {
+  if (!_socVaultKey) { socVaultMsg(t("soc_vt_exp_locked"), "#f87171"); return; }
+  if (!(window.crypto && window.crypto.subtle)) { socVaultMsg(t("soc_vt_err"), "#f87171"); return; }
+  const bak = (document.getElementById("soc-vt-bakpw") || {}).value || "";
+  if (bak.length < 8) { socVaultMsg(t("soc_vt_weak"), "#f87171"); return; }
+  const get = function (id) { return (document.getElementById(id) || {}).value || ""; };
+  const data = { email: get("soc-vt-email"), phone: get("soc-vt-phone"), contacts: get("soc-vt-contacts"), codes: get("soc-vt-codes"), notes: get("soc-vt-notes") };
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  _socDeriveKey(bak, _socB64(salt.buffer)).then(function (key) {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    return crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, key, new TextEncoder().encode(JSON.stringify(data)))
+      .then(function (ct) {
+        const payload = JSON.stringify({ kind: "scholarflow-vault-backup", v: 1, savedAt: new Date().toISOString(), salt: _socB64(salt.buffer), iv: _socB64(iv.buffer), ct: _socB64(ct) });
+        _socDownload("scholarflow-vault-backup.json", payload);
+        const pwEl = document.getElementById("soc-vt-bakpw"); if (pwEl) pwEl.value = "";
+        socVaultMsg(t("soc_vt_exp_done"), "#34d399");
+      });
+  }).catch(function () { socVaultMsg(t("soc_vt_err"), "#f87171"); });
+}
+let _socBackupFile = null;
+function socVaultImportPick() {
+  const fp = document.getElementById("soc-vt-bakfile");
+  if (!fp || !fp.files || !fp.files[0]) return;
+  try {
+    const reader = new FileReader();
+    const name = fp.files[0].name;
+    reader.onload = function () {
+      try { _socBackupFile = JSON.parse(reader.result); } catch (e) { _socBackupFile = null; }
+      const nameEl = document.getElementById("soc-vt-bakname");
+      if (nameEl) nameEl.textContent = _socBackupFile ? (name + " \u2014 " + t("soc_vt_imp_file_ok")) : t("soc_vt_imp_file_bad");
+    };
+    reader.readAsText(fp.files[0]);
+  } catch (e) {}
+}
+function socVaultImport() {
+  const pw = (document.getElementById("soc-vt-imbakpw") || {}).value || "";
+  const mpw = (document.getElementById("soc-vt-pw") || {}).value || "";
+  const mpw2 = (document.getElementById("soc-vt-pw2") || {}).value || "";
+  if (!_socBackupFile) { socVaultMsg(t("soc_vt_imp_none"), "#f87171"); return; }
+  if (pw.length < 8) { socVaultMsg(t("soc_vt_weak"), "#f87171"); return; }
+  if (mpw.length < 8) { socVaultMsg(t("soc_vt_weak"), "#f87171"); return; }
+  if (mpw !== mpw2) { socVaultMsg(t("soc_vt_mismatch"), "#f87171"); return; }
+  if (!(window.crypto && window.crypto.subtle)) { socVaultMsg(t("soc_vt_err"), "#f87171"); return; }
+  _socDeriveKey(pw, _socBackupFile.salt).then(function (key) {
+    return crypto.subtle.decrypt({ name: "AES-GCM", iv: _socB64ToBytes(_socBackupFile.iv) }, key, _socB64ToBytes(_socBackupFile.ct))
+      .then(function (plain) {
+        let data = {};
+        try { data = JSON.parse(new TextDecoder().decode(plain)); } catch (e) {}
+        const data2 = data && typeof data === "object" ? data : {};
+        const salt = crypto.getRandomValues(new Uint8Array(16));
+        return _socDeriveKey(mpw, _socB64(salt.buffer)).then(function (nkey) {
+          const iv = crypto.getRandomValues(new Uint8Array(12));
+          return crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, nkey, new TextEncoder().encode(JSON.stringify(data2)))
+            .then(function (ct) {
+              storSet({ sf_social_vault: { v: 1, salt: _socB64(salt.buffer), iv: _socB64(iv.buffer), ct: _socB64(ct), savedAt: new Date().toISOString().slice(0, 16).replace("T", " ") } }, function () {
+                _socVaultKey = null;
+                _socBackupFile = null;
+                const pwl = document.getElementById("soc-vt-pw"); if (pwl) pwl.value = "";
+                const pw2l = document.getElementById("soc-vt-pw2"); if (pw2l) pw2l.value = "";
+                const imb = document.getElementById("soc-vt-imbakpw"); if (imb) imb.value = "";
+                const fp2 = document.getElementById("soc-vt-bakfile"); if (fp2) fp2.value = "";
+                _socVaultSetLockView(true);
+                socVaultMsg(t("soc_vt_imp_done"), "#34d399");
+                socVaultShowEdit(data2);
+                const socScoreFn = window.socScoreRefresh;
+                if (socScoreFn) socScoreFn();
+              });
+            });
+        });
+      });
+  }).catch(function () { socVaultMsg(t("soc_vt_imp_bad"), "#f87171"); });
+}
+function socVaultAutoLock() {
+  if (!_socVaultKey) return;
+  const ev = document.getElementById("soc-vt-editview");
+  if (ev && ev.style.display !== "none") socVaultLock();
 }
 
 onReady(function () {
@@ -149,5 +229,22 @@ onReady(function () {
   if (btnVtCopy) btnVtCopy.addEventListener("click", socVaultCopy);
   const btnVtClear = document.getElementById("btn-soc-vt-clear");
   if (btnVtClear) btnVtClear.addEventListener("click", socVaultClear);
+  const btnVtExp = document.getElementById("btn-soc-vt-export");
+  if (btnVtExp) btnVtExp.addEventListener("click", socVaultExport);
+  const btnVtImpPick = document.getElementById("btn-soc-vt-importpick");
+  if (btnVtImpPick) btnVtImpPick.addEventListener("click", function () {
+    const fp = document.getElementById("soc-vt-bakfile");
+    if (fp) fp.click();
+  });
+  const fpIn = document.getElementById("soc-vt-bakfile");
+  if (fpIn) fpIn.addEventListener("change", socVaultImportPick);
+  const btnVtImp = document.getElementById("btn-soc-vt-import");
+  if (btnVtImp) btnVtImp.addEventListener("click", socVaultImport);
+  try {
+    document.addEventListener("visibilitychange", function () {
+      if (document.hidden) { setTimeout(socVaultAutoLock, 300); }
+    });
+    window.addEventListener("blur", function () { setTimeout(socVaultAutoLock, 300); });
+  } catch (eAuto) {}
   socVaultInit();
 });

@@ -66,8 +66,10 @@ function _socWzText() {
   lines.push(_socEvidenceTemplate());
   return lines.join("\n");
 }
-function socReportPhish() {
-  const url = ((document.getElementById("soc-ph-url") || {}).value || "").trim();
+async function socReportPhish() {
+  const tab = await ensureActiveTab();
+  const url = (tab && tab.url) ? tab.url : "";
+  if (!url) { showToast(t("soc_rp_none")); return; }
   _socOpen("https://safebrowsing.google.com/safebrowsing/report_phish/?url=" + encodeURIComponent(url));
   showToast(t("soc_rp_opened"));
 }

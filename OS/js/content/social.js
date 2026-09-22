@@ -70,10 +70,10 @@
   const WRAP_PARAMS = ["u", "url", "q", "href", "target", "to", "dest"];
   const STATS_CAP = 300;
 
-  const _settings = { inj: true, injMode: "remove", linkClean: true, shopClean: false };
+  const _settings = { inj: true, injMode: "remove", linkClean: true, shopClean: false, trackerBlockAll: false, trackerBlock: [], scamWarn: true };
   let _observer = null;
   let _guardActive = false;
-  const _stats = { extScript: 0, obfScript: 0, inlineMal: 0, extIframe: 0, jsUri: 0, linkCleaned: 0, shopLinks: 0 };
+  const _stats = { extScript: 0, obfScript: 0, inlineMal: 0, extIframe: 0, jsUri: 0, linkCleaned: 0, shopLinks: 0, trackerStripped: 0, scamLinks: 0 };
 
   function _runtime() {
     return (typeof browser !== "undefined" && browser.runtime) ? browser
@@ -106,6 +106,21 @@
     if (!code || code.length > 200000) return false;
     return SENSITIVE_RE.test(code) && SINK_RE.test(code);
   }
+  function _trackerHostActive() { return _settings.trackerBlockAll || (_settings.trackerBlock && _settings.trackerBlock.length > 0); }
+  function _trackerHostMatch(host) {
+    if (!_trackerHostActive()) return false;
+    const list = [];
+    if (_settings.trackerBlockAll) { for (let i = 0; i < TRACKER_HOSTS.length; i++) list.push(TRACKER_HOSTS[i]); }
+    const extra = _settings.trackerBlock || [];
+    for (let j = 0; j < extra.length; j++) { if (list.indexOf(extra[j]) === -1) list.push(extra[j]); }
+    if (!list.length) return false;
+    host = host.toLowerCase();
+    for (let k = 0; k < list.length; k++) {
+      const t = list[k];
+      if (host === t || host.endsWith("." + t)) return true;
+    }
+    return false;
+  }
   // A. injection vectors -------------------------------------------------
   function _hit(key, el, canRemove) {
     _stats[key]++;
@@ -126,6 +141,14 @@
       }
       if (tag === "IFRAME" && el.getAttribute("src") && _isExtSrc(el.getAttribute("src"))) {
         _hit("extIframe", el, remove); return;
+      }
+      if ((tag === "SCRIPT" || tag === "IFRAME" || tag === "IMG") && _trackerHostActive()) {
+        const tsrc = el.getAttribute("src");
+        if (tsrc && /^https?:/i.test(tsrc)) {
+          let thost = "";
+          try { thost = new URL(tsrc).hostname.toLowerCase(); } catch (e) {}
+          if (thost && _trackerHostMatch(thost)) { _hit("trackerStripped", el, remove); return; }
+        }
       }
       const href = el.getAttribute && (el.getAttribute("href") || el.getAttribute("src") || "");
       if (href && /^\s*javascript:/i.test(href)) {
@@ -258,7 +281,7 @@
       _stripNode(root);
       if (_settings.shopClean && root.tagName === "A") _unwrapShopLink(root);
       if (root.querySelectorAll) {
-        const nodes = root.querySelectorAll("script,iframe,a[href]");
+        const nodes = root.querySelectorAll("script,iframe,img,a[href]");
         const cap = Math.min(nodes.length, STATS_CAP);
         for (let i = 0; i < cap; i++) {
           const n = nodes[i];
@@ -272,7 +295,7 @@
     if (_observer || !document.documentElement) return;
     _guardActive = true;
     try {
-      document.querySelectorAll("script[src]").forEach(function (el) { _stripNode(el); });
+      document.querySelectorAll("script[src],iframe[src],img[src]").forEach(function (el) { _stripNode(el); });
       _observer = new MutationObserver(function (muts) {
         muts.forEach(function (m) {
           (m.addedNodes || []).forEach(function (n) {
@@ -321,6 +344,9 @@
           _settings.injMode = s.injMode === "warn" ? "warn" : "remove";
           _settings.linkClean = s.linkClean !== false;
           _settings.shopClean = !!s.shopClean;
+          _settings.trackerBlockAll = !!s.trackerBlockAll;
+          _settings.trackerBlock = Array.isArray(s.trackerBlock) ? s.trackerBlock.slice(0, 50) : [];
+          _settings.scamWarn = s.scamWarn !== false;
         }
         cb();
       };
@@ -342,6 +368,37 @@
       });
     } catch (e) {}
     return found;
+  }
+
+  // C2. Scam "unlock ảo" heuristic (100% local, best-effort): counts anchors
+  // that read like an account-unlock / prize / donation scam and point at a
+  // non-social destination (direct contact form, messenger, off-site landing).
+  const SCAM_TOKEN_RE = /(mở khóa|mở khoá|bảo hành acc|bảo kê acc|bảo kê tài khoản|hack lại|chiếm lại|lấy lại acc|phá khóa|phá khoá|mở lại account|nhận lại nick|cứu acc|facebook bị khóa|facebook bi khoa|khóa vĩnh viễn|khoa vinh vien|vi phạm tiêu chuẩn cộng đồng|đăng nhập bất thường|tài khoản bị xâm nhập|chấm công bấm vào đây|liên hệ ngay|nhắn tin riêng|ib với tôi|inbox gấp|bấm để nhận|đổi mật khẩu ngay|reset mật khẩu|nhận lại tiền|thu hồi tiền)/i;
+  const SCAM_CTX_RE = /(thẻ cào|chuyển khoản|rút về|nạp tiền|nhan tien|quỹ từ thiện|từ thiện|giải cứu|lan tỏa|share để nhận|like để nhận|vay nóng|ca heo|trúng thưởng|trung thuong|quà tặng|mã otp|theo dõi để nhận)/i;
+  const SCAM_CONTACT_RE = /^https?:\/\/(m\.me|zalo\.me|zaloapp\.com|t\.me|wa\.me|api\.whatsapp\.com|forms\.gle|docs\.google\.com|bit\.ly|tinyurl|shorturl|v\.gd|chuyenkhoan|vietqr)/i;
+  function _scanScamLinks() {
+    if (!_detectPlatform()) return { count: 0, samples: [] };
+    const hits = [];
+    const cap = Math.min(document.querySelectorAll("a[href]").length, 1500);
+    const anchors = document.querySelectorAll("a[href]");
+    for (let i = 0; i < cap; i++) {
+      try {
+        const a = anchors[i];
+        const text = (a.textContent || "").trim();
+        const href = a.getAttribute("href") || "";
+        if (!/^https?:/i.test(href)) continue;
+        let host = "";
+        try { host = new URL(href).hostname.toLowerCase(); } catch (e) { continue; }
+        if (SOCIAL_DEST_RE.test(host)) continue;
+        const isContact = SCAM_CONTACT_RE.test(href);
+        const tok = SCAM_TOKEN_RE.test(text);
+        const ctx = SCAM_CTX_RE.test(text);
+        if (tok || (isContact && ctx)) {
+          if (hits.length < 6) hits.push({ text: text.slice(0, 80), url: href });
+        }
+      } catch (e) {}
+    }
+    return { count: hits.length, samples: hits.slice(0, 3) };
   }
 
   // Click-time link cleaning (capture phase, before navigation resolves).
@@ -370,6 +427,13 @@
     if (rt && rt.onMessage && rt.onMessage.addListener) {
       rt.onMessage.addListener(function (msg, sender, sendResponse) {
         if (!msg || !msg.action) return;
+        if (msg.action === "SOC_SCAN_SCAM") {
+          try {
+            const r = _scanScamLinks();
+            sendResponse({ ok: true, count: r.count, samples: r.samples });
+          } catch (e) { sendResponse({ ok: false }); }
+          return;
+        }
         if (msg.action === "SOC_SCAN_TRACKERS") {
           try { sendResponse({ ok: true, trackers: _scanTrackers(), platform: _detectPlatform() }); } catch (e) { sendResponse({ ok: false }); }
           return;

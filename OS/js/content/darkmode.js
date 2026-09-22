@@ -86,8 +86,8 @@
     }
     return { top: top, img: img };
   }
-  function _readerCss(r) {
-    const txt = _safeColor(r.txt, "#e8dcc3");
+  function _readerCss(r, t) {
+    const txt = _safeColor((t && t.text) || r.txt, "#e8dcc3");
     const accent = _safeColor(r.accent, "#f0a860");
     const bg = _mixToBlack(_safeColor(r.bg, "#16130e"), r.dark == null ? 35 : r.dark);
     return [
@@ -114,13 +114,19 @@
         st.id = READER_ID;
         (document.head || document.documentElement).appendChild(st);
       }
-      st.textContent = _readerCss(r);
+      st.textContent = _readerCss(r, _siteTune(s));
       return true;
     } catch (e) { return false; }
   }
 
   function _host() {
     try { return (window.location.hostname || "").replace(/^www\./, "").toLowerCase(); } catch (e) { return ""; }
+  }
+  function _siteTune(s) {
+    try {
+      const h = _host();
+      return (s && s.siteTune && h && s.siteTune[h]) || null;
+    } catch (e) { return null; }
   }
   function _lumOf(rgb) {
     const m = /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/.exec(rgb || "");
@@ -175,6 +181,7 @@
   }
   function _cssFor(s) {
     const r = s.reader;
+    const t = _siteTune(s);
     let extra = "::selection{background:#38bdf8;color:#0b1220}";
     try {
       if (r && r.on && !r.flat) {
@@ -182,6 +189,18 @@
         if (acc) extra += "a,a *,[role='link'],[role='link'] *{color:" + _accentToSource(acc) + "!important}";
       }
     } catch (e) {}
+    if (t && t.text) {
+      const txt = _safeColor(t.text, "");
+      if (txt) {
+        const invertText = !(r && r.on && s.__toneOnly);
+        const col = invertText ? _accentToSource(txt) : txt;
+        extra += "body,p,li,td,th,blockquote,figcaption,pre,code,label,strong,em,h1,h2,h3,h4,h5,h6{color:" + col + "!important}";
+      }
+    }
+    if (t && t.size) {
+      const sz = Math.min(160, Math.max(75, parseInt(t.size, 10) || 100));
+      if (sz !== 100 && !(s.typo && s.typo.on)) extra += "html{font-size:calc(100% * " + (sz / 100).toFixed(3) + ")!important}";
+    }
     if (r && r.on && !r.flat && s.__toneOnly) {
       const tp = _toneParts(r);
       return "html{filter:" + tp.top + ";background:#000000!important}" + IMG_SEL + "{filter:" + tp.img + "}" + extra;

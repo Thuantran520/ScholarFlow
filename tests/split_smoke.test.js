@@ -40,6 +40,7 @@ const LOAD_ORDER_MODULES = [
   "tabs/capture.js",
   "tabs/video.js",
   "init.js",
+  "core/header-layout.js",
   "tabs/calendar.js",
   "tabs/pomodoro.js",
   "tabs/ai.js",
@@ -67,7 +68,10 @@ const KEY_GLOBALS = [
   "loadScreenshotSettings", "captureVisibleScreen", "captureFullPageSmart",
   "loadVideoSettings", "startVideoRecording", "stopVideoRecording",
   "renderAutofillList", "renderTodoList", "calRenderCalendar",
-  "pomodoroFormatTime", "pomodoroDailyStats", "pomodoroPlan", "pomodoroWeekStats"
+  "pomodoroFormatTime", "pomodoroDailyStats", "pomodoroPlan", "pomodoroWeekStats",
+  "sfGetHeaderSettings", "sfHeaderApply", "sfHeaderReset",
+  "sfNavGetOrder", "sfNavReorder", "sfNavReset",
+  "tabmgrMediaGetPref", "tabmgrMediaSetPref", "tabmgrMediaRefresh"
 ];
 
 // Minimal chrome/browser stub (callback + promise styles, resolved promises).
@@ -252,6 +256,360 @@ async function main() {
       `all 17 targets present in nav: ${ids.join(",")}`);
   }
 
+  // 1c. Tab-manager music player banner (local media agent + on/off pref)
+  console.log("\nRegressing tab-manager music player banner:");
+  {
+    const { window: w } = await loadPage("sidebar.html");
+    const prefTrue = w.tabmgrMediaGetPref();
+    check(prefTrue === true, `media banner pref defaults ON (got: ${prefTrue})`);
+    const box = w.document.getElementById("tabmgr-media");
+    check(!!box, "sidebar contains #tabmgr-media banner");
+    check(box && !box.classList.contains("is-off"), "banner visible by default (no is-off class)");
+
+    await new Promise((r) => setTimeout(r, 80));
+    const body = w.document.getElementById("tabmgr-media-body");
+    const mp = body && body.querySelector(".tabmgr-mp");
+    check(!!mp, "fallback player rendered from audible-tab poll (got: " + (mp ? "player" : "none") + ")");
+    if (mp) {
+      const title = mp.querySelector(".tabmgr-mp-title");
+      check(title && (title.textContent || "").trim() === "Paper",
+        `fallback shows the audible tab title (got: ${title ? title.textContent : "none"})`);
+      check(!mp.querySelector(".tabmgr-mp-playbtn"),
+        "fallback (no agent state) renders without a play button (skip/mute/open only)");
+      check((mp.querySelectorAll(".tabmgr-mp-tools button").length || 0) === 4,
+        `fallback tools expose skip prev/next + mute + open-tab buttons (got: ${mp.querySelectorAll(".tabmgr-mp-tools button").length || 0})`);
+      check(!!mp.querySelector(".tabmgr-mp-cover") && !!mp.querySelector(".tabmgr-mp-vinyl"),
+        "fallback still renders the sleeve + half-out vinyl (no artwork yet)");
+      check(!mp.querySelector(".tabmgr-mp-cover .tabmgr-mp-art") ||
+        !(mp.querySelector(".tabmgr-mp-cover") || {}).classList.contains("is-artwork"),
+        "fallback sleeve has no artwork <img>");
+    }
+
+    check(w.eval("_tabmgrMediaFmt(65)") === "1:05", "_tabmgrMediaFmt(65) === 1:05");
+    check(w.eval("_tabmgrMediaFmt(3599)") === "59:59", "_tabmgrMediaFmt(3599) === 59:59");
+    check(w.eval('_tabmgrMediaFmt("abc")') === "0:00", "_tabmgrMediaFmt(non-numeric) === 0:00");
+    check(w.eval("_tabmgrMediaPct(50, 100)") === "50", "_tabmgrMediaPct clamps to 0..100%");
+
+    // on/off switch: persists to storage and hides/shows the player
+    const chk = w.document.getElementById("tabmgr-media-check");
+    chk.checked = false;
+    chk.dispatchEvent(new w.Event("change", { bubbles: true }));
+    await new Promise((r) => setTimeout(r, 20));
+    const storedOff = await w.chrome.storage.local.get("sf_tabmgr_media_player");
+    check(storedOff.sf_tabmgr_media_player === false, "unchecking the switch persists sf_tabmgr_media_player=false");
+    check(box.classList.contains("is-off"), "banner hidden (is-off) after turning off");
+    check(!w.document.querySelector("#tabmgr-media-body .tabmgr-mp"), "player content cleared when switched off");
+
+    chk.checked = true;
+    chk.dispatchEvent(new w.Event("change", { bubbles: true }));
+    await new Promise((r) => setTimeout(r, 60));
+    const storedOn = await w.chrome.storage.local.get("sf_tabmgr_media_player");
+    check(storedOn.sf_tabmgr_media_player === true, "re-checking persists sf_tabmgr_media_player=true");
+    check(!box.classList.contains("is-off"), "banner visible again after turning on");
+    check(!!w.document.querySelector("#tabmgr-media-body .tabmgr-mp"), "player re-rendered after turning back on");
+
+    // agent-backed full display: audible tab + live state => play/pause + seek
+    w.chrome.tabs.query = () => Promise.resolve([{ id: 7, url: "https://music.youtube.com/watch?v=x", title: "Some Song", audible: true, windowId: 1 }]);
+    w.chrome.tabs.sendMessage = (t, msg, cb) => {
+      const res = { ok: true, state: { hasMedia: true, playing: true, title: "Some Song", artist: "Some Artist", artwork: "https://example.com/art.jpg", currentTime: 42, duration: 210 } };
+      if (typeof cb === "function") cb(res);
+      return Promise.resolve(res);
+    };
+    w.tabmgrMediaRefresh();
+    await new Promise((r) => setTimeout(r, 80));
+    const mp2 = w.document.querySelector("#tabmgr-media-body .tabmgr-mp");
+    check(!!mp2 && !!mp2.querySelector(".tabmgr-mp-playbtn"),
+      "live agent state renders the full player with play/pause button");
+    if (mp2) {
+      const t2 = mp2.querySelector(".tabmgr-mp-title");
+      check(t2 && (t2.textContent || "").trim() === "Some Song",
+        `live state uses the media title, not the tab title (got: ${t2 ? t2.textContent : "none"})`);
+      const timeTxt = mp2.querySelector(".tabmgr-vpb-time");
+      check(!!timeTxt && timeTxt.textContent === "00:42 / 03:30",
+        `video-style progress bar shows digital time (got: ${timeTxt ? timeTxt.textContent : "none"})`);
+      const vpbEl = mp2.querySelector(".tabmgr-vpb");
+      const vpbElapsed = mp2.querySelector(".tabmgr-vpb-elapsed");
+      const vpbHead = mp2.querySelector(".tabmgr-vpb-playhead");
+      check(!!vpbEl && !!vpbElapsed && !!vpbHead,
+        "progress bar renders the red elapsed track + floating playhead");
+      check(!mp2.querySelector(".tabmgr-vpb-buffer") && !mp2.querySelector(".tabmgr-vpb-bg"),
+        "no grey/white buffer or bg track (single red track on black)");
+      check(!!(vpbEl && vpbEl.style && (vpbEl.style.getPropertyValue("--e") || "").indexOf("%") > 0),
+        `elapsed fill uses --e (got: ${vpbEl && vpbEl.style ? vpbEl.style.getPropertyValue("--e") : "none"})`);
+      if (vpbEl && vpbElapsed && vpbHead && vpbEl.style) {
+        const eN = parseFloat(vpbEl.style.getPropertyValue("--e"));
+        check(Number.isFinite(eN) && eN === 20,
+          `elapsed --e resolves to 20% at 42/210 (got: ${eN})`);
+        check(vpbElapsed.contains(vpbHead),
+          "playhead is a CHILD of the red elapsed layer -> tracks its right edge");
+        check(!!timeTxt && vpbEl.contains(timeTxt) && !vpbElapsed.contains(timeTxt),
+          "time text is an overlay on the bar (always visible, never clipped by red)");
+      }
+      const artImg = mp2.querySelector(".tabmgr-mp-cover .tabmgr-mp-art");
+      const cover2 = mp2.querySelector(".tabmgr-mp-cover");
+      const vinyl2 = mp2.querySelector(".tabmgr-mp-vinyl");
+      check(!!artImg && artImg.getAttribute("src") === "https://example.com/art.jpg",
+        `sleeve artwork <img> rendered (got: ${artImg ? artImg.getAttribute("src") : "none"})`);
+      check(!!(cover2 && cover2.classList.contains("is-artwork")),
+        "sleeve (cover) carries .is-artwork when artwork present");
+      check(!!(vinyl2 && vinyl2.classList.contains("is-spin")),
+        "black vinyl half-out disc spins while playing");
+    }
+
+    // pointer drag on the video-style bar seeks: release commits MEDIA_SEEK at the ratio
+    const vpbDrag = mp2 && mp2.querySelector(".tabmgr-vpb");
+    if (vpbDrag) {
+      const seeksSeen = [];
+      w.chrome.tabs.sendMessage = (t, msg, cb) => {
+        if (msg && msg.action === "MEDIA_SEEK") seeksSeen.push(msg.time);
+        const res = { ok: true, state: { hasMedia: true, playing: true, title: "Some Song", artist: "Some Artist", artwork: "https://example.com/art.jpg", currentTime: 42, duration: 210 } };
+        if (typeof cb === "function") cb(res);
+        return Promise.resolve(res);
+      };
+      vpbDrag.getBoundingClientRect = () => ({ left: 0, right: 100, width: 100, top: 0, bottom: 40, x: 0, y: 0, height: 40 });
+      const pd = new w.Event("pointerdown", { bubbles: true });
+      pd.clientX = 42; pd.pointerId = 1;
+      vpbDrag.dispatchEvent(pd);
+      check(vpbDrag.classList.contains("is-dragging"),
+        "pointerdown marks the progress bar as dragging");
+      const pu = new w.Event("pointerup", { bubbles: true });
+      pu.clientX = 42;
+      vpbDrag.dispatchEvent(pu);
+      check(seeksSeen.length === 1 && seeksSeen[0] === 88,
+        `releasing the drag seeks to 42% of the duration (got: ${seeksSeen.join(",")})`);
+    }
+    // artwork scheme guard: javascript:/blank artwork must not put an <img> on the sleeve
+    w.chrome.tabs.sendMessage = (t, msg, cb) => {
+      const res = { ok: true, state: { hasMedia: true, playing: true, title: "Some Song", artist: "Some Artist", artwork: "javascript:alert(1)", currentTime: 42, duration: 210 } };
+      if (typeof cb === "function") cb(res);
+      return Promise.resolve(res);
+    };
+    w.tabmgrMediaRefresh();
+    await new Promise((r) => setTimeout(r, 60));
+    const mp3 = w.document.querySelector("#tabmgr-media-body .tabmgr-mp");
+    check(!!mp3, "player still renders when artwork is rejected");
+    check(mp3 && !mp3.querySelector(".tabmgr-mp-cover .tabmgr-mp-art") &&
+      !(mp3.querySelector(".tabmgr-mp-cover") || {}).classList?.contains("is-artwork"),
+      "unsafe artwork URL is not put on the sleeve (javascript: rejected)");
+    check(!!(mp3 && mp3.querySelector(".tabmgr-mp-vinyl")), "vinyl still renders when artwork is rejected");
+  }
+
+  // 1d. Multi-tab carousel: several tabs playing at once -> queue, click/wheel to rotate
+  console.log("\nRegressing multi-tab media carousel:");
+  {
+    const { window: w } = await loadPage("sidebar.html");
+    const states = {
+      7: { hasMedia: true, playing: true, title: "Song A", artist: "Artist A", artwork: "https://example.com/a.jpg", currentTime: 10, duration: 200 },
+      8: { hasMedia: true, playing: true, title: "Song B", artist: "Artist B", artwork: "https://example.com/b.jpg", currentTime: 20, duration: 180 },
+      9: { hasMedia: true, playing: false, title: "Song C", artist: "Artist C", artwork: "https://example.com/c.jpg", currentTime: 5, duration: 150 }
+    };
+    w.chrome.tabs.query = () => Promise.resolve([
+      { id: 7, url: "https://music.youtube.com/watch?v=a", title: "Song A", audible: true, windowId: 1 },
+      { id: 8, url: "https://music.youtube.com/watch?v=b", title: "Song B", audible: true, windowId: 1 },
+      { id: 9, url: "https://deezer.com/track/c", title: "Song C", audible: true, windowId: 1 }
+    ]);
+    w.chrome.tabs.sendMessage = (t, msg, cb) => {
+      const res = states[t] ? { ok: true, state: states[t] } : { ok: false };
+      if (typeof cb === "function") cb(res);
+      return Promise.resolve(res);
+    };
+    w.tabmgrMediaRefresh();
+    await new Promise((r) => setTimeout(r, 80));
+    const mpQ = w.document.querySelector("#tabmgr-media-body .tabmgr-mp");
+    check(!!mpQ, "carousel player rendered when multiple tabs play");
+    const titleQ = mpQ && mpQ.querySelector(".tabmgr-mp-title");
+    check(titleQ && (titleQ.textContent || "").trim() === "Song A",
+      `carousel starts at the first playing tab (got: ${titleQ ? titleQ.textContent : "none"})`);
+    const countQ = mpQ && mpQ.querySelector(".tabmgr-mp-count");
+    check(!!countQ && countQ.textContent === "1/3", `counter shows 1/3 => 3 sources queued (got: ${countQ ? countQ.textContent : "none"})`);
+    check(!!(mpQ && mpQ.querySelector(".tabmgr-mp-prev") && mpQ.querySelector(".tabmgr-mp-next")),
+      "carousel exposes prev/next buttons");
+    check(!!(mpQ && mpQ.querySelector(".tabmgr-mp-cover").classList.contains("is-multi")),
+      "sleeve is click-to-advance (is-multi)");
+
+    const skips = [];
+    w.chrome.tabs.sendMessage = (t, msg, cb) => {
+      if (msg && msg.action === "MEDIA_SKIP") skips.push(msg.dir);
+      const res = states[t] ? { ok: true, state: states[t] } : { ok: false };
+      if (typeof cb === "function") cb(res);
+      return Promise.resolve(res);
+    };
+    mpQ.querySelector(".tabmgr-mp-prev").click();
+    mpQ.querySelector(".tabmgr-mp-next").click();
+    await new Promise((r) => setTimeout(r, 60));
+    check(skips.join(",") === "-1,1",
+      `prev/next ask the CURRENT tab to skip tracks on its own page (MEDIA_SKIP ${skips.join(",")})`);
+    check(w.document.querySelector(".tabmgr-mp-title").textContent === "Song A",
+      "track-skip buttons leave the tab queue untouched (still Song A)");
+    check(w.document.querySelector(".tabmgr-mp-count").textContent === "1/3",
+      "counter stays 1/3 after track-skips (no tab rotation)");
+
+    mpQ.querySelector(".tabmgr-mp-count").click();
+    await new Promise((r) => setTimeout(r, 40));
+    check(w.document.querySelector(".tabmgr-mp-title").textContent === "Song B",
+      "counter click advances to Song B (still rotates the tab queue)");
+    check(w.document.querySelector(".tabmgr-mp-count").textContent === "2/3",
+      "counter reaches 2/3");
+
+    mpQ.querySelector(".tabmgr-mp-cover").click();
+    await new Promise((r) => setTimeout(r, 40));
+    check(w.document.querySelector(".tabmgr-mp-title").textContent === "Song C",
+      "sleeve click advances to Song C (paused but queued)");
+    check(w.document.querySelector(".tabmgr-mp-count").textContent === "3/3",
+      "counter reaches 3/3");
+
+    mpQ.querySelector(".tabmgr-mp-cover").click();
+    await new Promise((r) => setTimeout(r, 40));
+    check(w.document.querySelector(".tabmgr-mp-title").textContent === "Song A",
+      "carousel wraps around to Song A after the last one");
+
+    const topQ = mpQ.querySelector(".tabmgr-mp-top");
+    const hWheel = new w.Event("wheel");
+    hWheel.deltaX = 10; hWheel.deltaY = 0; hWheel.bubbles = true;
+    topQ.dispatchEvent(hWheel);
+    await new Promise((r) => setTimeout(r, 40));
+    check(w.document.querySelector(".tabmgr-mp-title").textContent === "Song B",
+      "horizontal wheel flips to the next playing tab");
+
+    const vWheel = new w.Event("wheel");
+    vWheel.deltaX = 0; vWheel.deltaY = 10; vWheel.bubbles = true;
+    topQ.dispatchEvent(vWheel);
+    await new Promise((r) => setTimeout(r, 40));
+    check(w.document.querySelector(".tabmgr-mp-title").textContent === "Song B",
+      "vertical wheel scroll does not hijack the carousel");
+
+    w.tabmgrMediaRefresh();
+    await new Promise((r) => setTimeout(r, 80));
+    check(w.document.querySelector(".tabmgr-mp-title").textContent === "Song B",
+      "selection survives a poll refresh while the tab still plays");
+
+    const hasCarouselControls = () => !!w.document.querySelector(".tabmgr-mp-prev") &&
+      !!w.document.querySelector(".tabmgr-mp-next") && !!w.document.querySelector(".tabmgr-mp-count");
+    w.document.querySelector(".tabmgr-mp-next").click();
+    await new Promise((r) => setTimeout(r, 40));
+    check(hasCarouselControls(), "prev/next/count persist after stepping (no disappearing buttons)");
+    w.document.querySelector(".tabmgr-mp-next").click();
+    w.document.querySelector(".tabmgr-mp-next").click();
+    w.document.querySelector(".tabmgr-mp-next").click();
+    await new Promise((r) => setTimeout(r, 40));
+    check(hasCarouselControls(), "prev/next/count persist after wrapping around multiple steps");
+
+    // sticky queue: a queued tab that briefly stops being "audible" (pause/mute)
+    // must not collapse the carousel into a single source.
+    w.chrome.tabs.query = () => Promise.resolve([
+      { id: 7, url: "https://music.youtube.com/watch?v=a", title: "Song A", audible: true, windowId: 1 },
+      { id: 8, url: "https://music.youtube.com/watch?v=b", title: "Song B", audible: true, windowId: 1 }
+    ]);
+    w.tabmgrMediaRefresh();
+    await new Promise((r) => setTimeout(r, 80));
+    check(!!w.document.querySelector(".tabmgr-mp-count") &&
+      w.document.querySelector(".tabmgr-mp-count").textContent === "2/3" &&
+      w.document.querySelector(".tabmgr-mp-title").textContent === "Song B",
+      `sticky queue keeps the paused (non-audible) tab: still showing 2 of 3 sources (got: ${w.document.querySelector(".tabmgr-mp-count") ? w.document.querySelector(".tabmgr-mp-count").textContent : "none"})`);
+    check(hasCarouselControls(), "carousel controls stay visible while a tab is briefly non-audible");
+    w.document.querySelector(".tabmgr-mp-count").click();
+    await new Promise((r) => setTimeout(r, 40));
+    check(w.document.querySelector(".tabmgr-mp-count").textContent === "3/3" &&
+      w.document.querySelector(".tabmgr-mp-title").textContent === "Song C",
+      "carousel still rotates through the sticky queue (count -> Song C, 3/3)");
+  }
+
+  // 1e. Realtime queue: pause-others button + onRemoved drops a closed tab immediately
+  console.log("\nRegressing realtime queue updates (pause-others, onRemoved):");
+  {
+    const { window: w } = await loadPage("sidebar.html");
+    let toggled = [];
+    const states = {
+      7: { hasMedia: true, playing: true, title: "Song A", artist: "Artist A", artwork: "https://example.com/a.jpg", currentTime: 0, duration: 200 },
+      8: { hasMedia: true, playing: true, title: "Song B", artist: "Artist B", artwork: "https://example.com/b.jpg", currentTime: 0, duration: 180 },
+      9: { hasMedia: true, playing: false, title: "Song C", artist: "Artist C", artwork: "https://example.com/c.jpg", currentTime: 0, duration: 150 }
+    };
+    let audibleTabs = [
+      { id: 7, url: "https://music.youtube.com/watch?v=a", title: "Song A", audible: true, windowId: 1 },
+      { id: 8, url: "https://music.youtube.com/watch?v=b", title: "Song B", audible: true, windowId: 1 },
+      { id: 9, url: "https://deezer.com/track/c", title: "Song C", audible: true, windowId: 1 }
+    ];
+    w.chrome.tabs.query = () => Promise.resolve(audibleTabs.slice());
+    w.chrome.tabs.sendMessage = (t, msg, cb) => {
+      if (msg && msg.action === "MEDIA_TOGGLE") toggled.push(t);
+      const res = states[t] ? { ok: true, state: states[t] } : { ok: false };
+      if (typeof cb === "function") cb(res);
+      return Promise.resolve(res);
+    };
+    w.tabmgrMediaRefresh();
+    await new Promise((r) => setTimeout(r, 80));
+    check(w.document.querySelector(".tabmgr-mp-count").textContent === "1/3",
+      "realtime block starts at 1/3");
+    check(!!w.document.querySelector(".tabmgr-mp-pause-all"),
+      "pause-all button shown when multiple tabs are queued");
+
+    w.document.querySelector(".tabmgr-mp-pause-all").click();
+    await new Promise((r) => setTimeout(r, 40));
+    check(toggled.length === 2 && toggled.indexOf(7) < 0,
+      `pause-all toggles every other queued tab and keeps the current one (got: ${toggled.join(",")})`);
+    check(w.document.querySelector(".tabmgr-mp-count").textContent === "1/3",
+      "pause-all keeps the queue intact (still 1/3)");
+
+    // closing a queued (non-current) tab must update the counter on the onRemoved event
+    audibleTabs = [audibleTabs[0]]; // tab 9 is gone browser-side
+    const remHandlers = w.chrome.tabs.__tabListeners.onRemoved.handlers.slice();
+    remHandlers.forEach(function (f) { try { f(9, { windowId: 1, isWindowClosing: false }); } catch (e) {} });
+    await new Promise((r) => setTimeout(r, 60));
+    const c1 = w.document.querySelector(".tabmgr-mp-count");
+    check(!!c1 && c1.textContent === "1/2",
+      `closing a queued tab updates the counter without a manual refresh (got: ${c1 ? c1.textContent : "none"})`);
+    check(!!w.document.querySelector(".tabmgr-mp-pause-all"),
+      "pause-all button still present while two sources remain");
+
+    remHandlers.forEach(function (f) { try { f(8, { windowId: 1, isWindowClosing: false }); } catch (e) {} });
+    await new Promise((r) => setTimeout(r, 60));
+    const title1 = w.document.querySelector(".tabmgr-mp-title");
+    check(!w.document.querySelector(".tabmgr-mp-count") &&
+      !w.document.querySelector(".tabmgr-mp-pause-all") &&
+      title1 && (title1.textContent || "").trim() === "Song A",
+      "queue collapses to the last surviving tab immediately (Song A kept)");
+
+    audibleTabs = [];
+    remHandlers.forEach(function (f) { try { f(7, { windowId: 1, isWindowClosing: false }); } catch (e) {} });
+    await new Promise((r) => setTimeout(r, 60));
+    check(!w.document.querySelector(".tabmgr-mp-count") && !!w.document.querySelector(".tabmgr-mp-empty"),
+      "queue empties immediately when the last playing tab is closed");
+
+    audibleTabs = [
+      { id: 7, url: "https://music.youtube.com/watch?v=a", title: "Song A", audible: true, windowId: 1 }
+    ];
+    w.tabmgrMediaRefresh();
+    await new Promise((r) => setTimeout(r, 80));
+    const c2 = w.document.querySelector(".tabmgr-mp-count");
+    check(!c2 && !!w.document.querySelector(".tabmgr-mp-title"),
+      "a lone playing tab re-queues itself as a single source (no counter needed)");
+
+    // realtime: a NEW tab that starts playing must extend the counter on the next
+    // poll WITHOUT any manual button press, and the current song's artwork node is
+    // reused across that update (no poster flicker).
+    const beforeImg = w.document.querySelector(".tabmgr-mp-cover .tabmgr-mp-art");
+    w.chrome.tabs.sendMessage = (t, msg, cb) => {
+      const res = states[t] ? { ok: true, state: states[t] } : { ok: false };
+      if (typeof cb === "function") cb(res);
+      return Promise.resolve(res);
+    };
+    audibleTabs = [
+      { id: 7, url: "https://music.youtube.com/watch?v=a", title: "Song A", audible: true, windowId: 1 },
+      { id: 8, url: "https://music.youtube.com/watch?v=b", title: "Song B", audible: true, windowId: 1 }
+    ];
+    w.tabmgrMediaRefresh();
+    await new Promise((r) => setTimeout(r, 80));
+    const c3 = w.document.querySelector(".tabmgr-mp-count");
+    check(!!c3 && c3.textContent === "1/2",
+      `counter extends to 1/2 in realtime when a new tab starts playing (got: ${c3 ? c3.textContent : "none"})`);
+    const t3 = w.document.querySelector(".tabmgr-mp-title");
+    check(t3 && (t3.textContent || "").trim() === "Song A",
+      "current source stays on Song A while the queue grows");
+    const afterImg = w.document.querySelector(".tabmgr-mp-cover .tabmgr-mp-art");
+    check(!!beforeImg && afterImg === beforeImg,
+      "artwork <img> node is reused across queue updates (no poster flicker)");
+  }
+
   // 2. Unified i18n: upgraded t() supports positional {0} and function fallback
   console.log("\nChecking unified i18n t():");
   {
@@ -265,8 +623,8 @@ async function main() {
     const viCount = w.Object.keys(w.I18N_DATA.vi).filter(k => k.startsWith("content_")).length;
     const enCount = w.Object.keys(w.I18N_DATA.en).filter(k => k.startsWith("content_")).length;
     const prCount = w.Object.keys(w.I18N_DATA.vi).filter(k => k.startsWith("privacy_")).length;
-    check(viCount === 33 && enCount === 33 && prCount === 43,
-      `namespace keys present in locale dumps (content_*=33, privacy_*=43; got ${viCount}/${enCount}/${prCount})`);
+    check(viCount === 39 && enCount === 39 && prCount === 43,
+      `namespace keys present in locale dumps (content_*=39, privacy_*=43; got ${viCount}/${enCount}/${prCount})`);
   }
 
   // 3. privacy.html standalone page uses the unified i18n engine
@@ -300,7 +658,8 @@ async function main() {
     w.browser = w.chrome;
     const contentFiles = [
       "OS/js/content/i18n.js", "OS/js/content/inspect.js", "OS/js/content/snip.js",
-      "OS/js/content/scroll.js", "OS/js/content/citation.js", "OS/js/content/lingua.js", "OS/js/content/main.js"
+      "OS/js/content/scroll.js", "OS/js/content/citation.js", "OS/js/content/media.js",
+      "OS/js/content/lingua.js", "OS/js/content/main.js"
     ];
     let injectErr = "";
     for (const f of contentFiles) {
@@ -308,7 +667,7 @@ async function main() {
       try { w.eval(fs.readFileSync(p, "utf8")); }
       catch (e) { injectErr += `${f}: ${e.message} `; }
     }
-    check(!injectErr, "all 7 content scripts evaluated without error" + (injectErr ? ` -> ${injectErr}` : ""));
+    check(!injectErr, "all 8 content scripts evaluated without error" + (injectErr ? ` -> ${injectErr}` : ""));
 
     // Bug: a 'var tContent' shim in snip.js/inspect.js leaks onto window.tContent in the
     // Chromium isolated world, so tContent calls itself -> RangeError "Maximum call stack
@@ -333,7 +692,154 @@ async function main() {
       failures++;
       console.error(`  FAIL  stopElementCaptureMode threw: ${e.message}`);
     }
+    // Security: media.js agent exposes a working state probe, discovers <audio>/<video>,
+    // and (durably) sends the tab a MEDIA_GET_STATE message when polled.
+    try {
+      const st = w.__sfMedia.getState();
+      check(!!st && typeof st.hasMedia === "boolean",
+        `media agent getState() returns a state object (hasMedia: ${st && st.hasMedia})`);
+    } catch (e) {
+      failures++;
+      console.error(`  FAIL  __sfMedia.getState() threw: ${e.message}`);
+    }
+    // Cover art extraction: video poster -> artwork; javascript: urls are rejected.
+    {
+      const v = w.document.createElement("video");
+      v.poster = "https://example.com/art.jpg";
+      w.document.body.appendChild(v);
+      const sv = w.__sfMedia.getState();
+      check(!!sv && sv.hasMedia === true && sv.artwork === "https://example.com/art.jpg",
+        `artwork read from <video poster> (got: ${sv && sv.artwork})`);
+      v.poster = "javascript:alert(1)";
+      const sv2 = w.__sfMedia.getState();
+      check(!!sv2 && sv2.artwork === "", `non-http poster rejected as artwork (got: ${sv2 && sv2.artwork})`);
+      v.poster = "";
+      const meta = w.document.createElement("meta");
+      meta.setAttribute("property", "og:image");
+      meta.content = "https://example.com/og-art.jpg";
+      w.document.head.appendChild(meta);
+      const sv3 = w.__sfMedia.getState();
+      check(!!sv3 && sv3.artwork === "https://example.com/og-art.jpg",
+        `og:image used as artwork fallback (got: ${sv3 && sv3.artwork})`);
+    }
+    // YouTube-style "previous": past 3s -> restart the track (no prev click),
+    // at the very beginning -> click the site's actual Previous button.
+    {
+      w.document.querySelectorAll("video, audio").forEach(function (m) { m.remove(); });
+      const prevBtn = w.document.createElement("button");
+      prevBtn.setAttribute("aria-label", "Previous");
+      prevBtn.className = "fake-prev";
+      let prevClicks = 0;
+      prevBtn.addEventListener("click", function () { prevClicks++; });
+      w.document.body.appendChild(prevBtn);
+      const v = w.document.createElement("video");
+      v.src = "https://example.com/song.mp4";
+      w.document.body.appendChild(v);
+      v.currentTime = 0;
+      Object.defineProperty(v, "duration", { value: 240 });
+      const stDeep = w.__sfMedia.skip(-1);
+      check(prevClicks === 1 && stDeep && stDeep.currentTime === 0,
+        `YouTube-style previous at the start clicks the real Previous button (clicks: ${prevClicks})`);
+      v.currentTime = 50;
+      const stRestart = w.__sfMedia.skip(-1);
+      check(prevClicks === 1 && stRestart && stRestart.currentTime === 0,
+        `YouTube-style previous mid-track restarts the song instead of switching (clicks: ${prevClicks})`);
+    }
     dom2.window.close();
+  }
+
+  // 4a. Phishing banner escape hatch: "Continue to site" button on a flagged host
+  console.log("Regressing phishing warning banner (continue-to-site):");
+  {
+    const domPh = new JSDOM('<!doctype html><html><body><p>flagged</p></body></html>', {
+      url: "https://secure-login.example.test/",
+      runScripts: "outside-only",
+      pretendToBeVisual: true
+    });
+    const w = domPh.window;
+    w.chrome = makeChromeStub({ app_language: "vi" });
+    w.browser = w.chrome;
+    let injectErr = "";
+    for (const f of ["OS/js/content/i18n.js", "OS/js/content/security.js"]) {
+      const p = path.join(__dirname, "..", f);
+      try { w.eval(fs.readFileSync(p, "utf8")); } catch (e) { injectErr += `${f}: ${e.message} `; }
+    }
+    check(!injectErr, "phishing content script evaluated without error" + (injectErr ? ` -> ${injectErr}` : ""));
+    await new Promise((r) => setTimeout(r, 60));
+    const banner = w.document.getElementById("__sf_phishing_banner");
+    check(!!banner, "banner auto-shown on flagged host secure-login.example.test (got: " + (banner ? banner.textContent : "none") + ")");
+    check(banner && banner.getAttribute("role") === "alertdialog" && banner.style.position === "fixed",
+      "warning is a full-screen modal overlay (role=alertdialog, fixed)");
+    const title = banner && [...banner.querySelectorAll("div")].find((d) => (d.textContent || "").trim() === w.tContent("phish_title"));
+    check(!!title, "modal shows the i18n 'Phishing warning' title (got: " + (title ? title.textContent : "none") + ")");
+    const goBtn = banner && [...banner.querySelectorAll("button")].find((bt) => (bt.textContent || "").trim() === w.tContent("phish_continue"));
+    check(!!goBtn, "banner exposes the i18n 'Continue to site' button (got: " + (goBtn ? goBtn.textContent : "none") + ")");
+    const dismissBtn = banner && [...banner.querySelectorAll("button")].find((bt) => (bt.textContent || "").trim() === w.tContent("phish_dismiss"));
+    check(!!dismissBtn, "modal also exposes a 'Dismiss' button");
+    if (goBtn) {
+      goBtn.click();
+      await new Promise((r) => setTimeout(r, 30));
+    }
+    check(!w.document.getElementById("__sf_phishing_banner"), "clicking 'Continue to site' dismisses the banner");
+    const storedP = w.chrome.storage.local.get("sf_phish_allow");
+    const storedRes = await Promise.resolve(storedP);
+    check(Array.isArray(storedRes.sf_phish_allow) && storedRes.sf_phish_allow.indexOf("secure-login.example.test") !== -1,
+      "continue persists the host to sf_phish_allow (got: " + JSON.stringify(storedRes.sf_phish_allow) + ")");
+    w.__sfSecurity.scanPhishing();
+    check(!w.document.getElementById("__sf_phishing_banner"), "allowed host is not re-warned on a later scan");
+    domPh.window.close();
+  }
+
+  // 4aa. Phishing link click interception (capture-phase block + continue)
+  console.log("Regressing phishing link-click interception:");
+  {
+    const domCl = new JSDOM('<!doctype html><html><body><a id="phishlink" href="https://bad-login.test/verify-account" target="_blank">evil</a></body></html>', {
+      url: "https://example.org/safe",
+      runScripts: "outside-only",
+      pretendToBeVisual: true
+    });
+    const w2 = domCl.window;
+    w2.chrome = makeChromeStub({ app_language: "vi" });
+    w2.browser = w2.chrome;
+    let injectErr = "";
+    for (const f of ["OS/js/content/i18n.js", "OS/js/content/security.js"]) {
+      const p = path.join(__dirname, "..", f);
+      try { w2.eval(fs.readFileSync(p, "utf8")); } catch (e) { injectErr += `${f}: ${e.message} `; }
+    }
+    check(!injectErr, "click-block content script evaluated without error" + (injectErr ? ` -> ${injectErr}` : ""));
+    await new Promise((r) => setTimeout(r, 60));
+    check(w2.__sfSecurity.isPhishClickEnabled(), "click interception listener attached by default (clickBlock undef -> enabled)");
+    const lnk = w2.document.getElementById("phishlink");
+    let ev = new w2.MouseEvent("click", { bubbles: true, cancelable: true, button: 0 });
+    lnk.dispatchEvent(ev);
+    check(ev.defaultPrevented, "plain click on a phishing link is intercepted (defaultPrevented)");
+    let modal = w2.document.getElementById("__sf_phishing_banner");
+    check(!!modal, "click interception shows the full-screen warning modal (got: " + (modal ? modal.textContent : "none") + ")");
+    const goBtn = modal && [...modal.querySelectorAll("button")].find((bt) => (bt.textContent || "").trim() === w2.tContent("phish_continue"));
+    check(!!goBtn, "modal exposes the 'Continue to site' button");
+    if (goBtn) {
+      goBtn.click();
+      await new Promise((r) => setTimeout(r, 30));
+    }
+    check(!w2.document.getElementById("__sf_phishing_banner"), "continue dismisses the interception modal");
+    const storedCl = await Promise.resolve(w2.chrome.storage.local.get("sf_phish_allow"));
+    check(Array.isArray(storedCl.sf_phish_allow) && storedCl.sf_phish_allow.indexOf("bad-login.test") !== -1,
+      "continue persists the clicked host to sf_phish_allow (got: " + JSON.stringify(storedCl.sf_phish_allow) + ")");
+    // subsequent clicks on the now-allowed host pass through untouched
+    ev = new w2.MouseEvent("click", { bubbles: true, cancelable: true, button: 0 });
+    lnk.dispatchEvent(ev);
+    check(!ev.defaultPrevented, "second click on an allowed host is NOT intercepted");
+    // safe links are never intercepted
+    const safe = w2.document.createElement("a");
+    safe.href = "https://example.com/safe-page";
+    w2.document.body.appendChild(safe);
+    const evSafe = new w2.MouseEvent("click", { bubbles: true, cancelable: true, button: 0 });
+    safe.dispatchEvent(evSafe);
+    check(!evSafe.defaultPrevented, "benign links are never intercepted");
+    // toggleable off
+    w2.__sfSecurity.disablePhishClickBlock();
+    check(!w2.__sfSecurity.isPhishClickEnabled(), "disablePhishClickBlock detaches the listener");
+    domCl.window.close();
   }
 
   // 4b. Vietnamese metadata extraction (byline patterns, dates, site names)
@@ -990,6 +1496,20 @@ async function main() {
       `${htmlFile}: page-context UI mirrored (add-page btn, pages strip, input wrap)`);
     check(!!w.document.getElementById("ai-input") && w.document.getElementById("ai-input").getAttribute("rows")==="1" && !w.document.getElementById("ai-page-badge"),
       `${htmlFile}: chat input is single-row autogrow, +Trang badge removed`);
+    check(await w.eval(`(function(){
+      var inp = document.getElementById("ai-input");
+      inp.setAttribute("placeholder", "PH");
+      try { Object.defineProperty(inp, "scrollHeight", { configurable: true, get: function(){ return this.getAttribute("placeholder") ? 60 : 30; } }); } catch(e) {}
+      inp.value = "x\\ncontent";
+      aiGrowInput(inp);
+      var grew = parseInt(inp.style.height, 10) >= 60;
+      inp.value = "";
+      aiGrowInput(inp);
+      var collapsed = parseInt(inp.style.height, 10) <= 40;
+      var phRestored = inp.getAttribute("placeholder") === "PH";
+      return grew === false && collapsed && phRestored;
+    })()`),
+      `${htmlFile}: aiGrowInput removes placeholder while measuring so an empty box collapses, never latching onto the placeholder height`);
     check(!!w.document.getElementById("ai-btn-copy-convo"),
       `${htmlFile}: copy-conversation (Markdown) button present in settings modal`);
     check(!!w.document.querySelector("#tab-ai .ai-chat-top .ai-model-bar .ai-model-select-wrap") && !!w.document.querySelector("#tab-ai .ai-chat-top .ai-top-actions") && !!w.document.querySelector(".ai-pages-context .ai-pages-label"),
@@ -1022,8 +1542,10 @@ async function main() {
     }
     check(!!w.document.getElementById("sec-dm-reader") && !!w.document.getElementById("dm-reader-presets") &&
       !!w.document.getElementById("dm-r-warm") && !!w.document.getElementById("dm-r-dark") && !!w.document.getElementById("dm-r-accent") &&
-      !!w.document.getElementById("dm-r-flat") && !!w.document.getElementById("dm-font-width") && !!w.document.getElementById("dm-font-justify"),
-      `${htmlFile}: Dark Mode Night Reader = safe tone sliders (warmth / deeper black / link color) + opt-in flat recolor + reading column + justify`);
+      !!w.document.getElementById("dm-r-txt") && !!w.document.getElementById("dm-r-bg") &&
+      !!w.document.getElementById("dm-r-flat") && !!w.document.getElementById("dm-font-width") && !!w.document.getElementById("dm-font-justify") &&
+      !!w.document.getElementById("dm-tune-size") && !!w.document.getElementById("dm-tune-text"),
+      `${htmlFile}: Dark Mode Night Reader = tone sliders (warmth / black / link / text / bg color) + opt-in flat recolor + per-site size & text color + reading column + justify`);
     {
       const dmContent = fs.readFileSync(path.join(__dirname, "..", "OS", "js", "content", "darkmode.js"), "utf8");
       check(dmContent.includes("_toneParts") && dmContent.includes("_accentToSource") && dmContent.includes("__toneOnly"),
@@ -1032,6 +1554,11 @@ async function main() {
         "content darkmode: aggressive flat recolor is opt-in only and keeps background-image elements (avatars/thumbnails) intact");
       check(dmContent.includes("text-align:justify") && dmContent.includes("max-width:"),
         "content darkmode: reading-column width + justify applied via typography extras");
+      check(dmContent.includes("_siteTune") && dmContent.includes("body,p,li,td,th") && dmContent.includes("font-size:calc(100% *"),
+        "content darkmode: per-site text color (pre-inverted via accent math) + per-site page font size");
+      const dmTab = fs.readFileSync(path.join(__dirname, "..", "OS", "js", "tabs", "darkmode.js"), "utf8");
+      check(dmTab.includes("dm-r-txt") && dmTab.includes("dm-r-bg") && dmTab.includes('field === "text"') && dmTab.includes("dm-tune-size"),
+        "darkmode tab: reader text/bg pickers + per-site text color & size wired");
     }
     check(await w.eval(`typeof lingSm2 === "function" && lingSm2({e:2.5,i:0,r:0},4).i === 1 && lingSm2({e:2.5,i:1,r:1},4).i === 6 && lingSm2({e:2.5,i:12,r:3},1).i === 1 && lingSm2({e:2.5,i:6,r:2},5).e > 2.5`),
       `${htmlFile}: Lingua SM-2 spaced repetition (golden transitions incl. lapse reset & easiness bump)`);
@@ -1219,6 +1746,23 @@ async function main() {
         return ok1 && ok2 && ok3;
       })()`),
         "sidebar: typing status stepper renders and updates pipeline status badge dynamically");
+      check(await w.eval(`(function(){
+        aiShowTyping({label:"LBL", step:2, total:3, text:"TXT"});
+        var row = document.querySelector(".ai-typing-row");
+        var st = row && row.querySelector(".ai-pipeline-status");
+        var ok1 = st && st.querySelector(".ai-pipe-label") && st.querySelector(".ai-pipe-label").textContent === "LBL";
+        var head = st && st.querySelector(".ai-pipe-head");
+        var ok2 = head && head.querySelector(".ai-pipe-step").textContent === "2/3";
+        var ok3 = st && st.querySelector(".ai-pipe-text").textContent === "TXT";
+        var fill = st && st.querySelector(".ai-pipe-fill");
+        var ok4 = fill && fill.style.width === "67%";
+        aiUpdateTypingStatus({label:"LBL", step:3, total:3, text:"TXT2"});
+        var ok5 = st && st.querySelector(".ai-pipe-step").textContent === "3/3"
+          && st.querySelector(".ai-pipe-fill").style.width === "100%"
+          && st.querySelector(".ai-pipe-text").textContent === "TXT2";
+        return ok1 && ok2 && ok3 && ok4 && ok5;
+      })()`),
+        "sidebar: pipeline status card renders label, step counter & progress fill");
       check(await w.eval(`typeof aiExtractViaScripting === "function" && typeof aiExtractViaBackgroundFetch === "function"`),
         "sidebar: multi-tier extraction helpers exported and available");
       check(await w.eval(`(function(){
@@ -1436,6 +1980,155 @@ async function main() {
     await new Promise(r => setTimeout(r, 40));
     check(w.chrome.cookies._cookies.length === 1 && w.chrome.cookies._cookies[0].value === "token1",
       "loading a profile re-applies saved cookies");
+  }
+
+  // 4zz. Header layout customization (top/bottom position, show/hide, side & order)
+  console.log("Regressing header layout customization (position + reorder):");
+  {
+    const custom = {
+      position: "bottom",
+      hidden: { brand: false, lang: false, trust: true, badge: false },
+      side: { brand: "left", lang: "right", trust: "right", badge: "right" },
+      order: { brand: 0, lang: 1, trust: 2, badge: 3 }
+    };
+    const { window: w } = await loadPage("sidebar.html", { sf_header_settings: custom });
+
+    const header = w.document.getElementById("sf-header");
+    const footer = w.document.querySelector(".footer-trust-bar");
+    const nav = w.document.querySelector(".main-nav-bar");
+    check(!!header && !!footer && !!nav, "header + footer + nav present in sidebar.html");
+    check(header.classList.contains("header-position-bottom"),
+      "custom position=bottom applies the header-position-bottom class");
+    check(header.nextElementSibling === footer,
+      `header relocates directly above the footer bar when bottom (next: ${header.nextElementSibling && header.nextElementSibling.className || "none"})`);
+
+    const brandEl = header.querySelector('[data-header-item="brand"]');
+    const langEl = header.querySelector('[data-header-item="lang"]');
+    const trustEl = header.querySelector('[data-header-item="trust"]');
+    check(!!brandEl && !!langEl && !!trustEl, "all header items present under sf-header");
+    check(trustEl.style.display === "none" && brandEl.style.display !== "none",
+      `hidden trust hidden via display:none (trust=${trustEl.style.display}, brand=${brandEl.style.display})`);
+    check(langEl.style.marginLeft === "auto" && brandEl.style.marginLeft === "",
+      `first right item carries margin-left:auto (lang=${langEl.style.marginLeft}, brand=${brandEl.style.marginLeft})`);
+
+    const gear = w.document.getElementById("btn-header-settings");
+    check(!!gear, "gear button present in header");
+    gear.click();
+    const modal = w.document.getElementById("header-settings-modal");
+    check(!!modal && modal.style.display === "block", "gear opens the header settings modal");
+    check(w.document.querySelectorAll("#hdrs-item-list .hdrs-item-row").length === 4,
+      `modal renders 4 item rows (got ${w.document.querySelectorAll("#hdrs-item-list .hdrs-item-row").length})`);
+    const posSegBottom = w.document.querySelector('#hdrs-position-seg [data-hdrs-pos="bottom"]');
+    check(!!posSegBottom && posSegBottom.classList.contains("active"),
+      "bottom segment active for position=bottom");
+
+    const trustRow = w.document.querySelector('#hdrs-item-list [data-hdrs-item="trust"]');
+    check(!!trustRow && trustRow.classList.contains("is-hidden"), "hidden item row marked is-hidden");
+    trustRow.querySelector(".hdrs-ico-btn").click();
+    await new Promise(r => setTimeout(r, 40));
+    const trustRowAfter = w.document.querySelector('#hdrs-item-list [data-hdrs-item="trust"]');
+    check(w.sfGetHeaderSettings().hidden.trust === false &&
+      !!trustRowAfter && !trustRowAfter.classList.contains("is-hidden") &&
+      w.document.querySelector('[data-header-item="trust"]').style.display !== "none",
+      "eye button un-hides trust in both the model and the header");
+
+    w.document.querySelector('#hdrs-position-seg [data-hdrs-pos="top"]').click();
+    await new Promise(r => setTimeout(r, 40));
+    check(w.sfGetHeaderSettings().position === "top",
+      "segmented control switches position to top");
+    check(!header.classList.contains("header-position-bottom") && header.nextElementSibling === nav,
+      "position top removes the bottom class and returns the header above the nav bar");
+
+    const applied = w.sfHeaderApply({
+      position: "top",
+      hidden: {},
+      side: { brand: "left", lang: "right", trust: "right", badge: "right" },
+      order: { brand: 0, lang: 1, trust: 0, badge: 2 }
+    });
+    check(applied && applied.side.brand === "left" && applied.order.trust === 0 && applied.order.lang === 1,
+      `sfHeaderApply reorders the right group (got order ${JSON.stringify(applied.order)})`);
+    const domOrder = [...header.children].map(c => c.dataset && c.dataset.headerItem).filter(Boolean);
+    check(domOrder.indexOf("trust") < domOrder.indexOf("lang"),
+      `header DOM order follows the reorder (got ${domOrder.join(",")})`);
+
+    const defs = w.sfHeaderReset();
+    check(defs && defs.position === "top" && defs.side.brand === "left" && defs.side.badge === "right" &&
+      defs.hidden.badge === false && defs.order.badge === 2,
+      `reset restores the default layout (got ${JSON.stringify(defs)})`);
+    const storedRes = (await w.chrome.storage.local.get("sf_header_settings")).sf_header_settings;
+    check(!!storedRes && storedRes.position === "top" && storedRes.hidden.trust === false &&
+      storedRes.order.brand === 0,
+      "reset persists defaults to sf_header_settings");
+
+    // --- Main-nav tab reorder ---
+    const navDefault = w.sfNavGetOrder();
+    check(Array.isArray(navDefault) && navDefault.length === 17 && navDefault[0] === "tab-cite" &&
+      navDefault[navDefault.length - 1] === "tab-qr",
+      `nav order initialized with 17 default targets (got ${navDefault.length})`);
+    const rev = w.sfNavReorder(navDefault.slice().reverse());
+    const domNav = [...w.document.querySelectorAll("#nav-wrapper .main-nav-btn")].map(b => b.dataset.target);
+    check(rev && rev[0] === "tab-qr" && rev[rev.length - 1] === "tab-cite" &&
+      domNav.join() === rev.join(),
+      `nav DOM order follows the reversed order (first=${domNav[0]}, last=${domNav[domNav.length - 1]})`);
+    const storedNav = (await w.chrome.storage.local.get("sf_nav_settings")).sf_nav_settings;
+    check(!!storedNav && Array.isArray(storedNav.order) && storedNav.order[0] === "tab-qr",
+      "nav order persisted to sf_nav_settings");
+
+    gear.click();
+    await new Promise(r => setTimeout(r, 40));
+    check(w.document.querySelectorAll("#hdrs-nav-list .hdrs-item-row").length === 17,
+      `modal renders 17 nav order rows (got ${w.document.querySelectorAll("#hdrs-nav-list .hdrs-item-row").length})`);
+    const rowMid = w.document.querySelector('#hdrs-nav-list [data-nav-target="tab-ai"]');
+    const downBtn = rowMid ? [...rowMid.querySelectorAll(".hdrs-ico-btn")][1] : null;
+    check(!!rowMid && !!downBtn && !downBtn.disabled,
+      "a middle nav row exposes an enabled down button");
+    if (downBtn) {
+      downBtn.click();
+      await new Promise(r => setTimeout(r, 40));
+      const afterClick = w.sfNavGetOrder();
+      check(afterClick.indexOf("tab-ai") === afterClick.length - 1,
+        `down-arrow moves the row (tab-ai now last, got idx ${afterClick.indexOf("tab-ai")})`);
+    }
+    const firstRowUp = w.document.querySelector('#hdrs-nav-list [data-nav-target="tab-qr"] .hdrs-ico-btn');
+    check(!!firstRowUp && firstRowUp.disabled === true,
+      "first nav row's up button is disabled");
+    w.document.getElementById("btn-reset-header-settings").click();
+    await new Promise(r => setTimeout(r, 40));
+    const navAfterReset = w.sfNavGetOrder();
+    const storedNavReset = (await w.chrome.storage.local.get("sf_nav_settings")).sf_nav_settings;
+    check(navAfterReset && navAfterReset.join() === navDefault.join() &&
+      storedNavReset.order.join() === navDefault.join() &&
+      [...w.document.querySelectorAll("#nav-wrapper .main-nav-btn")].map(b => b.dataset.target).join() === navDefault.join(),
+      "reset restores the default nav order in model, DOM, and storage");
+  }
+
+  // 4zz2. Nav default active tab = stored active, else first tab in nav order
+  console.log("Regressing nav default active tab (restore last used / first-in-order):");
+  {
+    const { window: w } = await loadPage("sidebar.html", {
+      sf_nav_settings: { order: ["tab-ai", "tab-cite", "tab-qr"], active: "tab-ai" }
+    });
+    const activeBtn = w.document.querySelector(".main-nav-btn.active");
+    check(!!activeBtn && activeBtn.dataset.target === "tab-ai",
+      `stored active tab restored on load (active=${activeBtn && activeBtn.dataset.target})`);
+    const activeSection = w.document.querySelector(".tab-section.active");
+    check(!!activeSection && activeSection.id === "tab-ai",
+      `corresponding tab-section active on load (section=${activeSection && activeSection.id})`);
+
+    const citeBtn = w.document.querySelector('.main-nav-btn[data-target="tab-cite"]');
+    if (citeBtn) citeBtn.click();
+    await new Promise(r => setTimeout(r, 30));
+    const storedNav = (await w.chrome.storage.local.get("sf_nav_settings")).sf_nav_settings;
+    check(!!storedNav && storedNav.active === "tab-cite",
+      `clicking a nav tab persists it as active (stored active=${storedNav && storedNav.active})`);
+  }
+  {
+    const { window: w } = await loadPage("sidebar.html", {
+      sf_nav_settings: { order: ["tab-qr", "tab-ai", "tab-cite"] }
+    });
+    const activeBtn = w.document.querySelector(".main-nav-btn.active");
+    check(!!activeBtn && activeBtn.dataset.target === "tab-qr",
+      `no stored active -> first tab in nav order (active=${activeBtn && activeBtn.dataset.target})`);
   }
 
   console.log("\n" + (failures === 0 ? "ALL TESTS PASSED" : `${failures} CHECK(S) FAILED`));

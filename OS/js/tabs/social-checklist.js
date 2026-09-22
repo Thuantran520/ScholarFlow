@@ -39,6 +39,8 @@ function socCkRender() {
     prog.textContent = t("soc_ck_progress").replace("{done}", String(done)).replace("{total}", String(SOC_CHECKLIST_KEYS.length));
     prog.style.color = done === SOC_CHECKLIST_KEYS.length ? "#34d399" : "#fbbf24";
   }
+  const socScoreFn = window.socScoreRefresh;
+  if (socScoreFn) socScoreFn();
 }
 function socCkExport() {
   const lines = ["ScholarFlow — " + t("soc_ck_title"), ""];

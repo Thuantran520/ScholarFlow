@@ -21,8 +21,20 @@
       </div>
     </div>
 
-    <!-- Active Tab Live Tracker Bar -->
-    <div id="tabmgr-active-live" class="tabmgr-card-url" style="font-size:10px; color:#94a3b8; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:4px 8px; margin-bottom:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">--:--:--</div>
+    <!-- Music Player Banner (toggleable via sf_tabmgr_media_player) -->
+    <div id="tabmgr-media" class="tabmgr-media">
+      <div class="tabmgr-media-bar">
+        <span class="tabmgr-media-bar-icon">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+        </span>
+        <span class="tabmgr-media-bar-title" data-i18n="tabmgr_media_title">Music player</span>
+        <label class="tabmgr-media-switch" title="Hide music player" data-i18n-title="tabmgr_media_toggle_hide">
+          <input type="checkbox" id="tabmgr-media-check" checked>
+          <span class="tabmgr-media-switch-slider"></span>
+        </label>
+      </div>
+      <div id="tabmgr-media-body" class="tabmgr-media-body"></div>
+    </div>
 
     <!-- Search & Filters -->
     <div class="tabmgr-control-row">
@@ -32,18 +44,18 @@
       </button>
     </div>
     <div class="tabmgr-control-row" style="flex-wrap:wrap;">
-      <select id="tabmgr-sort" class="tabmgr-select" style="flex:1; min-width:110px;">
+      <select id="tabmgr-sort" class="tabmgr-select" style="flex:1; min-width:130px;">
         <option value="title_asc" data-i18n="tabmgr_sort_title_asc">Tên A→Z</option>
         <option value="title_desc" data-i18n="tabmgr_sort_title_desc">Tên Z→A</option>
         <option value="domain" data-i18n="tabmgr_sort_domain">Theo domain</option>
         <option value="url_asc" data-i18n="tabmgr_sort_url">Theo URL</option>
       </select>
-      <select id="tabmgr-group-mode" class="tabmgr-select" style="flex:1; min-width:110px;">
+      <select id="tabmgr-group-mode" class="tabmgr-select" style="flex:1; min-width:130px;">
         <option value="none" data-i18n="tabmgr_group_none">Không nhóm</option>
         <option value="domain" data-i18n="tabmgr_group_domain">Nhóm domain</option>
         <option value="function" data-i18n="tabmgr_group_function">Nhóm chức năng</option>
       </select>
-      <span style="font-size:10.5px; color:#64748b; margin-left:auto;"><span id="tabmgr-domain-count">0</span> domain</span>
+      <span class="tabmgr-domain-chip"><strong id="tabmgr-domain-count">0</strong> domain</span>
     </div>
 
     <!-- Batch Actions Grid -->

@@ -133,6 +133,16 @@
   align-items: center;
   gap: 6px;
 }
+.sec-result-dot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(0,0,0,0.35);
+}
+.sec-result-text {
+  min-width: 0;
+}
 
 /* ── Cookie audit rows ── */
 .sec-ck-row {

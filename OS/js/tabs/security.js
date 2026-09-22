@@ -2,7 +2,7 @@
 // ScholarFlow module: OS/js/tabs/security.js
 // Security UI: phishing+typo-squat, anti-clickjacking auto-block, unlock per-site
 // ---------------------------------------------------------------------------
-let secState = { phishing: true, clickjack: true, autoBlock: true, cookieReject: false, pasteGuard: false, unlockSites: {}, lastScan: null };
+let secState = { phishing: true, clickjack: true, autoBlock: true, clickBlock: true, cookieReject: false, pasteGuard: false, unlockSites: {}, lastScan: null };
 let _secCurrentHost = "";
 
 function secLoadSettings() {
@@ -12,6 +12,7 @@ function secLoadSettings() {
       secState.phishing = s.phishing !== false;
       secState.clickjack = s.clickjack !== false;
       secState.autoBlock = s.autoBlock !== false;
+      secState.clickBlock = s.clickBlock !== false;
       secState.cookieReject = s.cookieReject === true;
       secState.pasteGuard = s.pasteGuard === true;
       secState.unlockSites = s.unlockSites || (s.unlock ? { _legacy: true } : {});
@@ -25,7 +26,7 @@ function secLoadSettings() {
   });
 }
 function secSaveSettings() {
-  storSet({ sf_security_settings: { phishing: secState.phishing, clickjack: secState.clickjack, autoBlock: !!secState.autoBlock, cookieReject: !!secState.cookieReject, pasteGuard: !!secState.pasteGuard, unlockSites: secState.unlockSites, lastScan: secState.lastScan } }, function () {
+  storSet({ sf_security_settings: { phishing: secState.phishing, clickjack: secState.clickjack, autoBlock: !!secState.autoBlock, clickBlock: !!secState.clickBlock, cookieReject: !!secState.cookieReject, pasteGuard: !!secState.pasteGuard, unlockSites: secState.unlockSites, lastScan: secState.lastScan } }, function () {
     secUpdateUI();
     secPushToActiveTab();
   });
@@ -56,12 +57,14 @@ function secUpdateUI() {
   const p = document.getElementById("sec-toggle-phishing");
   const c = document.getElementById("sec-toggle-clickjack");
   const a = document.getElementById("sec-toggle-autoblock");
+  const cb = document.getElementById("sec-toggle-phishclick");
   const u = document.getElementById("sec-toggle-unlock");
   const g = document.getElementById("sec-toggle-pasteguard");
   const r = document.getElementById("sec-toggle-cookiereject");
   if (p) p.checked = !!secState.phishing;
   if (c) c.checked = !!secState.clickjack;
   if (a) a.checked = !!secState.autoBlock;
+  if (cb) cb.checked = !!secState.clickBlock;
   if (g) g.checked = !!secState.pasteGuard;
   if (r) r.checked = !!secState.cookieReject;
   const host = _secCurrentHost || "";
@@ -89,8 +92,8 @@ function secUpdateUI() {
   }
   const st = document.getElementById("sec-status");
   if (st) {
-    const activeCount = (secState.phishing ? 1 : 0) + (secState.clickjack ? 1 : 0) + (secState.autoBlock ? 1 : 0) + (secState.cookieReject ? 1 : 0) + (secState.pasteGuard ? 1 : 0);
-    st.textContent = activeCount > 0 ? (activeCount + "/5 Active") : "Protected";
+    const activeCount = (secState.phishing ? 1 : 0) + (secState.clickjack ? 1 : 0) + (secState.autoBlock ? 1 : 0) + (secState.clickBlock ? 1 : 0) + (secState.cookieReject ? 1 : 0) + (secState.pasteGuard ? 1 : 0);
+    st.textContent = activeCount > 0 ? (activeCount + "/6 Active") : "Protected";
     st.className = activeCount > 0 ? "sec-pill sec-pill-safe" : "sec-pill";
   }
 }
@@ -116,25 +119,25 @@ function secScanPhishing() {
     while (out.firstChild) out.removeChild(out.firstChild);
     const row = document.createElement("div");
     row.className = "sec-result-row";
+    let msg, col;
     if (res && res.phishing && res.info) {
-      let msg = t("sec_result_phishing_yes");
+      msg = t("sec_result_phishing_yes");
       if (res.info.type === "typo") msg = t("sec_result_typo_yes").replace("{0}", res.info.host).replace("{1}", res.info.typo);
       else if (res.info.type === "punycode") msg = t("sec_result_punycode_yes").replace("{0}", res.info.host);
-      row.textContent = msg;
-      row.style.color = "#f87171";
+      col = "#f87171";
     } else if (res && res.phishing) {
-      row.textContent = t("sec_result_phishing_yes");
-      row.style.color = "#f87171";
+      msg = t("sec_result_phishing_yes");
+      col = "#f87171";
     } else if (res) {
-      row.textContent = t("sec_result_phishing_no");
-      row.style.color = "#34d399";
+      msg = t("sec_result_phishing_no");
+      col = "#34d399";
     } else {
-      row.textContent = t("sec_result_err");
-      row.style.color = "#94a3b8";
+      msg = t("sec_result_err");
+      col = "#94a3b8";
     }
-    out.appendChild(row);
+    out.appendChild(_secScanRow(col, msg));
     secState.lastScan = new Date().toISOString();
-    storSet({ sf_security_settings: { phishing: secState.phishing, clickjack: secState.clickjack, autoBlock: secState.autoBlock, cookieReject: !!secState.cookieReject, pasteGuard: !!secState.pasteGuard, unlockSites: secState.unlockSites, lastScan: secState.lastScan } }, function () {});
+    storSet({ sf_security_settings: { phishing: secState.phishing, clickjack: secState.clickjack, autoBlock: secState.autoBlock, clickBlock: !!secState.clickBlock, cookieReject: !!secState.cookieReject, pasteGuard: !!secState.pasteGuard, unlockSites: secState.unlockSites, lastScan: secState.lastScan } }, function () {});
   });
 }
 function secScanClickjack() {
@@ -142,20 +145,19 @@ function secScanClickjack() {
     const out = document.getElementById("sec-scan-out");
     if (!out) return;
     while (out.firstChild) out.removeChild(out.firstChild);
-    const row = document.createElement("div");
-    row.className = "sec-result-row";
     const n = res && typeof res.count === "number" ? res.count : -1;
+    let msg, col;
     if (n > 0) {
-      row.textContent = (secState.autoBlock ? t("sec_result_clickjack_blocked") : t("sec_result_clickjack_yes")).replace("{0}", String(n));
-      row.style.color = "#f87171";
+      msg = (secState.autoBlock ? t("sec_result_clickjack_blocked") : t("sec_result_clickjack_yes")).replace("{0}", String(n));
+      col = "#f87171";
     } else if (n === 0) {
-      row.textContent = t("sec_result_clickjack_no");
-      row.style.color = "#34d399";
+      msg = t("sec_result_clickjack_no");
+      col = "#34d399";
     } else {
-      row.textContent = t("sec_result_err");
-      row.style.color = "#94a3b8";
+      msg = t("sec_result_err");
+      col = "#94a3b8";
     }
-    out.appendChild(row);
+    out.appendChild(_secScanRow(col, msg));
   });
 }
 function secToggleUnlockPerSite() {
@@ -180,11 +182,8 @@ function secUnlockNow() {
     const out = document.getElementById("sec-scan-out");
     if (!out) return;
     while (out.firstChild) out.removeChild(out.firstChild);
-    const row = document.createElement("div");
-    row.className = "sec-result-row";
-    row.textContent = res && res.ok ? t("sec_result_unlock_ok") : t("sec_result_err");
-    row.style.color = res && res.ok ? "#34d399" : "#f87171";
-    out.appendChild(row);
+    const ok = res && res.ok;
+    out.appendChild(_secScanRow(ok ? "#34d399" : "#f87171", ok ? t("sec_result_unlock_ok") : t("sec_result_err")));
     showToast(res && res.ok ? t("sec_toast_unlocked") : t("sec_toast_unlock_err"));
   });
 }
@@ -278,7 +277,7 @@ function secQuickScan() {
   if (!out) return;
   out.style.display = "block";
   while (out.firstChild) out.removeChild(out.firstChild);
-  out.appendChild(_secRow(t("sec_quick_scanning"), "#94a3b8"));
+  out.appendChild(_secScanRow("#94a3b8", t("sec_quick_scanning")));
 
   let phishRes = null, clickRes = null, trustRes = null;
   let done = 0;
@@ -289,9 +288,9 @@ function secQuickScan() {
 
     // 1. Protocol
     if (_secCurrentProto === "http:") {
-      out.appendChild(_secRow("⚠️ " + t("sec_trust_http"), "#fbbf24"));
+      out.appendChild(_secScanRow("#fbbf24", t("sec_trust_http")));
     } else if (_secCurrentProto === "https:") {
-      out.appendChild(_secRow("🔒 HTTPS Encrypted", "#34d399"));
+      out.appendChild(_secScanRow("#34d399", t("sec_result_https_ok")));
     }
 
     // 2. Phishing verdict
@@ -302,32 +301,32 @@ function secQuickScan() {
       } else if (phishRes.info && phishRes.info.type === "punycode") {
         msg = t("sec_result_punycode_yes").replace("{0}", phishRes.info.host);
       }
-      out.appendChild(_secRow("❌ " + msg, "#f87171"));
+      out.appendChild(_secScanRow("#f87171", msg));
     } else if (phishRes) {
-      out.appendChild(_secRow("✓ " + t("sec_result_phishing_no"), "#34d399"));
+      out.appendChild(_secScanRow("#34d399", t("sec_result_phishing_no")));
     }
 
     // 3. Clickjacking verdict
     if (clickRes && typeof clickRes.count === "number") {
       if (clickRes.count > 0) {
         const msg = (secState.autoBlock ? t("sec_result_clickjack_blocked") : t("sec_result_clickjack_yes")).replace("{0}", String(clickRes.count));
-        out.appendChild(_secRow("❌ " + msg, "#f87171"));
+        out.appendChild(_secScanRow("#f87171", msg));
       } else {
-        out.appendChild(_secRow("✓ " + t("sec_result_clickjack_no"), "#34d399"));
+        out.appendChild(_secScanRow("#34d399", t("sec_result_clickjack_no")));
       }
     }
 
     // 4. Trust score & reasons
     if (trustRes && trustRes.ok) {
       if (trustRes.official) {
-        out.appendChild(_secRow("✓ " + t("sec_trust_official").replace("{0}", trustRes.official), "#34d399"));
+        out.appendChild(_secScanRow("#34d399", t("sec_trust_official").replace("{0}", trustRes.official)));
       } else {
         const score = Math.min(10, Math.max(0, trustRes.score || 0));
         const col = score >= 4 ? "#f87171" : score >= 1 ? "#fbbf24" : "#34d399";
-        out.appendChild(_secRow("• " + t("sec_trust_score").replace("{0}", String(score)), col));
+        out.appendChild(_secScanRow(col, t("sec_trust_score").replace("{0}", String(score))));
         (trustRes.reasons || []).slice(0, 2).forEach(function (r) {
           const txt = t(r.k);
-          out.appendChild(_secRow("  - " + (r.p ? txt.replace("{0}", r.p) : txt), "#fbbf24"));
+          out.appendChild(_secScanRow("#fbbf24", (r.p ? txt.replace("{0}", r.p) : txt)));
         });
       }
     }
@@ -344,6 +343,20 @@ function _secRow(text, color) {
   row.className = "sec-result-row";
   row.textContent = text;
   if (color) row.style.color = color;
+  return row;
+}
+function _secScanRow(color, text) {
+  const row = document.createElement("div");
+  row.className = "sec-result-row";
+  const dot = document.createElement("span");
+  dot.className = "sec-result-dot";
+  dot.style.background = color || "#94a3b8";
+  const lbl = document.createElement("span");
+  lbl.className = "sec-result-text";
+  lbl.textContent = text;
+  lbl.style.color = color || "#94a3b8";
+  row.appendChild(dot);
+  row.appendChild(lbl);
   return row;
 }
 function secTrustReport() {
@@ -482,6 +495,8 @@ onReady(function () {
     secSaveSettings();
     if (secState.phishing) secScanPhishing();
   });}
+  const cb = document.getElementById("sec-toggle-phishclick");
+  if (cb) cb.addEventListener("change", function () { secState.clickBlock = !!cb.checked; secSaveSettings(); });
   if (c) c.addEventListener("change", function () { secState.clickjack = !!c.checked; secSaveSettings(); });
   if (a) a.addEventListener("change", function () { secState.autoBlock = !!a.checked; secSaveSettings(); });
   if (u) u.addEventListener("change", secToggleUnlockPerSite);

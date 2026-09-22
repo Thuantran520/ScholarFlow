@@ -423,6 +423,37 @@ function aiSelectRelevantWindows(fullText, query, budget){
 }
 let aiAbort = null; let aiUserStopped = false;
 function aiSig(parent, ms){ const ctrl=new AbortController(); const t=setTimeout(()=>{ try{ ctrl.abort(); }catch(e){} }, ms); if(parent){ if(parent.aborted){ try{ ctrl.abort(); }catch(e){} } else { try{ parent.addEventListener("abort", ()=>{ try{ ctrl.abort(); }catch(e){} }); }catch(e){} } } return ctrl.signal; }
+function aiRenderPipelineStatus(el, info){
+  while(el.firstChild){ el.removeChild(el.firstChild); }
+  if(info==null || typeof info!=="object"){
+    el.textContent=String(info||"");
+    return;
+  }
+  const total=Number(info.total)>0?Number(info.total):3;
+  const step=Math.max(1, Math.min(Number(info.step)||1, total));
+  const head=document.createElement("div");
+  head.className="ai-pipe-head";
+  const lbl=document.createElement("span");
+  lbl.className="ai-pipe-label";
+  lbl.textContent=String(info.label||"");
+  const cnt=document.createElement("span");
+  cnt.className="ai-pipe-step";
+  cnt.textContent=step+"/"+total;
+  head.appendChild(lbl);
+  head.appendChild(cnt);
+  const track=document.createElement("div");
+  track.className="ai-pipe-track";
+  const fill=document.createElement("div");
+  fill.className="ai-pipe-fill";
+  fill.style.width=Math.round((step/total)*100)+"%";
+  track.appendChild(fill);
+  const txt=document.createElement("div");
+  txt.className="ai-pipe-text";
+  txt.textContent=String(info.text||"");
+  el.appendChild(head);
+  el.appendChild(track);
+  el.appendChild(txt);
+}
 function aiShowTyping(statusText){
   const c=document.getElementById("ai-chat-history");
   if(!c) return;
@@ -431,16 +462,19 @@ function aiShowTyping(statusText){
   row.className="ai-msg ai-msg-assistant ai-typing-row";
   const b=document.createElement("div");
   b.className="ai-bubble ai-typing";
+  const dots=document.createElement("div");
+  dots.className="ai-dots";
   for(let i=0;i<3;i++){
     const d=document.createElement("span");
     d.className="ai-dot";
-    b.appendChild(d);
+    dots.appendChild(d);
   }
+  b.appendChild(dots);
   if(statusText){
     const st=document.createElement("span");
     st.className="ai-pipeline-status";
-    st.textContent=String(statusText);
     b.appendChild(st);
+    aiRenderPipelineStatus(st, statusText);
   }
   row.appendChild(b);
   c.appendChild(row);
@@ -462,7 +496,7 @@ function aiUpdateTypingStatus(statusText){
     st.className="ai-pipeline-status";
     b.appendChild(st);
   }
-  st.textContent=String(statusText||"");
+  aiRenderPipelineStatus(st, statusText);
   c.scrollTop=c.scrollHeight;
 }
 function aiHideTyping(){ const c=document.getElementById("ai-chat-history"); if(!c) return; c.querySelectorAll(".ai-typing-row").forEach(x=>{ try{ c.removeChild(x); }catch(e){} }); }
@@ -640,11 +674,6 @@ function aiUpdateCurrentPageDisplay(){
             aiGetSelectionText().then(selText=>{
               if(selText&&selText.trim()){
                 aiAttachedSelection=selText.trim();
-                const inp=document.getElementById("ai-input");
-                if(inp&&!inp.value){
-                  const preview=selText.trim().replace(/\s+/g," ").slice(0,36);
-                  inp.placeholder="🎯 Bôi đen: \""+preview+(selText.trim().length>36?"...":"")+"\" — Hỏi hoặc bấm chip tác vụ";
-                }
               }
             }).catch(()=>{});
           }catch(e){}
@@ -1381,7 +1410,15 @@ function aiBuildMsgRow(msg){
   row.appendChild(bubble); row.appendChild(foot); return row;
 }
 function aiScrollToBottom(){ const c=document.getElementById("ai-chat-history"); if(c) c.scrollTop=c.scrollHeight; }
-function aiGrowInput(inp){ if(!inp) return; inp.style.height="auto"; inp.style.height=Math.min(140,Math.max(20,inp.scrollHeight))+"px"; }
+function aiGrowInput(inp){
+  if(!inp) return;
+  const ph=inp.getAttribute("placeholder");
+  if(ph) inp.removeAttribute("placeholder");
+  inp.style.height="auto";
+  const h=Math.min(140,Math.max(20,inp.scrollHeight));
+  if(ph) inp.setAttribute("placeholder", ph);
+  inp.style.height=h+"px";
+}
 function aiUpdateLatestBtn(){ const c=document.getElementById("ai-chat-history"); const b=document.getElementById("ai-btn-latest"); if(!c||!b) return; const gap=c.scrollHeight-c.scrollTop-c.clientHeight; b.classList.toggle("is-visible", gap>140); }
 function aiConversationMarkdown(){ const out=[]; try{ out.push("_ScholarFlow · "+new Date().toLocaleString()+"_",""); }catch(e){ out.push("",""); } aiHistory.forEach(m=>{ const who=m.role==="user"?aiT("ai_you",null,"Bạn"):aiGetProviderConfig(m.provider||aiProvider).label; let hm=""; const t=Number(m.ts)||0; if(t){ try{ hm=" · "+new Date(t).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}); }catch(e){} } out.push("**"+who+hm+"**","",""+String(m.content||""),""); }); if(aiPages.length){ out.push("---",""); out.push("_"+aiT("ai_pages_added",null,"Trang đã thêm")+":_"); aiPages.forEach(p=>out.push("- "+(p.title||p.url)+" — "+p.url)); out.push(""); } return out.join("\n"); }
 function aiDownloadBlob(blob, filename){
@@ -2049,20 +2086,19 @@ async function aiSendCurrent(){
     }
   };
   const pipeline = aiResolvePipeline(raw, isPageQuery, detectedSkill, quickReq, hasActiveWebPage, pageUrl);
-  aiShowTyping("⚡ [" + pipeline.label + "] 1/3: " + pipeline.steps[0]);
+  aiShowTyping({label:pipeline.label, step:1, total:pipeline.steps.length, text:pipeline.steps[0]});
   let pageText=""; let selectionText=aiAttachedSelection||"";
   aiAttachedSelection="";
-  if(input){ const defPh=aiT("ai_input_placeholder",null,"Hỏi về trang, video, tài liệu, hoặc nhập câu hỏi bất kỳ..."); if(input.placeholder!==defPh) input.placeholder=defPh; }
   /* Fetch page context when user triggered +/@ prefix, active page in auto mode, or a quick-chip request */
   if(isPageQuery) {
-    aiUpdateTypingStatus("⚡ [" + pipeline.label + "] 2/3: " + pipeline.steps[1]);
+    aiUpdateTypingStatus({label:pipeline.label, step:2, total:pipeline.steps.length, text:pipeline.steps[1]});
     try{
       pageText=await aiGetPageContextText(cleanQuery);
       if(!selectionText) selectionText=await aiGetSelectionText();
     }catch(e){}
   }
   if(quickReq){
-    aiUpdateTypingStatus("⚡ [" + pipeline.label + "] 2/3: " + pipeline.steps[1]);
+    aiUpdateTypingStatus({label:pipeline.label, step:2, total:pipeline.steps.length, text:pipeline.steps[1]});
     const kc=quickReq;
     try{
       if(kc.kind==="tabs"){ const tb=await aiCollectTabsContext(); if(tb){ pageText=tb; } else if(typeof showToast==="function") showToast("ai_toast_tabs_empty","warning"); }
@@ -2128,7 +2164,7 @@ async function aiSendCurrent(){
   let multiWebNote="";
   let multiWebSources=[];
   if(webSearchEnabled&&!quickReq){
-    aiUpdateTypingStatus("⚡ [" + pipeline.label + "] 2/3: " + pipeline.steps[1]);
+    aiUpdateTypingStatus({label:pipeline.label, step:2, total:pipeline.steps.length, text:pipeline.steps[1]});
     try{
       const sRes=await aiSearchMultiSources(cleanQuery);
       if(sRes&&sRes.text){
@@ -2145,7 +2181,7 @@ async function aiSendCurrent(){
     answer=needKeyMsg+"\n\n--- Context preview that will be sent (first ~5000 chars) ---\n"+prompt.slice(0,1200)+(prompt.length>1200?"...":"")+"\n\n("+aiLocalFallback(prompt, pageText)+")";
     usedFallback=true; if(typeof showToast==="function") showToast("ai_toast_need_key","warning");
   } else {
-    aiUpdateTypingStatus("⚡ [" + pipeline.label + "] 3/3: " + pipeline.steps[2]);
+    aiUpdateTypingStatus({label:pipeline.label, step:3, total:pipeline.steps.length, text:pipeline.steps[2]});
     callOpts={signal:aiAbort.signal, onToken:onToken, groundOverride:forceGround, isPageQuery:isPageQuery, skill:detectedSkill, pipeline:pipeline, __groundingSources:multiWebSources.slice()};
     try{
       if(videoDirectId){

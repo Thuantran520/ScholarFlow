@@ -138,13 +138,15 @@ function dmRender() {
     force.disabled = !_dmCurrentHost || !dmState.enabled;
   }
   const tune = (_dmCurrentHost && dmState.siteTune[_dmCurrentHost]) || {};
-  [["dm-tune-bright", "b", 100], ["dm-tune-contrast", "c", 100], ["dm-tune-color", "s", 100]].forEach(function (row) {
+  [["dm-tune-bright", "b", 100], ["dm-tune-contrast", "c", 100], ["dm-tune-color", "s", 100], ["dm-tune-size", "size", 100]].forEach(function (row) {
     const el = document.getElementById(row[0]);
     const val = document.getElementById(row[0] + "-val");
     const v = tune[row[1]] == null ? row[2] : tune[row[1]];
     if (el) { el.value = String(v); el.disabled = !_dmCurrentHost; }
     if (val) val.textContent = v + "%";
   });
+  const ttxtEl = document.getElementById("dm-tune-text");
+  if (ttxtEl) { ttxtEl.value = /^#[0-9a-f]{6}$/i.test(tune.text) ? tune.text : "#e2e8f0"; ttxtEl.disabled = !_dmCurrentHost; }
   const chips = document.getElementById("dm-paper-chips");
   if (chips) {
     _socClearBox(chips);
@@ -227,6 +229,10 @@ function dmRender() {
   if (rdvEl) rdvEl.textContent = (dmState.reader.dark == null ? 20 : dmState.reader.dark) + "%";
   const raEl = document.getElementById("dm-r-accent");
   if (raEl) raEl.value = dmState.reader.accent || "#f0a860";
+  const rtxtEl = document.getElementById("dm-r-txt");
+  if (rtxtEl) rtxtEl.value = /^#[0-9a-f]{6}$/i.test(dmState.reader.txt || "") ? dmState.reader.txt : "#e8dcc3";
+  const rbgEl = document.getElementById("dm-r-bg");
+  if (rbgEl) rbgEl.value = /^#[0-9a-f]{6}$/i.test(dmState.reader.bg || "") ? dmState.reader.bg : "#16130e";
   const rfEl = document.getElementById("dm-r-flat");
   if (rfEl) rfEl.checked = !!dmState.reader.flat;
   const wEl = document.getElementById("dm-font-width");
@@ -276,10 +282,15 @@ function dmToggleForce() {
 }
 function _dmSetTune(field, raw) {
   if (!_dmCurrentHost) return;
-  const v = Math.max(0, Math.min(180, parseInt(raw, 10) || 100));
   const cur = dmState.siteTune[_dmCurrentHost] || { b: 100, c: 100, s: 100 };
-  cur[field] = v;
-  if (cur.b === 100 && cur.c === 100 && cur.s === 100) delete dmState.siteTune[_dmCurrentHost];
+  if (field === "text") {
+    if (/^#[0-9a-fA-F]{6}$/.test(String(raw || ""))) cur.text = String(raw).toLowerCase();
+    else delete cur.text;
+  } else {
+    const v = Math.max(0, Math.min(180, parseInt(raw, 10) || 100));
+    cur[field] = v;
+  }
+  if (cur.b === 100 && cur.c === 100 && cur.s === 100 && (cur.size == null || cur.size === 100) && !cur.text) delete dmState.siteTune[_dmCurrentHost];
   else dmState.siteTune[_dmCurrentHost] = cur;
   dmSave();
 }
@@ -309,7 +320,7 @@ onReady(function () {
   if (btn) btn.addEventListener("click", dmToggleSite);
   const force = document.getElementById("btn-sec-dm-force");
   if (force) force.addEventListener("click", dmToggleForce);
-  [["dm-tune-bright", "b"], ["dm-tune-contrast", "c"], ["dm-tune-color", "s"]].forEach(function (row) {
+  [["dm-tune-bright", "b"], ["dm-tune-contrast", "c"], ["dm-tune-color", "s"], ["dm-tune-size", "size"]].forEach(function (row) {
     const el = document.getElementById(row[0]);
     if (!el) return;
     el.addEventListener("input", function () {
@@ -318,6 +329,8 @@ onReady(function () {
     });
     el.addEventListener("change", function () { _dmSetTune(row[1], el.value); });
   });
+  const ttxtInp = document.getElementById("dm-tune-text");
+  if (ttxtInp) ttxtInp.addEventListener("change", function () { _dmSetTune("text", ttxtInp.value); });
   const tuneReset = document.getElementById("btn-dm-tune-reset");
   if (tuneReset) {tuneReset.addEventListener("click", function () {
     if (_dmCurrentHost && dmState.siteTune[_dmCurrentHost]) { delete dmState.siteTune[_dmCurrentHost]; dmSave(); showToast(t("dm_updated").replace("{0}", _dmCurrentHost)); }
@@ -380,6 +393,10 @@ onReady(function () {
   }
   const raInp = document.getElementById("dm-r-accent");
   if (raInp) raInp.addEventListener("change", function () { dmState.reader.accent = raInp.value; dmState.reader.preset = "custom"; dmSave(); });
+  const rtxtInp = document.getElementById("dm-r-txt");
+  if (rtxtInp) rtxtInp.addEventListener("change", function () { dmState.reader.txt = rtxtInp.value; dmState.reader.preset = "custom"; dmSave(); });
+  const rbgInp = document.getElementById("dm-r-bg");
+  if (rbgInp) rbgInp.addEventListener("change", function () { dmState.reader.bg = rbgInp.value; dmState.reader.preset = "custom"; dmSave(); });
   const rfInp = document.getElementById("dm-r-flat");
   if (rfInp) rfInp.addEventListener("change", function () { dmState.reader.flat = !!rfInp.checked; if (dmState.reader.flat && !dmState.reader.on) dmState.reader.on = true; dmSave(); });
   const wInp = document.getElementById("dm-font-width");

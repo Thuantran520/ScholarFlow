@@ -142,9 +142,9 @@
 /* Controls row */
 .tabmgr-control-row {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .tabmgr-search-input {
@@ -183,12 +183,34 @@
 }
 
 .tabmgr-select {
-  font-size: 11px;
-  padding: 5px 8px;
+  font-size: 11.5px;
+  padding: 7px 11px;
   background: rgba(15, 23, 42, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 6px;
   color: #cbd5e1;
+  cursor: pointer;
+}
+
+.tabmgr-domain-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #7dd3fc;
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.18);
+  border-radius: 999px;
+  padding: 5px 10px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.tabmgr-domain-chip strong {
+  font-weight: 800;
+  color: #e0f2fe;
 }
 
 /* Batch actions grid */
@@ -197,6 +219,15 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 6px;
   margin-bottom: 10px;
+}
+
+/* 4-across variant (sidebar toolbar rows) so long labels wrap, not clip */
+.tabmgr-actions-grid.tabmgr-actions-4up {
+  grid-template-columns: repeat(4, 1fr);
+}
+.tabmgr-actions-grid.tabmgr-actions-4up .tabmgr-chip-btn {
+  white-space: normal;
+  line-height: 1.35;
 }
 
 .tabmgr-chip-btn {
@@ -493,4 +524,619 @@
   color: #64748b;
   text-align: center;
   padding: 6px;
+}
+
+/* ======================== Music Player Banner ============================= */
+/* NOTE: overflow MUST stay visible here — the 3D fan / hover-scaled poster cards
+   spill past the banner box; clipping them at this frame is what made the deck
+   look cut-off ("mất một phần") and chaotic at the edges. Corners are rounded on
+   the two children (bar + body) instead. */
+.tabmgr-media {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  margin-bottom: 10px;
+  overflow: visible;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tabmgr-media.has-source {
+  border-color: rgba(56, 189, 248, 0.25);
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.08), 0 6px 18px -12px rgba(56, 189, 248, 0.4);
+}
+
+.tabmgr-media-bar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 9px 9px 0 0;
+}
+
+.tabmgr-media.is-off .tabmgr-media-bar {
+  border-bottom: none;
+  border-radius: 9px;
+}
+
+.tabmgr-media-bar-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #7c3aed;
+  flex-shrink: 0;
+}
+
+.tabmgr-media.has-source .tabmgr-media-bar-icon {
+  color: #38bdf8;
+}
+
+.tabmgr-media-bar-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* On/Off switch */
+.tabmgr-media-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tabmgr-media-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.tabmgr-media-switch-slider {
+  width: 30px;
+  height: 17px;
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  position: relative;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.tabmgr-media-switch-slider::before {
+  content: "";
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #94a3b8;
+  transition: transform 0.18s ease, background 0.18s ease;
+}
+
+.tabmgr-media-switch input:checked + .tabmgr-media-switch-slider {
+  background: rgba(56, 189, 248, 0.35);
+  border-color: rgba(56, 189, 248, 0.5);
+}
+
+.tabmgr-media-switch input:checked + .tabmgr-media-switch-slider::before {
+  transform: translateX(13px);
+  background: #38bdf8;
+}
+
+.tabmgr-media-body {
+  padding: 8px 10px;
+  border-radius: 0 0 9px 9px;
+}
+
+.tabmgr-media.is-off .tabmgr-media-body {
+  display: none;
+}
+
+/* --- Empty / no-source line --- */
+.tabmgr-mp-empty {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  color: #64748b;
+  padding: 2px 0;
+}
+
+.tabmgr-mp-empty-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #475569;
+  flex-shrink: 0;
+}
+
+/* --- Full player --- */
+.tabmgr-mp {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tabmgr-mp-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  /* Lift the whole poster row above the seek bar's time overlay (z-index 5) so an
+     opened 3D fan paints OVER the "00:42 / 01:40" numbers, never under them. */
+  z-index: 30;
+}
+
+/* Sleeve: square jacket that shows the thumbnail poster */
+.tabmgr-mp-cover {
+  position: relative;
+  z-index: 2;
+  width: 50px;
+  height: 50px;
+  border-radius: 3px;
+  overflow: hidden;
+  flex-shrink: 0;
+  margin-right: 23px;
+  background: linear-gradient(135deg, #1e293b, #0f172a 55%, #111827);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14), 0 2px 7px -2px rgba(0, 0, 0, 0.5);
+}
+
+/* Multi-source: let the 3D fan spill past the jacket edge (cards clip themselves) */
+.tabmgr-mp-cover.is-multi {
+  overflow: visible;
+}
+
+.tabmgr-mp-cover::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(to left, rgba(255, 255, 255, 0.06), transparent);
+  pointer-events: none;
+  z-index: 30;
+}
+
+.tabmgr-mp-cover .tabmgr-mp-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  filter: saturate(1.18) contrast(1.06) brightness(1.03);
+}
+
+/* --- Stacked-cover deck (multi): overlapping poster cards with a 3D hover fan --- */
+.tabmgr-mp-card {
+  position: absolute;
+  inset: 0;
+  border-radius: 3px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #334155, #0f172a);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16), 0 1px 3px rgba(0, 0, 0, 0.5);
+  transform: translate(calc(var(--fan) * 3px), calc(var(--fan) * 1px)) rotate(calc(var(--fan) * 1.4deg));
+  transform-origin: 100% 100%;
+  z-index: calc(10 - var(--fan));
+  cursor: pointer;
+  transition: transform 0.16s ease, z-index 0.16s ease;
+}
+
+.tabmgr-mp-card.is-front {
+  z-index: 10;
+}
+
+.tabmgr-mp-title.is-preview {
+  color: #7dd3fc;
+  font-style: italic;
+}
+
+.tabmgr-mp-card img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+}
+
+.tabmgr-mp-card-ph {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 800;
+  color: #cbd5e1;
+  background: linear-gradient(135deg, #334155, #0f172a);
+  pointer-events: none;
+}
+
+/* Open fan (driven by JS .is-open): backend deck fans out in 3D. Cards step
+   34px apart so every fanned card (incl. the middle one) exposes a wide,
+   easy-to-hit strip. The hovered card pops to 1.32x — grown CENTERED (origin
+   center), so it expands evenly in all four directions and reads as free, not
+   "pinned" under the neighbouring cards — and jumps to the top. Nothing clips
+   it: .tabmgr-media overflow is visible. */
+.tabmgr-mp-cover.is-open .tabmgr-mp-card.is-behind {
+  transform: translate(calc(var(--fan) * 34px), calc(var(--fan) * -16px)) rotate(calc(var(--fan) * 2.2deg)) scale(1.04);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.24), 0 3px 10px rgba(0, 0, 0, 0.6);
+}
+
+.tabmgr-mp-cover.is-open .tabmgr-mp-card:hover {
+  z-index: 60;
+  transform-origin: center;
+  transform: translate(calc(var(--fan) * 34px), calc(var(--fan) * -20px)) rotate(0deg) scale(1.24);
+  box-shadow: inset 0 0 0 1px rgba(125, 211, 252, 0.8), 0 6px 14px rgba(0, 0, 0, 0.65), 0 0 0 3px rgba(125, 211, 252, 0.16);
+}
+
+/* Position pill (1/3) riding the sleeve corner indicator */
+.tabmgr-mp-cover .tabmgr-mp-count {
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  transform: translateX(-50%);
+  z-index: 20;
+  min-width: 24px;
+  height: 14px;
+  padding: 0 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  font-size: 8.5px;
+  font-weight: 700;
+  color: #7dd3fc;
+  background: rgba(15, 23, 42, 0.88);
+  border: 1px solid rgba(125, 211, 252, 0.45);
+}
+
+/* Black vinyl: nestled inside the sleeve (smaller than the jacket), half-out spin */
+.tabmgr-mp-vinyl {
+  position: absolute;
+  left: 27px;
+  top: 2px;
+  z-index: 1;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  pointer-events: none;
+  background:
+    repeating-radial-gradient(circle at 50% 50%, #101a26 0 2px, #2b4159 2px 4px, #16222f 4px 6px),
+    radial-gradient(circle at 50% 50%, #0f1a27 0 62%, #233a52 100%);
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55), inset 0 0 8px rgba(0, 0, 0, 0.65);
+}
+
+/* two-tone record label: rotation actually visible as it spins */
+.tabmgr-mp-vinyl::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  border-radius: 50%;
+  background: conic-gradient(from 10deg, #94a3b8 0 100deg, #475569 100deg 250deg, #94a3b8 250deg 360deg);
+  box-shadow: inset 0 0 0 3px #0b1220, inset 0 0 0 4px rgba(255, 255, 255, 0.22);
+}
+
+.tabmgr-mp-vinyl::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  border-radius: 50%;
+  background: #0b1220;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.75);
+}
+
+.tabmgr-mp-vinyl.is-spin {
+  animation: tabmgrMediaSpin 4s linear infinite;
+}
+
+@keyframes tabmgrMediaSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* carousel: sleeve flips to the next playing tab on click */
+.tabmgr-mp-cover.is-multi {
+  cursor: pointer;
+}
+
+.tabmgr-mp-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.tabmgr-mp-now {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: #38bdf8;
+}
+
+.tabmgr-mp-eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 8px;
+  flex-shrink: 0;
+}
+
+.tabmgr-mp-eq span {
+  width: 2px;
+  border-radius: 1px;
+  background: #38bdf8;
+  animation: tabmgrEq 1s ease-in-out infinite;
+}
+
+.tabmgr-mp-eq span:nth-child(2) { animation-delay: 0.2s; }
+.tabmgr-mp-eq span:nth-child(3) { animation-delay: 0.35s; }
+.tabmgr-mp-eq span:nth-child(4) { animation-delay: 0.5s; }
+
+.tabmgr-mp-eq.is-stop span {
+  animation-play-state: paused;
+  height: 2px;
+}
+
+@keyframes tabmgrEq {
+  0%, 100% { height: 2px; }
+  50% { height: 8px; }
+}
+
+.tabmgr-mp-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tabmgr-mp-artist {
+  font-size: 10.5px;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tabmgr-mp-playbtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  background: radial-gradient(circle at 30% 25%, rgba(56, 189, 248, 0.5), rgba(124, 58, 237, 0.55));
+  color: #f8fafc;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+
+.tabmgr-mp-playbtn:hover {
+  filter: brightness(1.15);
+  transform: scale(1.06);
+}
+
+.tabmgr-mp-playbtn:active {
+  transform: scale(0.96);
+}
+
+/* --- Seek row (minimal: thin track, dot only visible while hovering/dragging) --- */
+/* --- Video-style playback progress bar (slim) ---
+   Black pill container with a single red elapsed track (no grey/white buffer).
+   The time text is an overlay that is ALWAYS visible (never clipped by the red
+   width); the playhead dot floats above the right edge of the red track. */
+.tabmgr-mp-seek {
+  margin-top: 4px;
+}
+
+.tabmgr-vpb {
+  --e: 0%;
+  position: relative;
+  width: 100%;
+  height: 28px;
+  background: #17171c;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.03), 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+.tabmgr-vpb:focus-visible {
+  outline: 2px solid rgba(56, 189, 248, 0.7);
+  outline-offset: 2px;
+}
+
+.tabmgr-vpb-elapsed {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  bottom: 3px;
+  width: min(var(--e), calc(100% - 5px));
+  background: #f00;
+  border-radius: 5px;
+  pointer-events: none;
+  overflow: visible;
+  transition: none;
+}
+
+.tabmgr-vpb.is-dragging .tabmgr-vpb-elapsed {
+  transition: none;
+}
+
+/* Time text: overlay so 00:42 / 01:40 is ALWAYS readable, even before the red
+   track has filled up to it. Pure white, monospace/digital, vertically centred. */
+.tabmgr-vpb-time {
+  position: absolute;
+  z-index: 5;
+  top: 0;
+  left: 16px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  font-family: "Consolas", "SF Mono", ui-monospace, Menlo, monospace;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #fff;
+  mix-blend-mode: normal;
+  isolation: isolate;
+  pointer-events: none;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
+}
+
+/* Playhead: child of the red elapsed track, anchored to ITS right edge
+   (left:100%), floating above the bar. Never drifts to a buffer/background. */
+.tabmgr-vpb-playhead {
+  position: absolute;
+  z-index: 6;
+  left: 100%;
+  top: -11px;
+  transform: translate(-50%, -50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f00;
+  /* Override the inherited pointer-events:none from the red track so the dot is
+     grabbable + hovers. 6px visual but a 26px invisible hit area below. */
+  pointer-events: auto;
+  cursor: pointer;
+  touch-action: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  transition: width 0.12s ease, height 0.12s ease, box-shadow 0.12s ease;
+}
+
+.tabmgr-vpb-playhead::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 26px;
+  height: 26px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+}
+
+/* Bar hover / dragging: 10px preview of the grab point */
+.tabmgr-vpb:hover .tabmgr-vpb-playhead,
+.tabmgr-vpb.is-dragging .tabmgr-vpb-playhead {
+  width: 10px;
+  height: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* Directly hovering/grabbing the dot: 12px + red glow (later rule wins on tie) */
+.tabmgr-vpb-playhead:hover,
+.tabmgr-vpb-playhead:active,
+.tabmgr-vpb.is-dragging .tabmgr-vpb-playhead {
+  width: 12px;
+  height: 12px;
+  box-shadow: 0 0 0 4px rgba(255, 0, 0, 0.28), 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* --- Tools row: left group (play/prev/next) vs right group (pause-all/mute/open) --- */
+.tabmgr-mp-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+}
+
+.tabmgr-mp-tools-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+/* Play/pause button compacted to sit inside the tools row, flush with prev/next */
+.tabmgr-mp-tools .tabmgr-mp-playbtn {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+}
+
+.tabmgr-mp-tbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 7px;
+  font-size: 9.5px;
+  font-weight: 600;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.tabmgr-mp-tbtn:hover {
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.tabmgr-mp-tbtn.is-active {
+  color: #f8fafc;
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.tabmgr-mp-pause-all {
+  color: #fbbf24;
+}
+
+.tabmgr-mp-pause-all-label {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.tabmgr-mp-pause-all.is-active {
+  color: #fff;
+  background: rgba(251, 191, 36, 0.22);
+  border-color: rgba(251, 191, 36, 0.55);
+  box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.35);
+}
+
+.tabmgr-mp-pause-all:hover {
+  color: #fde68a;
+  background: rgba(251, 191, 36, 0.1);
+  border-color: rgba(251, 191, 36, 0.3);
 }
