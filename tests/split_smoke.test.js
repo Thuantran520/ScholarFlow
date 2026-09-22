@@ -1102,6 +1102,49 @@ async function main() {
       }
       w.document.pictureInPictureEnabled = undefined;
       vp.remove();
+      // MSE clamps "duration" of a live feed at an absurd huge finite value —
+      // that must still read as live; and the YouTube in-player LIVE badge flags
+      // a VOD-shaped <video> as a livestream (local page marker fallback).
+      w.document.querySelectorAll("video, audio").forEach(function (m) { m.remove(); });
+      w.document.querySelectorAll(".ytp-live-badge").forEach(function (b) { b.remove(); });
+      const vh = w.document.createElement("video");
+      w.document.body.appendChild(vh);
+      Object.defineProperty(vh, "readyState", { value: 1, configurable: true });
+      Object.defineProperty(vh, "duration", { value: 1e11, configurable: true });
+      Object.defineProperty(vh, "seekable", { value: { length: 1, start: function () { return 0; }, end: function () { return 1e11; } }, configurable: true });
+      const stHuge = w.__sfMedia.getState();
+      check(stHuge && stHuge.isLive === true,
+        `absurdly huge finite duration (MSE clamp) flagged isLive (got: ${stHuge && stHuge.isLive})`);
+      const badge = w.document.createElement("div");
+      badge.className = "ytp-live-badge";
+      w.document.body.appendChild(badge);
+      Object.defineProperty(vh, "duration", { value: 3600, configurable: true });
+      Object.defineProperty(vh, "seekable", { value: { length: 1, start: function () { return 0; }, end: function () { return 3600; } }, configurable: true });
+      const stBadge = w.__sfMedia.getState();
+      check(stBadge && stBadge.isLive === true,
+        `page .ytp-live-badge (YouTube) flags the VOD-shaped video as live (got: ${stBadge && stBadge.isLive})`);
+      badge.remove();
+      const stNoBadge = w.__sfMedia.getState();
+      check(stNoBadge && stNoBadge.isLive === false,
+        `removing the live badge returns the finite-duration video to non-live (got: ${stNoBadge && stNoBadge.isLive})`);
+      vh.remove();
+      // With several players on one page the MAIN one (biggest on screen) wins,
+      // so an auto-playing teaser never masks the real livestream.
+      const vSmall = w.document.createElement("video");
+      const vBig = w.document.createElement("video");
+      w.document.body.appendChild(vSmall);
+      w.document.body.appendChild(vBig);
+      Object.defineProperty(vSmall, "readyState", { value: 1, configurable: true });
+      Object.defineProperty(vSmall, "duration", { value: 300, configurable: true });
+      Object.defineProperty(vBig, "readyState", { value: 1, configurable: true });
+      Object.defineProperty(vBig, "duration", { value: Infinity, configurable: true });
+      vSmall.getBoundingClientRect = () => ({ left: 0, top: 0, right: 100, bottom: 56, width: 100, height: 56, x: 0, y: 0 });
+      vBig.getBoundingClientRect = () => ({ left: 0, top: 0, right: 1280, bottom: 720, width: 1280, height: 720, x: 0, y: 0 });
+      const stMain = w.__sfMedia.getState();
+      check(stMain && stMain.isLive === true,
+        `biggest on-screen player (the live stream) wins over a teaser (got isLive: ${stMain && stMain.isLive})`);
+      vSmall.remove();
+      vBig.remove();
       // No metadata yet (readyState 0): never claim live, whatever the duration.
       Object.defineProperty(lv, "readyState", { value: 0, configurable: true });
       Object.defineProperty(lv, "duration", { value: 0, configurable: true });

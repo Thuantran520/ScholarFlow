@@ -27,18 +27,45 @@
     });
   }
 
+  function _mediaArea(el) {
+    try {
+      const r = el.getBoundingClientRect();
+      if (r && r.width && r.height) return r.width * r.height;
+    } catch (e) {}
+    let w = 0;
+    let h = 0;
+    try { w = el.clientWidth || el.offsetWidth || 0; } catch (e) {}
+    try { h = el.clientHeight || el.offsetHeight || 0; } catch (e) {}
+    return w * h;
+  }
+
+  // Among several players (auto-playing teasers, ambient layers, ad slots on
+  // the same page) the MAIN player is the biggest on screen — e.g. the YouTube
+  // livestream, not a tiny preview. Ties keep the later (most recently added)
+  // element so single-player pages behave exactly as before.
+  function _biggest(list) {
+    if (!list || !list.length) return null;
+    let best = list[0];
+    let bestArea = _mediaArea(best);
+    for (let i = 1; i < list.length; i++) {
+      const a = _mediaArea(list[i]);
+      if (a > bestArea) { best = list[i]; bestArea = a; }
+    }
+    return best;
+  }
+
   function _getActive() {
     if (_lastEl && _lastEl.isConnected !== false) {
       return _lastEl;
     }
     const cur = _playingMedia();
     if (cur.length) {
-      _lastEl = cur[cur.length - 1];
+      _lastEl = _biggest(cur);
       return _lastEl;
     }
     const list = _allMedia();
     if (list.length) {
-      _lastEl = list[0];
+      _lastEl = _biggest(list);
       return _lastEl;
     }
     return null;
@@ -70,6 +97,21 @@
   function _num(v) {
     const n = Number(v);
     return isFinite(n) && n >= 0 ? n : 0;
+  }
+
+  // Page-level livestream markers (100% local DOM read, no network): YouTube
+  // streams live under the /live/ path and render a .ytp-live-badge in the
+  // player bar. Fallback signal for players whose <video> never reports an
+  // unbounded duration to the page.
+  function _pageSaysLive(doc) {
+    try {
+      const u = String((doc && doc.location && doc.location.href) || location.href || "");
+      if (/^https?:\/\/([a-z0-9-]+\.)*youtube\.com\/live\//i.test(u)) return true;
+    } catch (e) {}
+    try {
+      if (doc && doc.querySelector && doc.querySelector(".ytp-live-badge")) return true;
+    } catch (e) {}
+    return false;
   }
 
   // ---- Best-effort cover-art extraction (100% local, read-only DOM) ----
@@ -156,7 +198,12 @@
     let isLive = false;
     try {
       const d = Number(el.duration);
-      isLive = el.readyState > 0 && !(isFinite(d) && d > 0);
+      // Unbounded = live: a NON-finite/zero duration (native live Infinity,
+      // MSE/HLS live plain 0) OR an absurdly huge finite cap — some MSE players
+      // clamp the "duration" of a never-ending feed at Number.MAX_VALUE while
+      // they are technically finite. >1e10 s ≈ 300+ years on air, so only a
+      // live feed qualifies; normal media is far below that.
+      isLive = el.readyState > 0 && (!(isFinite(d) && d > 0) || d > 1e10);
       // Some MSE/HLS live players advertise a finite-looking duration but keep an
       // unbounded seekable range; a non-finite seekable end is another reliable
       // live signal that survives those players.
@@ -179,6 +226,13 @@
         if (t > 1000) { liveStart = t; isLive = true; }
       }
     } catch (e) {}
+    // Last-resort LOCAL page markers: the site itself calls this a livestream
+    // (YouTube /live/ URL path or its in-player .ytp-live-badge). Used only when
+    // the element still reports a VOD-shaped duration — covers stream players
+    // whose element never exposes an unbounded duration to the page.
+    if (!isLive && el.tagName === "VIDEO" && _pageSaysLive(el.ownerDocument)) {
+      isLive = true;
+    }
     // Video sources can open a floating popup (Picture-in-Picture), audio cannot.
     let isVideo = false;
     try { isVideo = el.tagName === "VIDEO"; } catch (e) {}
