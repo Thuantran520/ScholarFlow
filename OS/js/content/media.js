@@ -100,13 +100,14 @@
   }
 
   // Page-level livestream markers (100% local DOM read, no network), scoped to the
-  // video element's OWN player so we "catch the right video": YouTube tags the
-  // live player element with .ytp-live on .html5-video-player and toggles a
-  // VISIBLE .ytp-live-badge (VOD keeps the badge with the [hidden] attribute). We
-  // also accept the canonical /live/ URL. A badge/shell belonging to a DIFFERENT
-  // (ambient/teaser) player must never leak onto the current video, so the
-  // element's closest .html5-video-player shell is checked FIRST; a bare
-  // document-level marker is only a fallback for non-YouTube players.
+  // video element's OWN player so we "catch the right video". KEY YouTube fact
+  // (verified): the .ytp-live-badge node is present in the control bar of EVERY
+  // video, live or VOD — it is toggled with the [disabled] attribute (a VOD badge
+  // is disabled+hidden via CSS, a live one is enabled). Matching it with only
+  // :not([hidden]) therefore flagged ordinary videos as live. We require a badge
+  // that is neither [disabled] nor [hidden], and also honour the player root's
+  // .ytp-live class and the canonical /live/ URL. All scoped to THIS video's own
+  // .html5-video-player shell so an ambient/teaser player can never leak onto it.
   function _pageSaysLive(el) {
     const doc = (el && el.ownerDocument) || document;
     try {
@@ -116,15 +117,9 @@
     let shell = null;
     try { if (el && typeof el.closest === "function") shell = el.closest(".html5-video-player"); } catch (e) {}
     try {
-      // ONLY trust a marker on THIS video's own player. A badge/.ytp-live that
-      // belongs to a DIFFERENT (ambient, teaser, "breaking news") player must not
-      // leak onto the video the user is actually watching — that mis-scoping was
-      // what flagged ordinary videos (and the wrong picture-in-picture source)
-      // as live. If the video is not inside a .html5-video-player at all we fall
-      // back to the pure duration/seekable signals above and never guess here.
       if (shell) {
         if (shell.classList && shell.classList.contains("ytp-live")) return true;
-        if (shell.querySelector && shell.querySelector(".ytp-live-badge:not([hidden])")) return true;
+        if (shell.querySelector && shell.querySelector(".ytp-live-badge:not([disabled]):not([hidden])")) return true;
       }
     } catch (e) {}
     return false;

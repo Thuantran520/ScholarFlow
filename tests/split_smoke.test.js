@@ -1176,22 +1176,29 @@ async function main() {
       check(stForeign && stForeign.isLive === false,
         `a LIVE badge in a different (foreign) player does NOT flag the active video (got: ${stForeign && stForeign.isLive})`);
       foreignBadge.remove(); foreignShell.remove();
-      // A VISIBLE badge inside THIS video's OWN shell does flag it live, and a
-      // HIDDEN one (YouTube's VOD default) does not.
+      // THE actual YouTube VOD case (verified): the .ytp-live-badge node is ALWAYS
+      // in the own shell, but a normal video keeps it [disabled] (hidden by CSS) —
+      // so :not([hidden]) used to wrongly match it and flag every video live. Only
+      // a badge with NEITHER [disabled] NOR [hidden] is genuinely on air.
       const badge = w.document.createElement("div");
       badge.className = "ytp-live-badge";
-      badge.setAttribute("hidden", "");
+      badge.setAttribute("disabled", "");
       vhShell.appendChild(badge);
-      const stHiddenBadge = w.__sfMedia.getState();
-      check(stHiddenBadge && stHiddenBadge.isLive === false,
-        `a [hidden] .ytp-live-badge in the own shell (VOD) is NOT live (got: ${stHiddenBadge && stHiddenBadge.isLive})`);
-      badge.removeAttribute("hidden");
+      const stDisabledBadge = w.__sfMedia.getState();
+      check(stDisabledBadge && stDisabledBadge.isLive === false,
+        `a [disabled] .ytp-live-badge in the own shell (YouTube VOD) is NOT live (got: ${stDisabledBadge && stDisabledBadge.isLive})`);
+      badge.removeAttribute("disabled");
       const stShownBadge = w.__sfMedia.getState();
       check(stShownBadge && stShownBadge.isLive === true,
-        `un-hiding the badge in the own shell flips the video to live (got: ${stShownBadge && stShownBadge.isLive})`);
+        `an enabled .ytp-live-badge (no [disabled]) flips the video to live (got: ${stShownBadge && stShownBadge.isLive})`);
       // Now genuinely live -> getStartDate() is allowed to fill the elapsed clock.
       check(stShownBadge && Number(stShownBadge.liveStart) > 0,
         `once live, getStartDate() fills liveStart for the ● elapsed clock (got: ${stShownBadge && stShownBadge.liveStart})`);
+      // A [hidden] badge stays non-live too (belt-and-braces for other players).
+      badge.setAttribute("hidden", "");
+      const stHiddenBadge = w.__sfMedia.getState();
+      check(stHiddenBadge && stHiddenBadge.isLive === false,
+        `an enabled but [hidden] badge is still not live (got: ${stHiddenBadge && stHiddenBadge.isLive})`);
       badge.remove();
       const stNoBadge = w.__sfMedia.getState();
       check(stNoBadge && stNoBadge.isLive === false,
