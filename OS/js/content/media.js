@@ -109,7 +109,11 @@
       if (/^https?:\/\/([a-z0-9-]+\.)*youtube\.com\/live\//i.test(u)) return true;
     } catch (e) {}
     try {
-      if (doc && doc.querySelector && doc.querySelector(".ytp-live-badge")) return true;
+      // YouTube keeps a .ytp-live-badge node in the control bar of EVERY video
+      // and toggles it with the [hidden] attribute for live vs. VOD — a bare
+      // querySelector would flag ordinary videos as live (over-eager: full-red
+      // bar + no drag knob + seek/prev disabled). Only honour a VISIBLE badge.
+      if (doc && doc.querySelector && doc.querySelector(".ytp-live-badge:not([hidden])")) return true;
     } catch (e) {}
     // The player chrome itself is tagged .ytp-live on live streams — a marker
     // that exists even before the badge/cue text renders and on mobile layouts.

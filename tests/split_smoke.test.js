@@ -1154,6 +1154,22 @@ async function main() {
       const stNoBadge = w.__sfMedia.getState();
       check(stNoBadge && stNoBadge.isLive === false,
         `removing the live badge returns the finite-duration video to non-live (got: ${stNoBadge && stNoBadge.isLive})`);
+      // CRITICAL regression: YouTube keeps a HIDDEN .ytp-live-badge in EVERY
+      // player (VOD included) and toggles it with the [hidden] attribute. A bare
+      // querySelector flagged ordinary videos as live (full-red bar, no drag knob,
+      // seek/prev dead). A badge that carries [hidden] must NOT flag live.
+      const hiddenBadge = w.document.createElement("div");
+      hiddenBadge.className = "ytp-live-badge";
+      hiddenBadge.setAttribute("hidden", "");
+      w.document.body.appendChild(hiddenBadge);
+      const stHiddenBadge = w.__sfMedia.getState();
+      check(stHiddenBadge && stHiddenBadge.isLive === false,
+        `a [hidden] .ytp-live-badge (VOD on YouTube) is NOT flagged live (got: ${stHiddenBadge && stHiddenBadge.isLive})`);
+      hiddenBadge.removeAttribute("hidden");
+      const stShownBadge = w.__sfMedia.getState();
+      check(stShownBadge && stShownBadge.isLive === true,
+        `un-hiding the same badge flips the video to live (got: ${stShownBadge && stShownBadge.isLive})`);
+      hiddenBadge.remove();
       // On top of the badge, the whole player shell itself is tagged .ytp-live
       // during a livestream — a marker that exists before the badge paints and on
       // layouts that never render the badge. It must also flag a VOD-shaped feed.
