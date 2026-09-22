@@ -1040,7 +1040,6 @@ async function main() {
       const stQ = w.__sfMedia.skip(-1);
       check(clicksQ === 1 && stQ && (stQ.isVideo !== false),
         `YouTube queue previous clicks the item BEFORE the playing row — a real step back, not a restart (clicks: ${clicksQ})`);
-      const stQTime = stQ && stQ.currentTime;
       // First row is selected and there is no earlier item → fall back to restart.
       q2.classList.remove("selected");
       q1.classList.add("selected");
@@ -1084,10 +1083,15 @@ async function main() {
       const stSeek = w.__sfMedia.getState();
       check(stSeek && stSeek.isLive === true,
         `finite duration + unbounded seekable end flagged isLive (got: ${stSeek && stSeek.isLive})`);
-      // getStartDate() (epoch > 1970) both confirms live and yields liveStart.
-      w.document.querySelectorAll("video, audio").forEach(function (m) { m.remove(); });
+      // getStartDate() is only an ELAPSED-CLOCK source once the stream is already
+      // judged live (here via the player shell .ytp-live) — it fills liveStart so
+      // the sidebar can show ● mm:ss. It never DECIDES live-ness on its own.
+      w.document.querySelectorAll("video, audio, .html5-video-player").forEach(function (m) { m.remove(); });
+      const vgShell = w.document.createElement("div");
+      vgShell.className = "html5-video-player ytp-live";
+      w.document.body.appendChild(vgShell);
       const vg = w.document.createElement("video");
-      w.document.body.appendChild(vg);
+      vgShell.appendChild(vg);
       Object.defineProperty(vg, "readyState", { value: 1, configurable: true });
       Object.defineProperty(vg, "duration", { value: 300, configurable: true });
       Object.defineProperty(vg, "seekable", { value: { length: 1, start: function () { return 0; }, end: function () { return 300; } }, configurable: true });
@@ -1096,18 +1100,20 @@ async function main() {
       const stG = w.__sfMedia.getState();
       const liveDelta = stG ? Math.abs((Date.now() - (stG.liveStart || 0)) - 300000) : Infinity;
       check(stG && stG.isLive === true && stG.liveStart > 0 && liveDelta < 1500,
-        `getStartDate() confirms live and reports liveStart≈5min (isLive: ${stG && stG.isLive}, liveStart: ${stG && stG.liveStart})`);
-      // A VOD element returns the 1970 epoch from getStartDate() -> never live.
-      w.document.querySelectorAll("video, audio").forEach(function (m) { m.remove(); });
+        `.ytp-live shell + getStartDate() reports liveStart≈5min (isLive: ${stG && stG.isLive}, liveStart: ${stG && stG.liveStart})`);
+      // A VOD element (NO .ytp-live shell) whose getStartDate() returns a REAL
+      // recent date must STILL be non-live with liveStart 0 — getStartDate() no
+      // longer forces live on its own (that assumption flagged every YouTube video).
+      w.document.querySelectorAll("video, audio, .html5-video-player").forEach(function (m) { m.remove(); });
       const vv = w.document.createElement("video");
       w.document.body.appendChild(vv);
       Object.defineProperty(vv, "readyState", { value: 1, configurable: true });
       Object.defineProperty(vv, "duration", { value: 180, configurable: true });
       Object.defineProperty(vv, "seekable", { value: { length: 1, start: function () { return 0; }, end: function () { return 180; } }, configurable: true });
-      vv.getStartDate = function () { return new Date(0); };
+      vv.getStartDate = function () { return new Date(Date.now() - 86400000); };
       const stV = w.__sfMedia.getState();
       check(stV && stV.isLive === false && Number(stV.liveStart) === 0,
-        `VOD epoch getStartDate() (1970) stays non-live, liveStart=0 (got: ${stV && stV.isLive}/${stV && stV.liveStart})`);
+        `VOD with a real recent getStartDate() stays non-live, liveStart=0 (got: ${stV && stV.isLive}/${stV && stV.liveStart})`);
       // In-page PiP overlay: only grows after a SUPPORTED video plays, and stays
       // hidden while JSDOM gives no layout (real pages anchor it to the video).
       check(!w.document.querySelector(".__sf-media-pip"),
@@ -1134,57 +1140,73 @@ async function main() {
       // a VOD-shaped <video> as a livestream (local page marker fallback).
       w.document.querySelectorAll("video, audio").forEach(function (m) { m.remove(); });
       w.document.querySelectorAll(".ytp-live-badge").forEach(function (b) { b.remove(); });
+      // Mirror the real YouTube DOM: the <video> lives INSIDE a
+      // .html5-video-player shell, so live markers must be read from THAT shell
+      // ("catch the right video"), not from a stray node elsewhere on the page.
+      const vhShell = w.document.createElement("div");
+      vhShell.className = "html5-video-player";
+      w.document.body.appendChild(vhShell);
       const vh = w.document.createElement("video");
-      w.document.body.appendChild(vh);
+      vhShell.appendChild(vh);
       Object.defineProperty(vh, "readyState", { value: 1, configurable: true });
       Object.defineProperty(vh, "duration", { value: 1e11, configurable: true });
       Object.defineProperty(vh, "seekable", { value: { length: 1, start: function () { return 0; }, end: function () { return 1e11; } }, configurable: true });
       const stHuge = w.__sfMedia.getState();
       check(stHuge && stHuge.isLive === true,
         `absurdly huge finite duration (MSE clamp) flagged isLive (got: ${stHuge && stHuge.isLive})`);
-      const badge = w.document.createElement("div");
-      badge.className = "ytp-live-badge";
-      w.document.body.appendChild(badge);
+      // THE core YouTube bug: a VOD-shaped video whose getStartDate() returns a
+      // REAL recent timestamp (true for YouTube MSE VOD, not the 1970 epoch) must
+      // NOT be flagged live — that assumption used to turn every YouTube video
+      // into a red LIVE bar. getStartDate only fills liveStart when already live.
       Object.defineProperty(vh, "duration", { value: 3600, configurable: true });
       Object.defineProperty(vh, "seekable", { value: { length: 1, start: function () { return 0; }, end: function () { return 3600; } }, configurable: true });
-      const stBadge = w.__sfMedia.getState();
-      check(stBadge && stBadge.isLive === true,
-        `page .ytp-live-badge (YouTube) flags the VOD-shaped video as live (got: ${stBadge && stBadge.isLive})`);
+      vh.getStartDate = function () { return new Date(Date.now() - 120000); };
+      const stVodReal = w.__sfMedia.getState();
+      check(stVodReal && stVodReal.isLive === false && Number(stVodReal.liveStart) === 0,
+        `VOD-shaped video with a REAL getStartDate() is NOT live and has no liveStart (got ${stVodReal && stVodReal.isLive}/${stVodReal && stVodReal.liveStart})`);
+      // A visible LIVE badge that belongs to a DIFFERENT player (foreign shell)
+      // must not leak onto the video we are watching.
+      const foreignShell = w.document.createElement("div");
+      foreignShell.className = "html5-video-player";
+      w.document.body.appendChild(foreignShell);
+      const foreignBadge = w.document.createElement("div");
+      foreignBadge.className = "ytp-live-badge";
+      foreignShell.appendChild(foreignBadge);
+      const stForeign = w.__sfMedia.getState();
+      check(stForeign && stForeign.isLive === false,
+        `a LIVE badge in a different (foreign) player does NOT flag the active video (got: ${stForeign && stForeign.isLive})`);
+      foreignBadge.remove(); foreignShell.remove();
+      // A VISIBLE badge inside THIS video's OWN shell does flag it live, and a
+      // HIDDEN one (YouTube's VOD default) does not.
+      const badge = w.document.createElement("div");
+      badge.className = "ytp-live-badge";
+      badge.setAttribute("hidden", "");
+      vhShell.appendChild(badge);
+      const stHiddenBadge = w.__sfMedia.getState();
+      check(stHiddenBadge && stHiddenBadge.isLive === false,
+        `a [hidden] .ytp-live-badge in the own shell (VOD) is NOT live (got: ${stHiddenBadge && stHiddenBadge.isLive})`);
+      badge.removeAttribute("hidden");
+      const stShownBadge = w.__sfMedia.getState();
+      check(stShownBadge && stShownBadge.isLive === true,
+        `un-hiding the badge in the own shell flips the video to live (got: ${stShownBadge && stShownBadge.isLive})`);
+      // Now genuinely live -> getStartDate() is allowed to fill the elapsed clock.
+      check(stShownBadge && Number(stShownBadge.liveStart) > 0,
+        `once live, getStartDate() fills liveStart for the ● elapsed clock (got: ${stShownBadge && stShownBadge.liveStart})`);
       badge.remove();
       const stNoBadge = w.__sfMedia.getState();
       check(stNoBadge && stNoBadge.isLive === false,
-        `removing the live badge returns the finite-duration video to non-live (got: ${stNoBadge && stNoBadge.isLive})`);
-      // CRITICAL regression: YouTube keeps a HIDDEN .ytp-live-badge in EVERY
-      // player (VOD included) and toggles it with the [hidden] attribute. A bare
-      // querySelector flagged ordinary videos as live (full-red bar, no drag knob,
-      // seek/prev dead). A badge that carries [hidden] must NOT flag live.
-      const hiddenBadge = w.document.createElement("div");
-      hiddenBadge.className = "ytp-live-badge";
-      hiddenBadge.setAttribute("hidden", "");
-      w.document.body.appendChild(hiddenBadge);
-      const stHiddenBadge = w.__sfMedia.getState();
-      check(stHiddenBadge && stHiddenBadge.isLive === false,
-        `a [hidden] .ytp-live-badge (VOD on YouTube) is NOT flagged live (got: ${stHiddenBadge && stHiddenBadge.isLive})`);
-      hiddenBadge.removeAttribute("hidden");
-      const stShownBadge = w.__sfMedia.getState();
-      check(stShownBadge && stShownBadge.isLive === true,
-        `un-hiding the same badge flips the video to live (got: ${stShownBadge && stShownBadge.isLive})`);
-      hiddenBadge.remove();
-      // On top of the badge, the whole player shell itself is tagged .ytp-live
-      // during a livestream — a marker that exists before the badge paints and on
-      // layouts that never render the badge. It must also flag a VOD-shaped feed.
-      const playerShell = w.document.createElement("div");
-      playerShell.className = "html5-video-player";
-      w.document.body.appendChild(playerShell);
+        `removing the badge returns the finite-duration video to non-live (got: ${stNoBadge && stNoBadge.isLive})`);
+      // The shell itself tagged .ytp-live is the earliest/badge-less marker; it
+      // must flag a VOD-shaped feed live and scope to THIS player only.
       const stShellNoMark = w.__sfMedia.getState();
       check(stShellNoMark && stShellNoMark.isLive === false,
-        `player shell alone (no .ytp-live) is NOT live (got: ${stShellNoMark && stShellNoMark.isLive})`);
-      playerShell.classList.add("ytp-live");
+        `own shell without .ytp-live is NOT live (got: ${stShellNoMark && stShellNoMark.isLive})`);
+      vhShell.classList.add("ytp-live");
       const stShellMark = w.__sfMedia.getState();
       check(stShellMark && stShellMark.isLive === true && stShellMark.isVideo === true,
-        `player shell marked with .ytp-live is flagged live even with a finite duration (got isLive: ${stShellMark && stShellMark.isLive})`);
-      playerShell.remove();
-      vh.remove();
+        `own shell tagged .ytp-live flags the video live even with a finite duration (got isLive: ${stShellMark && stShellMark.isLive})`);
+      vhShell.classList.remove("ytp-live");
+      vh.remove(); vhShell.remove();
       // With several players on one page the MAIN one (biggest on screen) wins,
       // so an auto-playing teaser never masks the real livestream.
       const vSmall = w.document.createElement("video");

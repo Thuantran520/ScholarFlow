@@ -99,26 +99,33 @@
     return isFinite(n) && n >= 0 ? n : 0;
   }
 
-  // Page-level livestream markers (100% local DOM read, no network): YouTube
-  // streams live under the /live/ path and render a .ytp-live-badge in the
-  // player bar. Fallback signal for players whose <video> never reports an
-  // unbounded duration to the page.
-  function _pageSaysLive(doc) {
+  // Page-level livestream markers (100% local DOM read, no network), scoped to the
+  // video element's OWN player so we "catch the right video": YouTube tags the
+  // live player element with .ytp-live on .html5-video-player and toggles a
+  // VISIBLE .ytp-live-badge (VOD keeps the badge with the [hidden] attribute). We
+  // also accept the canonical /live/ URL. A badge/shell belonging to a DIFFERENT
+  // (ambient/teaser) player must never leak onto the current video, so the
+  // element's closest .html5-video-player shell is checked FIRST; a bare
+  // document-level marker is only a fallback for non-YouTube players.
+  function _pageSaysLive(el) {
+    const doc = (el && el.ownerDocument) || document;
     try {
       const u = String((doc && doc.location && doc.location.href) || location.href || "");
       if (/^https?:\/\/([a-z0-9-]+\.)*youtube\.com\/live\//i.test(u)) return true;
     } catch (e) {}
+    let shell = null;
+    try { if (el && typeof el.closest === "function") shell = el.closest(".html5-video-player"); } catch (e) {}
     try {
-      // YouTube keeps a .ytp-live-badge node in the control bar of EVERY video
-      // and toggles it with the [hidden] attribute for live vs. VOD — a bare
-      // querySelector would flag ordinary videos as live (over-eager: full-red
-      // bar + no drag knob + seek/prev disabled). Only honour a VISIBLE badge.
-      if (doc && doc.querySelector && doc.querySelector(".ytp-live-badge:not([hidden])")) return true;
-    } catch (e) {}
-    // The player chrome itself is tagged .ytp-live on live streams — a marker
-    // that exists even before the badge/cue text renders and on mobile layouts.
-    try {
-      if (doc && doc.querySelector && doc.querySelector(".html5-video-player.ytp-live")) return true;
+      // ONLY trust a marker on THIS video's own player. A badge/.ytp-live that
+      // belongs to a DIFFERENT (ambient, teaser, "breaking news") player must not
+      // leak onto the video the user is actually watching — that mis-scoping was
+      // what flagged ordinary videos (and the wrong picture-in-picture source)
+      // as live. If the video is not inside a .html5-video-player at all we fall
+      // back to the pure duration/seekable signals above and never guess here.
+      if (shell) {
+        if (shell.classList && shell.classList.contains("ytp-live")) return true;
+        if (shell.querySelector && shell.querySelector(".ytp-live-badge:not([hidden])")) return true;
+      }
     } catch (e) {}
     return false;
   }
@@ -224,23 +231,30 @@
         }
       }
     } catch (e) {}
-    // A real live stream exposes the broadcast start time via getStartDate() (a
-    // normal VOD returns the epoch 1970, i.e. timestamp 0). It both confirms live
-    // and lets the sidebar render the stream's elapsed time instead of 00:00/00:00.
-    let liveStart = 0;
-    try {
-      if (typeof el.getStartDate === "function") {
-        const sd = el.getStartDate();
-        const t = sd && typeof sd.getTime === "function" ? sd.getTime() : 0;
-        if (t > 1000) { liveStart = t; isLive = true; }
-      }
-    } catch (e) {}
-    // Last-resort LOCAL page markers: the site itself calls this a livestream
-    // (YouTube /live/ URL path or its in-player .ytp-live-badge). Used only when
-    // the element still reports a VOD-shaped duration — covers stream players
-    // whose element never exposes an unbounded duration to the page.
-    if (!isLive && el.tagName === "VIDEO" && _pageSaysLive(el.ownerDocument)) {
+    // Last-resort LOCAL page markers, scoped to THIS video's own player shell:
+    // YouTube flags a live feed on the player element (.html5-video-player.ytp-live
+    // / a VISIBLE .ytp-live-badge) and streams under /live/. Used only when the
+    // element still reports a VOD-shaped duration, to catch players that keep a
+    // finite-looking duration while on air. Scoping to the element's OWN shell is
+    // what "catches the right video": an ambient/teaser player or a leftover
+    // hidden badge elsewhere on the page can no longer mislabel this one.
+    if (!isLive && el.tagName === "VIDEO" && _pageSaysLive(el)) {
       isLive = true;
+    }
+    // Elapsed-clock source ONLY: a live stream's getStartDate() is the broadcast
+    // start used to render ● mm:ss. We deliberately NEVER let getStartDate() DECIDE
+    // live-ness — MSE VOD players (YouTube included) return a real timestamp for
+    // ordinary videos too, and that assumption flagged every YouTube video as a
+    // livestream. It only fills liveStart once isLive is ALREADY true.
+    let liveStart = 0;
+    if (isLive) {
+      try {
+        if (typeof el.getStartDate === "function") {
+          const sd = el.getStartDate();
+          const t = sd && typeof sd.getTime === "function" ? sd.getTime() : 0;
+          if (t > 1000) liveStart = t;
+        }
+      } catch (e) {}
     }
     // Video sources can open a floating popup (Picture-in-Picture), audio cannot.
     let isVideo = false;
