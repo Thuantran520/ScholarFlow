@@ -637,6 +637,52 @@
   // whether to bring the tab forward (where the pulsing in-page button is one
   // real tap). Resolves { state, outcome } with outcome ∈
   //   "opened" | "closed" | "needs-gesture" | "unsupported".
+  // Firefox/Chrome refuse requestPictureInPicture() unless the video's DOCUMENT
+  // has a FRESH user activation; a click in the sidebar/popup does not grant one
+  // to the page, so a second sidebar click fails once the ~5s activation window
+  // from the user's last real page interaction has expired. Since no extension can
+  // synthesize that activation, we make the flow ONE-WAY: when a sidebar-initiated
+  // open is refused, we "arm" a one-shot listener so the user's very NEXT genuine
+  // click on the video page opens PiP immediately — no trip back to the sidebar.
+  // Re-armed on every refused request, and cleared on success / close / timeout so
+  // it can never hijack an unrelated click much later.
+  let _pipArmHandler = null;
+  let _pipArmTimer = null;
+  function _pipArmed() { return !!_pipArmHandler; }
+  function _pipDisarm() {
+    if (_pipArmHandler) {
+      try { document.removeEventListener("pointerdown", _pipArmHandler, true); } catch (e) {}
+      try { document.removeEventListener("keydown", _pipArmHandler, true); } catch (e) {}
+      _pipArmHandler = null;
+    }
+    if (_pipArmTimer) { try { clearTimeout(_pipArmTimer); } catch (e) {} _pipArmTimer = null; }
+  }
+  // The actual open attempt (used by the one-shot gesture listener and by tests).
+  function _pipTryEnter() {
+    _pipDisarm();
+    const el = _getActive();
+    if (!el || el.tagName !== "VIDEO" || typeof el.requestPictureInPicture !== "function") return false;
+    if (document.pictureInPictureElement === el) return true;
+    try {
+      const p = el.requestPictureInPicture();
+      if (p && typeof p.then === "function") p.then(function () { try { _pipRefresh(); } catch (e) {} }, function () {});
+      return true;
+    } catch (e) { return false; }
+  }
+  function _pipArmForGesture() {
+    _pipDisarm();
+    _pipArmHandler = function (ev) {
+      // Ignore programmatic events; require a real pointer/key interaction so we
+      // only ever consume a genuine user tap (which carries the activation).
+      if (ev && ev.isTrusted === false) return;
+      _pipTryEnter();
+    };
+    document.addEventListener("pointerdown", _pipArmHandler, true);
+    document.addEventListener("keydown", _pipArmHandler, true);
+    // Auto-disarm after a short grace window so it never lingers indefinitely.
+    try { _pipArmTimer = setTimeout(_pipDisarm, 12000); } catch (e) {}
+  }
+
   function _pipRequest() {
     const el = _getActive();
     if (!el || el.tagName !== "VIDEO") {
@@ -646,16 +692,17 @@
     if (!entering) {
       let p = null;
       try { p = document.exitPictureInPicture(); } catch (e) { p = null; }
-      const done = function () { try { _pipRefresh(); } catch (e) {} return { state: getState(), outcome: "closed" }; };
+      const done = function () { _pipDisarm(); try { _pipRefresh(); } catch (e) {} return { state: getState(), outcome: "closed" }; };
       if (p && typeof p.then === "function") return p.then(done, done);
       return Promise.resolve(done());
     }
     if (typeof el.requestPictureInPicture !== "function") {
       return Promise.resolve({ state: getState(), outcome: "unsupported" });
     }
-    const onOk = function () { try { _pipRefresh(); } catch (e) {} return { state: getState(), outcome: "opened" }; };
+    const onOk = function () { _pipDisarm(); try { _pipRefresh(); } catch (e) {} return { state: getState(), outcome: "opened" }; };
     const onFail = function () {
       _pipAcquire(); _pipPulse(); try { _pipRefresh(); } catch (e) {}
+      _pipArmForGesture();   // open on the user's next real page tap, no sidebar return
       return { state: getState(), outcome: "needs-gesture" };
     };
     try {
@@ -816,6 +863,9 @@
       skip: _skip,
       pip: _pip,
       pipRequest: _pipRequest,
+      _pipTryEnter: _pipTryEnter,
+      _pipArmForGesture: _pipArmForGesture,
+      _pipArmed: _pipArmed,
       _liveEdge: _liveEdgeAdvanced,
       _resetLiveEdge: function () { _edgeRef = null; }
     };

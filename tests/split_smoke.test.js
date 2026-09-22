@@ -1353,6 +1353,28 @@ async function main() {
       } catch (e) {
         check(false, `pipRequest() threw: ${e.message}`);
       }
+      // Firefox/Chrome transient-activation: a sidebar-initiated open is refused
+      // when the page has no fresh gesture. We must ARM so the user's NEXT page
+      // tap opens PiP without a second trip back to the sidebar.
+      w.document.querySelectorAll("video, audio, .html5-video-player, .xgplayer, .xgplayer-live").forEach(function (m) { m.remove(); });
+      const pv = w.document.createElement("video");
+      w.document.body.appendChild(pv);
+      Object.defineProperty(pv, "readyState", { value: 4, configurable: true });
+      let pipCalls = 0;
+      pv.requestPictureInPicture = function () {
+        pipCalls++;
+        if (pipCalls === 1) return Promise.reject(new Error("NotAllowedError"));
+        return Promise.resolve();
+      };
+      const res1 = await w.__sfMedia.pipRequest();
+      check(res1 && res1.outcome === "needs-gesture",
+        `first sidebar PiP attempt refused (no gesture) -> needs-gesture (got: ${res1 && res1.outcome})`);
+      check(w.__sfMedia._pipArmed() === true, "a refused PiP open arms a one-shot next-gesture retry");
+      const armedOk = w.__sfMedia._pipTryEnter();
+      check(armedOk === true && pipCalls === 2,
+        `the next page tap re-issues requestPictureInPicture (calls: ${pipCalls})`);
+      check(w.__sfMedia._pipArmed() === false, "arming is one-shot and clears itself after firing");
+      pv.remove();
       // Generic, site-independent LIVE detection (the "toolkit" for non-YouTube):
       // a live stream's DVR seekable LEFT edge slides forward at ~real time, a VOD's
       // stays pinned at 0. Test the time-parameterised seam directly.
