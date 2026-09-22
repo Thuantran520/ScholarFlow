@@ -207,33 +207,46 @@
     // report a plain 0 while playing. Treating any such duration as live catches
     // both cases; a normal track always has a finite positive duration here.
     let isLive = false;
+    // YouTube players are quirky: a page can hold stray/ambient <video> elements
+    // (preloaders, the mini-player, Shorts layer) whose duration reports as
+    // Infinity/NaN even for ordinary videos, so the generic "duration is not a
+    // finite positive number => live" heuristic false-fires and paints every
+    // video red-LIVE. YouTube already tags the REAL live player itself
+    // (.html5-video-player.ytp-live / an enabled .ytp-live-badge), so for
+    // YouTube-like contexts we IGNORE the duration shape entirely and trust only
+    // that DOM flag (checked right below). Non-YouTube HTML5/MSE players keep the
+    // heuristic, which is the only live signal they expose.
+    let ytLike = false;
     try {
-      const d = Number(el.duration);
-      // Unbounded = live: a NON-finite/zero duration (native live Infinity,
-      // MSE/HLS live plain 0) OR an absurdly huge finite cap — some MSE players
-      // clamp the "duration" of a never-ending feed at Number.MAX_VALUE while
-      // they are technically finite. >1e10 s ≈ 300+ years on air, so only a
-      // live feed qualifies; normal media is far below that.
-      isLive = el.readyState > 0 && (!(isFinite(d) && d > 0) || d > 1e10);
-      // Some MSE/HLS live players advertise a finite-looking duration but keep an
-      // unbounded seekable range; a non-finite seekable end is another reliable
-      // live signal that survives those players.
-      if (!isLive) {
-        const s = el.seekable;
-        if (s && typeof s.length === "number" && s.length > 0) {
-          const end = s.end(s.length - 1);
-          if (!isFinite(end)) isLive = true;
-        }
-      }
+      const host = String((el.ownerDocument && el.ownerDocument.location && el.ownerDocument.location.hostname) || location.hostname || "");
+      if (/(^|\.)(youtube\.com|youtu\.be|youtube-nocookie\.com)$/i.test(host)) ytLike = true;
     } catch (e) {}
-    // Last-resort LOCAL page markers, scoped to THIS video's own player shell:
-    // YouTube flags a live feed on the player element (.html5-video-player.ytp-live
-    // / a VISIBLE .ytp-live-badge) and streams under /live/. Used only when the
-    // element still reports a VOD-shaped duration, to catch players that keep a
-    // finite-looking duration while on air. Scoping to the element's OWN shell is
-    // what "catches the right video": an ambient/teaser player or a leftover
-    // hidden badge elsewhere on the page can no longer mislabel this one.
-    if (!isLive && el.tagName === "VIDEO" && _pageSaysLive(el)) {
+    try { if (!ytLike && typeof el.closest === "function" && el.closest(".html5-video-player")) ytLike = true; } catch (e) {}
+    if (!ytLike) {
+      try {
+        const d = Number(el.duration);
+        // Unbounded = live: a NON-finite/zero duration (native live Infinity,
+        // MSE/HLS live plain 0) OR an absurdly huge finite cap — some MSE players
+        // clamp the "duration" of a never-ending feed at Number.MAX_VALUE while
+        // they are technically finite. >1e10 s ≈ 300+ years on air, so only a
+        // live feed qualifies; normal media is far below that.
+        isLive = el.readyState > 0 && (!(isFinite(d) && d > 0) || d > 1e10);
+        // Some MSE/HLS live players advertise a finite-looking duration but keep an
+        // unbounded seekable range; a non-finite seekable end is another reliable
+        // live signal that survives those players.
+        if (!isLive) {
+          const s = el.seekable;
+          if (s && typeof s.length === "number" && s.length > 0) {
+            const end = s.end(s.length - 1);
+            if (!isFinite(end)) isLive = true;
+          }
+        }
+      } catch (e) {}
+    }
+    // YouTube (and any player that self-declares live) is decided here: only a
+    // marker on THIS video's own .html5-video-player shell — .ytp-live or an
+    // ENABLED (not [disabled]/[hidden]) .ytp-live-badge — or the /live/ URL.
+    if (el.tagName === "VIDEO" && _pageSaysLive(el)) {
       isLive = true;
     }
     // Elapsed-clock source ONLY: a live stream's getStartDate() is the broadcast

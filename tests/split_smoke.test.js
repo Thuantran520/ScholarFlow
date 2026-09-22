@@ -1138,26 +1138,40 @@ async function main() {
       // MSE clamps "duration" of a live feed at an absurd huge finite value —
       // that must still read as live; and the YouTube in-player LIVE badge flags
       // a VOD-shaped <video> as a livestream (local page marker fallback).
-      w.document.querySelectorAll("video, audio").forEach(function (m) { m.remove(); });
+      w.document.querySelectorAll("video, audio, .html5-video-player").forEach(function (m) { m.remove(); });
       w.document.querySelectorAll(".ytp-live-badge").forEach(function (b) { b.remove(); });
-      // Mirror the real YouTube DOM: the <video> lives INSIDE a
-      // .html5-video-player shell, so live markers must be read from THAT shell
-      // ("catch the right video"), not from a stray node elsewhere on the page.
+      // (a) A GENERIC (non-YouTube) MSE player clamps a live feed's duration at an
+      // absurdly huge finite value — the duration heuristic must still read it as
+      // live. This video sits straight in <body> (host example.com => the YouTube
+      // suppression does NOT apply).
+      const huge = w.document.createElement("video");
+      w.document.body.appendChild(huge);
+      Object.defineProperty(huge, "readyState", { value: 1, configurable: true });
+      Object.defineProperty(huge, "duration", { value: 1e11, configurable: true });
+      Object.defineProperty(huge, "seekable", { value: { length: 1, start: function () { return 0; }, end: function () { return 1e11; } }, configurable: true });
+      const stHuge = w.__sfMedia.getState();
+      check(stHuge && stHuge.isLive === true,
+        `absurdly huge finite duration on a GENERIC player (MSE clamp) flagged isLive (got: ${stHuge && stHuge.isLive})`);
+      huge.remove();
+      // (b) THE YouTube false-live fix. Mirror the real DOM: the <video> lives
+      // INSIDE a .html5-video-player shell. YouTube keeps stray/ambient <video>s
+      // that report Infinity/NaN/huge durations for ORDINARY videos, so in a
+      // YouTube-like context we IGNORE the duration shape and trust only the
+      // player's OWN live flag. A shell with no .ytp-live / no enabled badge must
+      // stay NON-live even if its duration is Infinity.
       const vhShell = w.document.createElement("div");
       vhShell.className = "html5-video-player";
       w.document.body.appendChild(vhShell);
       const vh = w.document.createElement("video");
       vhShell.appendChild(vh);
       Object.defineProperty(vh, "readyState", { value: 1, configurable: true });
-      Object.defineProperty(vh, "duration", { value: 1e11, configurable: true });
-      Object.defineProperty(vh, "seekable", { value: { length: 1, start: function () { return 0; }, end: function () { return 1e11; } }, configurable: true });
-      const stHuge = w.__sfMedia.getState();
-      check(stHuge && stHuge.isLive === true,
-        `absurdly huge finite duration (MSE clamp) flagged isLive (got: ${stHuge && stHuge.isLive})`);
-      // THE core YouTube bug: a VOD-shaped video whose getStartDate() returns a
-      // REAL recent timestamp (true for YouTube MSE VOD, not the 1970 epoch) must
-      // NOT be flagged live — that assumption used to turn every YouTube video
-      // into a red LIVE bar. getStartDate only fills liveStart when already live.
+      Object.defineProperty(vh, "duration", { value: Infinity, configurable: true });
+      Object.defineProperty(vh, "seekable", { value: { length: 1, start: function () { return 0; }, end: function () { return Infinity; } }, configurable: true });
+      const stYtWeird = w.__sfMedia.getState();
+      check(stYtWeird && stYtWeird.isLive === false,
+        `a YouTube-context video with a weird Infinity duration but NO live flag is NOT live (duration heuristic off on YT) (got: ${stYtWeird && stYtWeird.isLive})`);
+      // (c) VOD-shaped (finite) + a REAL getStartDate() (true for YouTube MSE VOD,
+      // not the 1970 epoch) and no markers -> must be non-live.
       Object.defineProperty(vh, "duration", { value: 3600, configurable: true });
       Object.defineProperty(vh, "seekable", { value: { length: 1, start: function () { return 0; }, end: function () { return 3600; } }, configurable: true });
       vh.getStartDate = function () { return new Date(Date.now() - 120000); };
