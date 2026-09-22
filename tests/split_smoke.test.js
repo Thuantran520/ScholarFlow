@@ -1195,16 +1195,25 @@ async function main() {
       const stAfterLofi = w.__sfMedia.getState();
       check(stAfterLofi && stAfterLofi.isLive === false,
         `removing the .ytp-live root returns the video to non-live (got: ${stAfterLofi && stAfterLofi.isLive})`);
-      // (e) THE cat VOD case: a .ytp-live-badge node exists in EVERY player and is
-      // hidden by a CSS rule (no [disabled]/[hidden] attribute), so an attribute
-      // selector matched it and wrongly flagged ordinary videos live. Badges are
-      // now IGNORED entirely — a present badge with NO .ytp-live root stays non-live.
+      // (e) cat VOD vs lofi LIVE decided by whether the LIVE CHIP is RENDERED.
+      // A .ytp-live-badge node exists in EVERY player's bar, but on a VOD it is
+      // hidden with display:none (CSS) while on a real 24/7 live it is painted —
+      // and some live streams never set the .ytp-live root class at all. So the
+      // ONLY thing that matters is the chip's computed display.
       const badge = w.document.createElement("div");
       badge.className = "ytp-live-badge";
+      badge.style.display = "none";            // cat VOD: chip present but hidden
       vhShell.appendChild(badge);
-      const stBadgeOnly = w.__sfMedia.getState();
-      check(stBadgeOnly && stBadgeOnly.isLive === false,
-        `a .ytp-live-badge alone (no .ytp-live root) does NOT flag live — badge is ignored (cat VOD fix) (got: ${stBadgeOnly && stBadgeOnly.isLive})`);
+      const stBadgeHidden = w.__sfMedia.getState();
+      check(stBadgeHidden && stBadgeHidden.isLive === false,
+        `a .ytp-live-badge hidden by display:none does NOT flag live (cat VOD) (got: ${stBadgeHidden && stBadgeHidden.isLive})`);
+      // lofi 24/7: the very same chip is RENDERED and no .ytp-live root exists ->
+      // must still be flagged live (this is the case that "bên livestream không
+      // hiện nữa" was failing before).
+      badge.style.display = "flex";
+      const stBadgeShown = w.__sfMedia.getState();
+      check(stBadgeShown && stBadgeShown.isLive === true,
+        `a RENDERED .ytp-live-badge flags live even with no .ytp-live root (lofi 24/7) (got: ${stBadgeShown && stBadgeShown.isLive})`);
       badge.remove();
       // (f) the active video's OWN shell tagged .ytp-live still flags it live.
       vhShell.classList.add("ytp-live");

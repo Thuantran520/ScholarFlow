@@ -99,17 +99,38 @@
     return isFinite(n) && n >= 0 ? n : 0;
   }
 
-  // Page-level livestream markers (100% local DOM read, no network). YouTube's
-  // HTML5 player root carries the class .ytp-live ONLY while an actual live
-  // broadcast is playing, and never on a normal VOD — so that class is the single
-  // authoritative signal. We read it at DOCUMENT level (not just the sampled
-  // element's own shell): a 24/7 stream (e.g. lofi radio) sometimes has its
-  // <video> reported from an ambient/secondary element OUTSIDE the main player,
-  // and the ~14-hour DVR duration even looks finite — only the main player's
-  // .ytp-live reliably marks it live. We deliberately do NOT use .ytp-live-badge:
-  // that node exists in EVERY player's control bar and is toggled by a CSS rule
-  // (display:none), so an attribute selector on it false-flagged ordinary videos
-  // as live (the inverse bug).
+  // Is a node ACTUALLY painted on screen? Content-script getComputedStyle resolves
+  // the PAGE's CSS, so a .ytp-live-badge that YouTube hides on VOD via display:none
+  // reports display "none" here, while the red LIVE chip on a real 24/7 stream
+  // reports a rendered display. We only treat an explicit none/hidden/opacity-0 as
+  // not-visible; an empty/unknown value counts as visible (so the unit-test DOM,
+  // which has no stylesheet, still exercises the visible path).
+  function _chipRendered(node) {
+    if (!node) return false;
+    try { if (node.hasAttribute && node.hasAttribute("hidden")) return false; } catch (e) {}
+    try {
+      const view = node.ownerDocument && node.ownerDocument.defaultView;
+      const cs = view && view.getComputedStyle ? view.getComputedStyle(node) : null;
+      if (cs) {
+        const disp = (cs.display || "").toLowerCase();
+        const vis = (cs.visibility || "").toLowerCase();
+        if (disp === "none" || vis === "hidden" || vis === "collapse") return false;
+        if (cs.opacity !== "" && cs.opacity != null && Number(cs.opacity) === 0) return false;
+      }
+    } catch (e) {}
+    return true;
+  }
+
+  // Page-level livestream markers (100% local DOM read, no network). Two YouTube
+  // signals that are TRUE only while on air: (a) the HTML5 player root carries the
+  // class .ytp-live, or (b) the red LIVE chip (.ytp-live-badge) is ACTUALLY PAINTED
+  // (rendered, not CSS display:none). We read (a) at document level and (b) across
+  // the page, because a 24/7 stream (e.g. lofi radio) may be sampled from an
+  // ambient <video> outside the main player, may report a finite ~14h DVR duration,
+  // and may not even set the .ytp-live class — but the LIVE chip it shows on screen
+  // is what the user perceives, and its computed display distinguishes it from a
+  // VOD (where the same badge node exists yet is hidden via CSS). Merely PRESENT
+  // badges are ignored; only a RENDERED one counts.
   function _pageSaysLive(el) {
     const doc = (el && el.ownerDocument) || document;
     try {
@@ -117,13 +138,18 @@
       if (/^https?:\/\/([a-z0-9-]+\.)*(youtube\.com\/live\/|youtube\.com\/watch.*[?&]is_live=1)/i.test(u)) return true;
     } catch (e) {}
     try {
-      // Authoritative: the live player root is tagged .ytp-live on YouTube.
       if (doc.querySelector && doc.querySelector(".html5-video-player.ytp-live")) return true;
     } catch (e) {}
     try {
       if (el && typeof el.closest === "function") {
         const sh = el.closest(".html5-video-player");
         if (sh && sh.classList && sh.classList.contains("ytp-live")) return true;
+      }
+    } catch (e) {}
+    try {
+      if (doc.querySelectorAll) {
+        const chips = doc.querySelectorAll(".ytp-live-badge");
+        for (let i = 0; i < chips.length; i++) { if (_chipRendered(chips[i])) return true; }
       }
     } catch (e) {}
     return false;
