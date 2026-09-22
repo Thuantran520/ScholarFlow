@@ -111,6 +111,11 @@
     try {
       if (doc && doc.querySelector && doc.querySelector(".ytp-live-badge")) return true;
     } catch (e) {}
+    // The player chrome itself is tagged .ytp-live on live streams — a marker
+    // that exists even before the badge/cue text renders and on mobile layouts.
+    try {
+      if (doc && doc.querySelector && doc.querySelector(".html5-video-player.ytp-live")) return true;
+    } catch (e) {}
     return false;
   }
 
@@ -351,8 +356,32 @@
   // when the page exposes no native previous control (see _skip below).
   const _PREV_RESTART_SECONDS = 3;
 
+  // YouTube has NO "previous" control in its player chrome; stepping back a video
+  // means clicking the PREVIOUS item in the on-screen queue/playlist ("Now
+  // playing" side panel or the .ytp-playlist-menu). 100% local: that queue lives
+  // in the page DOM (ytd-playlist-panel-video-renderer / .ytp-playlist-menu-item)
+  // and the currently-playing row is marked with a selected/current class.
+  function _ytPreviousItem(rootDoc) {
+    try {
+      const items = rootDoc.querySelectorAll(".ytp-playlist-menu-item, ytd-playlist-panel-video-renderer");
+      let selIdx = -1;
+      for (let i = 0; i < items.length; i++) {
+        const it = items[i];
+        let cur = false;
+        try {
+          cur = it.classList.contains("selected") || it.classList.contains("currently-playing");
+          if (!cur && it.hasAttribute) cur = it.hasAttribute("selected") || it.getAttribute("aria-current") === "true";
+        } catch (e) {}
+        if (cur) { selIdx = i; break; }
+      }
+      if (selIdx > 0 && items[selIdx - 1]) return items[selIdx - 1];
+    } catch (e) {}
+    return null;
+  }
+
   function _skip(dir) {
     const el = _getActive();
+    const rootDoc = (el && el.ownerDocument) || document;
     // Prefer the site's OWN previous/next control: on any page that exposes one,
     // "Previous" truly steps back to the previous video/track instead of just
     // restarting the current one (the site itself applies any restart-gate). Only
@@ -361,6 +390,15 @@
     if (btn && typeof btn.click === "function") {
       try { btn.click(); } catch (e) {}
       return getState();
+    }
+    // YouTube-specific: no prev control in the player, so click the previous item
+    // in the visible queue/playlist (if one exists) — a real "previous video".
+    if (el && dir < 0) {
+      const yp = _ytPreviousItem(rootDoc);
+      if (yp && typeof yp.click === "function") {
+        try { yp.click(); } catch (e) {}
+        return getState();
+      }
     }
     if (el && dir < 0) {
       const ct = _num(el.currentTime);

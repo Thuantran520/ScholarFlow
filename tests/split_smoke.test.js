@@ -1021,6 +1021,33 @@ async function main() {
       const stFallback = w.__sfMedia.skip(-1);
       check(prevClicks === 2 && stFallback && stFallback.currentTime === 0,
         `with no page control, previous falls back to restarting from the start (clicks: ${prevClicks}, time: ${stFallback && stFallback.currentTime})`);
+      // YouTube-style queue/playlist: when the player exposes NO native Previous
+      // control (YouTube's chrome has none), stepping back selects the item that
+      // sits BEFORE the currently-playing row instead of restarting. The CURRENT
+      // row is marked .selected / .currently-playing in the live "Now playing"
+      // panel, so the previous track is always one DOM position up from it.
+      w.document.querySelectorAll(".ytp-playlist-menu-item").forEach(function (it) { it.remove(); });
+      w.document.querySelectorAll("button[aria-label*='Previous']").forEach(function (b2) { b2.remove(); });
+      const q1 = w.document.createElement("div");
+      const q2 = w.document.createElement("div");
+      const q3 = w.document.createElement("div");
+      q1.className = q2.className = q3.className = "ytp-playlist-menu-item";
+      q2.classList.add("selected");
+      let clicksQ = 0;
+      [q1, q2, q3].forEach(function (it) { it.addEventListener("click", function () { clicksQ++; }); });
+      w.document.body.appendChild(q1); w.document.body.appendChild(q2); w.document.body.appendChild(q3);
+      v.currentTime = 50;
+      const stQ = w.__sfMedia.skip(-1);
+      check(clicksQ === 1 && stQ && (stQ.isVideo !== false),
+        `YouTube queue previous clicks the item BEFORE the playing row — a real step back, not a restart (clicks: ${clicksQ})`);
+      const stQTime = stQ && stQ.currentTime;
+      // First row is selected and there is no earlier item → fall back to restart.
+      q2.classList.remove("selected");
+      q1.classList.add("selected");
+      v.currentTime = 50;
+      const stQFirst = w.__sfMedia.skip(-1);
+      check(clicksQ === 1 && stQFirst && stQFirst.currentTime === 0,
+        `with no earlier row, YouTube queue previous still restarts (clicks: ${clicksQ}, time: ${stQFirst && stQFirst.currentTime})`);
     }
     // Live detection: native live streams report a non-finite duration, MSE/HLS
     // live players often report a plain 0 — both must flag isLive once metadata
@@ -1127,6 +1154,20 @@ async function main() {
       const stNoBadge = w.__sfMedia.getState();
       check(stNoBadge && stNoBadge.isLive === false,
         `removing the live badge returns the finite-duration video to non-live (got: ${stNoBadge && stNoBadge.isLive})`);
+      // On top of the badge, the whole player shell itself is tagged .ytp-live
+      // during a livestream — a marker that exists before the badge paints and on
+      // layouts that never render the badge. It must also flag a VOD-shaped feed.
+      const playerShell = w.document.createElement("div");
+      playerShell.className = "html5-video-player";
+      w.document.body.appendChild(playerShell);
+      const stShellNoMark = w.__sfMedia.getState();
+      check(stShellNoMark && stShellNoMark.isLive === false,
+        `player shell alone (no .ytp-live) is NOT live (got: ${stShellNoMark && stShellNoMark.isLive})`);
+      playerShell.classList.add("ytp-live");
+      const stShellMark = w.__sfMedia.getState();
+      check(stShellMark && stShellMark.isLive === true && stShellMark.isVideo === true,
+        `player shell marked with .ytp-live is flagged live even with a finite duration (got isLive: ${stShellMark && stShellMark.isLive})`);
+      playerShell.remove();
       vh.remove();
       // With several players on one page the MAIN one (biggest on screen) wins,
       // so an auto-playing teaser never masks the real livestream.
