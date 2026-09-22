@@ -1249,6 +1249,8 @@ window.I18N_VI = {
    "content_snip_click_to_pick": "🎯 Click để chọn thẻ",
    "content_snip_btn_capture": "📸 Chụp ngay",
    "content_snip_btn_cancel": "✕ Hủy",
+   "content_media_popout_open": "Mở cửa sổ nổi",
+   "content_media_popout_close": "Đóng cửa sổ nổi",
    /* i18n: content_* block end */
    /* i18n: privacy_* block start - generated, do not edit */
    // ── Privacy-policy page strings (used by privacy.html) ──

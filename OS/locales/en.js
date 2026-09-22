@@ -1249,6 +1249,8 @@ window.I18N_EN = {
    "content_snip_click_to_pick": "🎯 Click to select element",
    "content_snip_btn_capture": "📸 Capture Now",
    "content_snip_btn_cancel": "✕ Cancel",
+   "content_media_popout_open": "Open pop-out window",
+   "content_media_popout_close": "Close pop-out window",
    /* i18n: content_* block end */
    /* i18n: privacy_* block start - generated, do not edit */
    // ── Privacy-policy page strings (used by privacy.html) ──

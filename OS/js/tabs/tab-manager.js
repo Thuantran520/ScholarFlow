@@ -686,10 +686,11 @@ function _tabmgrMediaFmtDigital(sec) {
 }
 
 // Push state into the video-style progress bar (--e elapsed, overlay time text).
-function _tabmgrMediaSeekUI(vpb, timeEl, current, duration, live) {
+function _tabmgrMediaSeekUI(vpb, timeEl, current, duration, live, liveStart) {
   if (live) {
     // Live stream: the track has no finite duration, so the bar is permanently
-    // FULL RED and the time text switches to a pulsing LIVE badge.
+    // FULL RED and the time text becomes a pulsing LIVE badge — or, when the
+    // stream start (getStartDate) is known, the stream's real elapsed time.
     const ct = Math.max(0, Math.round(Number(current) || 0));
     if (vpb) {
       vpb.classList.add("is-live");
@@ -697,7 +698,15 @@ function _tabmgrMediaSeekUI(vpb, timeEl, current, duration, live) {
       vpb.setAttribute("aria-valuemax", "0");
       vpb.setAttribute("aria-valuenow", String(ct));
     }
-    if (timeEl) timeEl.textContent = t("tabmgr_media_live");
+    if (timeEl) {
+      const start = Number(liveStart) || 0;
+      if (start > 0) {
+        const elapsed = Math.max(0, Math.round((Date.now() - start) / 1000));
+        timeEl.textContent = "● " + _tabmgrMediaFmtDigital(elapsed);
+      } else {
+        timeEl.textContent = t("tabmgr_media_live");
+      }
+    }
     return;
   }
   if (vpb) vpb.classList.remove("is-live");
@@ -718,11 +727,11 @@ function _tabmgrMediaIsLive(state) {
 // Baseline for the live clock: the last authoritative (polled / seeked) position.
 // Between polls the rAF loop extrapolates this forward in realtime so the red bar
 // glides smoothly instead of teleporting every ~900ms (which read as lag).
-function _tabmgrMediaSeekSetBase(vpb, current, duration, playing, live) {
+function _tabmgrMediaSeekSetBase(vpb, current, duration, playing, live, liveStart) {
   if (!vpb) return;
   const maxD = live ? 0 : Math.max(1, Math.round(Number(duration) || 0));
   const ct = Math.max(0, Number(current) || 0);
-  vpb._sfBase = { at: Date.now(), time: ct, dur: maxD, play: !!playing, live: !!live };
+  vpb._sfBase = { at: Date.now(), time: ct, dur: maxD, play: !!playing, live: !!live, liveAt: Number(liveStart) || 0 };
 }
 
 let _tabmgrMediaRafOn = false;
@@ -757,6 +766,16 @@ function _tabmgrMediaSeekTick() {
   if (!vpb) return;
   const b = vpb._sfBase;
   if (!b) return;
+  const timeEl = mp.querySelector(".tabmgr-vpb-time");
+  // Live with a known broadcast start: paint the elapsed stream time once per
+  // second straight off the wall clock (buffered-media currentTime is clamped).
+  if (b.live && Number(b.liveAt) > 0) {
+    const sec = Math.max(0, Math.round((Date.now() - Number(b.liveAt)) / 1000));
+    if (vpb._sfLast === sec) return;
+    vpb._sfLast = sec;
+    _tabmgrMediaSeekUI(vpb, timeEl, sec, 0, true, b.liveAt);
+    return;
+  }
   let ct = b.time;
   if (b.play) {
     ct = b.time + Math.max(0, (Date.now() - b.at) / 1000);
@@ -765,7 +784,7 @@ function _tabmgrMediaSeekTick() {
   const cur = Math.round(ct);
   if (vpb._sfLast === cur) return;
   vpb._sfLast = cur;
-  _tabmgrMediaSeekUI(vpb, mp.querySelector(".tabmgr-vpb-time"), cur, b.live ? 0 : b.dur, !!b.live);
+  _tabmgrMediaSeekUI(vpb, timeEl, cur, b.live ? 0 : b.dur, !!b.live, b.liveAt);
 }
 
 // Build the Video Playback Progress Bar (slim):
@@ -800,8 +819,9 @@ function _tabmgrMediaSeekEl(state) {
   vpb.appendChild(timeEl);
   seek.appendChild(vpb);
 
-  _tabmgrMediaSeekUI(vpb, timeEl, state.currentTime, state.duration, _tabmgrMediaIsLive(state));
-  _tabmgrMediaSeekSetBase(vpb, state.currentTime, state.duration, !!state.playing, _tabmgrMediaIsLive(state));
+  const liveStart = (state && Number(state.liveStart)) || 0;
+  _tabmgrMediaSeekUI(vpb, timeEl, state.currentTime, state.duration, _tabmgrMediaIsLive(state), liveStart);
+  _tabmgrMediaSeekSetBase(vpb, state.currentTime, state.duration, !!state.playing, _tabmgrMediaIsLive(state), liveStart);
   _tabmgrMediaSeekStart();
 
   const live = _tabmgrMediaIsLive(state);
@@ -812,7 +832,7 @@ function _tabmgrMediaSeekEl(state) {
     const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
     const target = Math.round(ratio * Math.max(1, Math.round(Number(state.duration) || 0)));
     tabmgrMedia.dragTime = target;
-    _tabmgrMediaSeekUI(vpb, timeEl, target, state.duration, false);
+    _tabmgrMediaSeekUI(vpb, timeEl, target, state.duration, false, 0);
   };
 
   vpb.addEventListener("pointerdown", function (e) {
@@ -833,7 +853,7 @@ function _tabmgrMediaSeekEl(state) {
     if (tabmgrMedia.dragTime != null && tabmgrMedia.state) {
       // Repoint the live clock at the released position so the bar continues
       // smoothly from the drag point instead of snapping back to the stale poll.
-      _tabmgrMediaSeekSetBase(vpb, tabmgrMedia.dragTime, state.duration, !!state.playing, live);
+      _tabmgrMediaSeekSetBase(vpb, tabmgrMedia.dragTime, state.duration, !!state.playing, live, 0);
       safeSendTabMessage(tabmgrMedia.sourceTabId, { action: "MEDIA_SEEK", time: tabmgrMedia.dragTime });
     }
     // dragTime is only a mid-gesture anchor. Left set, it would outlive the
@@ -870,8 +890,8 @@ function _tabmgrMediaSeekEl(state) {
     if (next == null) return;
     e.preventDefault();
     next = Math.max(0, Math.min(maxD, next));
-    _tabmgrMediaSeekUI(vpb, timeEl, next, maxD);
-    _tabmgrMediaSeekSetBase(vpb, next, maxD, !!(state && state.playing));
+    _tabmgrMediaSeekUI(vpb, timeEl, next, maxD, false, 0);
+    _tabmgrMediaSeekSetBase(vpb, next, maxD, !!(state && state.playing), false, 0);
     safeSendTabMessage(tabmgrMedia.sourceTabId, { action: "MEDIA_SEEK", time: next });
   });
 
@@ -879,7 +899,7 @@ function _tabmgrMediaSeekEl(state) {
 }
 
 function _tabmgrMediaSignature(tab, state) {
-  return (tab ? tab.id : 0) + "|" + (state ? state.title : "") + "|" + (state ? state.artist : "") + "|" + (state ? state.duration : 0) + "|" + (state ? state.playing : false) + "|" + _tabmgrMediaArtWork(state) + "|#" + tabmgrMedia.index + "|Q" + ((tabmgrMedia.sources || []).length) + "|L" + (state ? !!state.isLive : false) + "|V" + (state ? ((state.isVideo ? 1 : 0) + ":" + (state.pip ? 1 : 0)) : "0:0");
+  return (tab ? tab.id : 0) + "|" + (state ? state.title : "") + "|" + (state ? state.artist : "") + "|" + (state ? state.duration : 0) + "|" + (state ? state.playing : false) + "|" + _tabmgrMediaArtWork(state) + "|#" + tabmgrMedia.index + "|Q" + ((tabmgrMedia.sources || []).length) + "|L" + (state ? ((state.isLive ? 1 : 0) + ":" + (Number(state.liveStart) || 0)) : "0:0") + "|V" + (state ? ((state.isVideo ? 1 : 0) + ":" + (state.pip ? 1 : 0) + ":" + (state.pipSupported ? 1 : 0)) : "0:0:0");
 }
 
 // Poster flicker guard: reuse the same <img> element per artwork URL across
@@ -1390,6 +1410,12 @@ function _tabmgrMediaOnMute() {
 function _tabmgrMediaOnPip() {
   const tabId = tabmgrMedia.sourceTabId;
   if (!tabId) return;
+  // Chrome refuses to OPEN Picture-in-Picture unless the request runs inside a
+  // fresh user gesture on the video page; a sidebar button click is not one.
+  // Bring the tab to the front so the media agent can try the direct API — and
+  // on rejection it drops its own tiny PiP button ON the video, which a single
+  // real tap (a genuine gesture) uses to complete the pop-out.
+  tabmgrActivateTab(tabId);
   safeSendTabMessage(tabId, { action: "MEDIA_PIP" }).then(function (res) {
     if (res && res.state) {
       tabmgrMedia.state = res.state;
@@ -1524,8 +1550,10 @@ function _tabmgrMediaRenderPlayer() {
   const openBtn = _tabmgrMediaSvgBtn("M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3", t("tabmgr_media_open_tab"), "tabmgr-mp-tbtn");
   openBtn.addEventListener("click", function () { if (tabmgrMedia.sourceTabId) tabmgrActivateTab(tabmgrMedia.sourceTabId); });
   toolsR.appendChild(muteBtn);
-  // PiP "popup window" toggle — only a VIDEO source can float its own window.
-  if (state && state.isVideo) {
+  // PiP "popup window" toggle — only a VIDEO source can float its own window,
+  // and only when the page's native Picture-in-Picture API exists (Firefox has
+  // none, so the button would be a dead control there).
+  if (state && state.isVideo && state.pipSupported !== false) {
     const pipBtn = document.createElement("button");
     pipBtn.type = "button";
     pipBtn.className = "tabmgr-mp-tbtn tabmgr-mp-pip" + (state.pip ? " is-active" : "");
@@ -1580,8 +1608,9 @@ function _tabmgrMediaPatchPlayer() {
   const vpb = mp.querySelector(".tabmgr-vpb");
   const timeEl = mp.querySelector(".tabmgr-vpb-time");
   if (vpb && timeEl && !tabmgrMedia.dragging) {
-    _tabmgrMediaSeekUI(vpb, timeEl, state ? state.currentTime : 0, state ? state.duration : 0, _tabmgrMediaIsLive(state));
-    _tabmgrMediaSeekSetBase(vpb, state ? state.currentTime : 0, state ? state.duration : 0, playing, _tabmgrMediaIsLive(state));
+    const lvStart = (state && Number(state.liveStart)) || 0;
+    _tabmgrMediaSeekUI(vpb, timeEl, state ? state.currentTime : 0, state ? state.duration : 0, _tabmgrMediaIsLive(state), lvStart);
+    _tabmgrMediaSeekSetBase(vpb, state ? state.currentTime : 0, state ? state.duration : 0, playing, _tabmgrMediaIsLive(state), lvStart);
     _tabmgrMediaSeekStart();
   }
 

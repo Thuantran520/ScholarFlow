@@ -145,7 +145,7 @@
 
   function getState() {
     const el = _getActive();
-    if (!el) return { hasMedia: false, playing: false, title: "", artist: "", artwork: "", currentTime: 0, duration: 0 };
+    if (!el) return { hasMedia: false, playing: false, title: "", artist: "", artwork: "", currentTime: 0, duration: 0, isLive: false, liveStart: 0, isVideo: false, pip: false, pipSupported: false };
     let playing = false;
     try { playing = !el.paused && !el.ended; } catch (e) {}
     // Live detection: once metadata is loaded (readyState > 0), a live stream
@@ -157,12 +157,35 @@
     try {
       const d = Number(el.duration);
       isLive = el.readyState > 0 && !(isFinite(d) && d > 0);
+      // Some MSE/HLS live players advertise a finite-looking duration but keep an
+      // unbounded seekable range; a non-finite seekable end is another reliable
+      // live signal that survives those players.
+      if (!isLive) {
+        const s = el.seekable;
+        if (s && typeof s.length === "number" && s.length > 0) {
+          const end = s.end(s.length - 1);
+          if (!isFinite(end)) isLive = true;
+        }
+      }
+    } catch (e) {}
+    // A real live stream exposes the broadcast start time via getStartDate() (a
+    // normal VOD returns the epoch 1970, i.e. timestamp 0). It both confirms live
+    // and lets the sidebar render the stream's elapsed time instead of 00:00/00:00.
+    let liveStart = 0;
+    try {
+      if (typeof el.getStartDate === "function") {
+        const sd = el.getStartDate();
+        const t = sd && typeof sd.getTime === "function" ? sd.getTime() : 0;
+        if (t > 1000) { liveStart = t; isLive = true; }
+      }
     } catch (e) {}
     // Video sources can open a floating popup (Picture-in-Picture), audio cannot.
     let isVideo = false;
     try { isVideo = el.tagName === "VIDEO"; } catch (e) {}
     let pipActive = false;
     try { pipActive = isVideo && document.pictureInPictureElement === el; } catch (e) {}
+    let pipSupported = false;
+    try { pipSupported = isVideo && typeof el.requestPictureInPicture === "function" && !!(document.pictureInPictureEnabled); } catch (e) {}
     return {
       hasMedia: true,
       playing: playing,
@@ -172,8 +195,10 @@
       currentTime: _num(el.currentTime),
       duration: _num(el.duration),
       isLive: isLive,
+      liveStart: liveStart,
       isVideo: isVideo,
-      pip: pipActive
+      pip: pipActive,
+      pipSupported: pipSupported
     };
   }
 
@@ -297,17 +322,169 @@
   // it, the extension just flips the flag; audio sources have nothing to pop.
   function _pip() {
     const el = _getActive();
-    if (!el || el.tagName !== "VIDEO") return getState();
+    const state = getState();
+    if (!el || el.tagName !== "VIDEO") return state;
+    const entering = document.pictureInPictureElement !== el;
     try {
-      if (document.pictureInPictureElement === el) {
+      if (!entering) {
+        // Exit needs NO user gesture, the direct call always works.
         const p = document.exitPictureInPicture();
         if (p && typeof p.catch === "function") p.catch(function () {});
       } else if (typeof el.requestPictureInPicture === "function") {
         const p = el.requestPictureInPicture();
-        if (p && typeof p.catch === "function") p.catch(function () {});
+        if (p && typeof p.then === "function") {
+          p.then(function () { try { _pipRefresh(); } catch (e) {} }).catch(function () {
+            // NotAllowedError: Chrome requires a fresh trusted user gesture on the
+            // video page to ENTER Picture-in-Picture, and a sidebar-initiated
+            // request arrives with a stale activation token. Surface the in-page
+            // PiP button instead — one real tap on it (a genuine gesture) opens
+            // the window.
+            _pipAcquire();
+            _pipPulse();
+            try { _pipRefresh(); } catch (e) {}
+          });
+        } else if (p && typeof p.catch === "function") {
+          p.catch(function () { _pipAcquire(); _pipPulse(); });
+        }
+      }
+    } catch (e) {
+      _pipAcquire();
+      _pipPulse();
+    }
+    return getState();
+  }
+
+  // ---- In-page PiP button (the trusted-gesture path) ----
+  // A real click on this button carries a valid activation token, so "open
+  // popout" from here is never blocked by Chrome's gesture policy. The button is
+  // only ever shown next to a <video> that actually supports the native API
+  // (Firefox / disabled APIs never grow one), it is created lazily on first
+  // play, and it disappears as soon as the element is gone.
+  let _pipBtn = null;
+  let _pipStyle = null;
+  let _pipTimer = null;
+  let _pipUiOwned = false;
+
+  function _pipText(kind) {
+    try {
+      const k = kind === "close" ? "content_media_popout_close" : "content_media_popout_open";
+      const tr = window.tContent;
+      if (typeof tr === "function") {
+        const v = tr(k);
+        if (v && v !== k) return String(v);
       }
     } catch (e) {}
-    return getState();
+    return kind === "close" ? "Đóng cửa sổ nổi" : "Mở cửa sổ nổi";
+  }
+
+  function _pipCss() {
+    return "__sf-media-pip{position:fixed;z-index:2147483000;width:44px;height:44px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;background:rgba(10,15,25,.78);border:1px solid rgba(255,255,255,.28);box-shadow:0 4px 14px rgba(0,0,0,.55);color:#fff;padding:0;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .18s ease,transform .18s ease;font:14px/1 system-ui,Segoe UI,Arial,sans-serif}" +
+      "__sf-media-pip.is-visible{opacity:1;visibility:visible;pointer-events:auto}" +
+      "__sf-media-pip.is-pip{background:rgba(220,38,38,.92);border-color:rgba(255,255,255,.5);box-shadow:0 0 0 4px rgba(220,38,38,.28)}" +
+      "__sf-media-pip.is-pulse{animation:sfPipPulse .7s ease 2}" +
+      "@keyframes sfPipPulse{0%{transform:scale(1)}50%{transform:scale(1.22)}100%{transform:scale(1)}}" +
+      "__sf-media-pip svg{width:22px;height:22px}";
+  }
+
+  function _pipEnsureUi() {
+    const root = document.body || document.documentElement;
+    if (!root) return null;
+    if (_pipUiOwned && _pipBtn) return _pipBtn;
+    if (!_pipStyle) {
+      _pipStyle = document.createElement("style");
+      _pipStyle.textContent = _pipCss();
+      (document.head || root).appendChild(_pipStyle);
+    }
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "__sf-media-pip";
+    btn.setAttribute("aria-hidden", "true");
+    const svgNS = "http" + "://www.w3.org/2000/svg";
+    const svg = document.createElementNS(svgNS, "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("fill", "none");
+    svg.setAttribute("stroke", "currentColor");
+    svg.setAttribute("stroke-width", "2");
+    svg.setAttribute("stroke-linecap", "round");
+    svg.setAttribute("stroke-linejoin", "round");
+    const frame = document.createElementNS(svgNS, "rect");
+    frame.setAttribute("x", "3"); frame.setAttribute("y", "5"); frame.setAttribute("width", "18"); frame.setAttribute("height", "14"); frame.setAttribute("rx", "2");
+    svg.appendChild(frame);
+    const mini = document.createElementNS(svgNS, "rect");
+    mini.setAttribute("x", "12"); mini.setAttribute("y", "10"); mini.setAttribute("width", "7"); mini.setAttribute("height", "7"); mini.setAttribute("rx", "1");
+    svg.appendChild(mini);
+    btn.appendChild(svg);
+    btn.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      _pip();
+    });
+    root.appendChild(btn);
+    _pipBtn = btn;
+    _pipUiOwned = true;
+    if (!_pipTimer) {
+      _pipTimer = setInterval(function () { try { _pipRefresh(); } catch (e) {} }, 1400);
+      document.addEventListener("scroll", _pipRefresh, true);
+      try { window.addEventListener("resize", _pipRefresh); } catch (e) {}
+      try { document.addEventListener("pictureinpicturechange", _pipRefresh); } catch (e) {}
+    }
+    return btn;
+  }
+
+  function _pipSupportedVideo() {
+    try {
+      const inPip = document.pictureInPictureElement;
+      if (inPip) return inPip;
+    } catch (e) {}
+    const el = _getActive();
+    if (el && el.tagName === "VIDEO" && typeof el.requestPictureInPicture === "function") return el;
+    return null;
+  }
+
+  function _pipRefresh() {
+    const btn = _pipUiOwned && _pipBtn ? _pipBtn : null;
+    if (!btn || !document.body) { if (btn) _pipHide(); return; }
+    const el = _pipSupportedVideo();
+    let pipOn = false;
+    let r = null;
+    if (el) {
+      try { pipOn = document.pictureInPictureElement === el; } catch (e) {}
+      try { r = el.getBoundingClientRect(); } catch (e) {}
+    }
+    if (!el || !r || (!r.width && !r.height)) return _pipHide();
+    const winW = window.innerWidth || 0;
+    const winH = window.innerHeight || 0;
+    if (!winW || !winH) return _pipHide();
+    btn.style.left = Math.max(8, Math.min((r.right || 0) - 50, winW - 52)) + "px";
+    btn.style.top = Math.max(8, Math.min((r.top || 0) + 8, winH - 52)) + "px";
+    btn.classList.add("is-visible");
+    btn.classList.toggle("is-pip", pipOn);
+    const label = _pipText(pipOn ? "close" : "open");
+    btn.title = label;
+    btn.setAttribute("aria-label", label);
+  }
+
+  function _pipHide() {
+    if (_pipBtn) { _pipBtn.classList.remove("is-visible", "is-pip"); }
+  }
+
+  function _pipPulse() {
+    const b = _pipUiOwned ? _pipBtn : null;
+    if (!b) return;
+    b.classList.remove("is-pulse");
+    try { void b.offsetWidth; } catch (e) {}
+    b.classList.add("is-pulse");
+  }
+
+  function _pipAcquire() {
+    try {
+      const el = _getActive();
+      if (!el || el.tagName !== "VIDEO") return;
+      if (typeof el.requestPictureInPicture !== "function") return;
+      if (!(document.pictureInPictureEnabled)) return;
+      _pipEnsureUi();
+      _pipRefresh();
+    } catch (e) {}
   }
 
   // Expose a small testable surface (Firefox content DOM, chrome isolated world).
@@ -355,11 +532,11 @@
     try {
       document.addEventListener("play", function (e) {
         const t = e && e.target;
-        if (t && (t.tagName === "VIDEO" || t.tagName === "AUDIO")) _lastEl = t;
+        if (t && (t.tagName === "VIDEO" || t.tagName === "AUDIO")) { _lastEl = t; _pipAcquire(); }
       }, true);
       document.addEventListener("playing", function (e) {
         const t = e && e.target;
-        if (t && (t.tagName === "VIDEO" || t.tagName === "AUDIO")) _lastEl = t;
+        if (t && (t.tagName === "VIDEO" || t.tagName === "AUDIO")) { _lastEl = t; _pipAcquire(); }
       }, true);
       try {
         document.addEventListener("emptied", function (e) {

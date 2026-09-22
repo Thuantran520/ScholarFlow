@@ -1249,6 +1249,8 @@ window.I18N_RU = {
    "content_snip_click_to_pick": "🎯 Кликните для выбора элемента",
    "content_snip_btn_capture": "📸 Сделать снимок",
    "content_snip_btn_cancel": "✕ Отмена",
+   "content_media_popout_open": "Открыть всплывающее окно",
+   "content_media_popout_close": "Закрыть всплывающее окно",
    /* i18n: content_* block end */
    /* i18n: privacy_* block start - generated, do not edit */
    // ── Privacy-policy page strings (used by privacy.html) ──

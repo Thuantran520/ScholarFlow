@@ -507,6 +507,27 @@ async function main() {
       check(seeks.length === 0, "arrow key on a live bar does not commit a seek");
     }
   }
+  // 1c-iii-b. Live WITH a known broadcast start (getStartDate): the time text is
+  // the stream's real elapsed time (● mm:ss), not a static badge.
+  {
+    const { window: w } = await loadPage("sidebar.html");
+    const liveStart = Date.now() - 60 * 1000;
+    const liveState = { hasMedia: true, playing: true, title: "Live Sports", artist: "Channel", artwork: "https://example.com/live2.jpg", currentTime: 12, duration: 0, isLive: true, liveStart: liveStart };
+    w.chrome.tabs.query = () => Promise.resolve([{ id: 9, url: "https://sports.example/live", title: "Live Sports", audible: true, windowId: 1 }]);
+    w.chrome.tabs.sendMessage = (t, msg, cb) => {
+      const res = { ok: true, state: liveState };
+      if (typeof cb === "function") cb(res);
+      return Promise.resolve(res);
+    };
+    w.tabmgrMediaRefresh();
+    await new Promise((r) => setTimeout(r, 80));
+    const vpbB = w.document.querySelector("#tabmgr-media-body .tabmgr-vpb");
+    const timeB = w.document.querySelector("#tabmgr-media-body .tabmgr-vpb-time");
+    check(!!vpbB && vpbB.classList.contains("is-live"),
+      "live-with-liveStart bar still renders full red (.is-live)");
+    check(!!timeB && /^● \d{2}:\d{2}$/.test(timeB.textContent || "") && (timeB.textContent || "").indexOf("00:00") === -1,
+      `live time shows the stream elapsed clock, not a badge or 0 ratio (got: ${timeB && timeB.textContent})`);
+  }
 
   // 1c-iv. Video popup (Picture-in-Picture) toggle: shown for VIDEO sources and
   // opens/closes the floating window; absent entirely for audio sources.
@@ -515,7 +536,7 @@ async function main() {
     const { window: w } = await loadPage("sidebar.html");
     const pips = [];
     let pipOn = false;
-    const videoState = () => ({ hasMedia: true, playing: true, title: "Watch Me", artist: "Creator", artwork: "https://example.com/v.jpg", currentTime: 5, duration: 120, isVideo: true, pip: pipOn });
+    const videoState = () => ({ hasMedia: true, playing: true, title: "Watch Me", artist: "Creator", artwork: "https://example.com/v.jpg", currentTime: 5, duration: 120, isVideo: true, pip: pipOn, pipSupported: true });
     w.chrome.tabs.query = () => Promise.resolve([{ id: 7, url: "https://youtu.be/abc", title: "Watch Me", audible: true, windowId: 1 }]);
     w.chrome.tabs.sendMessage = (t, msg, cb) => {
       if (msg && msg.action === "MEDIA_PIP") { pips.push(1); pipOn = !pipOn; }
@@ -562,6 +583,20 @@ async function main() {
     await new Promise((r) => setTimeout(r, 80));
     check(!w.document.querySelector(".tabmgr-mp-pip"),
       "audio source renders NO popup (PiP) toggle — video-only control");
+  }
+  {
+    const { window: w } = await loadPage("sidebar.html");
+    const noApiVideo = { hasMedia: true, playing: true, title: "Browser Video", artist: "Site", artwork: "https://example.com/v2.jpg", currentTime: 3, duration: 60, isVideo: true, pip: false, pipSupported: false };
+    w.chrome.tabs.query = () => Promise.resolve([{ id: 8, url: "https://video.example/w", title: "Browser Video", audible: true, windowId: 1 }]);
+    w.chrome.tabs.sendMessage = (t, msg, cb) => {
+      const res = { ok: true, state: noApiVideo };
+      if (typeof cb === "function") cb(res);
+      return Promise.resolve(res);
+    };
+    w.tabmgrMediaRefresh();
+    await new Promise((r) => setTimeout(r, 80));
+    check(!w.document.querySelector(".tabmgr-mp-pip"),
+      "video WITHOUT the native Picture-in-Picture API renders NO popup toggle (Firefox case)");
   }
 
   // 1d. Multi-tab carousel: several tabs playing at once -> queue, click/wheel to rotate
@@ -858,8 +893,8 @@ async function main() {
     const viCount = w.Object.keys(w.I18N_DATA.vi).filter(k => k.startsWith("content_")).length;
     const enCount = w.Object.keys(w.I18N_DATA.en).filter(k => k.startsWith("content_")).length;
     const prCount = w.Object.keys(w.I18N_DATA.vi).filter(k => k.startsWith("privacy_")).length;
-    check(viCount === 39 && enCount === 39 && prCount === 43,
-      `namespace keys present in locale dumps (content_*=39, privacy_*=43; got ${viCount}/${enCount}/${prCount})`);
+    check(viCount === 41 && enCount === 41 && prCount === 43,
+      `namespace keys present in locale dumps (content_*=41, privacy_*=43; got ${viCount}/${enCount}/${prCount})`);
   }
 
   // 3. privacy.html standalone page uses the unified i18n engine
@@ -1009,6 +1044,64 @@ async function main() {
         `finite positive duration is NOT live (got: ${stNorm && stNorm.isLive})`);
       check(stNorm && stNorm.isVideo === true && stNorm.pip === false,
         `video source reports isVideo/pip for the popup toggle (got isVideo: ${stNorm && stNorm.isVideo}, pip: ${stNorm && stNorm.pip})`);
+      check(stNorm && stNorm.pipSupported === false,
+        `no native PiP API (JSDOM) -> pipSupported=false, no dead popup control (got: ${stNorm && stNorm.pipSupported})`);
+      // MSE/HLS live players can keep a FINITE duration but an unbounded
+      // (non-finite) seekable end — that must still flag live.
+      w.document.querySelectorAll("video, audio").forEach(function (m) { m.remove(); });
+      const vs = w.document.createElement("video");
+      w.document.body.appendChild(vs);
+      Object.defineProperty(vs, "readyState", { value: 1, configurable: true });
+      Object.defineProperty(vs, "duration", { value: 300, configurable: true });
+      Object.defineProperty(vs, "seekable", { value: { length: 1, start: function () { return 0; }, end: function () { return Infinity; } }, configurable: true });
+      const stSeek = w.__sfMedia.getState();
+      check(stSeek && stSeek.isLive === true,
+        `finite duration + unbounded seekable end flagged isLive (got: ${stSeek && stSeek.isLive})`);
+      // getStartDate() (epoch > 1970) both confirms live and yields liveStart.
+      w.document.querySelectorAll("video, audio").forEach(function (m) { m.remove(); });
+      const vg = w.document.createElement("video");
+      w.document.body.appendChild(vg);
+      Object.defineProperty(vg, "readyState", { value: 1, configurable: true });
+      Object.defineProperty(vg, "duration", { value: 300, configurable: true });
+      Object.defineProperty(vg, "seekable", { value: { length: 1, start: function () { return 0; }, end: function () { return 300; } }, configurable: true });
+      const liveStartMs = Date.now() - 300000;
+      vg.getStartDate = function () { return new Date(liveStartMs); };
+      const stG = w.__sfMedia.getState();
+      const liveDelta = stG ? Math.abs((Date.now() - (stG.liveStart || 0)) - 300000) : Infinity;
+      check(stG && stG.isLive === true && stG.liveStart > 0 && liveDelta < 1500,
+        `getStartDate() confirms live and reports liveStart≈5min (isLive: ${stG && stG.isLive}, liveStart: ${stG && stG.liveStart})`);
+      // A VOD element returns the 1970 epoch from getStartDate() -> never live.
+      w.document.querySelectorAll("video, audio").forEach(function (m) { m.remove(); });
+      const vv = w.document.createElement("video");
+      w.document.body.appendChild(vv);
+      Object.defineProperty(vv, "readyState", { value: 1, configurable: true });
+      Object.defineProperty(vv, "duration", { value: 180, configurable: true });
+      Object.defineProperty(vv, "seekable", { value: { length: 1, start: function () { return 0; }, end: function () { return 180; } }, configurable: true });
+      vv.getStartDate = function () { return new Date(0); };
+      const stV = w.__sfMedia.getState();
+      check(stV && stV.isLive === false && Number(stV.liveStart) === 0,
+        `VOD epoch getStartDate() (1970) stays non-live, liveStart=0 (got: ${stV && stV.isLive}/${stV && stV.liveStart})`);
+      // In-page PiP overlay: only grows after a SUPPORTED video plays, and stays
+      // hidden while JSDOM gives no layout (real pages anchor it to the video).
+      check(!w.document.querySelector(".__sf-media-pip"),
+        "no in-page PiP button before any supported video plays");
+      w.document.querySelectorAll("video, audio").forEach(function (m) { m.remove(); });
+      const vp = w.document.createElement("video");
+      w.document.body.appendChild(vp);
+      Object.defineProperty(vp, "readyState", { value: 1, configurable: true });
+      Object.defineProperty(vp, "duration", { value: 120, configurable: true });
+      vp.requestPictureInPicture = function () { return Promise.resolve(); };
+      w.document.pictureInPictureEnabled = true;
+      vp.dispatchEvent(new w.Event("play", { bubbles: true }));
+      const pipOv = w.document.querySelector(".__sf-media-pip");
+      check(!!pipOv && !pipOv.classList.contains("is-visible") && !pipOv.classList.contains("is-pip"),
+        `supported video play grows the hidden in-page PiP button (got button: ${!!pipOv})`);
+      if (pipOv) {
+        pipOv.click();
+        check(true, "in-page PiP button click handler does not throw in a gesture-less test harness");
+      }
+      w.document.pictureInPictureEnabled = undefined;
+      vp.remove();
       // No metadata yet (readyState 0): never claim live, whatever the duration.
       Object.defineProperty(lv, "readyState", { value: 0, configurable: true });
       Object.defineProperty(lv, "duration", { value: 0, configurable: true });
@@ -1022,8 +1115,8 @@ async function main() {
       Object.defineProperty(au, "readyState", { value: 4, configurable: true });
       Object.defineProperty(au, "duration", { value: 90, configurable: true });
       const stAu = w.__sfMedia.getState();
-      check(stAu && stAu.isVideo === false && stAu.isLive === false,
-        `audio source reports isVideo=false (no popup toggle, got isVideo: ${stAu && stAu.isVideo})`);
+      check(stAu && stAu.isVideo === false && stAu.isLive === false && stAu.pipSupported === false,
+        `audio source reports isVideo=false, pipSupported=false (no popup toggle, got isVideo: ${stAu && stAu.isVideo})`);
       // PiP toggle surface is safe when the browser API is unavailable (JSDOM).
       try {
         const pipSt = w.__sfMedia.pip();

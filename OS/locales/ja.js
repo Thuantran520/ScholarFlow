@@ -1249,6 +1249,8 @@ window.I18N_JA = {
    "content_snip_click_to_pick": "🎯 クリックして要素を選択",
    "content_snip_btn_capture": "📸 キャプチャ",
    "content_snip_btn_cancel": "✕ キャンセル",
+   "content_media_popout_open": "ポップアウトを開く",
+   "content_media_popout_close": "ポップアウトを閉じる",
    /* i18n: content_* block end */
    /* i18n: privacy_* block start - generated, do not edit */
    // ── Privacy-policy page strings (used by privacy.html) ──

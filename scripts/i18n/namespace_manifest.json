@@ -14,6 +14,8 @@
     "lingua_noai",
     "lingua_off",
     "lingua_wait",
+    "media_popout_close",
+    "media_popout_open",
     "phish_block",
     "phish_continue",
     "phish_dismiss",

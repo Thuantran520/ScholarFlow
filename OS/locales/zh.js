@@ -1249,6 +1249,8 @@ window.I18N_ZH = {
    "content_snip_click_to_pick": "🎯 点击选择此元素",
    "content_snip_btn_capture": "📸 立即截图",
    "content_snip_btn_cancel": "✕ 取消",
+   "content_media_popout_open": "打开悬浮窗",
+   "content_media_popout_close": "关闭悬浮窗",
    /* i18n: content_* block end */
    /* i18n: privacy_* block start - generated, do not edit */
    // ── Privacy-policy page strings (used by privacy.html) ──
