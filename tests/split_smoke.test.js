@@ -1178,50 +1178,35 @@ async function main() {
       const stVodReal = w.__sfMedia.getState();
       check(stVodReal && stVodReal.isLive === false && Number(stVodReal.liveStart) === 0,
         `VOD-shaped video with a REAL getStartDate() is NOT live and has no liveStart (got ${stVodReal && stVodReal.isLive}/${stVodReal && stVodReal.liveStart})`);
-      // A visible LIVE badge that belongs to a DIFFERENT player (foreign shell)
-      // must not leak onto the video we are watching.
-      const foreignShell = w.document.createElement("div");
-      foreignShell.className = "html5-video-player";
-      w.document.body.appendChild(foreignShell);
-      const foreignBadge = w.document.createElement("div");
-      foreignBadge.className = "ytp-live-badge";
-      foreignShell.appendChild(foreignBadge);
-      const stForeign = w.__sfMedia.getState();
-      check(stForeign && stForeign.isLive === false,
-        `a LIVE badge in a different (foreign) player does NOT flag the active video (got: ${stForeign && stForeign.isLive})`);
-      foreignBadge.remove(); foreignShell.remove();
-      // THE actual YouTube VOD case (verified): the .ytp-live-badge node is ALWAYS
-      // in the own shell, but a normal video keeps it [disabled] (hidden by CSS) —
-      // so :not([hidden]) used to wrongly match it and flag every video live. Only
-      // a badge with NEITHER [disabled] NOR [hidden] is genuinely on air.
+      // (d) THE lofi 24/7 case: the sampled <video> is a secondary/ambient element
+      // OUTSIDE the real player (its duration even looked finite), so the live
+      // signal is the MAIN player root's .ytp-live found at DOCUMENT level. An
+      // empty .html5-video-player.ytp-live anywhere must flag the active video
+      // live (this is what made real lives show a normal timed bar before).
+      const liveShell = w.document.createElement("div");
+      liveShell.className = "html5-video-player ytp-live";
+      w.document.body.appendChild(liveShell);
+      const stLofi = w.__sfMedia.getState();
+      check(stLofi && stLofi.isLive === true,
+        `a live player root .ytp-live elsewhere on the page flags the active video live (lofi 24/7 fix) (got: ${stLofi && stLofi.isLive})`);
+      check(stLofi && Number(stLofi.liveStart) > 0,
+        `once live, getStartDate() fills liveStart for the ● elapsed clock (got: ${stLofi && stLofi.liveStart})`);
+      liveShell.remove();
+      const stAfterLofi = w.__sfMedia.getState();
+      check(stAfterLofi && stAfterLofi.isLive === false,
+        `removing the .ytp-live root returns the video to non-live (got: ${stAfterLofi && stAfterLofi.isLive})`);
+      // (e) THE cat VOD case: a .ytp-live-badge node exists in EVERY player and is
+      // hidden by a CSS rule (no [disabled]/[hidden] attribute), so an attribute
+      // selector matched it and wrongly flagged ordinary videos live. Badges are
+      // now IGNORED entirely — a present badge with NO .ytp-live root stays non-live.
       const badge = w.document.createElement("div");
       badge.className = "ytp-live-badge";
-      badge.setAttribute("disabled", "");
       vhShell.appendChild(badge);
-      const stDisabledBadge = w.__sfMedia.getState();
-      check(stDisabledBadge && stDisabledBadge.isLive === false,
-        `a [disabled] .ytp-live-badge in the own shell (YouTube VOD) is NOT live (got: ${stDisabledBadge && stDisabledBadge.isLive})`);
-      badge.removeAttribute("disabled");
-      const stShownBadge = w.__sfMedia.getState();
-      check(stShownBadge && stShownBadge.isLive === true,
-        `an enabled .ytp-live-badge (no [disabled]) flips the video to live (got: ${stShownBadge && stShownBadge.isLive})`);
-      // Now genuinely live -> getStartDate() is allowed to fill the elapsed clock.
-      check(stShownBadge && Number(stShownBadge.liveStart) > 0,
-        `once live, getStartDate() fills liveStart for the ● elapsed clock (got: ${stShownBadge && stShownBadge.liveStart})`);
-      // A [hidden] badge stays non-live too (belt-and-braces for other players).
-      badge.setAttribute("hidden", "");
-      const stHiddenBadge = w.__sfMedia.getState();
-      check(stHiddenBadge && stHiddenBadge.isLive === false,
-        `an enabled but [hidden] badge is still not live (got: ${stHiddenBadge && stHiddenBadge.isLive})`);
+      const stBadgeOnly = w.__sfMedia.getState();
+      check(stBadgeOnly && stBadgeOnly.isLive === false,
+        `a .ytp-live-badge alone (no .ytp-live root) does NOT flag live — badge is ignored (cat VOD fix) (got: ${stBadgeOnly && stBadgeOnly.isLive})`);
       badge.remove();
-      const stNoBadge = w.__sfMedia.getState();
-      check(stNoBadge && stNoBadge.isLive === false,
-        `removing the badge returns the finite-duration video to non-live (got: ${stNoBadge && stNoBadge.isLive})`);
-      // The shell itself tagged .ytp-live is the earliest/badge-less marker; it
-      // must flag a VOD-shaped feed live and scope to THIS player only.
-      const stShellNoMark = w.__sfMedia.getState();
-      check(stShellNoMark && stShellNoMark.isLive === false,
-        `own shell without .ytp-live is NOT live (got: ${stShellNoMark && stShellNoMark.isLive})`);
+      // (f) the active video's OWN shell tagged .ytp-live still flags it live.
       vhShell.classList.add("ytp-live");
       const stShellMark = w.__sfMedia.getState();
       check(stShellMark && stShellMark.isLive === true && stShellMark.isVideo === true,

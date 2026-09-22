@@ -99,27 +99,31 @@
     return isFinite(n) && n >= 0 ? n : 0;
   }
 
-  // Page-level livestream markers (100% local DOM read, no network), scoped to the
-  // video element's OWN player so we "catch the right video". KEY YouTube fact
-  // (verified): the .ytp-live-badge node is present in the control bar of EVERY
-  // video, live or VOD — it is toggled with the [disabled] attribute (a VOD badge
-  // is disabled+hidden via CSS, a live one is enabled). Matching it with only
-  // :not([hidden]) therefore flagged ordinary videos as live. We require a badge
-  // that is neither [disabled] nor [hidden], and also honour the player root's
-  // .ytp-live class and the canonical /live/ URL. All scoped to THIS video's own
-  // .html5-video-player shell so an ambient/teaser player can never leak onto it.
+  // Page-level livestream markers (100% local DOM read, no network). YouTube's
+  // HTML5 player root carries the class .ytp-live ONLY while an actual live
+  // broadcast is playing, and never on a normal VOD — so that class is the single
+  // authoritative signal. We read it at DOCUMENT level (not just the sampled
+  // element's own shell): a 24/7 stream (e.g. lofi radio) sometimes has its
+  // <video> reported from an ambient/secondary element OUTSIDE the main player,
+  // and the ~14-hour DVR duration even looks finite — only the main player's
+  // .ytp-live reliably marks it live. We deliberately do NOT use .ytp-live-badge:
+  // that node exists in EVERY player's control bar and is toggled by a CSS rule
+  // (display:none), so an attribute selector on it false-flagged ordinary videos
+  // as live (the inverse bug).
   function _pageSaysLive(el) {
     const doc = (el && el.ownerDocument) || document;
     try {
       const u = String((doc && doc.location && doc.location.href) || location.href || "");
-      if (/^https?:\/\/([a-z0-9-]+\.)*youtube\.com\/live\//i.test(u)) return true;
+      if (/^https?:\/\/([a-z0-9-]+\.)*(youtube\.com\/live\/|youtube\.com\/watch.*[?&]is_live=1)/i.test(u)) return true;
     } catch (e) {}
-    let shell = null;
-    try { if (el && typeof el.closest === "function") shell = el.closest(".html5-video-player"); } catch (e) {}
     try {
-      if (shell) {
-        if (shell.classList && shell.classList.contains("ytp-live")) return true;
-        if (shell.querySelector && shell.querySelector(".ytp-live-badge:not([disabled]):not([hidden])")) return true;
+      // Authoritative: the live player root is tagged .ytp-live on YouTube.
+      if (doc.querySelector && doc.querySelector(".html5-video-player.ytp-live")) return true;
+    } catch (e) {}
+    try {
+      if (el && typeof el.closest === "function") {
+        const sh = el.closest(".html5-video-player");
+        if (sh && sh.classList && sh.classList.contains("ytp-live")) return true;
       }
     } catch (e) {}
     return false;
