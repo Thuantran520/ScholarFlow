@@ -1019,6 +1019,28 @@ async function main() {
       const sv3 = w.__sfMedia.getState();
       check(!!sv3 && sv3.artwork === "https://example.com/og-art.jpg",
         `og:image used as artwork fallback (got: ${sv3 && sv3.artwork})`);
+      // TikTok/XGPlayer style: NO poster, NO og:image — the cover is a LARGE <img>
+      // inside the player container (plus a small avatar). The extractor must pick
+      // the biggest image and ignore the tiny avatar.
+      meta.remove();
+      v.removeAttribute && v.removeAttribute("poster");
+      const player = w.document.createElement("div");
+      player.className = "xgplayer xgplayer-live";
+      const cover = w.document.createElement("img");
+      cover.src = "https://p16-sign.tiktokcdn.com/big-cover.jpg";
+      Object.defineProperty(cover, "naturalWidth", { value: 720, configurable: true });
+      Object.defineProperty(cover, "naturalHeight", { value: 1280, configurable: true });
+      const avatar = w.document.createElement("img");
+      avatar.src = "https://cdn.example/tiny-avatar.png";
+      Object.defineProperty(avatar, "naturalWidth", { value: 40, configurable: true });
+      Object.defineProperty(avatar, "naturalHeight", { value: 40, configurable: true });
+      const v2 = w.document.createElement("video");
+      player.appendChild(v2); player.appendChild(cover); player.appendChild(avatar);
+      w.document.body.appendChild(player);
+      const svTt = w.__sfMedia.getState();
+      check(!!svTt && svTt.artwork === "https://p16-sign.tiktokcdn.com/big-cover.jpg",
+        `largest image in the player container used as TikTok-style cover (got: ${svTt && svTt.artwork})`);
+      player.remove();
     }
     // "previous" must step back a track: it prefers the page's OWN Previous control
     // (even mid-track — the site applies any restart-gate itself), and only falls
@@ -1337,6 +1359,30 @@ async function main() {
       const vodLive = w.__sfMedia._liveEdge(vodEl, t0 + 30000);    // edge stays 0
       check(vodLive === false, `a pinned seekable edge (VOD) is NOT flagged by the DVR detector (got: ${vodLive})`);
       w.__sfMedia._resetLiveEdge();
+      // Growing-window live (seekable.start pinned at 0, RIGHT edge advances at
+      // real time) — a very common HLS pattern — must also be detected.
+      let growEnd = 300;
+      const growEl = { tagName: "VIDEO", readyState: 4, seekable: { length: 1, start: function () { return 0; }, end: function () { return growEnd; } } };
+      w.__sfMedia._liveEdge(growEl, t0);
+      growEnd = 300 + 7;
+      const growLive = w.__sfMedia._liveEdge(growEl, t0 + 7000);   // right edge +7s over 7s
+      check(growLive === true, `a growing-window live (right edge slides, start stays 0) is detected as LIVE (got: ${growLive})`);
+      w.__sfMedia._resetLiveEdge();
+      // XGPlayer (TikTok LIVE + Nimo/Douyu-class) flags live with .xgplayer-is-live
+      // on the root and a rendered .xgplayer-live chip — no duration signal needed.
+      w.document.querySelectorAll("video, audio, .html5-video-player, .xgplayer, .xgplayer-live").forEach(function (m) { m.remove(); });
+      const vt = w.document.createElement("video");
+      Object.defineProperty(vt, "readyState", { value: 4, configurable: true });
+      Object.defineProperty(vt, "duration", { value: 600, configurable: true });   // finite, looks like VOD
+      Object.defineProperty(vt, "seekable", { value: { length: 1, start: function () { return 0; }, end: function () { return 600; } }, configurable: true });
+      const xgRoot = w.document.createElement("div"); xgRoot.className = "xgplayer xgplayer-is-live";
+      xgRoot.appendChild(vt);
+      w.document.body.appendChild(xgRoot);
+      w.document.querySelectorAll("video, audio").forEach(function () {});
+      const stXg = w.__sfMedia.getState();
+      check(stXg && stXg.isLive === true,
+        `.xgplayer-is-live root (TikTok LIVE / Nimo) flags a finite-duration stream live (got: ${stXg && stXg.isLive})`);
+      xgRoot.remove(); vt.remove();
       // And confirm getState wires it up: a FINITE-duration, non-YouTube feed whose
       // seekable slides is flagged live (Twitch/Facebook/HLS style).
       w.document.querySelectorAll("video, audio, .html5-video-player").forEach(function (m) { m.remove(); });

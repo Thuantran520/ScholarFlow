@@ -13,16 +13,29 @@
   // banner can show the last track with play/pause + seek).
   let _lastEl = null;
 
-  function _allMedia() {
-    try {
-      return Array.prototype.slice.call(document.querySelectorAll("audio, video"));
-    } catch (e) {
-      return [];
-    }
+  function _elHasSource(el) {
+    try { if (el.currentSrc || el.src) return true; } catch (e) {}
+    try { if (el.srcObject) return true; } catch (e) {}   // MediaStream / WebRTC live
+    try { if (el.querySelector) { const so = el.querySelector("source"); if (so && so.src) return true; } } catch (e) {}
+    return false;
+  }
+
+  // When preferSrc, drop elements that have NO media source (poster/preview/ambient
+  // <video> with no src) so we "catch the right video" — e.g. TikTok LIVE keeps the
+  // real stream in a source-bearing <video> while a source-less poster <video> sits
+  // beside it (that one used to win "biggest" → blank thumbnail + wrong state).
+  // Falls back to the full list if nothing has a source, so src-less test DOMs and
+  // blob/srcObject players keep working.
+  function _allMedia(preferSrc) {
+    let list = [];
+    try { list = Array.prototype.slice.call(document.querySelectorAll("audio, video")); } catch (e) { return []; }
+    if (!preferSrc || !list.length) return list;
+    const withSrc = list.filter(function (el) { return _elHasSource(el); });
+    return withSrc.length ? withSrc : list;
   }
 
   function _playingMedia() {
-    return _allMedia().filter(function (el) {
+    return _allMedia(true).filter(function (el) {
       try { return !el.paused && !el.ended && el.readyState > 0; } catch (e) { return false; }
     });
   }
@@ -40,16 +53,20 @@
   }
 
   // Among several players (auto-playing teasers, ambient layers, ad slots on
-  // the same page) the MAIN player is the biggest on screen — e.g. the YouTube
-  // livestream, not a tiny preview. Ties keep the later (most recently added)
+  // the same page) prefer a source-bearing element (the REAL stream), then the
+  // biggest on screen — e.g. the YouTube/TikTok main player, not a tiny preview
+  // or a src-less poster video. Ties keep the later (most recently added)
   // element so single-player pages behave exactly as before.
-  function _biggest(list) {
+  function _biggest(list, preferSrc) {
     if (!list || !list.length) return null;
+    const srcScore = function (el) { return preferSrc ? (_elHasSource(el) ? 1 : 0) : 0; };
     let best = list[0];
     let bestArea = _mediaArea(best);
+    let bestSrc = srcScore(best);
     for (let i = 1; i < list.length; i++) {
       const a = _mediaArea(list[i]);
-      if (a > bestArea) { best = list[i]; bestArea = a; }
+      const s = srcScore(list[i]);
+      if (s > bestSrc || (s === bestSrc && a > bestArea)) { best = list[i]; bestArea = a; bestSrc = s; }
     }
     return best;
   }
@@ -60,12 +77,12 @@
     }
     const cur = _playingMedia();
     if (cur.length) {
-      _lastEl = _biggest(cur);
+      _lastEl = _biggest(cur, true);
       return _lastEl;
     }
-    const list = _allMedia();
+    const list = _allMedia(true);
     if (list.length) {
-      _lastEl = _biggest(list);
+      _lastEl = _biggest(list, true);
       return _lastEl;
     }
     return null;
@@ -110,28 +127,36 @@
   // per-site DOM hack, and cannot mislabel a VOD.
   var _edgeRef = null;
   // Pure, time-parameterised seam so it is unit-testable; returns true when the
-  // seekable left edge advanced at roughly real time since the reference sample.
+  // seekable window's LEFT or RIGHT edge advanced at roughly real time since the
+  // reference sample. A rolling-window live slides BOTH edges; a growing-window
+  // live (seekable.start pinned at 0) slides only the RIGHT edge; a VOD's edges
+  // stay fixed, so neither case can mislabel ordinary video.
   function _liveEdgeAdvanced(el, nowMs) {
     let start = null;
+    let end = null;
     try {
       const s = el && el.seekable;
       if (s && typeof s.length === "number" && s.length > 0) {
         const a = s.start(0);
+        const b = s.end(s.length - 1);
         if (isFinite(a)) start = a;
+        if (isFinite(b)) end = b;
       }
     } catch (e) {}
-    if (start == null) { _edgeRef = null; return false; }
+    if (start == null && end == null) { _edgeRef = null; return false; }
     if (!_edgeRef || _edgeRef.el !== el || !(_edgeRef.t <= nowMs)) {
-      _edgeRef = { el: el, t: nowMs, start: start };
+      _edgeRef = { el: el, t: nowMs, start: (start == null ? 0 : start), end: (end == null ? 0 : end) };
       return false;
     }
     const dt = (nowMs - _edgeRef.t) / 1000;
     // Wait for a wide-enough window; keep the reference pinned until we sample.
     if (dt < 5) return false;
-    const dStart = start - _edgeRef.start;
-    _edgeRef = { el: el, t: nowMs, start: start };
+    const dStart = (start == null ? _edgeRef.start : start) - _edgeRef.start;
+    const dEnd = (end == null ? _edgeRef.end : end) - _edgeRef.end;
+    _edgeRef = { el: el, t: nowMs, start: (start == null ? _edgeRef.start : start), end: (end == null ? _edgeRef.end : end) };
     if (dt > 180) return false;          // too long a gap to trust the ratio
-    return dStart >= dt * 0.5 && dStart <= dt * 3;
+    const advanced = Math.max(dStart, dEnd);
+    return advanced >= dt * 0.5 && advanced <= dt * 3;
   }
 
   // Is a node ACTUALLY painted on screen? Content-script getComputedStyle resolves
@@ -187,6 +212,19 @@
         for (let i = 0; i < chips.length; i++) { if (_chipRendered(chips[i])) return true; }
       }
     } catch (e) {}
+    // XGPlayer (bytedance/xgplayer) — used by TikTok LIVE and many Asian live
+    // sites (Nimo/Douyu-class). When config.isLive it adds .xgplayer-is-live to
+    // the player ROOT and appends a .xgplayer-live ("正在直播"/LIVE) chip to the
+    // controls. Both are in light DOM so a content script can read them.
+    try {
+      if (doc.querySelector && doc.querySelector(".xgplayer.xgplayer-is-live, [class*='xgplayer-is-live']")) return true;
+    } catch (e) {}
+    try {
+      if (doc.querySelectorAll) {
+        const xg = doc.querySelectorAll(".xgplayer-live");
+        for (let i = 0; i < xg.length; i++) { if (_chipRendered(xg[i])) return true; }
+      }
+    } catch (e) {}
     return false;
   }
 
@@ -210,17 +248,43 @@
     return "";
   }
 
+  function _imgSrc(im) {
+    if (!im) return "";
+    let s = "";
+    try { s = im.currentSrc || im.src || ""; } catch (e) {}
+    if (!s) { try { s = im.getAttribute("data-src") || im.getAttribute("data-original") || ""; } catch (e) {} }
+    try {
+      if (!s && im.srcset) s = String(im.srcset).split(/[\s,]+/).filter(Boolean).pop() || "";
+    } catch (e) {}
+    return s;
+  }
+
+  function _imgArea(im) {
+    let w = 0; let h = 0;
+    try { w = im.naturalWidth || im.width || im.clientWidth || 0; h = im.naturalHeight || im.height || im.clientHeight || 0; } catch (e) {}
+    if (!w || !h) {
+      try { const r = im.getBoundingClientRect ? im.getBoundingClientRect() : null; if (r) { if (!w) w = r.width; if (!h) h = r.height; } } catch (e) {}
+    }
+    return (w > 0 && h > 0) ? (w * h) : 0;
+  }
+
+  // Best-effort cover: walk up from the media element to a bounded player
+  // container and pick the LARGEST image inside it (TikTok/XGPlayer expose the
+  // live cover as a big <img>, not a poster), ignoring obvious chrome (icons,
+  // avatars) via a minimum size. Layout width can be 0 (lazy/absolute), so we
+  // fall back to naturalWidth and bounding-rect area.
   function _nearbyImg(el) {
     let node = el;
-    for (let depth = 0; node && depth < 5; depth++, node = node.parentElement) {
+    for (let depth = 0; node && depth < 7; depth++, node = node.parentElement) {
       let imgs = [];
       try { imgs = Array.prototype.slice.call(node.querySelectorAll ? node.querySelectorAll("img") : []); } catch (e) {}
       let best = null;
-      let bestW = 0;
+      let bestArea = 0;
       for (const im of imgs) {
-        const w = Number(im.width) || 0;
-        if (w <= 0 || w > 640) continue;
-        if (w > bestW) { bestW = w; best = im; }
+        if (!_imgSrc(im)) continue;
+        const a = _imgArea(im);
+        if (a < 120 * 120) continue;           // skip favicons / tiny avatars / icons
+        if (a > bestArea) { bestArea = a; best = im; }
       }
       if (best) return best;
     }
@@ -231,7 +295,7 @@
     const root = (el && el.ownerDocument) || document;
     const view = root.defaultView;
     let node = el;
-    for (let depth = 0; node && depth < 4; depth++, node = node.parentElement) {
+    for (let depth = 0; node && depth < 6; depth++, node = node.parentElement) {
       try {
         const cs = view && view.getComputedStyle ? view.getComputedStyle(node) : null;
         const bg = cs && cs.backgroundImage;
@@ -250,12 +314,13 @@
       if (poster && /^(https?:|data:image\/)/.test(poster)) return poster;
     } catch (e) {}
     try {
-      const m = document.querySelector('meta[property="og:image"], meta[name="twitter:image"]');
-      if (m && m.content && /^https?:/.test(String(m.content))) return String(m.content);
+      const m = document.querySelector('meta[property="og:image"], meta[property="og:image:secure_url"], meta[name="twitter:image"], meta[itemprop="image"], link[rel="image_src"], link[itemprop="image"]');
+      const c = m && (m.content || m.href);
+      if (c && /^https?:/.test(String(c))) return String(c);
     } catch (e) {}
     try {
       const near = _nearbyImg(el);
-      const src = near ? (near.currentSrc || near.src || "") : "";
+      const src = _imgSrc(near);
       if (src && /^(https?:|data:image\/)/.test(src)) return String(src);
     } catch (e) {}
     return _bgImage(el);
