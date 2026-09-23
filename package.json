@@ -1,13 +1,17 @@
 {
-  "name": "scholarflow",
+  "name": "panadolce",
   "version": "2.5.2",
+  "description": "Panadolce: Advanced academic assistant & multi-tasking browser workspace",
+  "author": "Panadolce",
   "private": true,
   "scripts": {
     "test": "node tests/run_all.js",
     "check:i18n": "node scripts/i18n/check_locales.js",
     "check:syntax": "node scripts/check_syntax.js",
     "lint": "eslint OS/js scripts tests --ext .js",
-    "check": "node scripts/check_syntax.js && node scripts/i18n/check_locales.js && npm run lint && node tests/run_all.js"
+    "check": "node scripts/check_syntax.js && node scripts/i18n/check_locales.js && npm run lint && node tests/run_all.js",
+    "build:browser": "pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/build_browser.ps1",
+    "sync:dist": "pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/sync_dist.ps1 -Firefox"
   },
   "dependencies": {
     "jsdom": "^29.1.1",

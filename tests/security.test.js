@@ -62,6 +62,7 @@ const ALLOWED_HOSTS = new Set([
   "chatgpt.com",
   "claude.ai",
   "openrouter.ai",
+  "api.deepseek.com",
   "www.facebook.com",
   "zalo.me",
   "www.instagram.com",

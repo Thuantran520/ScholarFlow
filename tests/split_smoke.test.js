@@ -115,7 +115,7 @@ function makeChromeStub(storeInit = {}) {
   const stub = {
     storage: { local: storageLocal, sync: storageLocal },
     runtime: {
-      getManifest: () => ({ name: "ScholarFlow", version: "0.0.0-test", manifest_version: 3 }),
+      getManifest: () => ({ name: "Panadolce", version: "0.0.0-test", manifest_version: 3 }),
       getURL: (p) => "chrome-extension://test/" + p,
       sendMessage: (...args) => { if (args.length > 1 && typeof args[args.length - 1] === "function") args[args.length - 1]({}); return Promise.resolve({}); },
       onMessage: { addListener: () => {}, removeListener: () => {} },
@@ -935,7 +935,7 @@ async function main() {
     const relevantErrors = errors.filter(e => !/Not implemented:/.test(e));
     check(relevantErrors.length === 0, "no uncaught errors at load" + (relevantErrors.length ? ` -> ${relevantErrors.slice(0, 3).join(" | ")}` : ""));
     await new Promise((r) => setTimeout(r, 30));
-    check(w.document.title === "Privacy Policy – ScholarFlow",
+    check(w.document.title === "Privacy Policy – Panadolce",
       `privacy page document.title translated (en): "${w.document.title}"`);
     check(w.document.getElementById("select-privacy-lang").value === "en", "privacy language select synced to en");
     check(w.document.getElementById("sec5-title").textContent === "5. Open Source & License",
@@ -2416,7 +2416,7 @@ async function main() {
         "sidebar: grounding search queries extracted and deduped");
       check(await w.eval(`typeof aiSourcesLabel==="function" && typeof aiSourcesLabel()==="string" && aiSourcesLabel().length>0 && typeof aiSearchQueriesLabel==="function" && typeof aiSearchQueriesLabel()==="string" && aiSearchQueriesLabel().length>0`),
         "sidebar: citation-footer and search-queries label localizers present");
-      check(await w.eval(`typeof aiBuildSystemInstruction==="function" && aiBuildSystemInstruction(false).indexOf("QUY TẮC SỰ THẬT")!==-1 && aiBuildSystemInstruction(true).indexOf("ScholarFlow")!==-1`),
+      check(await w.eval(`typeof aiBuildSystemInstruction==="function" && aiBuildSystemInstruction(false).indexOf("QUY TẮC SỰ THẬT")!==-1 && aiBuildSystemInstruction(true).indexOf("Panadolce")!==-1`),
         "sidebar: systemInstruction builder present and contains factual constraint");
       check(await w.eval(`(function(){var old=aiSettings.scope; aiSettings.scope="web"; var p=aiBuildPrompt("QQ","","","",null,null,"",null,true); aiSettings.scope=old; return p.indexOf("Nguồn:")!==-1 && p.indexOf("từ khóa")!==-1;})()`),
         "sidebar: scope=web prompt asks the model to list source URLs + verification keywords");

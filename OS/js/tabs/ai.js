@@ -1,10 +1,10 @@
-// ScholarFlow AI Assistant — minimal, isolated, no layout break
+// Panadolce AI Assistant — Enterprise Multi-Model Hub
 /* global storGet, storSet, showToast, currentTabUrl, currentTabObj, currentMeta, sendTabMessage, getI18nText */
 const AI_PROVIDERS = {
   gemini: { label: "Gemini", apiHost: "generativelanguage.googleapis.com", apiUrlBase: "https://generativelanguage.googleapis.com/v1beta/models/", models: ["gemini-3.5-flash","gemini-3.5-flash-lite","gemini-3-flash","gemini-3.1-flash-lite","gemini-3.8-flash","gemini-3.7-flash"], defaultModel: "gemini-3.5-flash-lite", keyPlaceholder: "AIza...", webUrl: "https://gemini.google.com/app", loginUrl: "https://aistudio.google.com/apikey" },
   openai: { label: "ChatGPT", apiHost: "api.openai.com", apiUrl: "https://api.openai.com/v1/chat/completions", models: ["gpt-4o","gpt-4o-mini","o3-mini","o1","o3","o4-mini","gpt-4.1"], defaultModel: "gpt-4o", webUrl: "https://chatgpt.com/" },
   claude: { label: "Claude", apiHost: "api.anthropic.com", apiUrl: "https://api.anthropic.com/v1/messages", models: ["claude-3-7-sonnet","claude-sonnet-5","claude-opus-4-8","claude-3-5-sonnet-20241022","claude-3-5-haiku-20241022"], defaultModel: "claude-3-7-sonnet", webUrl: "https://claude.ai/" },
-  custom: { label: "Custom", models: [], defaultModel: "", webUrl: "" }
+  custom: { label: "Custom / Local AI", models: [], defaultModel: "", webUrl: "" }
 };
 const AI_MODEL_LABELS = {
   "gemini-3.5-flash": "Gemini 3.5 Flash",
@@ -15,27 +15,28 @@ const AI_MODEL_LABELS = {
   "gemini-3.7-flash": "Gemini 3.7 Flash",
   "gpt-4o": "GPT-4o",
   "gpt-4o-mini": "GPT-4o Mini",
-  "o3-mini": "o3-mini",
-  "o1": "o1",
+  "o3-mini": "o3-mini (Reasoning)",
+  "o1": "o1 (High Reasoning)",
   "o3": "o3",
   "o4-mini": "o4-mini",
   "gpt-4.1": "GPT-4.1",
-  "claude-3-7-sonnet": "Claude 3.7 Sonnet",
+  "claude-3-7-sonnet": "Claude 3.7 Sonnet (Hybrid Reasoning)",
   "claude-sonnet-5": "Claude Sonnet 5",
   "claude-opus-4-8": "Claude Opus 4.8",
   "claude-3-5-sonnet-20241022": "Claude 3.5 Sonnet",
   "claude-3-5-haiku-20241022": "Claude 3.5 Haiku"
 };
 const AI_DEFAULT_CUSTOM_SERVERS = [
-  { id: "ollama", name: "Ollama Local", url: "http://localhost:11434/v1/chat/completions", model: "llama3", key: "" },
+  { id: "ollama", name: "Ollama Local (Offline 100%)", url: "http://localhost:11434/v1/chat/completions", model: "llama3.3", key: "" },
+  { id: "deepseek", name: "DeepSeek API (R1 & V3)", url: "https://api.deepseek.com/chat/completions", model: "deepseek-reasoner", key: "" },
   { id: "lmstudio", name: "LM Studio", url: "http://localhost:1234/v1/chat/completions", model: "local-model", key: "" },
-  { id: "openrouter", name: "OpenRouter", url: "https://openrouter.ai/api/v1/chat/completions", model: "deepseek/deepseek-r1", key: "" }
+  { id: "openrouter", name: "OpenRouter (DeepSeek R1 / Free)", url: "https://openrouter.ai/api/v1/chat/completions", model: "deepseek/deepseek-r1", key: "" }
 ];
 let aiCustomServers = [...AI_DEFAULT_CUSTOM_SERVERS];
 let aiActiveCustomServerId = "ollama";
 const AI_STORAGE_KEYS = { provider: "sf_ai_provider", keys: "sf_ai_keys", history: "sf_ai_history", settings: "sf_ai_settings", models: "sf_ai_models", prompts: "sf_ai_prompts", sessions: "sf_ai_sessions", mem: "sf_ai_mem", customServers: "sf_ai_custom_servers", activeCustomServer: "sf_ai_active_custom_server" };
 const AI_DEFAULT_SETTINGS = { includePage: true, includeSelection: true, includeNotes: false, includeImages: true, includeSource: false, stream: true, webSearch: true, autoVideo: true, readingCompanion: true, scope: "auto", maxChars: 16000, temperature: 0.7 };
-const AI_DEFAULT_PROMPTS = { summary: "Tóm tắt trang này thành 5 bullet + 1 đoạn 100 chữ bằng tiếng Việt.", qa: "Trả lời câu hỏi dựa trên nội dung trang đang đứng, trích dẫn nguồn nếu có.", explain: "Giải thích đoạn bôi đen bằng tiếng Việt đơn giản.", translate: "Dịch nội dung chính của trang sang tiếng Việt tự nhiên.", outline: "Tạo outline 3 cấp (I, 1, a) cho bài viết này.", timeline: "Tạo danh sách các mốc thời gian (timeline/chương) quan trọng của video hoặc bài viết theo định dạng:\n- [mm:ss] Tiêu đề chương: tóm tắt ngắn nội dung chính.", flashcard: "Tạo 5 thẻ flashcard ôn tập kiến thức cốt lõi từ nội dung trang theo định dạng:\nQ: [Câu hỏi ôn tập]\nA: [Câu trả lời giải thích chi tiết]", cite: "Gợi ý 3 câu hỏi nghiên cứu + 5 từ khóa học thuật từ trang này.", answer: "Giải các câu trắc nghiệm trong nội dung trang: mỗi câu nêu đáp án đúng (A/B/C/D hoặc giá trị) kèm giải thích 1 dòng bằng tiếng Việt. Nếu dữ liệu đáp án nằm trong mã nguồn/script của trang, hãy dựa vào đó để khẳng định.", tabs: "Tóm tắt TỪNG tab đang mở (mỗi tab 2 gạch đầu dòng bằng tiếng Việt), sau đó lập bảng so sánh các tab theo: chủ đề, luận điểm chính, độ tin cậy nguồn.", papers: "Dựa vào danh sách tài liệu tìm được từ Crossref/OpenAlex ở phần ngữ cảnh: chọn và xếp hạng 5 công trình liên quan nhất tới chủ đề trang, mỗi cái nêu lý do 1 dòng và định dạng trích dẫn APA." };
+const AI_DEFAULT_PROMPTS = { summary: "Tóm tắt trang này thành 5 bullet + 1 đoạn 100 chữ bằng tiếng Việt.", qa: "Trả lời câu hỏi dựa trên nội dung trang đang đứng, trích dẫn nguồn nếu có.", explain: "Giải thích đoạn bôi đen bằng tiếng Việt đơn giản.", translate: "Dịch nội dung chính của trang sang tiếng Việt tự nhiên.", outline: "Tạo outline 3 cấp (I, 1, a) cho bài viết này.", timeline: "Tạo danh sách các mốc thời gian (timeline/chương) quan trọng của video hoặc bài viết theo định dạng:\n- [mm:ss] Tiêu đề chương: tóm tắt ngắn nội dung chính.", flashcard: "Tạo 5 thẻ flashcard ôn tập kiến thức cốt lõi từ nội dung trang theo định dạng:\nQ: [Câu hỏi ôn tập]\nA: [Câu trả lời giải thích chi tiết]", cite: "Gợi ý 3 câu hỏi nghiên cứu + 5 từ khóa học thuật từ trang này.", answer: "Giải các câu trắc nghiệm trong nội dung trang: mỗi câu nêu đáp án đúng (A/B/C/D hoặc giá trị) kèm giải thích 1 dòng bằng tiếng Việt. Nếu dữ liệu đáp án nằm trong mã nguồn/script của trang, hãy dựa vào đó để khẳng định.", tabs: "Tóm tắt TỪNG tab đang mở (mỗi tab 2 gạch đầu dòng bằng tiếng Việt), sau đó lập bảng so sánh các tab theo: chủ đề, luận điểm chính, độ tin cậy nguồn.", papers: "Dựa vào danh sách tài liệu tìm được từ Crossref/OpenAlex ở phần ngữ cảnh: chọn và xếp hạng 5 công trình liên quan nhất tới chủ đề trang, mỗi cái nêu lý do 1 dòng và định dạng trích dẫn APA.", deep_read: "Đọc sâu và bóc tách tài liệu này theo cấu trúc: 1. Mục tiêu; 2. Phương pháp (Methodology); 3. Kết quả cốt lõi; 4. Thảo luận & Hạn chế; 5. Ý nghĩa thực tiễn.", fact_check: "Kiểm tra chéo độ chính xác của các luận điểm và số liệu trong văn bản. Chỉ ra điểm nghi vấn hoặc mâu thuẫn nếu có.", math_extract: "Trích xuất toàn bộ công thức toán học, thuật toán từ văn bản và định dạng dưới dạng LaTeX kèm giải thích các biến." };
 let aiProvider = "gemini";
 let aiKeys = {};
 let aiHistory = [];
@@ -43,7 +44,7 @@ let aiSettings = { ...AI_DEFAULT_SETTINGS };
 let aiModels = {};
 let aiFetchedModels = [];
 let aiPrompts = { ...AI_DEFAULT_PROMPTS };
-function aiDefaultPrompts(){ const d={}; ["summary","qa","explain","translate","outline","timeline","flashcard","cite","answer","tabs","papers"].forEach(k=>{ let v=""; try{ v=(typeof getI18nText==="function")?getI18nText("ai_prompt_"+k,""): ""; }catch(e){} if(!v||v==="ai_prompt_"+k) v=AI_DEFAULT_PROMPTS[k]||""; d[k]=v; }); return d; }
+function aiDefaultPrompts(){ const d={}; ["summary","qa","explain","translate","outline","timeline","flashcard","cite","answer","tabs","papers","deep_read","fact_check","math_extract"].forEach(k=>{ let v=""; try{ v=(typeof getI18nText==="function")?getI18nText("ai_prompt_"+k,""): ""; }catch(e){} if(!v||v==="ai_prompt_"+k) v=AI_DEFAULT_PROMPTS[k]||""; d[k]=v; }); return d; }
 let aiIsSending = false;
 let aiAttachedImage = null;
 let aiAttachedSelection = "";
@@ -1439,7 +1440,7 @@ function aiGrowInput(inp){
   inp.style.height=h+"px";
 }
 function aiUpdateLatestBtn(){ const c=document.getElementById("ai-chat-history"); const b=document.getElementById("ai-btn-latest"); if(!c||!b) return; const gap=c.scrollHeight-c.scrollTop-c.clientHeight; b.classList.toggle("is-visible", gap>140); }
-function aiConversationMarkdown(){ const out=[]; try{ out.push("_ScholarFlow · "+new Date().toLocaleString()+"_",""); }catch(e){ out.push("",""); } aiHistory.forEach(m=>{ const who=m.role==="user"?aiT("ai_you",null,"Bạn"):aiGetProviderConfig(m.provider||aiProvider).label; let hm=""; const t=Number(m.ts)||0; if(t){ try{ hm=" · "+new Date(t).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}); }catch(e){} } out.push("**"+who+hm+"**","",""+String(m.content||""),""); }); if(aiPages.length){ out.push("---",""); out.push("_"+aiT("ai_pages_added",null,"Trang đã thêm")+":_"); aiPages.forEach(p=>out.push("- "+(p.title||p.url)+" — "+p.url)); out.push(""); } return out.join("\n"); }
+function aiConversationMarkdown(){ const out=[]; try{ out.push("_Panadolce · "+new Date().toLocaleString()+"_",""); }catch(e){ out.push("",""); } aiHistory.forEach(m=>{ const who=m.role==="user"?aiT("ai_you",null,"Bạn"):aiGetProviderConfig(m.provider||aiProvider).label; let hm=""; const t=Number(m.ts)||0; if(t){ try{ hm=" · "+new Date(t).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}); }catch(e){} } out.push("**"+who+hm+"**","",""+String(m.content||""),""); }); if(aiPages.length){ out.push("---",""); out.push("_"+aiT("ai_pages_added",null,"Trang đã thêm")+":_"); aiPages.forEach(p=>out.push("- "+(p.title||p.url)+" — "+p.url)); out.push(""); } return out.join("\n"); }
 function aiDownloadBlob(blob, filename){
   const url=URL.createObjectURL(blob);
   const a=document.createElement("a");

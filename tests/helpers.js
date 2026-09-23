@@ -69,7 +69,7 @@ function makeChromeStub(storeInit = {}) {
   return {
     storage: { local: storageLocal, sync: storageLocal },
     runtime: {
-      getManifest: () => ({ name: "ScholarFlow", version: "0.0.0-test", manifest_version: 3 }),
+      getManifest: () => ({ name: "Panadolce", version: "0.0.0-test", manifest_version: 3 }),
       getURL: (p) => "chrome-extension://test/" + p,
       sendMessage: (...args) => { if (args.length > 1 && typeof args[args.length - 1] === "function") args[args.length - 1]({}); return Promise.resolve({}); },
       onMessage: { addListener: () => {}, removeListener: () => {} },
