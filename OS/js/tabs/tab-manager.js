@@ -663,7 +663,8 @@ let tabmgrMedia = {
   signature: "",
   wheelAt: 0,
   timer: null,
-  evPending: false
+  evPending: false,
+  vinylStyle: 0
 };
 
 function _tabmgrMediaFmt(sec) {
@@ -1335,12 +1336,13 @@ function _tabmgrMediaEvRemoved(tabId) {
 }
 
 // Pause every queued tab that is actually playing (or unmuted fallback), keeping
-// only the currently displayed tab's audio — analog to a "pause others" shortcut.
+// only the currently displayed tab's audio AND the user's active tab's audio.
 function _tabmgrMediaPauseOthers() {
   const curId = tabmgrMedia.sourceTabId;
+  const activeId = (typeof currentTabObj !== "undefined" && currentTabObj) ? currentTabObj.id : null;
   let sent = 0;
   (tabmgrMedia.sources || []).forEach(function (c) {
-    if (!c.tab || c.tab.id === curId) return;
+    if (!c.tab || c.tab.id === curId || c.tab.id === activeId) return;
     if (c.state && c.state.hasMedia) {
       sent++;
       safeSendTabMessage(c.tab.id, { action: "MEDIA_TOGGLE" }).then(function (res) {
@@ -1457,6 +1459,7 @@ function _tabmgrMediaRenderPlayer() {
 
   const vinyl = document.createElement("div");
   vinyl.className = "tabmgr-mp-vinyl" + (playing ? " is-spin" : "");
+  vinyl.dataset.style = tabmgrMedia.vinylStyle || 0;
 
   const cover = document.createElement("div");
   cover.className = "tabmgr-mp-cover";
@@ -1559,7 +1562,19 @@ function _tabmgrMediaRenderPlayer() {
   muteBtn.addEventListener("click", _tabmgrMediaOnMute);
   const openBtn = _tabmgrMediaSvgBtn("M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3", t("tabmgr_media_open_tab"), "tabmgr-mp-tbtn");
   openBtn.addEventListener("click", function () { if (tabmgrMedia.sourceTabId) tabmgrActivateTab(tabmgrMedia.sourceTabId); });
+  
+  const vinylBtn = _tabmgrMediaSvgBtn("M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6zM12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z", "Đổi đĩa than", "tabmgr-mp-tbtn tabmgr-mp-vinyl-toggle");
+  vinylBtn.addEventListener("click", function () {
+    let cur = tabmgrMedia.vinylStyle || 0;
+    cur = (cur + 1) % 5;
+    tabmgrMedia.vinylStyle = cur;
+    const vEl = mp.querySelector(".tabmgr-mp-vinyl");
+    if (vEl) vEl.dataset.style = cur;
+    storSet({ sf_tabmgr_vinyl_style: cur });
+  });
+
   toolsR.appendChild(muteBtn);
+  toolsR.appendChild(vinylBtn);
   // PiP "popup window" toggle — only a VIDEO source can float its own window,
   // and only when the page's native Picture-in-Picture API exists (Firefox has
   // none, so the button would be a dead control there).
@@ -1658,9 +1673,10 @@ function _tabmgrMediaPatchPlayer() {
 
 onReady(function () {
   // Music player banner: restore pref + bind the on/off switch
-  storGet(TABMGR_MEDIA_KEY, function (res) {
-    const v = res && res.sf_tabmgr_media_player;
+  storGet([TABMGR_MEDIA_KEY, "sf_tabmgr_vinyl_style"], function (res) {
+    const v = res && res[TABMGR_MEDIA_KEY];
     tabmgrMedia.enabled = v === undefined ? true : !!v;
+    tabmgrMedia.vinylStyle = res && res.sf_tabmgr_vinyl_style || 0;
     _tabmgrMediaApplyUI();
     if (tabmgrMedia.enabled) _tabmgrMediaPoll();
   });

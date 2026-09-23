@@ -863,6 +863,46 @@
   100% { transform: rotate(360deg); }
 }
 
+  /* Style 0: Default (Blue-ish dark vinyl) */
+
+  /* Style 1: Classic Black */
+  .tabmgr-mp-vinyl[data-style="1"] {
+    background: repeating-radial-gradient(circle at 50% 50%, #000 0 2px, #1a1a1a 2px 4px, #0f0f0f 4px 6px);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+  .tabmgr-mp-vinyl[data-style="1"]::before {
+    background: conic-gradient(from 10deg, #e11d48 0 100deg, #be123c 100deg 250deg, #e11d48 250deg 360deg);
+  }
+
+  /* Style 2: Gold Record */
+  .tabmgr-mp-vinyl[data-style="2"] {
+    background: repeating-radial-gradient(circle at 50% 50%, #a16207 0 2px, #facc15 2px 4px, #ca8a04 4px 6px);
+    border-color: rgba(255, 255, 255, 0.6);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55), inset 0 0 8px rgba(250, 204, 21, 0.6);
+  }
+  .tabmgr-mp-vinyl[data-style="2"]::before {
+    background: conic-gradient(from 10deg, #000 0 100deg, #111 100deg 250deg, #000 250deg 360deg);
+  }
+
+  /* Style 3: Neon Synthwave */
+  .tabmgr-mp-vinyl[data-style="3"] {
+    background: repeating-radial-gradient(circle at 50% 50%, #831843 0 2px, #ec4899 2px 4px, #be185d 4px 6px);
+    border-color: #fbcfe8;
+  }
+  .tabmgr-mp-vinyl[data-style="3"]::before {
+    background: conic-gradient(from 10deg, #06b6d4 0 100deg, #0891b2 100deg 250deg, #06b6d4 250deg 360deg);
+  }
+
+  /* Style 4: Platinum / White */
+  .tabmgr-mp-vinyl[data-style="4"] {
+    background: repeating-radial-gradient(circle at 50% 50%, #cbd5e1 0 2px, #f8fafc 2px 4px, #e2e8f0 4px 6px);
+    border-color: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55), inset 0 0 8px rgba(255, 255, 255, 0.5);
+  }
+  .tabmgr-mp-vinyl[data-style="4"]::before {
+    background: conic-gradient(from 10deg, #334155 0 100deg, #1e293b 100deg 250deg, #334155 250deg 360deg);
+  }
+
 /* carousel: sleeve flips to the next playing tab on click */
 .tabmgr-mp-cover.is-multi {
   cursor: pointer;
