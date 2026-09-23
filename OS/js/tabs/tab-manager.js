@@ -25,17 +25,21 @@ function tabmgrGetApi() { return _getTabsApi(); }
 function _tabmgrDomain(url) {
   try { return new URL(url).hostname.replace(/^www\./, "") || "other"; } catch (e) { return "other"; }
 }
-function _tabmgrFuncGroup(url) {
+function _tabmgrFuncGroup(tab) {
+  const url = tab.url || "";
+  const title = (tab.title || "").toLowerCase();
   const h = _tabmgrDomain(url).toLowerCase();
-  if (/(arxiv|openalex|crossref|scholar\.google|pubmed|semanticscholar|researchgate|ieeexplore|springer|nature\.com|sciencedirect|wiley|doi\.org)/.test(h)) return "academic";
-  if (/(youtube|youtu\.be|vimeo|twitch)/.test(h)) return "video";
-  if (/(docs\.google|drive\.google|notion|overleaf|dropbox)/.test(h)) return "docs";
-  if (/(github|gitlab|stackoverflow|stackexchange)/.test(h)) return "code";
-  if (/(facebook|twitter|x\.com|linkedin|reddit|instagram)/.test(h)) return "social";
+  if (/(arxiv|openalex|crossref|scholar\.google|pubmed|semanticscholar|researchgate|ieeexplore|springer|nature\.com|sciencedirect|wiley|doi\.org|\.edu|\.ac\.uk)/.test(h) || /(pdf|paper|journal|thesis|article|nghiên cứu|luận văn|luận án)/.test(title)) return "academic";
+  if (/(youtube|youtu\.be|vimeo|twitch|bilibili|spotify|soundcloud|netflix|zingmp3|nhaccuatui)/.test(h) || /(video|mp4|phim|nhạc)/.test(title)) return "video";
+  if (/(docs\.google|drive\.google|notion|overleaf|dropbox|office|word|excel)/.test(h) || /(tài liệu|document|sheet|slide|presentation)/.test(title)) return "docs";
+  if (/(github|gitlab|stackoverflow|stackexchange|npm|developer|localhost|127\.0\.0\.1)/.test(h) || /(api|documentation|tutorial|lập trình|code)/.test(title)) return "code";
+  if (/(facebook|twitter|x\.com|linkedin|reddit|instagram|tiktok|zalo|messenger)/.test(h)) return "social";
+  if (/(nytimes|vnexpress\.net|dantri\.com\.vn|tuoitre\.vn|thanhnien\.vn|bbc\.com|cnn\.com|news|baomoi)/.test(h) || /(tin tức|báo mới)/.test(title)) return "news";
+  if (/(shopee|lazada|tiki|amazon|aliexpress|ebay|taobao)/.test(h) || /(mua sắm|sản phẩm|giỏ hàng|cart|checkout)/.test(title)) return "shopping";
   return "other";
 }
 function _tabmgrFuncLabel(key) {
-  const map = { academic: "tabmgr_func_academic", video: "tabmgr_func_video", docs: "tabmgr_func_docs", code: "tabmgr_func_code", social: "tabmgr_func_social", other: "tabmgr_func_other" };
+  const map = { academic: "tabmgr_func_academic", video: "tabmgr_func_video", docs: "tabmgr_func_docs", code: "tabmgr_func_code", social: "tabmgr_func_social", news: "tabmgr_func_news", shopping: "tabmgr_func_shopping", other: "tabmgr_func_other" };
   const k = map[key] || "tabmgr_func_other";
   try { return t(k); } catch (e) { return key; }
 }
@@ -149,7 +153,7 @@ function tabmgrRenderList() {
   if (mode !== "none") {
     const groups = {};
     filtered.forEach(function (tab) {
-      const key = mode === "domain" ? _tabmgrDomain(tab.url || "") : _tabmgrFuncGroup(tab.url || "");
+      const key = mode === "domain" ? _tabmgrDomain(tab.url || "") : _tabmgrFuncGroup(tab);
       if (!groups[key]) groups[key] = [];
       groups[key].push(tab);
     });
@@ -534,7 +538,7 @@ function tabmgrGroupInBrowser() {
   if (list.length === 0) { showToast(t("tabmgr_toast_no_export")); return; }
   const groups = {};
   list.forEach(function (tab) {
-    const key = mode === "domain" ? _tabmgrDomain(tab.url || "") : _tabmgrFuncGroup(tab.url || "");
+    const key = mode === "domain" ? _tabmgrDomain(tab.url || "") : _tabmgrFuncGroup(tab);
     if (!groups[key]) groups[key] = [];
     groups[key].push(tab.id);
   });
