@@ -801,11 +801,13 @@
   align-items: center;
   justify-content: center;
   border-radius: 7px;
-  font-size: 8.5px;
-  font-weight: 700;
-  color: #7dd3fc;
-  background: rgba(15, 23, 42, 0.88);
-  border: 1px solid rgba(125, 211, 252, 0.45);
+  font-size: 8px;
+  font-weight: 600;
+  color: rgba(226, 232, 240, 0.85);
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(2px);
+  pointer-events: none;
 }
 
 /* Black vinyl: nestled inside the sleeve (smaller than the jacket), half-out spin */
@@ -864,6 +866,11 @@
 /* carousel: sleeve flips to the next playing tab on click */
 .tabmgr-mp-cover.is-multi {
   cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.tabmgr-mp-cover.is-multi:active {
+  transform: scale(0.92);
 }
 
 .tabmgr-mp-info {
@@ -1154,7 +1161,7 @@
 }
 
 /* Transport buttons and other tools are round (24px circle look) */
-.tabmgr-mp-tools-group .tabmgr-mp-tbtn {
+.tabmgr-mp-tools-group .tabmgr-mp-tbtn:not(.tabmgr-mp-pause-all) {
   width: 24px;
   height: 24px;
   padding: 0;
