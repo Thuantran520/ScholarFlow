@@ -732,6 +732,8 @@ window.I18N_JA = {
     "nav_social": "ソーシャル",
     "nav_lingua": "Lingua",
     "tip_tab_lingua": "Lingua Lab — あらゆるサイトで言語学習",
+    "lng_assist_title": "ライティングアシスタントを有効にする",
+    "lng_assist_desc": "英語入力時に \"Lingua?\" ボタンを表示",
     "lng_title": "Lingua Lab",
     "lng_desc": "SLA研究の合意に基づく外国語学習：理解可能インプット (i+1)、SM-2 間隔反復、カテゴリ別訂正フィードバック — 読んでいるコンテンツから直接。",
     "lng_st_review": "復習",

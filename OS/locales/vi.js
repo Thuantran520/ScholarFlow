@@ -732,6 +732,8 @@ window.I18N_VI = {
     "nav_social": "Social",
     "nav_lingua": "Lingua",
     "tip_tab_lingua": "Lingua Lab — học ngoại ngữ trên mọi trang web",
+    "lng_assist_title": "Bật trợ lý viết",
+    "lng_assist_desc": "Hiện nút \"Lingua?\" khi gõ tiếng Anh",
     "lng_title": "Lingua Lab",
     "lng_desc": "Học ngoại ngữ theo đồng thuận ngôn ngữ học: đầu vào dễ hiểu (i+1), lặp lại giãn cách SM-2, phản hồi lỗi có phân loại — ngay trên nội dung bạn đang đọc.",
     "lng_st_review": "Ôn tập",

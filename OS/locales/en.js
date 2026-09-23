@@ -732,6 +732,8 @@ window.I18N_EN = {
     "nav_social": "Social",
     "nav_lingua": "Lingua",
     "tip_tab_lingua": "Lingua Lab — learn a language on every website",
+    "lng_assist_title": "Enable writing assistant",
+    "lng_assist_desc": "Show \"Lingua?\" button when typing English",
     "lng_title": "Lingua Lab",
     "lng_desc": "Language learning built on SLA consensus: comprehensible input (i+1), SM-2 spaced repetition and categorized corrective feedback — on the content you already read.",
     "lng_st_review": "Review",

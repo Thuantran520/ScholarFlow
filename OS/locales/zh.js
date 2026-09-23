@@ -732,6 +732,8 @@ window.I18N_ZH = {
     "nav_social": "社交",
     "nav_lingua": "Lingua",
     "tip_tab_lingua": "Lingua Lab — 在所有网站上学习语言",
+    "lng_assist_title": "启用写作助手",
+    "lng_assist_desc": "输入英语时显示 \"Lingua?\" 按钮",
     "lng_title": "Lingua Lab",
     "lng_desc": "基于二语习得共识的外语学习：可理解输入 (i+1)、SM-2 间隔重复、按类别纠正反馈——直接利用你正在阅读的内容。",
     "lng_st_review": "复习",

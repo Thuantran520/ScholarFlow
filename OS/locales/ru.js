@@ -732,6 +732,8 @@ window.I18N_RU = {
     "nav_social": "Соцсети",
     "nav_lingua": "Lingua",
     "tip_tab_lingua": "Lingua Lab — учите язык на любом сайте",
+    "lng_assist_title": "Включить помощника",
+    "lng_assist_desc": "Показывать кнопку \"Lingua?\" при вводе",
     "lng_title": "Lingua Lab",
     "lng_desc": "Изучение языка по консенсусу SLA: понятный ввод (i+1), интервальное повторение SM-2 и адресная обратная связь по ошибкам — прямо на вашем контенте.",
     "lng_st_review": "Повтор",

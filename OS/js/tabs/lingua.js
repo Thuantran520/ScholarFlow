@@ -614,6 +614,16 @@ function lngSwitchSub(name) {
 }
 
 onReady(function () {
+  storGet(["sf_lingua_assist_off"], function(r) {
+    const tg = document.getElementById("lng-assist-toggle");
+    if (tg) tg.checked = !(r && r.sf_lingua_assist_off);
+  });
+  const tg = document.getElementById("lng-assist-toggle");
+  if (tg) {
+    tg.addEventListener("change", function() {
+      storSet({ sf_lingua_assist_off: !tg.checked });
+    });
+  }
   const tgt = document.getElementById("lng-target");
   if (tgt) tgt.addEventListener("change", function () { lngProfile.target = tgt.value || "en"; lngPersistProfile(); lngLoad(); });
   const lvl = document.getElementById("lng-level");

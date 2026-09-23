@@ -14,6 +14,20 @@
   const MIN_CHARS = 40;
   let curField = null;
   let hideTimer = null;
+  let assistOff = false;
+  try {
+    if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.get(["sf_lingua_assist_off"], function (res) {
+        if (res && res.sf_lingua_assist_off) assistOff = true;
+      });
+      chrome.storage.onChanged.addListener(function (changes, area) {
+        if (area === "local" && changes.sf_lingua_assist_off) {
+          assistOff = !!changes.sf_lingua_assist_off.newValue;
+          if (assistOff) { removeEl(PILL_ID); removeEl(BUB_ID); }
+        }
+      });
+    }
+  } catch (e) {}
 
   function runtime() {
     if (typeof browser !== "undefined" && browser.runtime) return browser.runtime;
@@ -128,6 +142,7 @@
     }
   }
   function schedulePill() {
+    if (assistOff) return;
     if (!curField) return;
     const text = textOf(curField).trim();
     if (text.length < MIN_CHARS || !looksLatin(text)) { removeEl(PILL_ID); return; }
