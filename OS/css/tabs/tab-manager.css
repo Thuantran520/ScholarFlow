@@ -1031,17 +1031,26 @@
 .tabmgr-vpb.is-live .tabmgr-vpb-time {
   color: #ffffff;
   font-weight: 700;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  text-shadow: none;
+  background: #ef4444;
+  padding: 0 6px;
+  border-radius: 3px;
+  height: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
 }
 .tabmgr-vpb.is-live .tabmgr-vpb-time::before {
   content: "";
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: #ef4444;
-  margin-right: 6px;
-  animation: tabmgr-vpb-live-pulse 1.1s ease-in-out infinite;
-  box-shadow: 0 0 6px rgba(239, 68, 68, 0.8);
+  background: #ffffff;
+  margin-right: 5px;
+  animation: tabmgr-vpb-live-pulse 1.2s ease-in-out infinite;
 }
 @keyframes tabmgr-vpb-live-pulse {
   0%, 100% { opacity: 1; }
