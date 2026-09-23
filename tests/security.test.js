@@ -21,7 +21,7 @@ const fs = require("fs");
 const path = require("path");
 
 const ROOT = REPO_ROOT;
-const SKIP_DIRS = new Set(["node_modules", ".git", "build", "tests", ".vscode", "scripts"]);
+const SKIP_DIRS = new Set(["node_modules", ".git", "build", "tests", ".vscode", "scripts", "App"]);
 const ALLOWED_HOSTS = new Set([
   "doi.org",
   "export.arxiv.org",

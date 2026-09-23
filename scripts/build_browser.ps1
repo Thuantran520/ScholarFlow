@@ -6,7 +6,8 @@
 # ---------------------------------------------------------------------------
 
 param(
-    [switch]$SkipZip
+    [switch]$SkipZip,
+    [switch]$CopyGecko
 )
 
 $ErrorActionPreference = "Stop"
@@ -16,6 +17,7 @@ $distDir = Join-Path $rootDir "dist"
 $browserDir = Join-Path $distDir "Panadolce_Browser"
 $appDir = Join-Path $browserDir "App"
 $firefoxAppDir = Join-Path $appDir "Firefox64"
+$distributionDir = Join-Path $firefoxAppDir "distribution"
 $dataDir = Join-Path $browserDir "Data"
 $profileDir = Join-Path $dataDir "profile"
 $chromeDir = Join-Path $profileDir "chrome"
@@ -31,10 +33,11 @@ if (Test-Path $browserDir) {
 }
 New-Item -ItemType Directory -Path $browserDir -Force | Out-Null
 New-Item -ItemType Directory -Path $firefoxAppDir -Force | Out-Null
+New-Item -ItemType Directory -Path $distributionDir -Force | Out-Null
 New-Item -ItemType Directory -Path $chromeDir -Force | Out-Null
 New-Item -ItemType Directory -Path $extensionsDir -Force | Out-Null
 
-Write-Host ">> [1/5] Initialized browser folder structure at: $browserDir" -ForegroundColor Green
+Write-Host ">> [1/6] Initialized browser folder structure at: $browserDir" -ForegroundColor Green
 
 # 2. Configure userChrome.css & browser aesthetics
 $userChromeCss = @"
@@ -79,7 +82,7 @@ $userChromeCss = @"
 }
 "@
 Set-Content -Path (Join-Path $chromeDir "userChrome.css") -Value $userChromeCss -Encoding UTF8
-Write-Host ">> [2/5] Injected userChrome.css theme engine" -ForegroundColor Green
+Write-Host ">> [2/6] Injected userChrome.css theme engine" -ForegroundColor Green
 
 # 3. Configure user.js (Hardened Privacy & Local Engine)
 $userJs = @"
@@ -101,7 +104,23 @@ user_pref("extensions.autoDisableScopes", 0);
 user_pref("extensions.enabledScopes", 15);
 "@
 Set-Content -Path (Join-Path $profileDir "user.js") -Value $userJs -Encoding UTF8
-Write-Host ">> [3/5] Configured user.js hardened privacy and custom stylesheet engine" -ForegroundColor Green
+
+# Enterprise policies.json
+$policiesJson = @"
+{
+  "policies": {
+    "DisableTelemetry": true,
+    "DisableFirefoxStudies": true,
+    "DisablePocket": true,
+    "DisableFeedbackCommands": true,
+    "DontCheckDefaultBrowser": true,
+    "OverrideFirstRunPage": "",
+    "OverridePostUpdatePage": ""
+  }
+}
+"@
+Set-Content -Path (Join-Path $distributionDir "policies.json") -Value $policiesJson -Encoding UTF8
+Write-Host ">> [3/6] Configured user.js hardened privacy and distribution policies" -ForegroundColor Green
 
 # 4. Stage Panadolce Extension into Profile Extensions
 $extTargetDir = Join-Path $extensionsDir "panadolce-dev@thuantran520.local"
@@ -110,9 +129,70 @@ if (-not (Test-Path $firefoxStaging)) {
     & (Join-Path $PSScriptRoot "sync_dist.ps1") -Firefox
 }
 Copy-Item -Path $firefoxStaging -Destination $extTargetDir -Recurse -Force
-Write-Host ">> [4/5] Embedded Panadolce Native Workspace extension into profile" -ForegroundColor Green
+Write-Host ">> [4/6] Embedded Panadolce Native Workspace extension into profile" -ForegroundColor Green
 
-# 5. Create Standalone Launchers
+# 5. Compile Native Panadolce.exe and Launchers
+# Ensure icon.ico exists
+$iconIco = Join-Path $rootDir "icon.ico"
+if (-not (Test-Path $iconIco)) {
+    Add-Type -AssemblyName System.Drawing
+    $bmp = [System.Drawing.Bitmap]::FromFile((Join-Path $rootDir "icon128.png"))
+    $iconHandle = $bmp.GetHicon()
+    $icon = [System.Drawing.Icon]::FromHandle($iconHandle)
+    $fs = [System.IO.File]::Create($iconIco)
+    $icon.Save($fs)
+    $fs.Close()
+    $bmp.Dispose()
+}
+
+$csSource = @'
+using System;
+using System.IO;
+using System.Diagnostics;
+using System.Windows.Forms;
+
+class Program {
+    [STAThread]
+    static void Main(string[] args) {
+        string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+        string exePath = Path.Combine(baseDir, "App\\Firefox64\\firefox.exe");
+        string profilePath = Path.Combine(baseDir, "Data\\profile");
+
+        if (!File.Exists(exePath)) {
+            MessageBox.Show(
+                "Không tìm thấy nhân trình duyệt Gecko tại:\n" + exePath + "\n\nVui lòng sao chép Firefox vào thư mục App\\Firefox64 hoặc chạy scripts/build_browser.ps1 -CopyGecko.",
+                "Panadolce Browser",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning
+            );
+            return;
+        }
+
+        ProcessStartInfo psi = new ProcessStartInfo();
+        psi.FileName = exePath;
+        psi.Arguments = "-profile \"" + profilePath + "\" -no-remote";
+        psi.WorkingDirectory = baseDir;
+        psi.UseShellExecute = false;
+
+        try {
+            Process.Start(psi);
+        } catch (Exception ex) {
+            MessageBox.Show("Lỗi khởi chạy Panadolce Browser:\n" + ex.Message, "Panadolce Browser", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+}
+'@
+
+$cscPath = "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
+$launcherCs = Join-Path $browserDir "Launcher.cs"
+$launcherExe = Join-Path $browserDir "Panadolce.exe"
+
+Set-Content -Path $launcherCs -Value $csSource -Encoding UTF8
+if (Test-Path $cscPath) {
+    & $cscPath /nologo /target:winexe /win32icon:$iconIco /out:$launcherExe $launcherCs
+    Remove-Item $launcherCs -Force
+}
+
 $batContent = @"
 @echo off
 title Panadolce Browser
@@ -122,7 +202,7 @@ set FIREFOX_EXE=App\Firefox64\firefox.exe
 if not exist "%FIREFOX_EXE%" (
     echo [Panadolce Browser] Gecko runtime not found in App\Firefox64\
     echo Please ensure firefox.exe is present in App\Firefox64\
-    echo Alternatively, copy your existing Firefox installation into App\Firefox64\
+    echo Alternatively, run: pwsh scripts/build_browser.ps1 -CopyGecko
     pause
     exit /b 1
 )
@@ -160,21 +240,36 @@ Trình duyệt độc lập dựa trên nhân Mozilla Firefox Gecko.
 - Chạy trực tiếp từ thư mục hoặc USB, không lưu registry, chuyển máy giữ nguyên 100% dữ liệu.
 
 ## Cách chạy:
-1. Đảm bảo thư mục App\Firefox64\ chứa file firefox.exe (nhân Firefox).
-2. Chạy `Panadolce.bat` hoặc `Panadolce.vbs` để khởi chạy trình duyệt.
+1. Đảm bảo thư mục App\Firefox64\ chứa file firefox.exe (hoặc build với cờ -CopyGecko).
+2. Chạy `Panadolce.exe`, `Panadolce.bat` hoặc `Panadolce.vbs`.
 "@
 Set-Content -Path (Join-Path $browserDir "README.md") -Value $readme -Encoding UTF8
 
-Write-Host ">> [5/5] Created Panadolce standalone launcher & documentation" -ForegroundColor Green
+Write-Host ">> [5/6] Created Panadolce native executable & standalone launchers" -ForegroundColor Green
+
+# Optional: Copy Gecko runtime
+if ($CopyGecko) {
+    $sysFirefox = "C:\Program Files\Mozilla Firefox"
+    if (Test-Path $sysFirefox) {
+        Write-Host ">> Copying Gecko runtime from $sysFirefox to $firefoxAppDir..." -ForegroundColor Yellow
+        Copy-Item -Path "$sysFirefox\*" -Destination $firefoxAppDir -Recurse -Force
+        # Ensure distribution folder remains with our custom policies
+        New-Item -ItemType Directory -Path $distributionDir -Force | Out-Null
+        Set-Content -Path (Join-Path $distributionDir "policies.json") -Value $policiesJson -Encoding UTF8
+        Write-Host ">> [GECKO] Runtime copied successfully!" -ForegroundColor Green
+    }
+}
 
 # 6. Create Zip Archive if not skipped
-if (-not $SkipZip) {
+if (-not $SkipZip -and -not $CopyGecko) {
     $zipPath = Join-Path $distDir "Panadolce_Browser_Portable.zip"
     if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     [System.IO.Compression.ZipFile]::CreateFromDirectory($browserDir, $zipPath)
     $zipSize = [math]::Round((Get-Item $zipPath).Length / 1024, 2)
-    Write-Host ">> [ZIP] Created dist\Panadolce_Browser_Portable.zip ($zipSize KB)" -ForegroundColor Green
+    Write-Host ">> [6/6] [ZIP] Created dist\Panadolce_Browser_Portable.zip ($zipSize KB)" -ForegroundColor Green
+} else {
+    Write-Host ">> [6/6] Skipped zip packaging (runtime included or -SkipZip specified)" -ForegroundColor Gray
 }
 
 Write-Host ""
