@@ -27,11 +27,10 @@ Write-Host "========================================================" -Foregroun
 Write-Host "  BUILDING PANADOLCE BROWSER (GECKO PORTABLE EDITION)   " -ForegroundColor Cyan
 Write-Host "========================================================" -ForegroundColor Cyan
 
-# 1. Clean & create directory structure
-if (Test-Path $browserDir) {
-    Remove-Item -Path $browserDir -Recurse -Force
+# 1. Clean & create directory structure (preserve Gecko runtime if present)
+if (-not (Test-Path $browserDir)) {
+    New-Item -ItemType Directory -Path $browserDir -Force | Out-Null
 }
-New-Item -ItemType Directory -Path $browserDir -Force | Out-Null
 New-Item -ItemType Directory -Path $firefoxAppDir -Force | Out-Null
 New-Item -ItemType Directory -Path $distributionDir -Force | Out-Null
 New-Item -ItemType Directory -Path $chromeDir -Force | Out-Null
@@ -369,7 +368,7 @@ class Program {
 
         ProcessStartInfo psi = new ProcessStartInfo();
         psi.FileName = exePath;
-        psi.Arguments = "-profile \"" + profilePath + "\" -no-remote";
+        psi.Arguments = "-new-instance -profile \"" + profilePath + "\" -no-remote";
         psi.WorkingDirectory = baseDir;
         psi.UseShellExecute = false;
 
@@ -406,7 +405,7 @@ if not exist "%FIREFOX_EXE%" (
     exit /b 1
 )
 
-start "" "%FIREFOX_EXE%" -profile "%~dp0Data\profile" -no-remote
+start "" "%FIREFOX_EXE%" -new-instance -profile "%~dp0Data\profile" -no-remote
 "@
 Set-Content -Path (Join-Path $browserDir "Panadolce.bat") -Value $batContent -Encoding ASCII
 
@@ -419,7 +418,7 @@ Set fso = CreateObject("Scripting.FileSystemObject")
 If Not fso.FileExists(strExe) Then
     MsgBox "Gecko runtime not found in App\Firefox64\" & vbCrLf & "Please copy Firefox into App\Firefox64\ directory.", vbExclamation, "Panadolce Browser"
 Else
-    WshShell.Run """" & strExe & """ -profile """ & strCurDir & "\Data\profile"" -no-remote", 0, False
+    WshShell.Run """" & strExe & """ -new-instance -profile """ & strCurDir & "\Data\profile"" -no-remote", 0, False
 End If
 "@
 Set-Content -Path (Join-Path $browserDir "Panadolce.vbs") -Value $vbsContent -Encoding ASCII
@@ -446,16 +445,37 @@ Set-Content -Path (Join-Path $browserDir "README.md") -Value $readme -Encoding U
 
 Write-Host ">> [5/6] Created Panadolce native executable & standalone launchers" -ForegroundColor Green
 
-# Optional: Copy Gecko runtime
-if ($CopyGecko) {
+# Ensure Gecko runtime is present (auto-deploy from local system if missing or if -CopyGecko specified)
+$firefoxExe = Join-Path $firefoxAppDir "firefox.exe"
+if (-not (Test-Path $firefoxExe) -or $CopyGecko) {
     $sysFirefox = "C:\Program Files\Mozilla Firefox"
     if (Test-Path $sysFirefox) {
-        Write-Host ">> Copying Gecko runtime from $sysFirefox to $firefoxAppDir..." -ForegroundColor Yellow
+        Write-Host ">> Deploying Gecko runtime from $sysFirefox to $firefoxAppDir..." -ForegroundColor Yellow
         Copy-Item -Path "$sysFirefox\*" -Destination $firefoxAppDir -Recurse -Force
         # Ensure distribution folder remains with our custom policies
         New-Item -ItemType Directory -Path $distributionDir -Force | Out-Null
         Set-Content -Path (Join-Path $distributionDir "policies.json") -Value $policiesJson -Encoding UTF8
-        Write-Host ">> [GECKO] Runtime copied successfully!" -ForegroundColor Green
+        Write-Host ">> [GECKO] Runtime deployed successfully!" -ForegroundColor Green
+    } else {
+        Write-Warning "System Firefox not found at $sysFirefox. Please place Gecko binaries in $firefoxAppDir"
+    }
+}
+
+# Create/Update Desktop Shortcut
+$desktopDir = [Environment]::GetFolderPath("Desktop")
+if (Test-Path $desktopDir) {
+    try {
+        $shortcutPath = Join-Path $desktopDir "Panadolce Browser.lnk"
+        $wshShell = New-Object -ComObject WScript.Shell
+        $shortcut = $wshShell.CreateShortcut($shortcutPath)
+        $shortcut.TargetPath = $launcherExe
+        $shortcut.WorkingDirectory = $browserDir
+        $shortcut.IconLocation = "$iconIco,0"
+        $shortcut.Description = "Panadolce Browser - Trợ Lý Học Thuật & Đa Nhiệm"
+        $shortcut.Save()
+        Write-Host ">> [DESKTOP] Updated shortcut: $shortcutPath" -ForegroundColor Green
+    } catch {
+        Write-Warning "Could not update desktop shortcut: $_"
     }
 }
 
