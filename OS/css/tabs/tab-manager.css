@@ -907,6 +907,9 @@
 .tabmgr-mp-cover.is-multi {
   cursor: pointer;
   transition: transform 0.1s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .tabmgr-mp-cover.is-multi:active {
