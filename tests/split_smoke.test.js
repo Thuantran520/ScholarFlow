@@ -1185,37 +1185,22 @@ async function main() {
       const stV = w.__sfMedia.getState();
       check(stV && stV.isLive === false && Number(stV.liveStart) === 0,
         `VOD with a real recent getStartDate() stays non-live, liveStart=0 (got: ${stV && stV.isLive}/${stV && stV.liveStart})`);
-      // In-page PiP overlay: only grows after a SUPPORTED video plays, and stays
-      // hidden while JSDOM gives no layout (real pages anchor it to the video).
+      // The in-page PiP overlay button has been REMOVED by request — a SUPPORTED
+      // video must never inject a `.__sf-media-pip` element or its stylesheet.
       check(!w.document.querySelector(".__sf-media-pip"),
-        "no in-page PiP button before any supported video plays");
+        "no in-page PiP button element before any supported video plays");
       w.document.querySelectorAll("video, audio").forEach(function (m) { m.remove(); });
       const vp = w.document.createElement("video");
       w.document.body.appendChild(vp);
       Object.defineProperty(vp, "readyState", { value: 1, configurable: true });
       Object.defineProperty(vp, "duration", { value: 120, configurable: true });
       vp.requestPictureInPicture = function () { return Promise.resolve(); };
-      w.document.pictureInPictureEnabled = true;
       vp.dispatchEvent(new w.Event("play", { bubbles: true }));
-      const pipOv = w.document.querySelector(".__sf-media-pip");
-      check(!!pipOv && !pipOv.classList.contains("is-visible") && !pipOv.classList.contains("is-pip"),
-        `supported video play grows the hidden in-page PiP button (got button: ${!!pipOv})`);
-      if (pipOv) {
-        pipOv.click();
-        check(true, "in-page PiP button click handler does not throw in a gesture-less test harness");
-      }
-      // Regression guard for the silent CSS bug: the injected stylesheet MUST target
-      // the button as a CLASS (.__sf-media-pip), not as a bare element selector — a
-      // missing leading dot meant none of the visibility/pointer-events rules applied
-      // and the PiP button never showed (while classList-only checks still passed).
-      const pipStyleText = Array.prototype.map.call(w.document.querySelectorAll("style"), function (s) { return s.textContent || ""; }).join("\n");
-      check(pipStyleText.indexOf(".__sf-media-pip{") !== -1,
-        "PiP overlay CSS uses a class selector for the button base rule (.__sf-media-pip{)");
-      check(pipStyleText.indexOf(".__sf-media-pip.is-visible") !== -1,
-        "PiP overlay CSS shows the button via a class selector (.__sf-media-pip.is-visible)");
-      check(!/(^|[^.\w])__sf-media-pip[.{ ]/.test(pipStyleText),
-        "PiP overlay CSS has no element-form (dotless) __sf-media-pip selector that would never match the button");
-      w.document.pictureInPictureEnabled = undefined;
+      check(!w.document.querySelector(".__sf-media-pip"),
+        "a supported video play does NOT inject an in-page PiP button");
+      const pipStyleInjected = Array.prototype.map.call(w.document.querySelectorAll("style"), function (s) { return s.textContent || ""; }).join("\n").indexOf("__sf-media-pip") !== -1;
+      check(!pipStyleInjected,
+        "the in-page PiP stylesheet is no longer injected into the document");
       vp.remove();
       // MSE clamps "duration" of a live feed at an absurd huge finite value —
       // that must still read as live; and the YouTube in-player LIVE badge flags
@@ -1353,28 +1338,47 @@ async function main() {
       } catch (e) {
         check(false, `pipRequest() threw: ${e.message}`);
       }
-      // Firefox/Chrome transient-activation: a sidebar-initiated open is refused
-      // when the page has no fresh gesture. We must ARM so the user's NEXT page
-      // tap opens PiP without a second trip back to the sidebar.
+      // A sidebar PiP open refused for lack of a gesture reports needs-gesture
+      // (so the caller can bring the tab forward) but must NOT inject any in-page
+      // PiP button or arm any gesture listener — that whole overlay was removed.
       w.document.querySelectorAll("video, audio, .html5-video-player, .xgplayer, .xgplayer-live").forEach(function (m) { m.remove(); });
       const pv = w.document.createElement("video");
       w.document.body.appendChild(pv);
       Object.defineProperty(pv, "readyState", { value: 4, configurable: true });
       let pipCalls = 0;
-      pv.requestPictureInPicture = function () {
-        pipCalls++;
-        if (pipCalls === 1) return Promise.reject(new Error("NotAllowedError"));
-        return Promise.resolve();
-      };
+      pv.requestPictureInPicture = function () { pipCalls++; return Promise.reject(new Error("NotAllowedError")); };
       const res1 = await w.__sfMedia.pipRequest();
       check(res1 && res1.outcome === "needs-gesture",
-        `first sidebar PiP attempt refused (no gesture) -> needs-gesture (got: ${res1 && res1.outcome})`);
-      check(w.__sfMedia._pipArmed() === true, "a refused PiP open arms a one-shot next-gesture retry");
-      const armedOk = w.__sfMedia._pipTryEnter();
-      check(armedOk === true && pipCalls === 2,
-        `the next page tap re-issues requestPictureInPicture (calls: ${pipCalls})`);
-      check(w.__sfMedia._pipArmed() === false, "arming is one-shot and clears itself after firing");
+        `refused PiP open reports needs-gesture (got: ${res1 && res1.outcome})`);
+      check(pipCalls === 1 && !w.document.querySelector(".__sf-media-pip"),
+        `a refused PiP open calls the API once and injects NO in-page button (calls: ${pipCalls})`);
       pv.remove();
+      // Firefox: Picture-in-Picture is dropped entirely — _isFirefox() makes
+      // pipRequest report "unsupported" and _pip() a no-op (no API call at all).
+      const uaDesc = Object.getOwnPropertyDescriptor(w.navigator, "userAgent");
+      let uaForced = false;
+      try {
+        Object.defineProperty(w.navigator, "userAgent", { value: "Mozilla/5.0 (X11; Linux x86_64; rv:135.0) Gecko/20100101 Firefox/135.0", configurable: true, writable: true });
+        uaForced = true;
+      } catch (e) {}
+      if (uaForced) {
+        w.document.querySelectorAll("video, audio, .html5-video-player").forEach(function (m) { m.remove(); });
+        const fv = w.document.createElement("video");
+        w.document.body.appendChild(fv);
+        Object.defineProperty(fv, "readyState", { value: 4, configurable: true });
+        Object.defineProperty(fv, "duration", { value: 120, configurable: true });
+        let ffPip = 0;
+        fv.requestPictureInPicture = function () { ffPip++; return Promise.resolve(); };
+        const stFF = w.__sfMedia.getState();
+        check(stFF && stFF.pipSupported === false, `Firefox UA => pipSupported false, sidebar button hidden (got: ${stFF && stFF.pipSupported})`);
+        const resFF = await w.__sfMedia.pipRequest();
+        check(resFF && resFF.outcome === "unsupported" && ffPip === 0,
+          `Firefox PiP is a no-op: outcome unsupported, zero requestPictureInPicture calls (calls: ${ffPip})`);
+        fv.remove();
+        if (uaDesc) { try { Object.defineProperty(w.navigator, "userAgent", uaDesc); } catch (e) {} }
+      } else {
+        check(true, "skipping Firefox-override assertions (navigator.userAgent not configurable here)");
+      }
       // Generic, site-independent LIVE detection (the "toolkit" for non-YouTube):
       // a live stream's DVR seekable LEFT edge slides forward at ~real time, a VOD's
       // stays pinned at 0. Test the time-parameterised seam directly.

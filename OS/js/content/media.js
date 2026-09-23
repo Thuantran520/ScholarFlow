@@ -414,7 +414,9 @@
     // PiP control on those Firefox builds even though it can actually work (the
     // call itself throws NotSupportedError when truly unavailable, which we
     // handle below, so trusting the method is the safer, more permissive gate).
-    try { pipSupported = isVideo && typeof el.requestPictureInPicture === "function"; } catch (e) {}
+    // NOTE: PiP is deliberately OFF on Firefox (see _isFirefox) — even where the
+    // pref-gated requestPictureInPicture exists — so the sidebar hides its button.
+    try { pipSupported = isVideo && !_isFirefox() && typeof el.requestPictureInPicture === "function"; } catch (e) {}
     return {
       hasMedia: true,
       playing: playing,
@@ -592,12 +594,27 @@
     return getState();
   }
 
-  // Picture-in-Picture toggle: opens/closes the web-native floating "popup"
-  // window for the currently watched video. 100% local — the browser renders
-  // it, the extension just flips the flag; audio sources have nothing to pop.
+  // Firefox is excluded from Picture-in-Picture on purpose: its Web PiP API is
+  // still pref-gated (dom.media-pip.enabled) and, like Chrome, opening requires a
+  // fresh user gesture on the video DOCUMENT that a sidebar click cannot provide —
+  // so a web PiP control there is unreliable and confusing. On Firefox we advertise
+  // no PiP support at all (the sidebar button then hides itself) and every PiP call
+  // is a no-op. Detection keys off the UA so it never depends on the API existing.
+  function _isFirefox() {
+    let ua = "";
+    try { ua = (navigator && navigator.userAgent) || ""; } catch (e) { ua = ""; }
+    return /\bfirefox\b|\bonebrowser\b|\bicecat\b/i.test(ua);
+  }
+
+  // Picture-in-Picture toggle: opens/closes the web-native floating window for the
+  // currently watched video. 100% local — the browser renders it; there is NO
+  // injected in-page PiP button (removed by request), so a background open that the
+  // browser refuses for lack of a gesture simply stays closed (reported to the
+  // caller). Unsupported on Firefox.
   function _pip() {
     const el = _getActive();
     const state = getState();
+    if (_isFirefox()) return state;
     if (!el || el.tagName !== "VIDEO") return state;
     const entering = document.pictureInPictureElement !== el;
     try {
@@ -607,83 +624,19 @@
         if (p && typeof p.catch === "function") p.catch(function () {});
       } else if (typeof el.requestPictureInPicture === "function") {
         const p = el.requestPictureInPicture();
-        if (p && typeof p.then === "function") {
-          p.then(function () { try { _pipRefresh(); } catch (e) {} }).catch(function () {
-            // NotAllowedError: Chrome requires a fresh trusted user gesture on the
-            // video page to ENTER Picture-in-Picture, and a sidebar-initiated
-            // request arrives with a stale activation token. Surface the in-page
-            // PiP button instead — one real tap on it (a genuine gesture) opens
-            // the window.
-            _pipAcquire();
-            _pipPulse();
-            try { _pipRefresh(); } catch (e) {}
-          });
-        } else if (p && typeof p.catch === "function") {
-          p.catch(function () { _pipAcquire(); _pipPulse(); });
-        }
+        if (p && typeof p.then === "function") p.then(function () {}, function () {});
       }
-    } catch (e) {
-      _pipAcquire();
-      _pipPulse();
-    }
+    } catch (e) {}
     return getState();
   }
 
-  // Asynchronous PiP request for the SIDEBAR path. It tries the native API
-  // directly on whichever tab the video lives in WITHOUT switching to it: on
-  // browsers that don't demand a fresh user gesture to open (e.g. Edge) the
-  // window pops out immediately; on Chrome/Firefox the open is usually refused
-  // for lack of a gesture and we report "needs-gesture" so the caller can decide
-  // whether to bring the tab forward (where the pulsing in-page button is one
-  // real tap). Resolves { state, outcome } with outcome ∈
-  //   "opened" | "closed" | "needs-gesture" | "unsupported".
-  // Firefox/Chrome refuse requestPictureInPicture() unless the video's DOCUMENT
-  // has a FRESH user activation; a click in the sidebar/popup does not grant one
-  // to the page, so a second sidebar click fails once the ~5s activation window
-  // from the user's last real page interaction has expired. Since no extension can
-  // synthesize that activation, we make the flow ONE-WAY: when a sidebar-initiated
-  // open is refused, we "arm" a one-shot listener so the user's very NEXT genuine
-  // click on the video page opens PiP immediately — no trip back to the sidebar.
-  // Re-armed on every refused request, and cleared on success / close / timeout so
-  // it can never hijack an unrelated click much later.
-  let _pipArmHandler = null;
-  let _pipArmTimer = null;
-  function _pipArmed() { return !!_pipArmHandler; }
-  function _pipDisarm() {
-    if (_pipArmHandler) {
-      try { document.removeEventListener("pointerdown", _pipArmHandler, true); } catch (e) {}
-      try { document.removeEventListener("keydown", _pipArmHandler, true); } catch (e) {}
-      _pipArmHandler = null;
-    }
-    if (_pipArmTimer) { try { clearTimeout(_pipArmTimer); } catch (e) {} _pipArmTimer = null; }
-  }
-  // The actual open attempt (used by the one-shot gesture listener and by tests).
-  function _pipTryEnter() {
-    _pipDisarm();
-    const el = _getActive();
-    if (!el || el.tagName !== "VIDEO" || typeof el.requestPictureInPicture !== "function") return false;
-    if (document.pictureInPictureElement === el) return true;
-    try {
-      const p = el.requestPictureInPicture();
-      if (p && typeof p.then === "function") p.then(function () { try { _pipRefresh(); } catch (e) {} }, function () {});
-      return true;
-    } catch (e) { return false; }
-  }
-  function _pipArmForGesture() {
-    _pipDisarm();
-    _pipArmHandler = function (ev) {
-      // Ignore programmatic events; require a real pointer/key interaction so we
-      // only ever consume a genuine user tap (which carries the activation).
-      if (ev && ev.isTrusted === false) return;
-      _pipTryEnter();
-    };
-    document.addEventListener("pointerdown", _pipArmHandler, true);
-    document.addEventListener("keydown", _pipArmHandler, true);
-    // Auto-disarm after a short grace window so it never lingers indefinitely.
-    try { _pipArmTimer = setTimeout(_pipDisarm, 12000); } catch (e) {}
-  }
-
+  // Asynchronous PiP request for the SIDEBAR path — no in-page button, no gesture
+  // arming. It just tries the native API on the video's tab. Resolves
+  // { state, outcome } with outcome ∈ "opened" | "closed" | "unsupported".
   function _pipRequest() {
+    if (_isFirefox()) {
+      return Promise.resolve({ state: getState(), outcome: "unsupported" });
+    }
     const el = _getActive();
     if (!el || el.tagName !== "VIDEO") {
       return Promise.resolve({ state: getState(), outcome: "unsupported" });
@@ -692,164 +645,22 @@
     if (!entering) {
       let p = null;
       try { p = document.exitPictureInPicture(); } catch (e) { p = null; }
-      const done = function () { _pipDisarm(); try { _pipRefresh(); } catch (e) {} return { state: getState(), outcome: "closed" }; };
+      const done = function () { return { state: getState(), outcome: "closed" }; };
       if (p && typeof p.then === "function") return p.then(done, done);
       return Promise.resolve(done());
     }
     if (typeof el.requestPictureInPicture !== "function") {
       return Promise.resolve({ state: getState(), outcome: "unsupported" });
     }
-    const onOk = function () { _pipDisarm(); try { _pipRefresh(); } catch (e) {} return { state: getState(), outcome: "opened" }; };
-    const onFail = function () {
-      _pipAcquire(); _pipPulse(); try { _pipRefresh(); } catch (e) {}
-      _pipArmForGesture();   // open on the user's next real page tap, no sidebar return
-      return { state: getState(), outcome: "needs-gesture" };
-    };
+    const onOk = function () { return { state: getState(), outcome: "opened" }; };
+    // A rejected enter (NotAllowedError) means the video DOCUMENT lacks a fresh
+    // user gesture. Report needs-gesture so the sidebar can bring the tab forward.
+    const onFail = function () { return { state: getState(), outcome: "needs-gesture" }; };
     try {
       const p = el.requestPictureInPicture();
       if (p && typeof p.then === "function") return p.then(onOk, onFail);
     } catch (e) { return Promise.resolve(onFail()); }
     return Promise.resolve({ state: getState(), outcome: "unsupported" });
-  }
-
-  // ---- In-page PiP button (the trusted-gesture path) ----
-  // A real click on this button carries a valid activation token, so "open
-  // popout" from here is never blocked by Chrome's gesture policy. The button is
-  // only ever shown next to a <video> that actually supports the native API
-  // (Firefox / disabled APIs never grow one), it is created lazily on first
-  // play, and it disappears as soon as the element is gone.
-  let _pipBtn = null;
-  let _pipStyle = null;
-  let _pipTimer = null;
-  let _pipUiOwned = false;
-
-  function _pipText(kind) {
-    try {
-      const k = kind === "close" ? "content_media_popout_close" : "content_media_popout_open";
-      const tr = window.tContent;
-      if (typeof tr === "function") {
-        const v = tr(k);
-        if (v && v !== k) return String(v);
-      }
-    } catch (e) {}
-    return kind === "close" ? "Đóng cửa sổ nổi" : "Mở cửa sổ nổi";
-  }
-
-  function _pipCss() {
-    // NOTE: every rule MUST be prefixed with "." — the button is created as
-    // <button class="__sf-media-pip">, so a bare `__sf-media-pip{...}` selector
-    // would match a <__sf-media-pip> ELEMENT and never style the button (this was
-    // the silent bug that made the in-page PiP button invisible/unclickable while
-    // classList-only JSDOM tests still passed).
-    return ".__sf-media-pip{position:fixed;z-index:2147483000;width:44px;height:44px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;background:rgba(10,15,25,.78);border:1px solid rgba(255,255,255,.28);box-shadow:0 4px 14px rgba(0,0,0,.55);color:#fff;padding:0;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .18s ease,transform .18s ease;font:14px/1 system-ui,Segoe UI,Arial,sans-serif}" +
-      ".__sf-media-pip.is-visible{opacity:1;visibility:visible;pointer-events:auto}" +
-      ".__sf-media-pip.is-pip{background:rgba(220,38,38,.92);border-color:rgba(255,255,255,.5);box-shadow:0 0 0 4px rgba(220,38,38,.28)}" +
-      ".__sf-media-pip.is-pulse{animation:sfPipPulse .7s ease 2}" +
-      "@keyframes sfPipPulse{0%{transform:scale(1)}50%{transform:scale(1.22)}100%{transform:scale(1)}}" +
-      ".__sf-media-pip svg{width:22px;height:22px}";
-  }
-
-  function _pipEnsureUi() {
-    const root = document.body || document.documentElement;
-    if (!root) return null;
-    if (_pipUiOwned && _pipBtn) return _pipBtn;
-    if (!_pipStyle) {
-      _pipStyle = document.createElement("style");
-      _pipStyle.textContent = _pipCss();
-      (document.head || root).appendChild(_pipStyle);
-    }
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "__sf-media-pip";
-    btn.setAttribute("aria-hidden", "true");
-    const svgNS = "http" + "://www.w3.org/2000/svg";
-    const svg = document.createElementNS(svgNS, "svg");
-    svg.setAttribute("viewBox", "0 0 24 24");
-    svg.setAttribute("fill", "none");
-    svg.setAttribute("stroke", "currentColor");
-    svg.setAttribute("stroke-width", "2");
-    svg.setAttribute("stroke-linecap", "round");
-    svg.setAttribute("stroke-linejoin", "round");
-    const frame = document.createElementNS(svgNS, "rect");
-    frame.setAttribute("x", "3"); frame.setAttribute("y", "5"); frame.setAttribute("width", "18"); frame.setAttribute("height", "14"); frame.setAttribute("rx", "2");
-    svg.appendChild(frame);
-    const mini = document.createElementNS(svgNS, "rect");
-    mini.setAttribute("x", "12"); mini.setAttribute("y", "10"); mini.setAttribute("width", "7"); mini.setAttribute("height", "7"); mini.setAttribute("rx", "1");
-    svg.appendChild(mini);
-    btn.appendChild(svg);
-    btn.addEventListener("click", function (ev) {
-      ev.preventDefault();
-      ev.stopPropagation();
-      _pip();
-    });
-    root.appendChild(btn);
-    _pipBtn = btn;
-    _pipUiOwned = true;
-    if (!_pipTimer) {
-      _pipTimer = setInterval(function () { try { _pipRefresh(); } catch (e) {} }, 1400);
-      document.addEventListener("scroll", _pipRefresh, true);
-      try { window.addEventListener("resize", _pipRefresh); } catch (e) {}
-      try { document.addEventListener("pictureinpicturechange", _pipRefresh); } catch (e) {}
-    }
-    return btn;
-  }
-
-  function _pipSupportedVideo() {
-    try {
-      const inPip = document.pictureInPictureElement;
-      if (inPip) return inPip;
-    } catch (e) {}
-    const el = _getActive();
-    if (el && el.tagName === "VIDEO" && typeof el.requestPictureInPicture === "function") return el;
-    return null;
-  }
-
-  function _pipRefresh() {
-    const btn = _pipUiOwned && _pipBtn ? _pipBtn : null;
-    if (!btn || !document.body) { if (btn) _pipHide(); return; }
-    const el = _pipSupportedVideo();
-    let pipOn = false;
-    let r = null;
-    if (el) {
-      try { pipOn = document.pictureInPictureElement === el; } catch (e) {}
-      try { r = el.getBoundingClientRect(); } catch (e) {}
-    }
-    if (!el || !r || (!r.width && !r.height)) return _pipHide();
-    const winW = window.innerWidth || 0;
-    const winH = window.innerHeight || 0;
-    if (!winW || !winH) return _pipHide();
-    btn.style.left = Math.max(8, Math.min((r.right || 0) - 50, winW - 52)) + "px";
-    btn.style.top = Math.max(8, Math.min((r.top || 0) + 8, winH - 52)) + "px";
-    btn.classList.add("is-visible");
-    btn.classList.toggle("is-pip", pipOn);
-    const label = _pipText(pipOn ? "close" : "open");
-    btn.title = label;
-    btn.setAttribute("aria-label", label);
-  }
-
-  function _pipHide() {
-    if (_pipBtn) { _pipBtn.classList.remove("is-visible", "is-pip"); }
-  }
-
-  function _pipPulse() {
-    const b = _pipUiOwned ? _pipBtn : null;
-    if (!b) return;
-    b.classList.remove("is-pulse");
-    try { void b.offsetWidth; } catch (e) {}
-    b.classList.add("is-pulse");
-  }
-
-  function _pipAcquire() {
-    try {
-      const el = _getActive();
-      if (!el || el.tagName !== "VIDEO") return;
-      if (typeof el.requestPictureInPicture !== "function") return;
-      // NOTE: intentionally NOT gated on document.pictureInPictureEnabled — on
-      // Firefox that flag can be false while requestPictureInPicture still works
-      // (pref-gated), and gating here was hiding the in-page button entirely.
-      _pipEnsureUi();
-      _pipRefresh();
-    } catch (e) {}
   }
 
   // Expose a small testable surface (Firefox content DOM, chrome isolated world).
@@ -863,9 +674,6 @@
       skip: _skip,
       pip: _pip,
       pipRequest: _pipRequest,
-      _pipTryEnter: _pipTryEnter,
-      _pipArmForGesture: _pipArmForGesture,
-      _pipArmed: _pipArmed,
       _liveEdge: _liveEdgeAdvanced,
       _resetLiveEdge: function () { _edgeRef = null; }
     };
@@ -908,11 +716,11 @@
     try {
       document.addEventListener("play", function (e) {
         const t = e && e.target;
-        if (t && (t.tagName === "VIDEO" || t.tagName === "AUDIO")) { _lastEl = t; _pipAcquire(); }
+        if (t && (t.tagName === "VIDEO" || t.tagName === "AUDIO")) { _lastEl = t; }
       }, true);
       document.addEventListener("playing", function (e) {
         const t = e && e.target;
-        if (t && (t.tagName === "VIDEO" || t.tagName === "AUDIO")) { _lastEl = t; _pipAcquire(); }
+        if (t && (t.tagName === "VIDEO" || t.tagName === "AUDIO")) { _lastEl = t; }
       }, true);
       try {
         document.addEventListener("emptied", function (e) {
