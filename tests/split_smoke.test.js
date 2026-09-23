@@ -276,8 +276,9 @@ async function main() {
         `fallback shows the audible tab title (got: ${title ? title.textContent : "none"})`);
       check(!mp.querySelector(".tabmgr-mp-playbtn"),
         "fallback (no agent state) renders without a play button (skip/mute/open only)");
-      check((mp.querySelectorAll(".tabmgr-mp-tools button").length || 0) === 4,
-        `fallback tools expose skip prev/next + mute + open-tab buttons (got: ${mp.querySelectorAll(".tabmgr-mp-tools button").length || 0})`);
+      const numFallbackT = mp && mp.querySelectorAll(".tabmgr-mp-tools button").length;
+      check(numFallbackT === 5,
+        `fallback tools expose skip prev/next + mute + vinyl + open-tab buttons (got: ${numFallbackT})`);
       check(!!mp.querySelector(".tabmgr-mp-cover") && !!mp.querySelector(".tabmgr-mp-vinyl"),
         "fallback still renders the sleeve + half-out vinyl (no artwork yet)");
       check(!mp.querySelector(".tabmgr-mp-cover .tabmgr-mp-art") ||
