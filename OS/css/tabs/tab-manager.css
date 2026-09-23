@@ -1029,9 +1029,9 @@
   cursor: default;
 }
 .tabmgr-vpb.is-live .tabmgr-vpb-time {
-  color: #f87171;
+  color: #ffffff;
   font-weight: 700;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 .tabmgr-vpb.is-live .tabmgr-vpb-time::before {
   content: "";
@@ -1136,6 +1136,16 @@
 
 /* Video popup (Picture-in-Picture) toggle joins the round controls. */
 .tabmgr-mp-tools .tabmgr-mp-pip {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  justify-content: center;
+}
+
+/* Transport buttons and other tools are round (24px circle look) */
+.tabmgr-mp-tools-group .tabmgr-mp-tbtn {
   width: 24px;
   height: 24px;
   padding: 0;

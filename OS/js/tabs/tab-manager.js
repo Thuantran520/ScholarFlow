@@ -189,10 +189,15 @@ function _tabmgrCreateCard(tab) {
   top.className = "tabmgr-card-top";
   const fav = document.createElement("img");
   fav.className = "tabmgr-favicon";
-  fav.src = tab.favIconUrl || "";
+  const favUrl = tab.favIconUrl || "";
   fav.alt = "";
   fav.onerror = function () { fav.style.display = "none"; };
-  if (!tab.favIconUrl) fav.style.display = "none";
+  if (favUrl.startsWith("chrome://")) {
+    fav.style.display = "none";
+  } else {
+    fav.src = favUrl;
+    if (!favUrl) fav.style.display = "none";
+  }
   const titleEl = document.createElement("div");
   titleEl.className = "tabmgr-card-title";
   titleEl.textContent = tab.title || tab.url || "Untitled";

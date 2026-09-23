@@ -2068,12 +2068,10 @@ document.getElementById("btn-quick-swap-tabs")?.addEventListener("click", swapDu
             if (ytMeta && ytMeta.ok && ytMeta.publishDate && ytMeta.author) break;
             if (ytTry < 2) await new Promise((r) => setTimeout(r, 700));
           }
-          console.info("[SF-YT-META] live tab:", ytMeta && ytMeta.ok ? ("ok date=" + (ytMeta.publishDate || "-") + " author=" + (ytMeta.author || "-")) : "empty/fail");
           const ytIncomplete = !ytMeta || !ytMeta.ok || !ytMeta.publishDate || !ytMeta.author;
           if (ytIncomplete && ytVid && typeof aiYtMetaViaFetch === "function") {
             try {
               const hm = await aiYtMetaViaFetch(ytVid);
-              console.info("[SF-YT-META] direct fetch:", hm && hm.ok ? ("ok date=" + (hm.publishDate || "-") + " author=" + (hm.author || "-")) : "empty/fail");
               if (hm && hm.ok) {
                 ytMeta = {
                   ok: true,
