@@ -47,8 +47,11 @@ $userChromeCss = @"
 
 :root {
   --panadolce-bg: #0b0f19;
+  --panadolce-surface: #0f172a;
   --panadolce-accent: #38bdf8;
+  --panadolce-accent-glow: rgba(56, 189, 248, 0.4);
   --panadolce-border: rgba(255, 255, 255, 0.08);
+  --panadolce-border-cyan: rgba(56, 189, 248, 0.35);
 }
 
 /* Dark Minimal Titlebar & Tabs */
@@ -73,6 +76,201 @@ $userChromeCss = @"
   border-radius: 8px !important;
 }
 
+/* ==========================================================================
+   1. Mini Spinning Vinyl Disc Keyframes
+   ========================================================================== */
+@keyframes panadolce-vinyl-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* ==========================================================================
+   2. Dedicated "Panadolce AI" Button on Tab Bar (#TabsToolbar)
+   ========================================================================== */
+toolbarbutton#panadolce-dev_thuantran520_local-browser-action,
+toolbarbutton[id*="panadolce-dev_thuantran520_local"] {
+  appearance: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.8) 100%) !important;
+  border: 1px solid var(--panadolce-border-cyan) !important;
+  border-radius: 20px !important;
+  padding: 3px 12px 3px 8px !important;
+  margin: 3px 6px !important;
+  cursor: pointer !important;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.2), inset 0 0 6px rgba(56, 189, 248, 0.1) !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+toolbarbutton#panadolce-dev_thuantran520_local-browser-action:hover,
+toolbarbutton[id*="panadolce-dev_thuantran520_local"]:hover {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.25) 0%, rgba(99, 102, 241, 0.3) 100%) !important;
+  border-color: var(--panadolce-accent) !important;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.5), inset 0 0 8px rgba(56, 189, 248, 0.2) !important;
+  transform: translateY(-1px) scale(1.02) !important;
+}
+
+/* Mini Vinyl Disc icon inside Panadolce AI button */
+toolbarbutton#panadolce-dev_thuantran520_local-browser-action .toolbarbutton-icon,
+toolbarbutton[id*="panadolce-dev_thuantran520_local"] .toolbarbutton-icon {
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
+  min-height: 20px !important;
+  border-radius: 50% !important;
+  background: radial-gradient(circle at center,
+    #0b0f19 0px, #0b0f19 2px,
+    #38bdf8 2px, #0284c7 4px,
+    #0b0f19 4.5px, #1e293b 5.5px,
+    #0b0f19 6px, #334155 7px,
+    #0b0f19 7.5px, #475569 8.5px,
+    #0b0f19 9px, #38bdf8 9.5px,
+    #0f172a 10px
+  ) !important;
+  box-shadow: 0 0 0 1.5px rgba(56, 189, 248, 0.7), 0 0 10px rgba(56, 189, 248, 0.45) !important;
+  animation: panadolce-vinyl-spin 3s linear infinite !important;
+  list-style-image: none !important;
+  object-fit: contain !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+toolbarbutton#panadolce-dev_thuantran520_local-browser-action:hover .toolbarbutton-icon,
+toolbarbutton[id*="panadolce-dev_thuantran520_local"]:hover .toolbarbutton-icon {
+  animation-duration: 1.2s !important;
+  box-shadow: 0 0 0 2px #38bdf8, 0 0 16px rgba(56, 189, 248, 0.8) !important;
+}
+
+/* Label text inside Panadolce button */
+toolbarbutton#panadolce-dev_thuantran520_local-browser-action::after,
+toolbarbutton[id*="panadolce-dev_thuantran520_local"]::after {
+  content: "✨ Panadolce AI" !important;
+  display: inline-block !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.3px !important;
+  color: var(--panadolce-accent) !important;
+  text-shadow: 0 0 8px rgba(56, 189, 248, 0.6) !important;
+  margin-left: 6px !important;
+  margin-right: 2px !important;
+  pointer-events: none !important;
+  white-space: nowrap !important;
+}
+
+/* ==========================================================================
+   3. Fallback Mini Spinning Vinyl Disc on Tab Bar (#tabs-newtab-button)
+   ========================================================================== */
+#TabsToolbar #tabs-newtab-button::after {
+  content: "" !important;
+  display: inline-flex !important;
+  align-self: center !important;
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
+  min-height: 20px !important;
+  margin-left: 6px !important;
+  margin-right: 4px !important;
+  border-radius: 50% !important;
+  background: radial-gradient(circle at center,
+    #0b0f19 0px, #0b0f19 2px,
+    #38bdf8 2px, #0284c7 4px,
+    #0b0f19 4.5px, #1e293b 5.5px,
+    #0b0f19 6px, #334155 7px,
+    #0b0f19 7.5px, #475569 8.5px,
+    #0b0f19 9px, #38bdf8 9.5px,
+    #0f172a 10px
+  ) !important;
+  box-shadow: 0 0 0 1.5px rgba(56, 189, 248, 0.7), 0 0 10px rgba(56, 189, 248, 0.4) !important;
+  animation: panadolce-vinyl-spin 3s linear infinite !important;
+  cursor: pointer !important;
+}
+
+#TabsToolbar:has(#panadolce-dev_thuantran520_local-browser-action) #tabs-newtab-button::after {
+  display: none !important;
+}
+
+/* ==========================================================================
+   4. Mini Spinning Vinyl Disc on Audio/Video-Playing Tabs
+   ========================================================================== */
+/* Transform tab audio overlay icon into spinning vinyl record */
+.tabbrowser-tab[soundplaying] .tab-icon-overlay,
+.tab-icon-overlay[soundplaying] {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px !important;
+  min-height: 18px !important;
+  border-radius: 50% !important;
+  list-style-image: none !important;
+  -moz-context-properties: none !important;
+  fill: transparent !important;
+  stroke: transparent !important;
+  mask: none !important;
+  -webkit-mask: none !important;
+  background: radial-gradient(circle at center,
+    #0b0f19 0px, #0b0f19 2px,
+    #38bdf8 2px, #0284c7 4px,
+    #0b0f19 4.5px, #1e293b 5.5px,
+    #0b0f19 6px, #334155 7px,
+    #0b0f19 7.5px, #475569 8.5px,
+    #0b0f19 9px, #38bdf8 9.5px,
+    #0f172a 10px
+  ) !important;
+  box-shadow: 0 0 0 1.5px rgba(56, 189, 248, 0.7), 0 0 8px rgba(56, 189, 248, 0.6) !important;
+  animation: panadolce-vinyl-spin 2s linear infinite !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+/* Hover on sound-playing tab vinyl disc */
+.tabbrowser-tab[soundplaying] .tab-icon-overlay:hover,
+.tab-icon-overlay[soundplaying]:hover {
+  animation-duration: 1s !important;
+  box-shadow: 0 0 0 2px #38bdf8, 0 0 14px rgba(56, 189, 248, 0.85) !important;
+}
+
+/* Also add a mini vinyl record badge right next to the tab title */
+.tabbrowser-tab[soundplaying] .tab-label-container::after {
+  content: "" !important;
+  display: inline-block !important;
+  width: 14px !important;
+  height: 14px !important;
+  min-width: 14px !important;
+  min-height: 14px !important;
+  margin-left: 6px !important;
+  vertical-align: middle !important;
+  border-radius: 50% !important;
+  background: radial-gradient(circle at center,
+    #0b0f19 0px, #0b0f19 1.5px,
+    #38bdf8 1.5px, #0284c7 3px,
+    #0b0f19 3.5px, #1e293b 4.5px,
+    #0b0f19 5px, #38bdf8 6px,
+    #0f172a 7px
+  ) !important;
+  box-shadow: 0 0 0 1px #38bdf8, 0 0 6px rgba(56, 189, 248, 0.7) !important;
+  animation: panadolce-vinyl-spin 1.8s linear infinite !important;
+}
+
+/* Muted tab: pause spin and amber-red hue */
+.tabbrowser-tab[muted] .tab-icon-overlay,
+.tab-icon-overlay[muted],
+.tabbrowser-tab[muted] .tab-label-container::after {
+  animation: none !important;
+  opacity: 0.6 !important;
+  background: radial-gradient(circle at center,
+    #0b0f19 0px, #0b0f19 2px,
+    #ef4444 2px, #dc2626 4px,
+    #0b0f19 4.5px, #334155 7px,
+    #0f172a 10px
+  ) !important;
+  box-shadow: 0 0 0 1px #ef4444, 0 0 6px rgba(239, 68, 68, 0.5) !important;
+}
+
 /* Native Bottom Dock Container for Media Shelf */
 #panadolce-dock {
   min-height: 48px;
@@ -82,9 +280,9 @@ $userChromeCss = @"
 }
 "@
 Set-Content -Path (Join-Path $chromeDir "userChrome.css") -Value $userChromeCss -Encoding UTF8
-Write-Host ">> [2/6] Injected userChrome.css theme engine" -ForegroundColor Green
+Write-Host ">> [2/6] Injected userChrome.css theme engine with Panadolce AI button and spinning vinyl disc" -ForegroundColor Green
 
-# 3. Configure user.js (Hardened Privacy & Local Engine)
+# 3. Configure user.js (Hardened Privacy, Toolbar Placement, & Local Engine)
 $userJs = @"
 // Panadolce Browser Core Configuration (Zero Telemetry & Custom Stylesheets)
 user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
@@ -102,6 +300,7 @@ user_pref("privacy.donottrackheader.enabled", true);
 user_pref("xpinstall.signatures.required", false);
 user_pref("extensions.autoDisableScopes", 0);
 user_pref("extensions.enabledScopes", 15);
+user_pref("browser.uiCustomization.state", "{\"placements\":{\"widget-overflow-fixed-list\":[],\"unified-extensions-area\":[],\"nav-bar\":[\"sidebar-button\",\"back-button\",\"forward-button\",\"stop-reload-button\",\"customizableui-special-spring1\",\"urlbar-container\",\"customizableui-special-spring2\",\"downloads-button\",\"unified-extensions-button\"],\"toolbar-menubar\":[\"menubar-items\"],\"TabsToolbar\":[\"tabbrowser-tabs\",\"new-tab-button\",\"panadolce-dev_thuantran520_local-browser-action\",\"alltabs-button\"],\"vertical-tabs\":[],\"PersonalToolbar\":[\"import-button\",\"personal-bookmarks\"]},\"seen\":[\"panadolce-dev_thuantran520_local-browser-action\"],\"dirtyAreaCache\":[\"nav-bar\",\"TabsToolbar\",\"vertical-tabs\",\"PersonalToolbar\",\"unified-extensions-area\",\"toolbar-menubar\"],\"currentVersion\":26,\"newElementCount\":0}");
 "@
 Set-Content -Path (Join-Path $profileDir "user.js") -Value $userJs -Encoding UTF8
 

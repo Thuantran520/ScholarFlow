@@ -41,7 +41,10 @@ const userChromeCssPath = path.join(browserDir, "Data/profile/chrome/userChrome.
 assert(fs.existsSync(userChromeCssPath), "userChrome.css must exist in Data/profile/chrome/");
 const cssContent = fs.readFileSync(userChromeCssPath, "utf8");
 assert(cssContent.includes("--panadolce-bg"), "userChrome.css must contain Panadolce styling variables");
-console.log("  [PASS] Native Gecko userChrome.css theme engine verified");
+assert(cssContent.includes("panadolce-vinyl-spin"), "userChrome.css must contain spinning vinyl disc animation");
+assert(cssContent.includes("panadolce-dev_thuantran520_local"), "userChrome.css must style Panadolce AI button on Tab Bar");
+assert(userJsContent.includes("panadolce-dev_thuantran520_local-browser-action"), "user.js must position Panadolce AI button in TabsToolbar");
+console.log("  [PASS] Native Gecko userChrome.css theme engine & spinning vinyl disc verified");
 
 // Check embedded extension
 const extDir = path.join(browserDir, "Data/profile/extensions/panadolce-dev@thuantran520.local");
