@@ -417,6 +417,16 @@
     // NOTE: PiP is deliberately OFF on Firefox (see _isFirefox) — even where the
     // pref-gated requestPictureInPicture exists — so the sidebar hides its button.
     try { pipSupported = isVideo && !_isFirefox() && typeof el.requestPictureInPicture === "function"; } catch (e) {}
+    let streamDur = _num(el.duration);
+    if (isLive) {
+      try {
+        const sk = el.seekable;
+        if (sk && sk.length > 0) {
+          const skEnd = sk.end(sk.length - 1);
+          if (isFinite(skEnd) && skEnd > 0) streamDur = skEnd;
+        }
+      } catch (e) {}
+    }
     return {
       hasMedia: true,
       playing: playing,
@@ -424,7 +434,7 @@
       artist: _metaArtist(),
       artwork: _metaArt(el),
       currentTime: _num(el.currentTime),
-      duration: _num(el.duration),
+      duration: streamDur,
       isLive: isLive,
       liveStart: liveStart,
       isVideo: isVideo,

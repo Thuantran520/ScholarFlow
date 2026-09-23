@@ -671,26 +671,67 @@ body.is-popup .ai-chat-wrapper {
 }
 
 .ai-ts {
-  color: #7dd3fc;
-  background: rgba(56, 189, 248, 0.12);
-  border: 1px solid rgba(56, 189, 248, 0.35);
-  border-radius: 7px;
-  padding: 1px 6px;
-  margin: 0 1px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #38bdf8;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.15), rgba(14, 165, 233, 0.22));
+  border: 1px solid rgba(56, 189, 248, 0.38);
+  border-radius: 6px;
+  padding: 1px 7px;
+  margin: 0 2px;
   font-family: ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, monospace;
   font-variant-numeric: tabular-nums;
-  font-size: 0.92em;
+  font-size: 0.9em;
   font-weight: 600;
   letter-spacing: 0.2px;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: all 0.15s ease;
+  vertical-align: baseline;
+  user-select: none;
 }
 
 .ai-ts:hover {
+  color: #ffffff;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.35), rgba(14, 165, 233, 0.5));
+  border-color: #7dd3fc;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.45);
+  transform: translateY(-0.5px);
+}
+
+.ai-ts:active {
+  transform: translateY(0.5px) scale(0.98);
+  box-shadow: 0 0 4px rgba(56, 189, 248, 0.3);
+}
+
+.ai-ts-icon {
+  font-size: 8px;
+  line-height: 1;
+  color: #38bdf8;
+  opacity: 0.9;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.ai-ts:hover .ai-ts-icon {
   color: #fff;
-  background: rgba(14, 165, 233, 0.4);
-  border-color: #38bdf8;
+  transform: scale(1.15);
+  opacity: 1;
+}
+
+.ai-ts-text {
+  line-height: 1.35;
+}
+
+.ai-ts.is-range {
+  border-color: rgba(56, 189, 248, 0.5);
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.18), rgba(99, 102, 241, 0.22));
+}
+
+.ai-ts.is-range:hover {
+  border-color: #818cf8;
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.45);
 }
 
 .ai-link {

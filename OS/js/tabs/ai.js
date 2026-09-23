@@ -1142,12 +1142,30 @@ function aiGetSelectionText(){
   return new Promise(res=>{ if(typeof sendTabMessage!=="function"){res("");return;} sendTabMessage({action:"GET_SELECTION_TEXT"},r=>{res(r&&typeof r.text==="string"?r.text.slice(0,4000):"");}); });
 }
 function aiAppendTsPlain(frag, text){
-  const re=/\[(\d{1,2}):([0-5]\d)(?::([0-5]\d))?\]/g; let last=0, m;
+  const re=/(?:\[|\()\s*(\d{1,2}:[0-5]\d(?::[0-5]\d)?)(?:\s*[-–—~]\s*(\d{1,2}:[0-5]\d(?::[0-5]\d)?))?\s*(?:\]|\))/g;
+  let last=0, m;
   while((m=re.exec(text))!==null){
     if(m.index>last) frag.appendChild(document.createTextNode(text.slice(last,m.index)));
-    const secs=m[3]?(Number(m[1])*3600+Number(m[2])*60+Number(m[3])):(Number(m[1])*60+Number(m[2]));
-    const sp=document.createElement("span"); sp.className="ai-ts"; sp.textContent=m[0]; sp.setAttribute("data-ts",String(secs)); sp.title=aiT("ai_ts_seek",null,"Nhảy tới thời điểm này trong video");
-    frag.appendChild(sp); last=m.index+m[0].length;
+    const secs=aiParseTimestampSec(m[1]);
+    const sp=document.createElement("span");
+    sp.className="ai-ts" + (m[2] ? " is-range" : "");
+    sp.setAttribute("data-ts",String(secs));
+    if(m[2]){
+      sp.setAttribute("data-ts-end", String(aiParseTimestampSec(m[2])));
+      sp.title=aiT("ai_ts_seek",null,"Nhảy tới thời điểm này trong video") + " (" + m[1] + " – " + m[2] + ")";
+    } else {
+      sp.title=aiT("ai_ts_seek",null,"Nhảy tới thời điểm này trong video") + " (" + m[1] + ")";
+    }
+    const icon=document.createElement("span");
+    icon.className="ai-ts-icon";
+    icon.textContent="▶";
+    sp.appendChild(icon);
+    const txt=document.createElement("span");
+    txt.className="ai-ts-text";
+    txt.textContent=m[2] ? (m[1]+" – "+m[2]) : m[1];
+    sp.appendChild(txt);
+    frag.appendChild(sp);
+    last=m.index+m[0].length;
   }
   if(last<text.length) frag.appendChild(document.createTextNode(text.slice(last)));
 }
@@ -1183,12 +1201,12 @@ function aiFormatInline(text){
   const frag=document.createDocumentFragment(); text=String(text||""); let i=0;
   const nextMarker=(from)=>{ const marks=[text.indexOf("***",from),text.indexOf("**",from),text.indexOf("~~",from),text.indexOf("==",from),text.indexOf("`",from),text.indexOf("*",from)]; let m=-1; for(const x of marks){ if(x!==-1&&(m===-1||x<m)) m=x; } return m; };
   while(i<text.length){
-    if(text.startsWith("***",i)){ const e=text.indexOf("***",i+3); if(e!==-1){ const s=document.createElement("strong"); const em=document.createElement("em"); em.textContent=text.slice(i+3,e); s.appendChild(em); frag.appendChild(s); i=e+3; continue; } }
-    if(text.startsWith("**",i)){ const e=text.indexOf("**",i+2); if(e!==-1&&e>i+2){ const s=document.createElement("strong"); s.textContent=text.slice(i+2,e); frag.appendChild(s); i=e+2; continue; } }
-    if(text.startsWith("~~",i)){ const e=text.indexOf("~~",i+2); if(e!==-1&&e>i+2){ const st=document.createElement("s"); st.textContent=text.slice(i+2,e); frag.appendChild(st); i=e+2; continue; } }
-    if(text.startsWith("==",i)){ const e=text.indexOf("==",i+2); if(e!==-1&&e>i+2){ const mk=document.createElement("span"); mk.textContent=text.slice(i+2,e); mk.style.background="rgba(250,204,21,0.2)"; mk.style.color="#fde68a"; mk.style.padding="0 3px"; mk.style.borderRadius="3px"; mk.style.fontWeight="600"; frag.appendChild(mk); i=e+2; continue; } }
+    if(text.startsWith("***",i)){ const e=text.indexOf("***",i+3); if(e!==-1){ const s=document.createElement("strong"); const em=document.createElement("em"); aiAppendTextWithTs(em, text.slice(i+3,e)); s.appendChild(em); frag.appendChild(s); i=e+3; continue; } }
+    if(text.startsWith("**",i)){ const e=text.indexOf("**",i+2); if(e!==-1&&e>i+2){ const s=document.createElement("strong"); aiAppendTextWithTs(s, text.slice(i+2,e)); frag.appendChild(s); i=e+2; continue; } }
+    if(text.startsWith("~~",i)){ const e=text.indexOf("~~",i+2); if(e!==-1&&e>i+2){ const st=document.createElement("s"); aiAppendTextWithTs(st, text.slice(i+2,e)); frag.appendChild(st); i=e+2; continue; } }
+    if(text.startsWith("==",i)){ const e=text.indexOf("==",i+2); if(e!==-1&&e>i+2){ const mk=document.createElement("span"); mk.style.background="rgba(250,204,21,0.2)"; mk.style.color="#fde68a"; mk.style.padding="0 3px"; mk.style.borderRadius="3px"; mk.style.fontWeight="600"; aiAppendTextWithTs(mk, text.slice(i+2,e)); frag.appendChild(mk); i=e+2; continue; } }
     if(text[i]==="`"){ const e=text.indexOf("`",i+1); if(e!==-1){ const c=document.createElement("code"); c.style.background="rgba(0,0,0,0.25)"; c.style.padding="1px 4px"; c.style.borderRadius="4px"; c.textContent=text.slice(i+1,e); frag.appendChild(c); i=e+1; continue; } }
-    if(text[i]==="*"){ const e=text.indexOf("*",i+1); if(e!==-1&&e>i+1){ const em=document.createElement("em"); em.textContent=text.slice(i+1,e); frag.appendChild(em); i=e+1; continue; } }
+    if(text[i]==="*"){ const e=text.indexOf("*",i+1); if(e!==-1&&e>i+1){ const em=document.createElement("em"); aiAppendTextWithTs(em, text.slice(i+1,e)); frag.appendChild(em); i=e+1; continue; } }
     const n=nextMarker(i+1); const chunkEnd=(n!==-1)?n:text.length;
     aiAppendTextWithTs(frag, text.slice(i,chunkEnd)); i=chunkEnd;
   }
@@ -1242,18 +1260,19 @@ function aiRenderFormattedText(bubble, text){
     if(inCode){ buf.push(raw); return; }
 
     /* Interactive Chapter Timeline */
-    const chM=trimmed.match(/^(?:[-*•]\s*)?\[([0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?)\]\s*(.+)/);
-    if(chM){
+    const chM=trimmed.match(/^(?:[-*•]\s*)?\[([0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?)(?:\s*[-–—~]\s*([0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?))?\]\s*(.+)/);
+    if(chM && !chM[3].startsWith(":") && !chM[3].startsWith("**") && chM[3].length <= 140){
       if(pendingCardQ){ const dq=document.createElement("div"); dq.style.margin="2px 0"; dq.appendChild(aiFormatInline(pendingCardQ)); bubble.appendChild(dq); pendingCardQ=null; }
       sugMode=false;
       const timeStr=chM[1];
-      const titleContent=chM[2];
+      const rangeEnd=chM[2];
+      const titleContent=chM[3];
       const card=document.createElement("div");
       card.className="ai-chapter-card";
       const seekBtn=document.createElement("button");
       seekBtn.type="button";
       seekBtn.className="ai-chapter-seek";
-      seekBtn.textContent="⏱ "+timeStr;
+      seekBtn.textContent="⏱ " + (rangeEnd ? (timeStr + " – " + rangeEnd) : timeStr);
       seekBtn.title=aiT("ai_chapter_seek_hint",null,"Nhấn để phát video tại thời điểm này");
       seekBtn.setAttribute("data-ts",String(aiParseTimestampSec(timeStr)));
       seekBtn.addEventListener("click",(e)=>{
@@ -1833,7 +1852,14 @@ const AI_VIDEO_REF_RE=/(video|clip|phim|mv|doan\s*(?:vua|nay|do|tren)|vua\s*(?:x
 function aiIsTranscriptRequest(text){ return AI_TRANSCRIPT_RE.test(_aiFoldAscii(text)); }
 function aiQueryRefersToVideo(text){ return AI_VIDEO_REF_RE.test(_aiFoldAscii(text)); }
 function _aiMMSS(sec){ sec=Math.max(0,Math.floor(sec)||0); const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=sec%60,p=function(n){return (n<10?"0":"")+n;}; return (h?h+":":"")+p(m)+":"+p(s); }
-function aiLastTimestampSec(text){ const m=String(text||"").match(/\[(\d{1,2}):([0-5]\d)(?::([0-5]\d))?\]/g)||[]; if(!m.length) return 0; const p=m[m.length-1].replace(/[\[\]]/g,"").split(":").map(Number); return p.length===3?p[0]*3600+p[1]*60+p[2]:p[0]*60+p[1]; }
+function aiLastTimestampSec(text){
+  const m=String(text||"").match(/(?:\[|\()\s*(\d{1,2}:[0-5]\d(?::[0-5]\d)?)(?:\s*[-–—~]\s*(\d{1,2}:[0-5]\d(?::[0-5]\d)?))?\s*(?:\]|\))/g)||[];
+  if(!m.length) return 0;
+  const lastMatch=m[m.length-1];
+  const parts=lastMatch.replace(/[\[\]\(\)]/g,"").split(/[-–—~]/).map(s=>s.trim()).filter(Boolean);
+  const targetTs=parts[parts.length-1]||parts[0];
+  return aiParseTimestampSec(targetTs);
+}
 const AI_CONTINUE_RE=/(?:^|\s)(tiep tuc|tiep theo|tiep lai|tiep den|tiep|con nua|con lai|lam tiep|noi tiep|doc tiep|dich tiep|phan con lai|phan con|continue|next|go on|more)(?:\s|$|[!?.])/;
 function aiIsContinueRequest(text){ const t=_aiFoldAscii(text).replace(/\s+/g," ").trim(); return t.length<=60 && AI_CONTINUE_RE.test(" "+t+" "); }
 function aiVideoQuestionText(question, transcriptMode, isLong){
@@ -1842,7 +1868,7 @@ function aiVideoQuestionText(question, transcriptMode, isLong){
   if(isLong){
     sys+="- Video này DÀI. KHÔNG cố chép nguyên văn toàn bộ (một lượt sẽ bị cắt giữa chừng). Thay vào đó hãy trả về BẢNG TIMELINE: chia thành các mục '[mm:ss] – [mm:ss]', mỗi mục 1–2 câu TÓM TẮT sự kiện/ý chính + chi tiết hình ảnh nổi bật, bám đúng thứ tự thời gian tới hết video.\n";
   } else {
-    sys+="- Nếu hỏi tóm tắt/phân tích/ý nghĩa/nhân vật: bám cả CHI TIẾT HÌNH ẢNH (đồ vật, hành động, cảnh, chữ trên màn hình) lẫn lời thoại; mỗi luận điểm kèm mốc [mm:ss]. Trả lời gọn, đúng markdown.\n";
+    sys+="- Nếu hỏi tóm tắt/phân tích/ý nghĩa/nhân vật: bám cả CHI TIẾT HÌNH ẢNH (đồ vật, hành động, cảnh, chữ trên màn hình) lẫn lời thoại; mỗi luận điểm kèm mốc [mm:ss] hoặc khoảng thời gian [mm:ss - mm:ss]. Trả lời gọn, đúng markdown.\n";
     if(tm) sys+="- NẾU xin BẢN CHÉP LỜI / phụ đề / lyrics: chép NGUYÊN VĂN từng câu nói hoặc lời hát, theo DÒNG THỜI GIAN, MỖI phát ngôn một dòng '[mm:ss] <lời>' — KHÔNG gom nhóm theo nhân vật/chủ đề, KHÔNG viết dạng mục lục, KHÔNG dịch, KHÔNG tóm tắt, KHÔNG bỏ sót; bỏ nhãn '[Music]'; nghe không rõ ghi '[nghe không rõ]'. Chép LIÊN TỤC tới HẾT video; nếu không kịp trong một lần, hãy chép đến một mốc '[mm:ss]' hợp lý rồi thêm DÒNG CUỐI đúng định dạng: '⏭️ Còn tiếp — nhắn \"tiếp tục\"'. KHÔNG nhảy cóc hay bịa phần chưa chép.\n";
   }
   sys+="Kết thúc bằng khối 'GỢI Ý:' với 3 câu hỏi tiềm năng.";

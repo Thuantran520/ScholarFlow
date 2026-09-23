@@ -668,7 +668,9 @@ let tabmgrMedia = {
   wheelAt: 0,
   timer: null,
   evPending: false,
-  vinylStyle: 0
+  vinylStyle: 0,
+  trayOpen: false,
+  trayView: "shelf"
 };
 
 function _tabmgrMediaFmt(sec) {
@@ -698,32 +700,51 @@ function _tabmgrMediaFmtDigital(sec) {
 // Push state into the video-style progress bar (--e elapsed, overlay time text).
 function _tabmgrMediaSeekUI(vpb, timeEl, current, duration, live, liveStart) {
   if (live) {
-    // Live stream: the track has no finite duration, so the bar is permanently
-    // FULL RED and the time text becomes a pulsing LIVE badge — or, when the
-    // stream start (getStartDate) is known, the stream's real elapsed time.
     const ct = Math.max(0, Math.round(Number(current) || 0));
+    let maxD = Math.round(Number(duration) || 0);
+    if (maxD <= 1 && vpb && vpb._sfBase && vpb._sfBase.dur > 1) {
+      maxD = vpb._sfBase.dur;
+    }
+    maxD = Math.max(1, maxD);
     if (vpb) {
-      vpb.classList.add("is-live");
-      vpb.style.setProperty("--e", "100%");
-      vpb.setAttribute("aria-valuemax", "0");
+      if (!vpb._sfLiveMax || ct > vpb._sfLiveMax) {
+        vpb._sfLiveMax = ct;
+      }
+    }
+    const liveMax = (vpb && vpb._sfLiveMax) ? vpb._sfLiveMax : ct;
+    const isRewound = !!(vpb && vpb._sfRewound && liveMax > 15 && (liveMax - ct) > 15);
+    const ratio = (!isRewound || liveMax <= 0) ? 100 : Math.max(0, Math.min(100, Math.round((ct / liveMax) * 100)));
+
+    if (vpb) {
+      vpb.classList.remove("is-live");
+      if (ratio >= 99) {
+        vpb.classList.add("at-live-edge");
+        vpb.style.setProperty("--e", "100%");
+      } else {
+        vpb.classList.remove("at-live-edge");
+        vpb.style.setProperty("--e", ratio + "%");
+      }
+      vpb.setAttribute("aria-valuemax", String(liveMax || maxD));
       vpb.setAttribute("aria-valuenow", String(ct));
     }
     if (timeEl) {
-      const start = Number(liveStart) || 0;
-      if (start > 0) {
-        const elapsed = Math.max(0, Math.round((Date.now() - start) / 1000));
-        timeEl.textContent = "● " + _tabmgrMediaFmtDigital(elapsed);
-      } else {
-        timeEl.textContent = t("tabmgr_media_live");
+      timeEl.textContent = "";
+      if (maxD > 1 || Number(liveStart) > 0) {
+        const dispTime = maxD > 1 ? ct : Math.max(0, Math.round((Date.now() - Number(liveStart)) / 1000));
+        timeEl.appendChild(document.createTextNode(_tabmgrMediaFmtDigital(dispTime) + " / "));
       }
+      const jumpLive = document.createElement("span");
+      jumpLive.className = "tabmgr-jump-live";
+      jumpLive.textContent = t("tabmgr_media_live");
+      timeEl.appendChild(jumpLive);
     }
     return;
   }
-  if (vpb) vpb.classList.remove("is-live");
   const maxD = Math.max(1, Math.round(Number(duration) || 0));
   const ct = Math.max(0, Math.round(Number(current) || 0));
   if (vpb) {
-    vpb.style.setProperty("--e", _tabmgrMediaPct(ct, maxD) + "%");
+    vpb.classList.remove("is-live");
+    vpb.style.setProperty("--e", Math.min(100, Math.max(0, (ct / maxD) * 100)) + "%");
     vpb.setAttribute("aria-valuemax", String(maxD));
     vpb.setAttribute("aria-valuenow", String(ct));
   }
@@ -734,12 +755,13 @@ function _tabmgrMediaIsLive(state) {
   return !!(state && state.isLive);
 }
 
-// Baseline for the live clock: the last authoritative (polled / seeked) position.
-// Between polls the rAF loop extrapolates this forward in realtime so the red bar
-// glides smoothly instead of teleporting every ~900ms (which read as lag).
 function _tabmgrMediaSeekSetBase(vpb, current, duration, playing, live, liveStart) {
   if (!vpb) return;
-  const maxD = live ? 0 : Math.max(1, Math.round(Number(duration) || 0));
+  let maxD = Math.round(Number(duration) || 0);
+  if (live && maxD <= 1 && vpb._sfBase && vpb._sfBase.dur > 1) {
+    maxD = vpb._sfBase.dur;
+  }
+  maxD = Math.max(1, maxD);
   const ct = Math.max(0, Number(current) || 0);
   vpb._sfBase = { at: Date.now(), time: ct, dur: maxD, play: !!playing, live: !!live, liveAt: Number(liveStart) || 0 };
 }
@@ -777,13 +799,14 @@ function _tabmgrMediaSeekTick() {
   const b = vpb._sfBase;
   if (!b) return;
   const timeEl = mp.querySelector(".tabmgr-vpb-time");
-  // Live with a known broadcast start: paint the elapsed stream time once per
-  // second straight off the wall clock (buffered-media currentTime is clamped).
-  if (b.live && Number(b.liveAt) > 0) {
+  // Live with a known broadcast start AND non-seekable (no DVR buffer): paint the
+  // elapsed stream time once per second straight off the wall clock.
+  // For DVR streams (b.dur > 1), we use the actual currentTime (b.time).
+  if (b.live && Number(b.liveAt) > 0 && b.dur <= 1) {
     const sec = Math.max(0, Math.round((Date.now() - Number(b.liveAt)) / 1000));
     if (vpb._sfLast === sec) return;
     vpb._sfLast = sec;
-    _tabmgrMediaSeekUI(vpb, timeEl, sec, 0, true, b.liveAt);
+    _tabmgrMediaSeekUI(vpb, timeEl, sec, b.dur, true, b.liveAt);
     return;
   }
   let ct = b.time;
@@ -794,7 +817,7 @@ function _tabmgrMediaSeekTick() {
   const cur = Math.round(ct);
   if (vpb._sfLast === cur) return;
   vpb._sfLast = cur;
-  _tabmgrMediaSeekUI(vpb, timeEl, cur, b.live ? 0 : b.dur, !!b.live, b.liveAt);
+  _tabmgrMediaSeekUI(vpb, timeEl, cur, b.dur, !!b.live, b.liveAt);
 }
 
 // Build the Video Playback Progress Bar (slim):
@@ -815,7 +838,7 @@ function _tabmgrMediaSeekEl(state) {
   vpb.setAttribute("aria-valuemin", "0");
 
   const elapsed = document.createElement("div");
-  elapsed.className = "tabmgr-vpb-elapsed";
+  elapsed.className = "tabmgr-vpb-elapsed" + (tabmgrMediaCustom.vpbEffect && tabmgrMediaCustom.vpbEffect !== "none" ? " is-fx-" + tabmgrMediaCustom.vpbEffect : "");
   // The playhead is a CHILD of the elapsed layer so it always tracks the right
   // edge of the red track (left:100%), independent of any other layer.
   const playhead = document.createElement("div");
@@ -835,18 +858,35 @@ function _tabmgrMediaSeekEl(state) {
   _tabmgrMediaSeekStart();
 
   const live = _tabmgrMediaIsLive(state);
+
+  timeEl.addEventListener("pointerdown", function (e) {
+    if (live && e.target.closest(".tabmgr-jump-live")) {
+      e.stopPropagation();
+      vpb._sfRewound = false;
+      const targetTime = (vpb && vpb._sfLiveMax) ? vpb._sfLiveMax : Math.max(1, Math.round(Number(state.duration) || 0));
+      _tabmgrMediaSeekUI(vpb, timeEl, targetTime, targetTime, live, 0);
+      _tabmgrMediaSeekSetBase(vpb, targetTime, targetTime, !!(state && state.playing), live, 0);
+      safeSendTabMessage(tabmgrMedia.sourceTabId, { action: "MEDIA_SEEK", time: targetTime });
+    }
+  });
+
   const seekFromPointer = function (clientX) {
-    if (live) return;
     const rect = vpb.getBoundingClientRect();
     if (!rect || !rect.width) return;
+    const durNum = Math.round(Number(state.duration) || 0);
+    if (live && durNum <= 1) return; // Unseekable live stream
+    const maxD = live ? ((vpb && vpb._sfLiveMax) || Math.max(1, durNum)) : Math.max(1, durNum);
     const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    const target = Math.round(ratio * Math.max(1, Math.round(Number(state.duration) || 0)));
+    const target = Math.round(ratio * maxD);
     tabmgrMedia.dragTime = target;
-    _tabmgrMediaSeekUI(vpb, timeEl, target, state.duration, false, 0);
+    if (live) vpb._sfRewound = (maxD - target) > 15;
+    _tabmgrMediaSeekUI(vpb, timeEl, target, maxD, live, 0);
   };
 
   vpb.addEventListener("pointerdown", function (e) {
-    if (live) return;
+    const durNum = Math.round(Number(state.duration) || 0);
+    if (live && durNum <= 1) return; // Unseekable live stream
+    const maxD = live ? ((vpb && vpb._sfLiveMax) || Math.max(1, durNum)) : Math.max(1, durNum);
     tabmgrMedia.dragging = true;
     tabmgrMedia.dragTime = null;
     vpb.classList.add("is-dragging");
@@ -861,20 +901,19 @@ function _tabmgrMediaSeekEl(state) {
     tabmgrMedia.dragging = false;
     vpb.classList.remove("is-dragging");
     if (tabmgrMedia.dragTime != null && tabmgrMedia.state) {
-      // Repoint the live clock at the released position so the bar continues
-      // smoothly from the drag point instead of snapping back to the stale poll.
-      _tabmgrMediaSeekSetBase(vpb, tabmgrMedia.dragTime, state.duration, !!state.playing, live, 0);
+      const lvStart = (state && Number(state.liveStart)) || 0;
+      const maxD = live ? ((vpb && vpb._sfLiveMax) || state.duration) : state.duration;
+      _tabmgrMediaSeekSetBase(vpb, tabmgrMedia.dragTime, maxD, !!state.playing, live, lvStart);
       safeSendTabMessage(tabmgrMedia.sourceTabId, { action: "MEDIA_SEEK", time: tabmgrMedia.dragTime });
     }
-    // dragTime is only a mid-gesture anchor. Left set, it would outlive the
-    // drag and become the stale base for later keyboard seeks.
     tabmgrMedia.dragTime = null;
   };
   vpb.addEventListener("pointerup", endSeek);
   vpb.addEventListener("pointercancel", endSeek);
 
   vpb.addEventListener("keydown", function (e) {
-    if (live) return;
+    const maxD = Math.max(1, Math.round(Number(state.duration) || 0));
+    if (live && (!Number.isFinite(maxD) || maxD <= 1)) return;
     const stepp = (e.shiftKey ? 10 : 5);
     // Base = the position the user actually SEES: the mid-drag anchor if a
     // gesture is live, otherwise the extrapolated live clock (_sfBase is
@@ -891,7 +930,6 @@ function _tabmgrMediaSeekEl(state) {
       base = (tabmgrMedia.state && tabmgrMedia.state.currentTime) || 0;
     }
     base = Math.round(base);
-    const maxD = Math.max(1, Math.round((b && b.dur) || state.duration || 0));
     let next = null;
     if (e.key === "ArrowRight") next = base + stepp;
     else if (e.key === "ArrowLeft") next = base - stepp;
@@ -900,8 +938,9 @@ function _tabmgrMediaSeekEl(state) {
     if (next == null) return;
     e.preventDefault();
     next = Math.max(0, Math.min(maxD, next));
-    _tabmgrMediaSeekUI(vpb, timeEl, next, maxD, false, 0);
-    _tabmgrMediaSeekSetBase(vpb, next, maxD, !!(state && state.playing), false, 0);
+    const lvStart = (state && Number(state.liveStart)) || 0;
+    _tabmgrMediaSeekUI(vpb, timeEl, next, maxD, live, lvStart);
+    _tabmgrMediaSeekSetBase(vpb, next, maxD, !!(state && state.playing), live, lvStart);
     safeSendTabMessage(tabmgrMedia.sourceTabId, { action: "MEDIA_SEEK", time: next });
   });
 
@@ -1343,13 +1382,12 @@ function _tabmgrMediaEvRemoved(tabId) {
 // only the currently displayed tab's audio AND the user's active tab's audio.
 function _tabmgrMediaPauseOthers() {
   const curId = tabmgrMedia.sourceTabId;
-  const activeId = (typeof currentTabObj !== "undefined" && currentTabObj) ? currentTabObj.id : null;
   let sent = 0;
   (tabmgrMedia.sources || []).forEach(function (c) {
-    if (!c.tab || c.tab.id === curId || c.tab.id === activeId) return;
+    if (!c.tab || c.tab.id === curId) return;
     if (c.state && c.state.hasMedia) {
       sent++;
-      safeSendTabMessage(c.tab.id, { action: "MEDIA_TOGGLE" }).then(function (res) {
+      safeSendTabMessage(c.tab.id, { action: "MEDIA_PAUSE" }).then(function (res) {
         if (res && res.state && tabmgrMedia.known) {
           tabmgrMedia.known[c.tab.id] = { ts: Date.now(), tab: c.tab, state: res.state };
         }
@@ -1360,6 +1398,366 @@ function _tabmgrMediaPauseOthers() {
     }
   });
   if (sent > 0) _tabmgrMediaEventRefresh();
+}
+
+function _tabmgrMediaToggleTray() {
+  tabmgrMedia.trayOpen = !tabmgrMedia.trayOpen;
+  _tabmgrMediaRenderPlayer();
+}
+
+function _tabmgrMediaSoloPlay(targetIdx) {
+  const sources = tabmgrMedia.sources || [];
+  const target = sources[targetIdx];
+  if (!target) return;
+  sources.forEach(function (c, idx) {
+    if (idx !== targetIdx && c.tab && c.tab.id) {
+      if (c.state && c.state.hasMedia) {
+        safeSendTabMessage(c.tab.id, { action: "MEDIA_PAUSE" }).catch(function () {});
+      } else {
+        tabmgrToggleMute(c.tab.id, true);
+      }
+    }
+  });
+  if (target.tab && target.tab.id) {
+    if (target.state && target.state.hasMedia && !target.state.playing) {
+      safeSendTabMessage(target.tab.id, { action: "MEDIA_PLAY" }).catch(function () {});
+    } else {
+      tabmgrToggleMute(target.tab.id, false);
+    }
+  }
+  _tabmgrMediaStepTo(targetIdx);
+}
+
+function _tabmgrMediaFocusTab(tabId) {
+  if (!tabId) return;
+  tabmgrActivateTab(tabId);
+}
+
+function _tabmgrMediaCloseTab(tabId) {
+  if (!tabId) return;
+  try {
+    chrome.tabs.remove(tabId);
+    _tabmgrMediaEvRemoved(tabId);
+    _tabmgrMediaRenderPlayer();
+  } catch (e) {}
+}
+
+function _tabmgrMediaToggleTabPlay(tabId, state) {
+  if (!tabId) return;
+  safeSendTabMessage(tabId, { action: "MEDIA_TOGGLE" }).then(function (res) {
+    if (res && res.state && tabmgrMedia.known) {
+      tabmgrMedia.known[tabId] = { ts: Date.now(), tab: tabmgrMedia.sourceTab, state: res.state };
+    }
+    _tabmgrMediaEventRefresh();
+  }).catch(function () {
+    const tab = (tabmgrMedia.sources || []).find(function (c) { return c.tab && c.tab.id === tabId; });
+    if (tab && tab.tab) {
+      const muted = !!(tab.tab.mutedInfo && tab.tab.mutedInfo.muted);
+      tabmgrToggleMute(tabId, !muted);
+      _tabmgrMediaEventRefresh();
+    }
+  });
+}
+
+function _tabmgrMediaRenderTray() {
+  const sources = tabmgrMedia.sources || [];
+  const n = sources.length;
+  if (n < 2 || !tabmgrMedia.trayOpen) return null;
+
+  const tray = document.createElement("div");
+  tray.className = "tabmgr-mp-tray is-open";
+
+  // 1. Header with stats & actions
+  const hdr = document.createElement("div");
+  hdr.className = "tabmgr-mp-tray-hdr";
+
+  const titleWrap = document.createElement("div");
+  titleWrap.className = "tabmgr-mp-tray-title-wrap";
+  const titleTxt = document.createElement("span");
+  titleTxt.className = "tabmgr-mp-tray-title";
+  titleTxt.textContent = t("tabmgr_media_tray_toggle", null, [n]);
+  titleWrap.appendChild(titleTxt);
+
+  const actWrap = document.createElement("div");
+  actWrap.className = "tabmgr-mp-tray-actions";
+
+  // Solo play button
+  const soloBtn = document.createElement("button");
+  soloBtn.type = "button";
+  soloBtn.className = "tabmgr-mp-tray-btn tabmgr-mp-tray-solo";
+  soloBtn.title = t("tabmgr_media_solo_play_tip");
+  const soloSvg = _tabmgrSvgWithExtra([
+    { tag: "circle", attrs: { cx: "12", cy: "12", r: "8" } },
+    { tag: "circle", attrs: { cx: "12", cy: "12", r: "3" } },
+    { tag: "line", attrs: { x1: "12", y1: "1", x2: "12", y2: "4" } },
+    { tag: "line", attrs: { x1: "12", y1: "20", x2: "12", y2: "23" } },
+    { tag: "line", attrs: { x1: "1", y1: "12", x2: "4", y2: "12" } },
+    { tag: "line", attrs: { x1: "20", y1: "12", x2: "23", y2: "12" } }
+  ]);
+  soloSvg.style.marginRight = "4px";
+  soloBtn.appendChild(soloSvg);
+  const soloSpan = document.createElement("span");
+  soloSpan.textContent = t("tabmgr_media_solo_play");
+  soloBtn.appendChild(soloSpan);
+  soloBtn.addEventListener("click", function (ev) {
+    ev.stopPropagation();
+    _tabmgrMediaSoloPlay(tabmgrMedia.index);
+  });
+  actWrap.appendChild(soloBtn);
+
+  // Pause all button
+  const pauseAllBtn = document.createElement("button");
+  pauseAllBtn.type = "button";
+  pauseAllBtn.className = "tabmgr-mp-tray-btn tabmgr-mp-tray-pause-all";
+  pauseAllBtn.title = t("tabmgr_media_pause_all");
+  const pauseSvg = _tabmgrSvgWithExtra([
+    { tag: "rect", attrs: { x: "6", y: "4", width: "4", height: "16", rx: "1", fill: "currentColor" } },
+    { tag: "rect", attrs: { x: "14", y: "4", width: "4", height: "16", rx: "1", fill: "currentColor" } }
+  ]);
+  pauseSvg.style.marginRight = "4px";
+  pauseAllBtn.appendChild(pauseSvg);
+  const pauseSpan = document.createElement("span");
+  pauseSpan.textContent = t("tabmgr_media_pause_all_short");
+  pauseAllBtn.appendChild(pauseSpan);
+  pauseAllBtn.addEventListener("click", function (ev) {
+    ev.stopPropagation();
+    _tabmgrMediaPauseOthers();
+  });
+  actWrap.appendChild(pauseAllBtn);
+
+  // View toggle button (Shelf vs List)
+  const isShelf = (tabmgrMedia.trayView !== "list");
+  const viewBtn = document.createElement("button");
+  viewBtn.type = "button";
+  viewBtn.className = "tabmgr-mp-tray-btn tabmgr-mp-tray-view-toggle";
+  viewBtn.title = isShelf ? t("tabmgr_media_view_list") : t("tabmgr_media_view_shelf");
+  if (isShelf) {
+    const listSvg = _tabmgrSvgWithExtra([
+      { tag: "line", attrs: { x1: "8", y1: "6", x2: "21", y2: "6" } },
+      { tag: "line", attrs: { x1: "8", y1: "12", x2: "21", y2: "12" } },
+      { tag: "line", attrs: { x1: "8", y1: "18", x2: "21", y2: "18" } },
+      { tag: "line", attrs: { x1: "3", y1: "6", x2: "3.01", y2: "6", "stroke-width": "3" } },
+      { tag: "line", attrs: { x1: "3", y1: "12", x2: "3.01", y2: "12", "stroke-width": "3" } },
+      { tag: "line", attrs: { x1: "3", y1: "18", x2: "3.01", y2: "18", "stroke-width": "3" } }
+    ]);
+    listSvg.style.marginRight = "4px";
+    viewBtn.appendChild(listSvg);
+    const viewSpan = document.createElement("span");
+    viewSpan.textContent = t("tabmgr_media_view_list");
+    viewBtn.appendChild(viewSpan);
+  } else {
+    const shelfSvg = _tabmgrSvgWithExtra([
+      { tag: "circle", attrs: { cx: "12", cy: "12", r: "9" } },
+      { tag: "circle", attrs: { cx: "12", cy: "12", r: "3" } }
+    ]);
+    shelfSvg.style.marginRight = "4px";
+    viewBtn.appendChild(shelfSvg);
+    const viewSpan = document.createElement("span");
+    viewSpan.textContent = t("tabmgr_media_view_shelf");
+    viewBtn.appendChild(viewSpan);
+  }
+  viewBtn.addEventListener("click", function (ev) {
+    ev.stopPropagation();
+    tabmgrMedia.trayView = isShelf ? "list" : "shelf";
+    _tabmgrMediaRenderPlayer();
+  });
+  actWrap.appendChild(viewBtn);
+
+  // Close tray button
+  const closeBtn = document.createElement("button");
+  closeBtn.type = "button";
+  closeBtn.className = "tabmgr-mp-tray-close";
+  closeBtn.title = t("tabmgr_media_tab_close");
+  closeBtn.appendChild(_tabmgrSvg("M18 6L6 18M6 6l12 12"));
+  closeBtn.addEventListener("click", function (ev) {
+    ev.stopPropagation();
+    _tabmgrMediaToggleTray();
+  });
+  actWrap.appendChild(closeBtn);
+
+  hdr.appendChild(titleWrap);
+  hdr.appendChild(actWrap);
+  tray.appendChild(hdr);
+
+  // 2. Body: Shelf View or List View
+  if (isShelf) {
+    // --- Vinyl Filmstrip Shelf ---
+    const shelf = document.createElement("div");
+    shelf.className = "tabmgr-mp-shelf";
+
+    // Enable horizontal scroll via mouse wheel
+    shelf.addEventListener("wheel", function (ev) {
+      if (ev.deltaY !== 0) {
+        ev.preventDefault();
+        shelf.scrollLeft += ev.deltaY;
+      }
+    }, { passive: false });
+
+    sources.forEach(function (s, idx) {
+      const isCur = (idx === tabmgrMedia.index);
+      const isPlay = !!(s.state && s.state.playing);
+      const art = _tabmgrMediaArtWork(s.state);
+      const title = (s.state && s.state.title) ? String(s.state.title) : ((s.tab && s.tab.title) ? String(s.tab.title) : "");
+
+      const item = document.createElement("div");
+      item.className = "tabmgr-mp-shelf-item" + (isCur ? " is-active" : "") + (isPlay ? " is-playing" : "");
+      item.title = (idx + 1) + ". " + (title || t("tabmgr_media_unknown"));
+
+      const disc = document.createElement("div");
+      disc.className = "tabmgr-mp-shelf-disc" + (isPlay ? " is-spin" : "");
+
+      if (art) {
+        const artImg = document.createElement("img");
+        artImg.className = "tabmgr-mp-shelf-art";
+        artImg.src = art;
+        disc.appendChild(artImg);
+      } else {
+        const ph = document.createElement("span");
+        ph.className = "tabmgr-mp-shelf-ph";
+        ph.textContent = (title || "?").charAt(0).toUpperCase();
+        disc.appendChild(ph);
+      }
+
+      // Playing indicator: mini EQ badge
+      if (isPlay) {
+        const eqBadge = document.createElement("div");
+        eqBadge.className = "tabmgr-mp-shelf-eq";
+        for (let b = 0; b < 3; b++) {
+          eqBadge.appendChild(document.createElement("span"));
+        }
+        item.appendChild(eqBadge);
+      } else {
+        const pauseDot = document.createElement("div");
+        pauseDot.className = "tabmgr-mp-shelf-paused";
+        pauseDot.appendChild(_tabmgrSvgWithExtra([
+          { tag: "rect", attrs: { x: "7", y: "6", width: "3", height: "12", rx: "0.5", fill: "currentColor" } },
+          { tag: "rect", attrs: { x: "14", y: "6", width: "3", height: "12", rx: "0.5", fill: "currentColor" } }
+        ]));
+        item.appendChild(pauseDot);
+      }
+
+      item.appendChild(disc);
+
+      const label = document.createElement("div");
+      label.className = "tabmgr-mp-shelf-label";
+      label.textContent = "#" + (idx + 1);
+      item.appendChild(label);
+
+      item.addEventListener("click", function (ev) {
+        ev.stopPropagation();
+        _tabmgrMediaStepTo(idx);
+      });
+
+      shelf.appendChild(item);
+    });
+
+    tray.appendChild(shelf);
+  } else {
+    // --- Detailed List View ---
+    const list = document.createElement("div");
+    list.className = "tabmgr-mp-tray-list";
+
+    sources.forEach(function (s, idx) {
+      const isCur = (idx === tabmgrMedia.index);
+      const isPlay = !!(s.state && s.state.playing);
+      const art = _tabmgrMediaArtWork(s.state);
+      const title = (s.state && s.state.title) ? String(s.state.title) : ((s.tab && s.tab.title) ? String(s.tab.title) : "");
+      const artist = (s.state && s.state.artist) ? String(s.state.artist) : "";
+
+      const row = document.createElement("div");
+      row.className = "tabmgr-mp-tray-row" + (isCur ? " is-active" : "") + (isPlay ? " is-playing" : "");
+
+      const thumb = document.createElement("div");
+      thumb.className = "tabmgr-mp-tray-thumb";
+      if (art) {
+        const img = document.createElement("img");
+        img.src = art;
+        thumb.appendChild(img);
+      } else {
+        const ph = document.createElement("span");
+        ph.textContent = (title || "?").charAt(0).toUpperCase();
+        thumb.appendChild(ph);
+      }
+
+      const meta = document.createElement("div");
+      meta.className = "tabmgr-mp-tray-meta";
+      const titleEl = document.createElement("div");
+      titleEl.className = "tabmgr-mp-tray-item-title";
+      titleEl.textContent = (idx + 1) + ". " + (title || t("tabmgr_media_unknown"));
+      titleEl.title = title;
+      const subEl = document.createElement("div");
+      subEl.className = "tabmgr-mp-tray-item-sub";
+      subEl.textContent = artist || (isPlay ? t("tabmgr_media_now_playing") : t("tabmgr_media_pause"));
+      meta.appendChild(titleEl);
+      meta.appendChild(subEl);
+
+      const ops = document.createElement("div");
+      ops.className = "tabmgr-mp-tray-ops";
+
+      // Toggle play button
+      const playBtn = document.createElement("button");
+      playBtn.type = "button";
+      playBtn.className = "tabmgr-mp-tray-op-btn";
+      playBtn.title = isPlay ? t("tabmgr_media_pause") : t("tabmgr_media_play");
+      if (isPlay) {
+        playBtn.appendChild(_tabmgrSvgWithExtra([
+          { tag: "rect", attrs: { x: "6", y: "4", width: "4", height: "16", rx: "1", fill: "currentColor" } },
+          { tag: "rect", attrs: { x: "14", y: "4", width: "4", height: "16", rx: "1", fill: "currentColor" } }
+        ]));
+      } else {
+        playBtn.appendChild(_tabmgrSvgWithExtra([
+          { tag: "polygon", attrs: { points: "6 4 20 12 6 20 6 4", fill: "currentColor" } }
+        ]));
+      }
+      playBtn.addEventListener("click", function (ev) {
+        ev.stopPropagation();
+        if (s.tab && s.tab.id) _tabmgrMediaToggleTabPlay(s.tab.id, s.state);
+      });
+      ops.appendChild(playBtn);
+
+      // Focus tab button
+      const focusBtn = document.createElement("button");
+      focusBtn.type = "button";
+      focusBtn.className = "tabmgr-mp-tray-op-btn";
+      focusBtn.title = t("tabmgr_media_tab_focus");
+      focusBtn.appendChild(_tabmgrSvgWithExtra([
+        { tag: "path", attrs: { d: "M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" } },
+        { tag: "polyline", attrs: { points: "15 3 21 3 21 9" } },
+        { tag: "line", attrs: { x1: "10", y1: "14", x2: "21", y2: "3" } }
+      ]));
+      focusBtn.addEventListener("click", function (ev) {
+        ev.stopPropagation();
+        if (s.tab && s.tab.id) _tabmgrMediaFocusTab(s.tab.id);
+      });
+      ops.appendChild(focusBtn);
+
+      // Close tab button
+      const closeTabBtn = document.createElement("button");
+      closeTabBtn.type = "button";
+      closeTabBtn.className = "tabmgr-mp-tray-op-btn is-close";
+      closeTabBtn.title = t("tabmgr_media_tab_close");
+      closeTabBtn.appendChild(_tabmgrSvg("M18 6L6 18M6 6l12 12"));
+      closeTabBtn.addEventListener("click", function (ev) {
+        ev.stopPropagation();
+        if (s.tab && s.tab.id) _tabmgrMediaCloseTab(s.tab.id);
+      });
+      ops.appendChild(closeTabBtn);
+
+      row.appendChild(thumb);
+      row.appendChild(meta);
+      row.appendChild(ops);
+
+      row.addEventListener("click", function () {
+        _tabmgrMediaStepTo(idx);
+      });
+
+      list.appendChild(row);
+    });
+
+    tray.appendChild(list);
+  }
+
+  return tray;
 }
 
 function _tabmgrMediaRenderEmpty() {
@@ -1442,6 +1840,301 @@ function _tabmgrMediaOnPip() {
   });
 }
 
+const TABMGR_MEDIA_CUSTOM_KEY = "sf_media_custom";
+const DEFAULT_MEDIA_CUSTOM = {
+  posterMode: "vinyl",
+  vpbColor: "#ef4444",
+  vpbEffect: "none",
+  vinylColor: "#111827",
+  customVinylSvg: ""
+};
+let tabmgrMediaCustom = Object.assign({}, DEFAULT_MEDIA_CUSTOM);
+
+function _tabmgrApplyCustomToPlayer() {
+  const mp = document.querySelector("#tabmgr-media-body .tabmgr-mp");
+  if (!mp) return;
+  const modes = ["is-mode-default", "is-mode-vinyl", "is-mode-cd", "is-mode-ambient"];
+  modes.forEach(function (m) { mp.classList.remove(m); });
+  mp.classList.add("is-mode-" + (tabmgrMediaCustom.posterMode || "vinyl"));
+  mp.style.setProperty("--vpb-color", tabmgrMediaCustom.vpbColor || "#ef4444");
+  mp.style.setProperty("--vinyl-color", tabmgrMediaCustom.vinylColor || "#111827");
+
+  // Apply RGB animated FX classes to the progress bar
+  const elapsed = mp.querySelector(".tabmgr-vpb-elapsed");
+  if (elapsed) {
+    const fxClasses = ["is-fx-rainbow", "is-fx-cyberpunk", "is-fx-sunset", "is-fx-aurora", "is-fx-cosmic"];
+    fxClasses.forEach(function (c) { elapsed.classList.remove(c); });
+    if (tabmgrMediaCustom.vpbEffect && tabmgrMediaCustom.vpbEffect !== "none") {
+      elapsed.classList.add("is-fx-" + tabmgrMediaCustom.vpbEffect);
+    }
+  }
+
+  // Ensure tonearm exists in top row for turntable mode
+  const top = mp.querySelector(".tabmgr-mp-top");
+  if (top && !top.querySelector(".tabmgr-mp-tonearm")) {
+    const tonearm = document.createElement("div");
+    const playing = !!(tabmgrMedia.state && tabmgrMedia.state.playing);
+    tonearm.className = "tabmgr-mp-tonearm" + (playing ? " is-playing" : "");
+    const pivot = document.createElement("div");
+    pivot.className = "tabmgr-mp-tonearm-pivot";
+    const arm = document.createElement("div");
+    arm.className = "tabmgr-mp-tonearm-arm";
+    const head = document.createElement("div");
+    head.className = "tabmgr-mp-tonearm-head";
+    tonearm.appendChild(pivot);
+    tonearm.appendChild(arm);
+    tonearm.appendChild(head);
+    const info = top.querySelector(".tabmgr-mp-info");
+    if (info) {
+      top.insertBefore(tonearm, info);
+    } else {
+      top.appendChild(tonearm);
+    }
+  }
+
+  const vinyl = mp.querySelector(".tabmgr-mp-vinyl");
+  if (vinyl) {
+    vinyl.classList.toggle("has-custom-color", !!(tabmgrMediaCustom.vinylColor && tabmgrMediaCustom.vinylColor !== "#111827"));
+    vinyl.classList.toggle("has-custom-svg", !!tabmgrMediaCustom.customVinylSvg);
+    const existingImg = vinyl.querySelector(".tabmgr-mp-vinyl-svg-img");
+    if (tabmgrMediaCustom.customVinylSvg) {
+      if (!existingImg) {
+        const img = document.createElement("img");
+        img.className = "tabmgr-mp-vinyl-svg-img";
+        img.src = tabmgrMediaCustom.customVinylSvg;
+        vinyl.appendChild(img);
+      } else {
+        existingImg.src = tabmgrMediaCustom.customVinylSvg;
+      }
+    } else if (existingImg) {
+      vinyl.removeChild(existingImg);
+    }
+    const existingArt = vinyl.querySelector(".tabmgr-mp-vinyl-art");
+    const artwork = _tabmgrMediaArtWork(tabmgrMedia.state);
+    const isDiscWithArt = (tabmgrMediaCustom.posterMode !== "ambient");
+    if (!tabmgrMediaCustom.customVinylSvg && artwork && isDiscWithArt) {
+      if (!existingArt) {
+        const artImg = document.createElement("img");
+        artImg.className = "tabmgr-mp-vinyl-art";
+        artImg.src = artwork;
+        vinyl.appendChild(artImg);
+      } else {
+        existingArt.src = artwork;
+      }
+    } else if (existingArt) {
+      vinyl.removeChild(existingArt);
+    }
+  }
+}
+
+function _tabmgrOpenMediaSettings() {
+  const modal = document.getElementById("media-settings-modal");
+  if (!modal) return;
+  _tabmgrUpdateMediaSettingsUI();
+  modal.style.display = "block";
+}
+
+function _tabmgrCloseMediaSettings() {
+  const modal = document.getElementById("media-settings-modal");
+  if (modal) modal.style.display = "none";
+}
+
+function _tabmgrSaveMediaCustom() {
+  storSet({ [TABMGR_MEDIA_CUSTOM_KEY]: tabmgrMediaCustom });
+  _tabmgrApplyCustomToPlayer();
+}
+
+function _tabmgrUpdateMediaSettingsUI() {
+  const modal = document.getElementById("media-settings-modal");
+  if (!modal) return;
+
+  const modeBtns = modal.querySelectorAll(".tabmgr-mode-btn");
+  modeBtns.forEach(function (btn) {
+    btn.classList.toggle("is-active", btn.dataset.mode === (tabmgrMediaCustom.posterMode || "vinyl"));
+  });
+
+  const vinylCard = document.getElementById("media-vinyl-custom-card");
+  if (vinylCard) {
+    const isDisc = (tabmgrMediaCustom.posterMode !== "ambient");
+    vinylCard.style.display = isDisc ? "block" : "none";
+  }
+
+  const vpbPicker = document.getElementById("media-vpb-color-picker");
+  if (vpbPicker) vpbPicker.value = tabmgrMediaCustom.vpbColor || "#ef4444";
+  const vpbDots = modal.querySelectorAll("#media-vpb-swatches .tabmgr-color-dot");
+  vpbDots.forEach(function (dot) {
+    dot.classList.toggle("is-selected", dot.dataset.color.toLowerCase() === (tabmgrMediaCustom.vpbColor || "#ef4444").toLowerCase());
+  });
+
+  const fxBtns = modal.querySelectorAll(".tabmgr-fx-btn");
+  fxBtns.forEach(function (btn) {
+    btn.classList.toggle("is-active", btn.dataset.fx === (tabmgrMediaCustom.vpbEffect || "none"));
+  });
+
+  const vinylPicker = document.getElementById("media-vinyl-color-picker");
+  if (vinylPicker) vinylPicker.value = tabmgrMediaCustom.vinylColor || "#111827";
+  const vinylDots = modal.querySelectorAll("#media-vinyl-swatches .tabmgr-color-dot");
+  vinylDots.forEach(function (dot) {
+    dot.classList.toggle("is-selected", dot.dataset.color.toLowerCase() === (tabmgrMediaCustom.vinylColor || "#111827").toLowerCase());
+  });
+
+  const prevWrap = document.getElementById("media-custom-svg-preview-wrap");
+  const prevBox = document.getElementById("media-custom-svg-preview");
+  if (prevWrap && prevBox) {
+    if (tabmgrMediaCustom.customVinylSvg) {
+      prevWrap.style.display = "flex";
+      _tabmgrMediaClear(prevBox);
+      const img = document.createElement("img");
+      img.src = tabmgrMediaCustom.customVinylSvg;
+      img.style.width = "100%";
+      img.style.height = "100%";
+      img.style.objectFit = "cover";
+      prevBox.appendChild(img);
+    } else {
+      prevWrap.style.display = "none";
+      _tabmgrMediaClear(prevBox);
+    }
+  }
+}
+
+function _tabmgrDownloadVinylSvg() {
+  const ns = "http" + "://www.w3.org/2000/svg";
+  const svg = `<svg xmlns="${ns}" viewBox="0 0 100 100" width="100" height="100">
+  <circle cx="50" cy="50" r="48" fill="#111827" stroke="#374151" stroke-width="2"/>
+  <circle cx="50" cy="50" r="40" fill="none" stroke="#1f2937" stroke-width="1" stroke-dasharray="2 2"/>
+  <circle cx="50" cy="50" r="32" fill="none" stroke="#1f2937" stroke-width="1" stroke-dasharray="3 3"/>
+  <circle cx="50" cy="50" r="24" fill="none" stroke="#1f2937" stroke-width="1"/>
+  <circle cx="50" cy="50" r="16" fill="#ef4444"/>
+  <circle cx="50" cy="50" r="4" fill="#000000"/>
+</svg>`;
+  const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "scholarflow-vinyl-disc.svg";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+}
+
+let _mediaSettingsBound = false;
+function _tabmgrInitMediaSettingsModal() {
+  if (_mediaSettingsBound) return;
+  _mediaSettingsBound = true;
+
+  const modal = document.getElementById("media-settings-modal");
+  if (!modal) return;
+
+  const btnClose = document.getElementById("btn-close-media-settings");
+  if (btnClose) btnClose.addEventListener("click", _tabmgrCloseMediaSettings);
+
+  const btnDone = document.getElementById("btn-media-done");
+  if (btnDone) btnDone.addEventListener("click", _tabmgrCloseMediaSettings);
+
+  modal.addEventListener("click", function (e) {
+    if (e.target === modal) _tabmgrCloseMediaSettings();
+  });
+
+  const modeBtns = modal.querySelectorAll(".tabmgr-mode-btn");
+  modeBtns.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      tabmgrMediaCustom.posterMode = btn.dataset.mode;
+      _tabmgrSaveMediaCustom();
+      _tabmgrUpdateMediaSettingsUI();
+    });
+  });
+
+  const vpbPicker = document.getElementById("media-vpb-color-picker");
+  if (vpbPicker) {
+    vpbPicker.addEventListener("input", function () {
+      tabmgrMediaCustom.vpbColor = vpbPicker.value;
+      _tabmgrSaveMediaCustom();
+      _tabmgrUpdateMediaSettingsUI();
+    });
+  }
+  const vpbDots = modal.querySelectorAll("#media-vpb-swatches .tabmgr-color-dot");
+  vpbDots.forEach(function (dot) {
+    dot.addEventListener("click", function () {
+      tabmgrMediaCustom.vpbColor = dot.dataset.color;
+      _tabmgrSaveMediaCustom();
+      _tabmgrUpdateMediaSettingsUI();
+    });
+  });
+
+  const fxBtns = modal.querySelectorAll(".tabmgr-fx-btn");
+  fxBtns.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      tabmgrMediaCustom.vpbEffect = btn.dataset.fx;
+      _tabmgrSaveMediaCustom();
+      _tabmgrUpdateMediaSettingsUI();
+    });
+  });
+
+  const vinylPicker = document.getElementById("media-vinyl-color-picker");
+  if (vinylPicker) {
+    vinylPicker.addEventListener("input", function () {
+      tabmgrMediaCustom.vinylColor = vinylPicker.value;
+      _tabmgrSaveMediaCustom();
+      _tabmgrUpdateMediaSettingsUI();
+    });
+  }
+  const vinylDots = modal.querySelectorAll("#media-vinyl-swatches .tabmgr-color-dot");
+  vinylDots.forEach(function (dot) {
+    dot.addEventListener("click", function () {
+      tabmgrMediaCustom.vinylColor = dot.dataset.color;
+      _tabmgrSaveMediaCustom();
+      _tabmgrUpdateMediaSettingsUI();
+    });
+  });
+
+  const btnDownloadSvg = document.getElementById("btn-media-download-svg");
+  if (btnDownloadSvg) btnDownloadSvg.addEventListener("click", _tabmgrDownloadVinylSvg);
+
+  const uploadInput = document.getElementById("input-media-upload-svg");
+  if (uploadInput) {
+    uploadInput.addEventListener("change", function (e) {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      if (file.size > 2000000) {
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function (ev) {
+        const text = String(ev.target && ev.target.result || "");
+        if (!text.includes("<svg")) return;
+        const sanitized = text
+          .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+          .replace(/on\w+\s*=\s*["'][^"']*["']/gi, "");
+        const dataUri = "data:image/svg+xml;utf8," + encodeURIComponent(sanitized);
+        tabmgrMediaCustom.customVinylSvg = dataUri;
+        _tabmgrSaveMediaCustom();
+        _tabmgrUpdateMediaSettingsUI();
+        uploadInput.value = "";
+      };
+      reader.readAsText(file);
+    });
+  }
+
+  const btnRemoveSvg = document.getElementById("btn-media-remove-svg");
+  if (btnRemoveSvg) {
+    btnRemoveSvg.addEventListener("click", function () {
+      tabmgrMediaCustom.customVinylSvg = "";
+      _tabmgrSaveMediaCustom();
+      _tabmgrUpdateMediaSettingsUI();
+    });
+  }
+
+  const btnReset = document.getElementById("btn-reset-media-settings");
+  if (btnReset) {
+    btnReset.addEventListener("click", function () {
+      tabmgrMediaCustom = Object.assign({}, DEFAULT_MEDIA_CUSTOM);
+      _tabmgrSaveMediaCustom();
+      _tabmgrUpdateMediaSettingsUI();
+    });
+  }
+}
+
 function _tabmgrMediaRenderPlayer() {
   const body = _tabmgrMediaBody();
   const box = _tabmgrMediaBox();
@@ -1455,15 +2148,39 @@ function _tabmgrMediaRenderPlayer() {
   const playing = !!(state && state.playing);
 
   const mp = document.createElement("div");
-  mp.className = "tabmgr-mp";
+  mp.className = "tabmgr-mp is-mode-" + (tabmgrMediaCustom.posterMode || "vinyl") + (playing ? " is-playing" : "");
+  mp.style.setProperty("--vpb-color", tabmgrMediaCustom.vpbColor || "#ef4444");
+  mp.style.setProperty("--vinyl-color", tabmgrMediaCustom.vinylColor || "#111827");
 
-  // --- top: sleeve (cover + thumbnail) + vinyl half-out + info + play/pause ---
+  // --- top: sleeve (cover + thumbnail) + vinyl half-out + tonearm + info + play/pause ---
   const top = document.createElement("div");
   top.className = "tabmgr-mp-top";
 
   const vinyl = document.createElement("div");
   vinyl.className = "tabmgr-mp-vinyl" + (playing ? " is-spin" : "");
   vinyl.dataset.style = tabmgrMedia.vinylStyle || 0;
+  if (tabmgrMediaCustom.vinylColor && tabmgrMediaCustom.vinylColor !== "#111827") {
+    vinyl.classList.add("has-custom-color");
+  }
+  if (tabmgrMediaCustom.customVinylSvg) {
+    vinyl.classList.add("has-custom-svg");
+    const svgImg = document.createElement("img");
+    svgImg.className = "tabmgr-mp-vinyl-svg-img";
+    svgImg.src = tabmgrMediaCustom.customVinylSvg;
+    vinyl.appendChild(svgImg);
+  }
+  const artwork = _tabmgrMediaArtWork(state);
+  const isDiscWithArt = (tabmgrMediaCustom.posterMode !== "ambient");
+  if (!tabmgrMediaCustom.customVinylSvg && artwork && isDiscWithArt) {
+    const artImg = document.createElement("img");
+    artImg.className = "tabmgr-mp-vinyl-art";
+    artImg.src = artwork;
+    vinyl.appendChild(artImg);
+  }
+  vinyl.style.cursor = "pointer";
+  vinyl.style.pointerEvents = "auto";
+  vinyl.title = t("tabmgr_media_btn_customize");
+  vinyl.addEventListener("click", _tabmgrOpenMediaSettings);
 
   const cover = document.createElement("div");
   cover.className = "tabmgr-mp-cover";
@@ -1473,12 +2190,24 @@ function _tabmgrMediaRenderPlayer() {
     cover.addEventListener("click", function () { _tabmgrMediaStep(1); });
     _tabmgrMediaCoverStack(cover);
   } else {
-    const artwork = _tabmgrMediaArtWork(state);
     if (artwork) {
       cover.classList.add("is-artwork");
       cover.appendChild(_tabmgrMediaArtEl(artwork));
     }
   }
+
+  // Tonearm for Turntable mode
+  const tonearm = document.createElement("div");
+  tonearm.className = "tabmgr-mp-tonearm" + (playing ? " is-playing" : "");
+  const pivot = document.createElement("div");
+  pivot.className = "tabmgr-mp-tonearm-pivot";
+  const arm = document.createElement("div");
+  arm.className = "tabmgr-mp-tonearm-arm";
+  const head = document.createElement("div");
+  head.className = "tabmgr-mp-tonearm-head";
+  tonearm.appendChild(pivot);
+  tonearm.appendChild(arm);
+  tonearm.appendChild(head);
 
   const info = document.createElement("div");
   info.className = "tabmgr-mp-info";
@@ -1508,8 +2237,9 @@ function _tabmgrMediaRenderPlayer() {
   info.appendChild(titleEl);
   info.appendChild(artistEl);
 
-  top.appendChild(vinyl);
   top.appendChild(cover);
+  top.appendChild(vinyl);
+  top.appendChild(tonearm);
   top.appendChild(info);
 
   // --- seek row: video-style playback progress bar (agent-backed only) ---
@@ -1567,15 +2297,8 @@ function _tabmgrMediaRenderPlayer() {
   const openBtn = _tabmgrMediaSvgBtn("M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3", t("tabmgr_media_open_tab"), "tabmgr-mp-tbtn");
   openBtn.addEventListener("click", function () { if (tabmgrMedia.sourceTabId) tabmgrActivateTab(tabmgrMedia.sourceTabId); });
   
-  const vinylBtn = _tabmgrMediaSvgBtn("M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6zM12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z", "Đổi đĩa than", "tabmgr-mp-tbtn tabmgr-mp-vinyl-toggle");
-  vinylBtn.addEventListener("click", function () {
-    let cur = tabmgrMedia.vinylStyle || 0;
-    cur = (cur + 1) % 5;
-    tabmgrMedia.vinylStyle = cur;
-    const vEl = mp.querySelector(".tabmgr-mp-vinyl");
-    if (vEl) vEl.dataset.style = cur;
-    storSet({ sf_tabmgr_vinyl_style: cur });
-  });
+  const vinylBtn = _tabmgrMediaSvgBtn("M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6zM12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z", t("tabmgr_media_btn_customize"), "tabmgr-mp-tbtn tabmgr-mp-vinyl-toggle");
+  vinylBtn.addEventListener("click", _tabmgrOpenMediaSettings);
 
   toolsR.appendChild(muteBtn);
   toolsR.appendChild(vinylBtn);
@@ -1594,12 +2317,25 @@ function _tabmgrMediaRenderPlayer() {
     pipBtn.addEventListener("click", _tabmgrMediaOnPip);
     toolsR.appendChild(pipBtn);
   }
+  if (_tabmgrMediaIsMulti()) {
+    const trayBtn = _tabmgrMediaSvgBtn(
+      "M4 6h16M4 12h16M4 18h7",
+      t("tabmgr_media_tray_toggle", null, [(tabmgrMedia.sources || []).length]),
+      "tabmgr-mp-tbtn tabmgr-mp-tray-toggle" + (tabmgrMedia.trayOpen ? " is-active" : "")
+    );
+    trayBtn.addEventListener("click", _tabmgrMediaToggleTray);
+    toolsR.appendChild(trayBtn);
+  }
   toolsR.appendChild(openBtn);
   tools.appendChild(toolsL);
   tools.appendChild(toolsR);
 
   mp.appendChild(top);
   mp.appendChild(tools);
+  if (_tabmgrMediaIsMulti()) {
+    const trayEl = _tabmgrMediaRenderTray();
+    if (trayEl) mp.appendChild(trayEl);
+  }
   body.appendChild(mp);
 
   _tabmgrMediaPatchPlayer();
@@ -1608,13 +2344,18 @@ function _tabmgrMediaRenderPlayer() {
 function _tabmgrMediaPatchPlayer() {
   const mp = document.querySelector("#tabmgr-media-body .tabmgr-mp");
   if (!mp) return;
+  _tabmgrApplyCustomToPlayer();
   const state = tabmgrMedia.state;
   const muted = !!(tabmgrMedia.sourceTab && tabmgrMedia.sourceTab.mutedInfo && tabmgrMedia.sourceTab.mutedInfo.muted);
   // fallback (no agent state): audible == playing until muted
   const playing = state ? !!(state.playing) : !muted;
+  mp.classList.toggle("is-playing", !!playing);
 
   const vinyl = mp.querySelector(".tabmgr-mp-vinyl");
   if (vinyl) vinyl.classList.toggle("is-spin", !!playing);
+
+  const tonearm = mp.querySelector(".tabmgr-mp-tonearm");
+  if (tonearm) tonearm.classList.toggle("is-playing", !!playing);
 
   const eq = mp.querySelector(".tabmgr-mp-eq");
   if (eq) eq.classList.toggle("is-stop", !playing);
@@ -1658,7 +2399,13 @@ function _tabmgrMediaPatchPlayer() {
 
   const countBtn = mp.querySelector(".tabmgr-mp-count");
   const n = (tabmgrMedia.sources || []).length;
-  if (countBtn) countBtn.textContent = (tabmgrMedia.index + 1) + "/" + n;
+  if (countBtn) {
+    countBtn.textContent = (tabmgrMedia.index + 1) + "/" + n;
+  }
+  const trayBtn = mp.querySelector(".tabmgr-mp-tray-toggle");
+  if (trayBtn) {
+    trayBtn.classList.toggle("is-active", !!tabmgrMedia.trayOpen);
+  }
   const cover = mp.querySelector(".tabmgr-mp-cover");
   if (cover) cover.classList.toggle("is-multi", n > 1);
 
@@ -1677,11 +2424,18 @@ function _tabmgrMediaPatchPlayer() {
 
 onReady(function () {
   // Music player banner: restore pref + bind the on/off switch
-  storGet([TABMGR_MEDIA_KEY, "sf_tabmgr_vinyl_style"], function (res) {
+  storGet([TABMGR_MEDIA_KEY, "sf_tabmgr_vinyl_style", TABMGR_MEDIA_CUSTOM_KEY], function (res) {
     const v = res && res[TABMGR_MEDIA_KEY];
     tabmgrMedia.enabled = v === undefined ? true : !!v;
     tabmgrMedia.vinylStyle = res && res.sf_tabmgr_vinyl_style || 0;
+    if (res && res[TABMGR_MEDIA_CUSTOM_KEY]) {
+      tabmgrMediaCustom = Object.assign({}, DEFAULT_MEDIA_CUSTOM, res[TABMGR_MEDIA_CUSTOM_KEY]);
+      if (tabmgrMediaCustom.posterMode === "minimal") {
+        tabmgrMediaCustom.posterMode = "vinyl";
+      }
+    }
     _tabmgrMediaApplyUI();
+    _tabmgrInitMediaSettingsModal();
     if (tabmgrMedia.enabled) _tabmgrMediaPoll();
   });
   const mediaCheck = document.getElementById("tabmgr-media-check");

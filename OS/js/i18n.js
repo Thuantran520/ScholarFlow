@@ -24,6 +24,10 @@ try { window.I18N_DATA = I18N_DATA; } catch (e) {}
  * 1. Target lang -> 2. English -> 3. Vietnamese -> 4. Key itself
  */
 function t(key, lang = null, params = null) {
+  if (lang && typeof lang !== "string") {
+    params = lang;
+    lang = null;
+  }
   const l = lang || (typeof currentAppLanguage !== 'undefined' ? currentAppLanguage : "vi");
   let text = "";
   if (I18N_DATA[l] && I18N_DATA[l][key] !== undefined) {

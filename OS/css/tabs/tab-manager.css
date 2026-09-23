@@ -694,6 +694,10 @@
   overflow: visible;
 }
 
+.tabmgr-mp-cover.is-open {
+  z-index: 20;
+}
+
 .tabmgr-mp-cover::after {
   content: "";
   position: absolute;
@@ -712,6 +716,8 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  user-select: none;
+  -webkit-user-select: none;
   display: block;
   filter: saturate(1.18) contrast(1.06) brightness(1.03);
 }
@@ -810,12 +816,12 @@
   pointer-events: none;
 }
 
-/* Black vinyl: nestled inside the sleeve (smaller than the jacket), half-out spin */
+/* Black vinyl: sits on top of sleeve, half-out spin over cover */
 .tabmgr-mp-vinyl {
   position: absolute;
   left: 27px;
   top: 2px;
-  z-index: 1;
+  z-index: 5;
   width: 46px;
   height: 46px;
   border-radius: 50%;
@@ -824,7 +830,7 @@
     repeating-radial-gradient(circle at 50% 50%, #101a26 0 2px, #2b4159 2px 4px, #16222f 4px 6px),
     radial-gradient(circle at 50% 50%, #0f1a27 0 62%, #233a52 100%);
   border: 1px solid rgba(255, 255, 255, 0.26);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55), inset 0 0 8px rgba(0, 0, 0, 0.65);
+  box-shadow: -2px 3px 10px rgba(0, 0, 0, 0.65), 0 2px 6px rgba(0, 0, 0, 0.5), inset 0 0 8px rgba(0, 0, 0, 0.65);
 }
 
 /* two-tone record label: rotation actually visible as it spins */
@@ -852,6 +858,21 @@
   border-radius: 50%;
   background: #0b1220;
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.75);
+  z-index: 5;
+}
+
+.tabmgr-mp-vinyl-art {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  border-radius: 50%;
+  object-fit: cover;
+  z-index: 2;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
 }
 
 .tabmgr-mp-vinyl.is-spin {
@@ -925,43 +946,47 @@
 }
 
 .tabmgr-mp-now {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #38bdf8;
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.6px;
+  gap: 6px;
+  text-shadow: 0 0 6px rgba(56, 189, 248, 0.4);
+  letter-spacing: 0.5px;
   text-transform: uppercase;
-  color: #38bdf8;
 }
 
 .tabmgr-mp-eq {
   display: inline-flex;
   align-items: flex-end;
-  gap: 2px;
-  height: 8px;
+  gap: 3px;
+  height: 10px;
   flex-shrink: 0;
 }
 
 .tabmgr-mp-eq span {
-  width: 2px;
-  border-radius: 1px;
+  width: 3px;
+  border-radius: 2px;
   background: #38bdf8;
-  animation: tabmgrEq 1s ease-in-out infinite;
+  box-shadow: 0 0 5px rgba(56, 189, 248, 0.6);
+  animation: tabmgrEq 1.2s ease-in-out infinite;
 }
 
 .tabmgr-mp-eq span:nth-child(2) { animation-delay: 0.2s; }
-.tabmgr-mp-eq span:nth-child(3) { animation-delay: 0.35s; }
-.tabmgr-mp-eq span:nth-child(4) { animation-delay: 0.5s; }
+.tabmgr-mp-eq span:nth-child(3) { animation-delay: 0.4s; }
+.tabmgr-mp-eq span:nth-child(4) { animation-delay: 0.6s; }
 
 .tabmgr-mp-eq.is-stop span {
   animation-play-state: paused;
-  height: 2px;
+  height: 3px;
+  opacity: 0.6;
+  box-shadow: none;
 }
 
 @keyframes tabmgrEq {
-  0%, 100% { height: 2px; }
-  50% { height: 8px; }
+  0%, 100% { height: 3px; }
+  50% { height: 10px; }
 }
 
 .tabmgr-mp-title {
@@ -1041,11 +1066,15 @@
   left: 3px;
   bottom: 3px;
   width: min(var(--e), calc(100% - 5px));
-  background: #f00;
+  background: var(--vpb-color, #ef4444);
   border-radius: 5px;
   pointer-events: none;
   overflow: visible;
   transition: none;
+}
+
+.tabmgr-vpb.at-live-edge .tabmgr-vpb-elapsed {
+  width: calc(100% - 6px);
 }
 
 .tabmgr-vpb.is-dragging .tabmgr-vpb-elapsed {
@@ -1070,43 +1099,32 @@
   color: #fff;
   mix-blend-mode: normal;
   isolation: isolate;
+  cursor: default;
   pointer-events: none;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
 }
 
-/* Live stream: full-red bar, pulsing LIVE badge, no seek affordances. */
-.tabmgr-vpb.is-live {
-  cursor: default;
+.tabmgr-jump-live {
+  pointer-events: auto;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 600;
+  margin-left: 2px;
+  transition: all 0.2s ease;
 }
-.tabmgr-vpb.is-live .tabmgr-vpb-time {
+
+.tabmgr-jump-live:hover {
+  color: #ffffff;
+}
+
+.tabmgr-vpb.at-live-edge .tabmgr-jump-live {
   color: #ffffff;
   font-weight: 700;
-  text-shadow: none;
-  background: #ef4444;
-  padding: 0 6px;
-  border-radius: 3px;
-  height: 16px;
-  top: 50%;
-  transform: translateY(-50%);
-  display: inline-flex;
-  align-items: center;
-  font-size: 10px;
-  box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+  text-shadow: 0 0 6px rgba(255, 255, 255, 0.4);
+  cursor: default;
 }
-.tabmgr-vpb.is-live .tabmgr-vpb-time::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #ffffff;
-  margin-right: 5px;
-  animation: tabmgr-vpb-live-pulse 1.2s ease-in-out infinite;
-}
-@keyframes tabmgr-vpb-live-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.35; }
-}
-.tabmgr-vpb.is-live .tabmgr-vpb-playhead {
+
+.tabmgr-vpb.at-live-edge .tabmgr-vpb-playhead {
   display: none;
 }
 
@@ -1121,7 +1139,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #f00;
+  background: var(--vpb-color, #ef4444);
   /* Override the inherited pointer-events:none from the red track so the dot is
      grabbable + hovers. 6px visual but a 26px invisible hit area below. */
   pointer-events: auto;
@@ -1264,3 +1282,722 @@
   background: rgba(251, 191, 36, 0.1);
   border-color: rgba(251, 191, 36, 0.3);
 }
+
+/* --- Media Player Customization & Modes --- */
+.tabmgr-mp {
+  --vpb-color: #ef4444;
+  --vinyl-color: #111827;
+}
+
+/* Mode 1: Default (Classic Vinyl Sleeve - square poster sleeve with spinning vinyl disc sliding half-out) */
+.tabmgr-mp.is-mode-default .tabmgr-mp-cover {
+  margin-right: 23px;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14), 0 2px 7px -2px rgba(0, 0, 0, 0.5);
+}
+.tabmgr-mp.is-mode-default .tabmgr-mp-vinyl {
+  display: block !important;
+  left: 27px;
+  top: 2px;
+  width: 46px;
+  height: 46px;
+  z-index: 1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55), inset 0 0 8px rgba(0, 0, 0, 0.65);
+}
+
+/* Mode 2: Vinyl Record / Turntable (Poster acts as turntable plinth, disc sits directly on poster with tonearm) */
+.tabmgr-mp.is-mode-vinyl .tabmgr-mp-cover {
+  margin-right: 8px;
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+.tabmgr-mp.is-mode-vinyl .tabmgr-mp-cover .tabmgr-mp-count {
+  left: 3px;
+  bottom: 3px;
+  transform: none;
+  z-index: 10;
+  background: rgba(15, 23, 42, 0.85);
+}
+.tabmgr-mp.is-mode-vinyl .tabmgr-mp-vinyl {
+  display: block !important;
+  left: 4px;
+  top: 4px;
+  width: 42px;
+  height: 42px;
+  z-index: 5;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.75), 0 0 0 1.5px rgba(255, 255, 255, 0.35), inset 0 0 8px rgba(0, 0, 0, 0.7);
+}
+.tabmgr-mp.is-mode-vinyl .tabmgr-mp-tonearm {
+  display: block !important;
+  left: 34px;
+  top: 1px;
+  z-index: 15;
+}
+.tabmgr-mp:not(.is-mode-vinyl) .tabmgr-mp-tonearm {
+  display: none !important;
+}
+
+/* Turntable Tonearm */
+.tabmgr-mp-tonearm {
+  position: absolute;
+  left: 34px;
+  top: 1px;
+  width: 14px;
+  height: 46px;
+  pointer-events: none;
+  z-index: 15;
+  transform-origin: 7px 4px;
+  transform: rotate(-18deg);
+  transition: transform 0.65s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.tabmgr-mp.is-playing .tabmgr-mp-tonearm,
+.tabmgr-mp-tonearm.is-playing {
+  transform: rotate(16deg);
+}
+.tabmgr-mp-tonearm-pivot {
+  position: absolute;
+  left: 3px;
+  top: 0px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #f1f5f9 0%, #64748b 60%, #1e293b 100%);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.4);
+}
+.tabmgr-mp-tonearm-arm {
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  width: 2px;
+  height: 26px;
+  background: linear-gradient(to right, #f8fafc, #94a3b8);
+  border-radius: 1px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+.tabmgr-mp-tonearm-head {
+  position: absolute;
+  left: 4px;
+  top: 30px;
+  width: 6px;
+  height: 9px;
+  background: linear-gradient(135deg, #f59e0b, #b45309);
+  border-radius: 1px 1px 2px 2px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+/* Mode 3: CD Player (Spinning compact disc with printed thumbnail, no left cover) */
+.tabmgr-mp.is-mode-cd .tabmgr-mp-cover {
+  display: none !important;
+}
+.tabmgr-mp.is-mode-cd .tabmgr-mp-vinyl {
+  display: block !important;
+  position: relative;
+  left: 0;
+  top: 0;
+  width: 50px;
+  height: 50px;
+  margin-right: 12px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5), inset 0 0 6px rgba(255, 255, 255, 0.4);
+  background:
+    radial-gradient(circle at 50% 50%, #000 0 5px, rgba(255,255,255,0.7) 5px 6px, transparent 6px 13px, rgba(255,255,255,0.5) 13px 14px, #334155 14px),
+    conic-gradient(from 45deg, #cbd5e1 0deg, #94a3b8 60deg, #f8fafc 120deg, #64748b 180deg, #e2e8f0 240deg, #94a3b8 300deg, #cbd5e1 360deg);
+}
+.tabmgr-mp.is-mode-cd .tabmgr-mp-vinyl-art {
+  width: 100%;
+  height: 100%;
+  left: 0;
+  top: 0;
+  margin: 0;
+  border-radius: 50%;
+  object-fit: cover;
+  z-index: 1;
+  mask-image: radial-gradient(circle at 50% 50%, transparent 0 6px, #000 7px);
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent 0 6px, #000 7px);
+}
+.tabmgr-mp.is-mode-cd .tabmgr-mp-vinyl::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border-radius: 50%;
+  background: conic-gradient(from 45deg, rgba(255,255,255,0.3) 0deg, rgba(239,68,68,0.25) 60deg, rgba(59,130,246,0.25) 120deg, rgba(16,185,129,0.25) 180deg, rgba(250,204,21,0.25) 240deg, rgba(168,85,247,0.25) 300deg, rgba(255,255,255,0.3) 360deg);
+  mix-blend-mode: color-dodge;
+  pointer-events: none;
+  z-index: 2;
+  box-shadow: none;
+}
+.tabmgr-mp.is-mode-cd .tabmgr-mp-vinyl::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, #0f172a 0 5px, rgba(255,255,255,0.6) 5px 6px);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), inset 0 0 3px rgba(0, 0, 0, 0.8);
+  z-index: 3;
+}
+
+/* Mode 4: Ambient Glow (Blurred cover background + sharp center art) */
+.tabmgr-mp.is-mode-ambient {
+  position: relative;
+  overflow: hidden;
+}
+.tabmgr-mp.is-mode-ambient .tabmgr-mp-vinyl {
+  display: none !important;
+}
+.tabmgr-mp.is-mode-ambient .tabmgr-mp-cover {
+  margin-right: 12px;
+  border-radius: 8px;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.35), 0 4px 12px rgba(0, 0, 0, 0.6);
+}
+.tabmgr-mp.is-mode-ambient .tabmgr-mp-stage {
+  margin-right: 12px;
+}
+
+/* Custom Vinyl Color & SVG Support */
+.tabmgr-mp-vinyl.has-custom-color {
+  background:
+    repeating-radial-gradient(circle at 50% 50%, var(--vinyl-color) 0 2px, rgba(255,255,255,0.06) 2px 4px, var(--vinyl-color) 4px 6px),
+    radial-gradient(circle at 50% 50%, var(--vinyl-color) 0 62%, rgba(0,0,0,0.6) 100%) !important;
+}
+.tabmgr-mp-vinyl.has-custom-svg {
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+.tabmgr-mp-vinyl.has-custom-svg::before,
+.tabmgr-mp-vinyl.has-custom-svg::after {
+  display: none !important;
+}
+.tabmgr-mp-vinyl-svg-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Media Settings Modal Grid & Controls */
+.tabmgr-mode-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+}
+
+.tabmgr-mode-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.tabmgr-mode-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(56, 189, 248, 0.4);
+  color: #f1f5f9;
+  transform: translateY(-1px);
+}
+
+.tabmgr-mode-btn.is-active {
+  background: rgba(56, 189, 248, 0.14);
+  border-color: #38bdf8;
+  color: #38bdf8;
+  font-weight: 700;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
+}
+
+.tabmgr-mode-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  line-height: 1;
+}
+.tabmgr-mode-icon svg {
+  display: block;
+  stroke: currentColor;
+}
+
+.tabmgr-mode-label {
+  font-size: 11px;
+}
+
+.tabmgr-color-swatches {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tabmgr-color-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tabmgr-color-dot:hover {
+  transform: scale(1.15);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+}
+
+.tabmgr-color-dot.is-selected {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* Dynamic RGB Progress Bar Effects */
+@keyframes tabmgrRgbFlow {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+.tabmgr-vpb-elapsed.is-fx-rainbow {
+  background: linear-gradient(90deg, #f43f5e, #ec4899, #8b5cf6, #3b82f6, #06b6d4, #10b981, #eab308, #f97316, #f43f5e) !important;
+  background-size: 200% 100% !important;
+  animation: tabmgrRgbFlow 3s linear infinite !important;
+  box-shadow: 0 0 10px rgba(236, 72, 153, 0.5);
+}
+
+.tabmgr-vpb-elapsed.is-fx-cyberpunk {
+  background: linear-gradient(90deg, #00f0ff, #7000ff, #ff007b, #00f0ff) !important;
+  background-size: 200% 100% !important;
+  animation: tabmgrRgbFlow 2.5s linear infinite !important;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+}
+
+.tabmgr-vpb-elapsed.is-fx-sunset {
+  background: linear-gradient(90deg, #ff416c, #ff4b2b, #f9d423, #ff416c) !important;
+  background-size: 200% 100% !important;
+  animation: tabmgrRgbFlow 3s linear infinite !important;
+  box-shadow: 0 0 10px rgba(255, 75, 43, 0.5);
+}
+
+.tabmgr-vpb-elapsed.is-fx-aurora {
+  background: linear-gradient(90deg, #0575e6, #00f260, #10b981, #0575e6) !important;
+  background-size: 200% 100% !important;
+  animation: tabmgrRgbFlow 3.5s linear infinite !important;
+  box-shadow: 0 0 10px rgba(0, 242, 96, 0.5);
+}
+
+.tabmgr-vpb-elapsed.is-fx-cosmic {
+  background: linear-gradient(90deg, #8a2387, #e94057, #f27121, #8a2387) !important;
+  background-size: 200% 100% !important;
+  animation: tabmgrRgbFlow 3s linear infinite !important;
+  box-shadow: 0 0 10px rgba(233, 64, 87, 0.5);
+}
+
+.tabmgr-fx-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  width: 100%;
+}
+
+.tabmgr-fx-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tabmgr-fx-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #f1f5f9;
+}
+
+.tabmgr-fx-btn.is-active {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: #ef4444;
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.3);
+}
+
+.tabmgr-fx-preview {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.tabmgr-fx-p-none { background: #ef4444; }
+.tabmgr-fx-p-rainbow { background: linear-gradient(135deg, #f43f5e, #8b5cf6, #10b981); }
+.tabmgr-fx-p-cyberpunk { background: linear-gradient(135deg, #00f0ff, #7000ff, #ff007b); }
+.tabmgr-fx-p-sunset { background: linear-gradient(135deg, #ff416c, #ff4b2b, #f9d423); }
+.tabmgr-fx-p-aurora { background: linear-gradient(135deg, #0575e6, #00f260); }
+.tabmgr-fx-p-cosmic { background: linear-gradient(135deg, #8a2387, #e94057, #f27121); }
+
+/* --- Multi-Tab Smart Media Tray & Vinyl Shelf --- */
+.tabmgr-mp-tray {
+  margin-top: 8px;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px 10px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  animation: tabmgrTraySlide 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes tabmgrTraySlide {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.tabmgr-mp-tray-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-wrap: wrap;
+}
+
+.tabmgr-mp-tray-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #38bdf8;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.tabmgr-mp-tray-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.tabmgr-mp-tray-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2.5px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: #cbd5e1;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+.tabmgr-mp-tray-btn svg {
+  flex-shrink: 0;
+}
+
+.tabmgr-mp-tray-btn:hover {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: rgba(56, 189, 248, 0.4);
+  color: #f0f9ff;
+}
+
+.tabmgr-mp-tray-solo:hover {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #fecaca;
+}
+
+.tabmgr-mp-tray-close {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.tabmgr-mp-tray-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+/* Shelf View: Horizontal Vinyl Strip */
+.tabmgr-mp-shelf {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 2px 6px 2px;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tabmgr-mp-shelf::-webkit-scrollbar {
+  height: 4px;
+}
+.tabmgr-mp-shelf::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 2px;
+}
+.tabmgr-mp-shelf::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+}
+.tabmgr-mp-shelf::-webkit-scrollbar-thumb:hover {
+  background: rgba(56, 189, 248, 0.5);
+}
+
+.tabmgr-mp-shelf-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+  user-select: none;
+}
+.tabmgr-mp-shelf-item:hover {
+  transform: translateY(-2px);
+}
+
+.tabmgr-mp-shelf-disc {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background:
+    repeating-radial-gradient(circle at 50% 50%, #101a26 0 2px, #2b4159 2px 4px, #16222f 4px 6px),
+    radial-gradient(circle at 50% 50%, #0f1a27 0 62%, #233a52 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.tabmgr-mp-shelf-item.is-active .tabmgr-mp-shelf-disc {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.6), 0 3px 8px rgba(0, 0, 0, 0.6);
+}
+
+.tabmgr-mp-shelf-item.is-playing .tabmgr-mp-shelf-disc {
+  border-color: #22c55e;
+}
+
+.tabmgr-mp-shelf-disc.is-spin {
+  animation: tabmgrMediaSpin 4s linear infinite;
+}
+
+.tabmgr-mp-shelf-art {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+}
+
+.tabmgr-mp-shelf-ph {
+  font-size: 11px;
+  font-weight: 700;
+  color: #cbd5e1;
+}
+
+.tabmgr-mp-shelf-eq {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  z-index: 5;
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 1.5px;
+  height: 8px;
+  background: rgba(15, 23, 42, 0.85);
+  padding: 1px 3px;
+  border-radius: 4px;
+  border: 1px solid rgba(34, 197, 94, 0.5);
+}
+.tabmgr-mp-shelf-eq span {
+  width: 2px;
+  background: #22c55e;
+  border-radius: 1px;
+  animation: tabmgrEq 1.1s ease-in-out infinite;
+}
+.tabmgr-mp-shelf-eq span:nth-child(2) { animation-delay: 0.2s; }
+.tabmgr-mp-shelf-eq span:nth-child(3) { animation-delay: 0.4s; }
+
+.tabmgr-mp-shelf-paused {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  z-index: 5;
+  width: 12px;
+  height: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.85);
+  border-radius: 3px;
+  color: #94a3b8;
+}
+.tabmgr-mp-shelf-paused svg {
+  width: 8px;
+  height: 8px;
+}
+
+.tabmgr-mp-shelf-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: #94a3b8;
+}
+.tabmgr-mp-shelf-item.is-active .tabmgr-mp-shelf-label {
+  color: #38bdf8;
+}
+
+/* Detailed List View */
+.tabmgr-mp-tray-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 180px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+.tabmgr-mp-tray-list::-webkit-scrollbar {
+  width: 4px;
+}
+.tabmgr-mp-tray-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+}
+
+.tabmgr-mp-tray-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.tabmgr-mp-tray-row:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.tabmgr-mp-tray-row.is-active {
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.35);
+}
+
+.tabmgr-mp-tray-thumb {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #1e293b;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tabmgr-mp-tray-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.tabmgr-mp-tray-thumb span {
+  font-size: 11px;
+  font-weight: 700;
+  color: #cbd5e1;
+}
+
+.tabmgr-mp-tray-meta {
+  flex: 1;
+  min-width: 0;
+}
+.tabmgr-mp-tray-item-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tabmgr-mp-tray-row.is-active .tabmgr-mp-tray-item-title {
+  color: #38bdf8;
+  font-weight: 700;
+}
+.tabmgr-mp-tray-item-sub {
+  font-size: 9.5px;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tabmgr-mp-tray-ops {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.tabmgr-mp-tray-op-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: #cbd5e1;
+  font-size: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: all 0.12s ease;
+}
+.tabmgr-mp-tray-op-btn:hover {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: rgba(56, 189, 248, 0.4);
+  color: #fff;
+}
+.tabmgr-mp-tray-op-btn.is-close:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+}
+
