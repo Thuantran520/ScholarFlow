@@ -5,6 +5,13 @@ Tất cả thay đổi đáng chú ý của dự án đều được ghi tại �
 
 ---
 
+## [2.5.3] - 2026-09-24
+### Added
+- Tính năng Dịch học thuật thông minh (Smart Paragraph Translation) với 2 chế độ: Google Translate (nhanh, cả trang) và Local AI (dịch nội bộ 100%, bảo mật, bôi đen). (Đang phát triển)
+
+### Fixed
+- Sửa lỗi thanh công cụ Snipping (`#super-snip-toolbar`) bị trôi ra ngoài màn hình khi vẽ khung chọn sát lề hoặc quá nhỏ (Smart Collision Detection).
+
 ## [2.5.2] - 2026-09-22
 
 ### 🐛 Bản vá lỗi (Patch) — sửa logic lõi & đồng bộ phiên bản
