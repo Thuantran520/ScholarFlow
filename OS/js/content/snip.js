@@ -129,11 +129,50 @@ function onBoxEstablished() {
       snipSizeBadgeEl.textContent = `${snipActiveRect.width} × ${snipActiveRect.height} px`;
     }
     if (snipToolbarEl) {
-      if (snipActiveRect.top + snipActiveRect.height + 54 > window.innerHeight) {
-        snipToolbarEl.classList.add("toolbar-top");
-      } else {
-        snipToolbarEl.classList.remove("toolbar-top");
+      // Force toolbar to be fixed to break out of any relative positioning issues
+      snipToolbarEl.style.position = 'fixed';
+      
+      const margin = 8;
+      // Estimate toolbar dimensions if not fully rendered yet
+      const tbW = snipToolbarEl.offsetWidth || 180;
+      const tbH = snipToolbarEl.offsetHeight || 44;
+      const winW = window.innerWidth;
+      const winH = window.innerHeight;
+
+      // Default position: Bottom-Right of the selection
+      let top = snipActiveRect.top + snipActiveRect.height + margin;
+      let left = snipActiveRect.left + snipActiveRect.width - tbW;
+
+      // Vertical Collision (Off bottom edge)
+      if (top + tbH > winH - margin) {
+        // Try placing it above the box
+        top = snipActiveRect.top - tbH - margin;
+        if (top < margin) {
+          // If it also overflows the top, place it inside the box at the bottom
+          top = snipActiveRect.top + snipActiveRect.height - tbH - margin;
+          if (top < margin) top = margin; // Absolute fallback
+        }
       }
+
+      // Horizontal Collision (Off left edge)
+      if (left < margin) {
+        left = snipActiveRect.left; // Align to left edge of the box
+        if (left + tbW > winW - margin) {
+          left = margin; // Box is wider than screen? Force to left margin
+        }
+      } 
+      // Horizontal Collision (Off right edge)
+      else if (left + tbW > winW - margin) {
+        left = winW - tbW - margin;
+      }
+
+      snipToolbarEl.style.left = `${left}px`;
+      snipToolbarEl.style.top = `${top}px`;
+      snipToolbarEl.style.right = 'auto';
+      snipToolbarEl.style.bottom = 'auto';
+      
+      // Cleanup old classes just in case
+      snipToolbarEl.classList.remove("toolbar-top");
     }
   }
 
