@@ -250,10 +250,10 @@ async function main() {
     const navCount = w.document.querySelectorAll(".main-nav-btn").length;
     const tabCount = w.document.querySelectorAll(".tab-section").length;
     const ids = [...w.document.querySelectorAll(".main-nav-btn")].map(b => b.dataset.target);
-    check(navCount === 17, `17 nav buttons (found ${navCount})`);
-    check(tabCount === 17, `17 tab sections (found ${tabCount})`);
-    check(["tab-cite", "tab-ai", "tab-flow", "tab-redact", "tab-capture", "tab-cookie", "tab-autofill", "tab-todo", "tab-pomo", "tab-cal", "tab-tabmgr", "tab-testhelper", "tab-security", "tab-social", "tab-lingua", "tab-dm", "tab-qr"].every(t => ids.includes(t)),
-      `all 17 targets present in nav: ${ids.join(",")}`);
+    check(navCount === 18, `18 nav buttons (found ${navCount})`);
+    check(tabCount === 18, `18 tab sections (found ${tabCount})`);
+    check(["tab-cite", "tab-ai", "tab-flow", "tab-redact", "tab-capture", "tab-cookie", "tab-autofill", "tab-todo", "tab-pomo", "tab-cal", "tab-tabmgr", "tab-testhelper", "tab-security", "tab-social", "tab-lingua", "tab-dm", "tab-scratchpad"].every(t => ids.includes(t)),
+      `all 18 targets present in nav: ${ids.join(",")}`);
   }
 
   // 1c. Tab-manager music player banner (local media agent + on/off pref)
@@ -1611,7 +1611,7 @@ async function main() {
       return d.window;
     };
     const cases = [
-      ["https://arxiv.org/abs/1706.03762", "academic"],
+      ["https://arxiv.org/abs/1806.03762", "academic"],
       ["https://pubmed.ncbi.nlm.nih.gov/12345/", "academic"],
       ["https://openreview.net/forum?id=abc", "conference"],
       ["https://github.com/org/repo", "software"]
@@ -2324,7 +2324,7 @@ async function main() {
         "sidebar: agentic video gated to the 3.5/3.6/3.7/3.8 family only");
       check(await w.eval(`(function(){var A=aiVideoContents("vid1","h\u1ecfi",[],false,true); var a=A[A.length-1].parts[0]; var B=aiVideoContents("vid1","h\u1ecfi",[],false,false); var b=B[B.length-1].parts[0]; return a.mediaProcessing==="AGENTIC" && b.mediaProcessing===undefined && a.fileData.fileUri.indexOf("vid1")!==-1;})()`),
         "sidebar: agentic mode tags the video part mediaProcessing=AGENTIC (static/short leaves it off)");
-      check(await w.eval(`(function(){var AG=["gemini-3.8-flash","gemini-3.7-flash","gemini-3.1-flash-lite","gemini-2.5-flash"]; var L=aiPickVideoModel(1740,AG); var S=aiPickVideoModel(60,AG); var NONE=aiPickVideoModel(1740,["gemini-2.5-flash","gemini-2.5-flash-lite"]); return L.agentic===true && L.model==="gemini-3.5-flash-lite" && S.agentic===false && S.model==="gemini-3.5-flash-lite" && NONE.agentic===true && NONE.model==="gemini-3.5-flash-lite";})()`),
+      check(await w.eval(`(function(){var AG=["gemini-3.8-flash","gemini-3.7-flash","gemini-3.1-flash-lite","gemini-2.5-flash"]; var L=aiPickVideoModel(1840,AG); var S=aiPickVideoModel(60,AG); var NONE=aiPickVideoModel(1840,["gemini-2.5-flash","gemini-2.5-flash-lite"]); return L.agentic===true && L.model==="gemini-3.5-flash-lite" && S.agentic===false && S.model==="gemini-3.5-flash-lite" && NONE.agentic===true && NONE.model==="gemini-3.5-flash-lite";})()`),
         `sidebar: long video auto-picks the agentic-capable default (gemini-3.5-flash-lite); short / unsupported-avail cases keep the user's model`);
       check(await w.eval(`aiSettings.autoVideo===true && !!document.getElementById("ai-opt-autovideo")`),
         "sidebar: 'auto-watch open video' is on by default and its checkbox is wired");
@@ -2804,22 +2804,22 @@ async function main() {
 
     // --- Main-nav tab reorder ---
     const navDefault = w.sfNavGetOrder();
-    check(Array.isArray(navDefault) && navDefault.length === 17 && navDefault[0] === "tab-cite" &&
-      navDefault[navDefault.length - 1] === "tab-qr",
-      `nav order initialized with 17 default targets (got ${navDefault.length})`);
+    check(Array.isArray(navDefault) && navDefault.length === 18 && navDefault[0] === "tab-cite" &&
+      navDefault[navDefault.length - 1] === "tab-scratchpad",
+      `nav order initialized with 18 default targets (got ${navDefault.length})`);
     const rev = w.sfNavReorder(navDefault.slice().reverse());
     const domNav = [...w.document.querySelectorAll("#nav-wrapper .main-nav-btn")].map(b => b.dataset.target);
-    check(rev && rev[0] === "tab-qr" && rev[rev.length - 1] === "tab-cite" &&
+    check(rev && rev[0] === "tab-scratchpad" && rev[rev.length - 1] === "tab-cite" &&
       domNav.join() === rev.join(),
       `nav DOM order follows the reversed order (first=${domNav[0]}, last=${domNav[domNav.length - 1]})`);
     const storedNav = (await w.chrome.storage.local.get("sf_nav_settings")).sf_nav_settings;
-    check(!!storedNav && Array.isArray(storedNav.order) && storedNav.order[0] === "tab-qr",
+    check(!!storedNav && Array.isArray(storedNav.order) && storedNav.order[0] === "tab-scratchpad",
       "nav order persisted to sf_nav_settings");
 
     gear.click();
     await new Promise(r => setTimeout(r, 40));
-    check(w.document.querySelectorAll("#hdrs-nav-list .hdrs-item-row").length === 17,
-      `modal renders 17 nav order rows (got ${w.document.querySelectorAll("#hdrs-nav-list .hdrs-item-row").length})`);
+    check(w.document.querySelectorAll("#hdrs-nav-list .hdrs-item-row").length === 18,
+      `modal renders 18 nav order rows (got ${w.document.querySelectorAll("#hdrs-nav-list .hdrs-item-row").length})`);
     const rowMid = w.document.querySelector('#hdrs-nav-list [data-nav-target="tab-ai"]');
     const downBtn = rowMid ? [...rowMid.querySelectorAll(".hdrs-ico-btn")][1] : null;
     check(!!rowMid && !!downBtn && !downBtn.disabled,
@@ -2831,7 +2831,7 @@ async function main() {
       check(afterClick.indexOf("tab-ai") === afterClick.length - 1,
         `down-arrow moves the row (tab-ai now last, got idx ${afterClick.indexOf("tab-ai")})`);
     }
-    const firstRowUp = w.document.querySelector('#hdrs-nav-list [data-nav-target="tab-qr"] .hdrs-ico-btn');
+    const firstRowUp = w.document.querySelector('#hdrs-nav-list [data-nav-target="tab-scratchpad"] .hdrs-ico-btn');
     check(!!firstRowUp && firstRowUp.disabled === true,
       "first nav row's up button is disabled");
     w.document.getElementById("btn-reset-header-settings").click();
@@ -2848,7 +2848,7 @@ async function main() {
   console.log("Regressing nav default active tab (restore last used / first-in-order):");
   {
     const { window: w } = await loadPage("sidebar.html", {
-      sf_nav_settings: { order: ["tab-ai", "tab-cite", "tab-qr"], active: "tab-ai" }
+      sf_nav_settings: { order: ["tab-ai", "tab-cite", "tab-scratchpad"], active: "tab-ai" }
     });
     const activeBtn = w.document.querySelector(".main-nav-btn.active");
     check(!!activeBtn && activeBtn.dataset.target === "tab-ai",
@@ -2866,10 +2866,10 @@ async function main() {
   }
   {
     const { window: w } = await loadPage("sidebar.html", {
-      sf_nav_settings: { order: ["tab-qr", "tab-ai", "tab-cite"] }
+      sf_nav_settings: { order: ["tab-scratchpad", "tab-ai", "tab-cite"] }
     });
     const activeBtn = w.document.querySelector(".main-nav-btn.active");
-    check(!!activeBtn && activeBtn.dataset.target === "tab-qr",
+    check(!!activeBtn && activeBtn.dataset.target === "tab-scratchpad",
       `no stored active -> first tab in nav order (active=${activeBtn && activeBtn.dataset.target})`);
   }
 
@@ -2881,3 +2881,4 @@ main().catch((e) => {
   console.error("FATAL:", e && e.stack || e);
   process.exit(1);
 });
+
