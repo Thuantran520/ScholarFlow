@@ -25,7 +25,7 @@
   var DEFAULT_NAV_ORDER = [
     'tab-cite', 'tab-ai', 'tab-flow', 'tab-redact', 'tab-capture', 'tab-cookie',
     'tab-autofill', 'tab-todo', 'tab-pomo', 'tab-cal', 'tab-tabmgr',
-    'tab-testhelper', 'tab-security', 'tab-social', 'tab-lingua', 'tab-dm', 'tab-qr'
+    'tab-testhelper', 'tab-security', 'tab-social', 'tab-lingua', 'tab-dm', 'tab-qr', 'tab-scratchpad'
   ];
 
   var state = null;
