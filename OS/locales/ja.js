@@ -1822,7 +1822,16 @@ window.I18N_JA = {
   "qr_bg_image": "QR背景画像 🖼️",
   "qr_remove_bg": "背景を削除",
   "qr_icon_placeholder": "絵文字/文字 (⭐, 🌿...)",
+   "nav_scratchpad": "スクラッチパッド",
+   "tip_tab_scratchpad": "フローティングスクラッチパッドとスマートハイライター",
+   "reader_mode_title": "サイバーリーダーモード",
+   "reader_mode_desc": "広告や不要な要素を排除し、ダークモードでメインテキストのみを表示します。",
+   "reader_mode_btn": "リーダーモードを有効にする",
+   "scratchpad_title": "フローティングスクラッチパッド",
+   "scratchpad_desc": "読書中にすばやくメモを取るための透明なフローティングスクラッチパッド。",
+   "scratchpad_btn": "スクラッチパッドを開く",
+   "highlighter_title": "スマートウェブハイライター",
+   "highlighter_desc": "任意のWebページのテキストをハイライトしてローカルに保存します。",
+   "highlighter_btn_on": "ハイライターを有効にする",
+   "highlighter_btn_off": "ハイライターを無効にする",
 };
-
-
-

@@ -1822,7 +1822,16 @@ window.I18N_EN = {
   "qr_bg_image": "QR Background Image 🖼️",
   "qr_remove_bg": "Remove bg",
   "qr_icon_placeholder": "Icon / Emoji (⭐, 🌿...)",
+   "nav_scratchpad": "Scratchpad",
+   "tip_tab_scratchpad": "Floating Scratchpad & Smart Highlighter",
+   "reader_mode_title": "Cyber-Reader Mode",
+   "reader_mode_desc": "Strip ads and clutter, leaving only the main text in a clean dark mode.",
+   "reader_mode_btn": "Enable Reader Mode",
+   "scratchpad_title": "Floating Scratchpad",
+   "scratchpad_desc": "A transparent floating scratchpad for quick notes while reading.",
+   "scratchpad_btn": "Open Scratchpad",
+   "highlighter_title": "Smart Web Highlighter",
+   "highlighter_desc": "Highlight text on any webpage and save locally.",
+   "highlighter_btn_on": "Enable Highlighter",
+   "highlighter_btn_off": "Disable Highlighter",
 };
-
-
-

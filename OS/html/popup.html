@@ -184,11 +184,21 @@
         <span class="nav-label" data-i18n="nav_qr">QR</span>
       </button>
 
+      <button class="main-nav-btn" data-target="tab-scratchpad" title="Sổ nháp bay & Highlight học thuật" data-i18n-title="tip_tab_scratchpad">
+        <span class="nav-icon" id="icon-tab-scratchpad"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg></span>
+        <span class="nav-label" data-i18n="nav_scratchpad">Sổ Nháp</span>
+      </button>
+
 </div>
     <button id="nav-scroll-right" class="nav-scroll-arrow" title="Cuộn phải" data-i18n-title="tip_scroll_right">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
     </button>
-  </div>
+        <button class="main-nav-btn" data-target="tab-scratchpad" title="Sổ nháp bay & Highlight học thuật" data-i18n-title="tip_tab_scratchpad">
+        <span class="nav-icon" id="icon-tab-scratchpad"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg></span>
+        <span class="nav-label" data-i18n="nav_scratchpad">Sổ Nháp</span>
+      </button>
+
+</div>
   <!-- @@NAV-END@@ -->
 
 
@@ -2509,7 +2519,20 @@
           <button type="button" id="btn-sec-clear-unlock" class="btn-text-small dm-btn" data-i18n="sec_breach_clear">Xóa site đã mở khóa</button>
         </div>
       </div>
+        <!-- Card: Cyber-Reader Mode -->
+    <div class="feature-card sec-quick-card" style="margin-top: 15px;">
+      <div class="sec-section-head">
+        <svg class="sec-section-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+        <span class="sec-section-label" data-i18n="reader_mode_title">Cyber-Reader Mode</span>
+      </div>
+      <p class="sec-page-desc" data-i18n="reader_mode_desc">Lột sạch quảng cáo, chỉ chừa lại văn bản chính với nền tối dịu mắt.</p>
+      <button type="button" id="btn-sec-reader-mode" class="sec-quick-btn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+        <span data-i18n="reader_mode_btn">Bật Chế độ đọc</span>
+      </button>
     </div>
+
+  </div>
   </div>
 
 
@@ -3275,6 +3298,24 @@
     </div>
   </div>
 
+    <div id="tab-scratchpad" class="tab-section scratchpad-tab">
+    <div class="sf-feature-card">
+      <div class="sf-feature-header">
+        <h3 data-i18n="scratchpad_title">Sổ nháp bay (Floating Scratchpad)</h3>
+      </div>
+      <p class="sf-feature-desc" data-i18n="scratchpad_desc">Sổ nháp trong suốt trôi nổi trên màn hình, giúp ghi chú nhanh khi đọc tài liệu.</p>
+      <button id="btn-toggle-scratchpad" class="flow-action-btn primary" data-i18n="scratchpad_btn">Mở Sổ nháp</button>
+    </div>
+    
+    <div class="sf-feature-card" style="margin-top: 15px;">
+      <div class="sf-feature-header">
+        <h3 data-i18n="highlighter_title">Bút Dạ Quang Học Thuật</h3>
+      </div>
+      <p class="sf-feature-desc" data-i18n="highlighter_desc">Bôi đen văn bản trên web và tô màu highlight (lưu cục bộ).</p>
+      <button id="btn-toggle-highlighter" class="flow-action-btn success" data-i18n="highlighter_btn_on">Bật Highlighter</button>
+    </div>
+  </div>
+
   <div class="footer-trust-bar">
     <div class="trust-pill" title="Phiên bản hiện tại" data-i18n-title="tip_trust_version">
       <span class="trust-dot dot-green"></span>
@@ -3339,3 +3380,5 @@
   <script src="../js/debug.js"></script>
 </body>
 </html>
+
+

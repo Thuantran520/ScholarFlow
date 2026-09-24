@@ -1822,7 +1822,16 @@ window.I18N_ZH = {
   "qr_bg_image": "QR背景图片 🖼️",
   "qr_remove_bg": "删除背景",
   "qr_icon_placeholder": "图标 / Emoji (⭐, 🌿...)",
+   "nav_scratchpad": "草稿本",
+   "tip_tab_scratchpad": "悬浮草稿本与智能高亮",
+   "reader_mode_title": "赛博阅读模式",
+   "reader_mode_desc": "去除广告和杂乱内容，只保留暗黑模式下的主文本。",
+   "reader_mode_btn": "开启阅读模式",
+   "scratchpad_title": "悬浮草稿本",
+   "scratchpad_desc": "一个透明的悬浮草稿本，方便在阅读时快速记笔记。",
+   "scratchpad_btn": "打开草稿本",
+   "highlighter_title": "智能网页高亮",
+   "highlighter_desc": "在任何网页上高亮文本并本地保存。",
+   "highlighter_btn_on": "开启高亮",
+   "highlighter_btn_off": "关闭高亮",
 };
-
-
-

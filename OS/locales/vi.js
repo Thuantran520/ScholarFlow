@@ -1822,7 +1822,16 @@ window.I18N_VI = {
   "qr_bg_image": "Ảnh nền mã QR 🖼️",
   "qr_remove_bg": "Xóa nền",
   "qr_icon_placeholder": "Icon / Emoji (⭐, 🌿...)",
+   "nav_scratchpad": "Sổ Nháp",
+   "tip_tab_scratchpad": "Sổ nháp bay & Highlight học thuật",
+   "reader_mode_title": "Cyber-Reader Mode",
+   "reader_mode_desc": "Lột sạch quảng cáo, chỉ chừa lại văn bản chính với nền tối dịu mắt.",
+   "reader_mode_btn": "Bật Chế độ đọc",
+   "scratchpad_title": "Sổ nháp bay (Floating Scratchpad)",
+   "scratchpad_desc": "Sổ nháp trong suốt trôi nổi trên màn hình, giúp ghi chú nhanh khi đọc tài liệu.",
+   "scratchpad_btn": "Mở Sổ nháp",
+   "highlighter_title": "Bút Dạ Quang Học Thuật",
+   "highlighter_desc": "Bôi đen văn bản trên web và tô màu highlight (lưu cục bộ).",
+   "highlighter_btn_on": "Bật Highlighter",
+   "highlighter_btn_off": "Tắt Highlighter",
 };
-
-
-

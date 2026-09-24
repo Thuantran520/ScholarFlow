@@ -1822,7 +1822,16 @@ window.I18N_RU = {
   "qr_bg_image": "Фон QR-кода 🖼️",
   "qr_remove_bg": "Удалить фон",
   "qr_icon_placeholder": "Иконка / Emoji (⭐, 🌿...)",
+   "nav_scratchpad": "Блокнот",
+   "tip_tab_scratchpad": "Плавающий блокнот и Умный маркер",
+   "reader_mode_title": "Кибер-режим чтения",
+   "reader_mode_desc": "Удаляет рекламу и мусор, оставляя только основной текст в темном режиме.",
+   "reader_mode_btn": "Включить режим чтения",
+   "scratchpad_title": "Плавающий блокнот",
+   "scratchpad_desc": "Прозрачный плавающий блокнот для быстрых заметок во время чтения.",
+   "scratchpad_btn": "Открыть блокнот",
+   "highlighter_title": "Умный маркер",
+   "highlighter_desc": "Выделяйте текст на любой веб-странице и сохраняйте локально.",
+   "highlighter_btn_on": "Включить маркер",
+   "highlighter_btn_off": "Отключить маркер",
 };
-
-
-
