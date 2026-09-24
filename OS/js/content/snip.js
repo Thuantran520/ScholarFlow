@@ -129,49 +129,39 @@ function onBoxEstablished() {
       snipSizeBadgeEl.textContent = `${snipActiveRect.width} × ${snipActiveRect.height} px`;
     }
     if (snipToolbarEl) {
-      // Force toolbar to be fixed to break out of any relative positioning issues
-      snipToolbarEl.style.position = 'fixed';
-      
       const margin = 8;
-      // Estimate toolbar dimensions if not fully rendered yet
-      const tbW = snipToolbarEl.offsetWidth || 180;
+      const tbW = snipToolbarEl.offsetWidth || 220;
       const tbH = snipToolbarEl.offsetHeight || 44;
       const winW = window.innerWidth;
       const winH = window.innerHeight;
 
-      // Default position: Bottom-Right of the selection
-      let top = snipActiveRect.top + snipActiveRect.height + margin;
-      let left = snipActiveRect.left + snipActiveRect.width - tbW;
+      // Coordinates relative to the top-left of snipBoxEl
+      let relTop = snipActiveRect.height + margin;
+      let relLeft = snipActiveRect.width - tbW;
 
-      // Vertical Collision (Off bottom edge)
-      if (top + tbH > winH - margin) {
-        // Try placing it above the box
-        top = snipActiveRect.top - tbH - margin;
-        if (top < margin) {
-          // If it also overflows the top, place it inside the box at the bottom
-          top = snipActiveRect.top + snipActiveRect.height - tbH - margin;
-          if (top < margin) top = margin; // Absolute fallback
+      // Vertical Collision
+      if (snipActiveRect.top + relTop + tbH > winH - margin) {
+        relTop = -tbH - margin; // Above box
+        if (snipActiveRect.top + relTop < margin) {
+          relTop = snipActiveRect.height - tbH - margin; // Inside bottom
+          if (relTop < margin) relTop = margin;
         }
       }
 
-      // Horizontal Collision (Off left edge)
-      if (left < margin) {
-        left = snipActiveRect.left; // Align to left edge of the box
-        if (left + tbW > winW - margin) {
-          left = margin; // Box is wider than screen? Force to left margin
+      // Horizontal Collision
+      if (snipActiveRect.left + relLeft < margin) {
+        relLeft = 0; // Align left
+        if (snipActiveRect.left + relLeft + tbW > winW - margin) {
+          relLeft = (winW - margin - tbW) - snipActiveRect.left; 
         }
-      } 
-      // Horizontal Collision (Off right edge)
-      else if (left + tbW > winW - margin) {
-        left = winW - tbW - margin;
+      } else if (snipActiveRect.left + relLeft + tbW > winW - margin) {
+        relLeft = (winW - margin - tbW) - snipActiveRect.left;
       }
 
-      snipToolbarEl.style.left = `${left}px`;
-      snipToolbarEl.style.top = `${top}px`;
-      snipToolbarEl.style.right = 'auto';
-      snipToolbarEl.style.bottom = 'auto';
-      
-      // Cleanup old classes just in case
+      snipToolbarEl.style.setProperty('left', `${relLeft}px`, 'important');
+      snipToolbarEl.style.setProperty('top', `${relTop}px`, 'important');
+      snipToolbarEl.style.setProperty('right', 'auto', 'important');
+      snipToolbarEl.style.setProperty('bottom', 'auto', 'important');
       snipToolbarEl.classList.remove("toolbar-top");
     }
   }
