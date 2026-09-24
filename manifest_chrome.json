@@ -35,6 +35,7 @@
         "OS/js/content/social.js",
         "OS/js/content/lingua.js",
         "OS/js/content/highlighter.js",
+        "OS/js/content/scratchpad.js",
         "OS/js/content/main.js"
       ],
       "css": [
