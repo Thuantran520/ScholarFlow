@@ -25,6 +25,7 @@
     { "file": "OS/js/tabs/capture.js",   "note": "Tab 3: smart screenshot, element/table capture, marquee snip",                "ranges": [[4270, 4907]] },
     { "file": "OS/js/tabs/video.js",     "note": "Tab 3: screen/tab video recording engine (WebM)",                             "ranges": [[4908, 5309]] },
     { "file": "OS/js/init.js",           "note": "DOM-ready bootstrap + full event wiring for every tab",                        "ranges": [[5310, 7493]] },
-    { "file": "OS/js/tabs/calendar.js",  "note": "Calendar (ICS subscription) module incl. manual events",                       "ranges": [[7494, 8530]] }
+    { "file": "OS/js/tabs/calendar.js",  "note": "Calendar (ICS subscription) module incl. manual events",                       "ranges": [[7494, 8530]] },
+    { "file": "OS/js/tabs/scratchpad.js",  "note": "Floating scratchpad and web highlighter", "ranges": [] }
   ]
 }
