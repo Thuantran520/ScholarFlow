@@ -533,6 +533,9 @@ var tContentShim = function(key, ...args) {
   }
 
   function clearAllRedactions() {
+    if (typeof clearAllKeywordRules === "function") {
+      clearAllKeywordRules();
+    }
     for (const item of [...redactedElementsList]) {
       const el = item.element;
       if (el) {
@@ -1092,6 +1095,9 @@ var tContentShim = function(key, ...args) {
 
   function redactReapplyTick() {
     loadAndReapplyRedactions();
+    if (typeof loadAndReapplyKeywordRules === "function") {
+      loadAndReapplyKeywordRules();
+    }
     sfRedactReapplyAttempts++;
     if (sfSavedCount <= 0) return;
     if (redactedElementsList.length >= sfSavedCount) return;
@@ -1327,41 +1333,377 @@ var tContentShim = function(key, ...args) {
     return count;
   }
 
-  function maskByKeyword(keyword, style, blurPx) {
-    keyword = String(keyword || "").trim();
-    if (!keyword) return 0;
-    style = style || currentRedactStyle;
-    blurPx = blurPx || currentBlurPx;
-    const lower = keyword.toLowerCase();
-    const toMask = [];
-    const seen = new Set();
+  // ════════════════════════════════════════════════════════════════════════
+  // ACTIVE KEYWORD RULES + DYNAMIC LIVE REDACT OBSERVER (Infinite Scroll Guard)
+  // ════════════════════════════════════════════════════════════════════════
+  const activeKeywordRules = [];
+  let liveRedactObserver = null;
+  let liveRedactBatchTimer = null;
+  const pendingMutatedNodes = [];
+  let liveScrollThrottleTimer = null;
+
+  function ensureLiveRedactObserver() {
+    if (activeKeywordRules.length === 0) {
+      if (liveRedactObserver) {
+        liveRedactObserver.disconnect();
+        liveRedactObserver = null;
+      }
+      window.removeEventListener("scroll", onLiveRedactScrollThrottled);
+      return;
+    }
+
+    if (!liveRedactObserver) {
+      liveRedactObserver = new MutationObserver(onLiveRedactMutations);
+      try {
+        liveRedactObserver.observe(document.body || document.documentElement, {
+          childList: true,
+          subtree: true
+        });
+      } catch (e) {}
+      window.addEventListener("scroll", onLiveRedactScrollThrottled, { passive: true });
+    }
+  }
+
+  function onLiveRedactMutations(mutations) {
+    if (activeKeywordRules.length === 0) return;
+    for (let i = 0; i < mutations.length; i++) {
+      const m = mutations[i];
+      for (let j = 0; j < m.addedNodes.length; j++) {
+        const node = m.addedNodes[j];
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          if (!node.classList.contains("sf-redact-inline") &&
+              !node.hasAttribute("data-super-redact-id") &&
+              !isExtensionUiElement(node)) {
+            pendingMutatedNodes.push(node);
+          }
+        }
+      }
+    }
+
+    if (!liveRedactBatchTimer && pendingMutatedNodes.length > 0) {
+      liveRedactBatchTimer = setTimeout(() => {
+        liveRedactBatchTimer = null;
+        const batch = pendingMutatedNodes.splice(0, pendingMutatedNodes.length);
+        for (const el of batch) {
+          if (el.isConnected) {
+            applyAllKeywordRulesToSubtree(el);
+          }
+        }
+      }, 40);
+    }
+  }
+
+  function onLiveRedactScrollThrottled() {
+    if (activeKeywordRules.length === 0) return;
+    if (liveScrollThrottleTimer) return;
+    liveScrollThrottleTimer = setTimeout(() => {
+      liveScrollThrottleTimer = null;
+      scanVisibleViewportForKeywords();
+    }, 120);
+  }
+
+  function scanVisibleViewportForKeywords() {
+    if (activeKeywordRules.length === 0) return;
+    // Target dynamic social feeds (Facebook, Threads, Twitter, YouTube, etc.)
+    const candidates = document.querySelectorAll(
+      '[role="feed"] > div, [role="article"], .userContentWrapper, div[data-pagelet*="FeedUnit"], .tweet, ytd-rich-item-renderer'
+    );
+    candidates.forEach(unit => {
+      if (!unit.dataset.sfScanned) {
+        unit.dataset.sfScanned = "1";
+        applyAllKeywordRulesToSubtree(unit);
+      }
+    });
+  }
+
+  function applyAllKeywordRulesToSubtree(root) {
+    if (!root || !root.isConnected) return;
+    for (const rule of activeKeywordRules) {
+      applyKeywordRuleToSubtree(root, rule);
+    }
+  }
+
+  function applyKeywordRuleToSubtree(root, rule) {
+    if (!root || !rule || !rule.keyword) return 0;
+    const keyword = rule.keyword;
+    const lowerKw = keyword.toLowerCase();
+    const kwLen = keyword.length;
+    if (!kwLen) return 0;
+
+    let count = 0;
+    const textNodes = [];
+
+    // 1. Traverse and gather matching text nodes
     try {
-      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+        acceptNode(node) {
+          const parent = node.parentElement;
+          if (!parent) return NodeFilter.FILTER_REJECT;
+          const tag = parent.tagName;
+          if (tag === "SCRIPT" || tag === "STYLE" || tag === "TEXTAREA" || tag === "INPUT" || tag === "NOSCRIPT" || tag === "IFRAME") {
+            return NodeFilter.FILTER_REJECT;
+          }
+          if (parent.closest(".sf-redact-inline, [data-super-redact-id].super-is-redacted:not([data-sf-keyword-parent])")) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          if (isExtensionUiElement(parent)) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          const val = node.nodeValue;
+          if (!val || !val.toLowerCase().includes(lowerKw)) {
+            return NodeFilter.FILTER_SKIP;
+          }
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      });
+
       let n;
       while ((n = walker.nextNode())) {
-        const text = (n.nodeValue || "").toLowerCase();
-        if (!text.includes(lower)) continue;
-        const el = redactSensitiveElementFor(n);
-        if (!el || el.hasAttribute("data-super-redact-id") || seen.has(el)) continue;
-        seen.add(el);
-        toMask.push(el);
+        textNodes.push(n);
       }
     } catch (e) {}
 
-    let count = 0;
-    for (const el of toMask) {
-      const item = maskElementInternal(el, style, blurPx);
-      if (item) count++;
+    // 2. Perform inline word wrapping
+    for (const textNode of textNodes) {
+      if (!textNode.parentNode) continue;
+      const parentEl = textNode.parentElement;
+      if (!parentEl) continue;
+
+      let curr = textNode;
+      let val = curr.nodeValue || "";
+      let idx = val.toLowerCase().indexOf(lowerKw);
+
+      while (idx !== -1 && curr && curr.nodeValue) {
+        try {
+          const matchNode = curr.splitText(idx);
+          const rest = matchNode.splitText(kwLen);
+
+          const span = document.createElement("span");
+          span.className = "sf-redact-inline";
+          span.setAttribute("data-super-redact-id", rule.id);
+          span.setAttribute("data-sf-keyword", keyword);
+          span.setAttribute("data-sf-inline", "1");
+          updateElementStyle(span, rule.style, rule.blurPx);
+
+          const parent = matchNode.parentNode;
+          if (parent) {
+            parent.insertBefore(span, matchNode);
+            span.appendChild(matchNode);
+
+            // Mark parent container for selector & test compatibility
+            if (!parentEl.hasAttribute("data-super-redact-id")) {
+              parentEl.setAttribute("data-super-redact-id", rule.id);
+              parentEl.setAttribute("data-sf-keyword-parent", "1");
+            }
+
+            count++;
+
+            // Register in redactedElementsList so getRedactedMasksForCapture sees it
+            redactedElementsList.push({
+              id: rule.id + "-" + count,
+              ruleId: rule.id,
+              kind: "element",
+              element: span,
+              tagName: "span",
+              style: rule.style,
+              blurPx: rule.blurPx,
+              snippet: `"${keyword}"`,
+              prevClasses: [],
+              prevStyle: "",
+              selector: redactSelectorFor(span)
+            });
+          }
+
+          curr = rest;
+          val = curr && curr.nodeValue ? curr.nodeValue : "";
+          idx = val.toLowerCase().indexOf(lowerKw);
+        } catch (e) {
+          break;
+        }
+      }
     }
-    if (count > 0) {
-      redactPersist();
-      notifySidebarShim({
-        type: "REDACTION_UPDATED",
-        count: redactedElementsList.length,
-        list: getRedactedItemsForSidebar()
+
+    // 3. Detect and mask associated avatars & profile images (Facebook, Twitter, YouTube, etc.)
+    try {
+      const candidateImgs = (root || document).querySelectorAll('img, svg, [role="img"], image');
+      candidateImgs.forEach(img => {
+        if (img.hasAttribute("data-super-redact-id")) return;
+        if (isExtensionUiElement(img)) return;
+
+        const alt = (img.getAttribute("alt") || "").toLowerCase();
+        const aria = (img.getAttribute("aria-label") || "").toLowerCase();
+        const title = (img.getAttribute("title") || "").toLowerCase();
+
+        if ((alt && alt.includes(lowerKw)) || (aria && aria.includes(lowerKw)) || (title && title.includes(lowerKw))) {
+          img.setAttribute("data-super-redact-id", rule.id);
+          img.classList.add("super-is-redacted", "sf-redact-avatar");
+          updateElementStyle(img, rule.style, rule.blurPx);
+          count++;
+
+          redactedElementsList.push({
+            id: rule.id + "-img-" + count,
+            ruleId: rule.id,
+            kind: "element",
+            element: img,
+            tagName: img.tagName.toLowerCase(),
+            style: rule.style,
+            blurPx: rule.blurPx,
+            snippet: `[Ảnh]: "${keyword}"`,
+            prevClasses: [],
+            prevStyle: img.getAttribute("style") || "",
+            selector: redactSelectorFor(img)
+          });
+        }
       });
-    }
+    } catch (e) {}
+
+    rule.count = (rule.count || 0) + count;
     return count;
+  }
+
+  function addKeywordRule(keyword, style, blurPx) {
+    keyword = String(keyword || "").trim();
+    if (!keyword) return { count: 0, rules: getKeywordRules() };
+    style = style || currentRedactStyle;
+    blurPx = blurPx || currentBlurPx;
+
+    let rule = activeKeywordRules.find(r => r.keyword.toLowerCase() === keyword.toLowerCase());
+    if (!rule) {
+      rule = {
+        id: "kw-" + Date.now() + "-" + Math.random().toString(36).substr(2, 4),
+        keyword: keyword,
+        style: style,
+        blurPx: blurPx,
+        count: 0
+      };
+      activeKeywordRules.push(rule);
+    } else {
+      rule.style = style;
+      rule.blurPx = blurPx;
+    }
+
+    const count = applyKeywordRuleToSubtree(document.body, rule);
+    ensureLiveRedactObserver();
+    redactPersistKeywordRules();
+
+    notifySidebarShim({
+      type: "REDACTION_UPDATED",
+      count: redactedElementsList.length,
+      list: getRedactedItemsForSidebar(),
+      keywordRules: getKeywordRules()
+    });
+
+    return { count: count, rules: getKeywordRules() };
+  }
+
+  function removeKeywordRule(ruleId) {
+    // 1. Restore all inline spans
+    const spans = document.querySelectorAll(`span.sf-redact-inline[data-super-redact-id="${ruleId}"]`);
+    spans.forEach(span => {
+      const parent = span.parentNode;
+      if (parent) {
+        while (span.firstChild) {
+          parent.insertBefore(span.firstChild, span);
+        }
+        span.remove();
+        parent.normalize();
+      }
+    });
+
+    // 2. Clean parent markers
+    document.querySelectorAll(`[data-super-redact-id="${ruleId}"][data-sf-keyword-parent]`).forEach(p => {
+      p.removeAttribute("data-super-redact-id");
+      p.removeAttribute("data-sf-keyword-parent");
+    });
+
+    // 3. Restore avatar & other images
+    document.querySelectorAll(`[data-super-redact-id="${ruleId}"]`).forEach(el => {
+      el.removeAttribute("data-super-redact-id");
+      el.classList.remove(
+        "super-redact-blur",
+        "super-redact-blackout",
+        "super-redact-pixelate",
+        "super-redact-hide",
+        "super-is-redacted",
+        "sf-redact-avatar"
+      );
+    });
+
+    // 4. Clean redactedElementsList
+    for (let i = redactedElementsList.length - 1; i >= 0; i--) {
+      if (redactedElementsList[i].ruleId === ruleId) {
+        redactedElementsList.splice(i, 1);
+      }
+    }
+
+    // 5. Remove rule
+    const idx = activeKeywordRules.findIndex(r => r.id === ruleId);
+    if (idx !== -1) {
+      activeKeywordRules.splice(idx, 1);
+    }
+
+    ensureLiveRedactObserver();
+    redactPersistKeywordRules();
+
+    notifySidebarShim({
+      type: "REDACTION_UPDATED",
+      count: redactedElementsList.length,
+      list: getRedactedItemsForSidebar(),
+      keywordRules: getKeywordRules()
+    });
+
+    return getKeywordRules();
+  }
+
+  function getKeywordRules() {
+    return activeKeywordRules.map(r => ({
+      id: r.id,
+      keyword: r.keyword,
+      style: r.style,
+      blurPx: r.blurPx,
+      count: r.count || 0
+    }));
+  }
+
+  function clearAllKeywordRules() {
+    const ids = activeKeywordRules.map(r => r.id);
+    for (const id of ids) {
+      removeKeywordRule(id);
+    }
+    activeKeywordRules.length = 0;
+    ensureLiveRedactObserver();
+    redactPersistKeywordRules();
+    return [];
+  }
+
+  function redactPersistKeywordRules() {
+    try {
+      const originKey = redactOrigin();
+      if (!originKey) return;
+      sessionStorage.setItem("sf_kw_rules_" + originKey, JSON.stringify(activeKeywordRules));
+    } catch (e) {}
+  }
+
+  function loadAndReapplyKeywordRules() {
+    try {
+      const originKey = redactOrigin();
+      if (!originKey) return;
+      const raw = sessionStorage.getItem("sf_kw_rules_" + originKey);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (Array.isArray(saved) && saved.length > 0) {
+        for (const r of saved) {
+          if (r && r.keyword) {
+            addKeywordRule(r.keyword, r.style || "blur", r.blurPx || 12);
+          }
+        }
+      }
+    } catch (e) {}
+  }
+
+  function maskByKeyword(keyword, style, blurPx) {
+    const res = addKeywordRule(keyword, style, blurPx);
+    return res.count;
   }
 
   window.startInspectMode = startInspectMode;
@@ -1385,6 +1727,10 @@ var tContentShim = function(key, ...args) {
   window.getRedactedMasksForCapture = getRedactedMasksForCapture;
   window.detectSensitiveElements = detectSensitiveElements;
   window.maskByKeyword = maskByKeyword;
+  window.addKeywordRule = addKeywordRule;
+  window.removeKeywordRule = removeKeywordRule;
+  window.getKeywordRules = getKeywordRules;
+  window.clearAllKeywordRules = clearAllKeywordRules;
   window.redactSensitivePatterns = redactSensitivePatterns;
 
   // Auto re-apply any persisted redactions for this origin after page load.

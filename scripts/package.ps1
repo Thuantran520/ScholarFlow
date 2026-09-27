@@ -120,6 +120,15 @@ Create-ExtensionZip -ZipPath $chromeZip -ManifestSource $manifestChrome
 $chromeAlias = Join-Path $distDir "ScholarFlow_Chrome.zip"
 Copy-Item $chromeZip $chromeAlias -Force
 
+# 3. Edge Package (uses Chrome manifest)
+$edgeName = "ScholarFlow_v${Version}_Edge.zip"
+if ($branchLabel) { $edgeName = "ScholarFlow_v${Version}_${branchLabel}_Edge.zip" }
+$edgeZip = Join-Path $distDir $edgeName
+Create-ExtensionZip -ZipPath $edgeZip -ManifestSource $manifestChrome
+
+$edgeAlias = Join-Path $distDir "ScholarFlow_Edge.zip"
+Copy-Item $edgeZip $edgeAlias -Force
+
 Write-Host ""
 Write-Host "Hoan tat dong goi trong thu muc: $distDir" -ForegroundColor Yellow
 Write-Host "========================================================" -ForegroundColor Cyan

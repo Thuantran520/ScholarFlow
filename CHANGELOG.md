@@ -5,6 +5,10 @@ Tất cả thay đổi đáng chú ý của dự án đều được ghi tại �
 
 ---
 
+## [2.5.4] - Unreleased
+### Added
+- **Tampermonkey-like Engine**: Bỏ triết lý cấm `eval` cũ, cho phép cài đặt và chạy custom userscripts trực tiếp bên trong tiện ích.
+
 ## [2.5.3] - 2026-09-24
 ### Added
 - Tính năng Dịch học thuật thông minh (Smart Paragraph Translation) với 2 chế độ: Google Translate (nhanh, cả trang) và Local AI (dịch nội bộ 100%, bảo mật, bôi đen). (Đang phát triển)

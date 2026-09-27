@@ -20,8 +20,10 @@
 // ---------------------------------------------------------------------------
 (function () {
   const SETTINGS_KEY = "sf_social_settings";
+  const SEC_SETTINGS_KEY = "sf_security_settings";
   const PLATFORM_HOSTS = {
     facebook: ["facebook.com", "messenger.com"],
+    youtube: ["youtube.com"],
     zalo: ["zalo.me", "zaloapp.com"],
     instagram: ["instagram.com"],
     whatsapp: ["web.whatsapp.com"],
@@ -70,7 +72,7 @@
   const WRAP_PARAMS = ["u", "url", "q", "href", "target", "to", "dest"];
   const STATS_CAP = 300;
 
-  const _settings = { inj: true, injMode: "remove", linkClean: true, shopClean: false, trackerBlockAll: false, trackerBlock: [], scamWarn: true };
+  const _settings = { inj: true, injMode: "remove", linkClean: true, linkGuard: false, shopClean: false, ytDislike: true, trackerBlockAll: false, trackerBlock: [], scamWarn: true };
   let _observer = null;
   let _guardActive = false;
   const _stats = { extScript: 0, obfScript: 0, inlineMal: 0, extIframe: 0, jsUri: 0, linkCleaned: 0, shopLinks: 0, trackerStripped: 0, scamLinks: 0 };
@@ -291,6 +293,12 @@
       }
     } catch (e) {}
   }
+  
+  let _ytDislikeInterval = null;
+  function _runYtDislike() {
+    // Left empty since we now rely on the standalone ryd.js
+  }
+
   function _startObserver() {
     if (_observer || !document.documentElement) return;
     _guardActive = true;
@@ -319,16 +327,36 @@
       const links = document.querySelectorAll("a[href]");
       const cap = Math.min(links.length, 3000);
       for (let i = cap - 1; i >= 0; i--) {
-        if (links[i] && links[i].nodeType === 1) _unwrapShopLink(links[i]);
+        const el = links[i];
+        if (el && el.nodeType === 1) {
+          if (_settings.shopClean) _unwrapShopLink(el);
+        }
+      }
+    } catch (e) {}
+  }
+  function _toggleDisableLinksStyle(enable) {
+    try {
+      if (enable) {
+        document.documentElement.classList.add("sf-disable-all-links");
+      } else {
+        document.documentElement.classList.remove("sf-disable-all-links");
       }
     } catch (e) {}
   }
   function _refresh() {
     const onSocial = !!_detectPlatform();
-    if (onSocial && (_settings.inj || _settings.shopClean)) {
-      _startObserver();
-      if (_settings.shopClean) _sweepExistingShopLinks();
+    if (onSocial) {
+      _toggleDisableLinksStyle(_settings.disableAllLinks);
+      if (_settings.inj || _settings.shopClean) {
+        _startObserver();
+          _runYtDislike();
+        if (_settings.shopClean) _sweepExistingShopLinks();
+      } else {
+        _stopObserver();
+          _runYtDislike();
+      }
     } else {
+      _toggleDisableLinksStyle(false);
       _stopObserver();
     }
   }
@@ -336,22 +364,29 @@
     const api = _storage();
     if (!api) { cb(); return; }
     try {
-      const p = api.get(SETTINGS_KEY);
+      const p = api.get([SETTINGS_KEY, SEC_SETTINGS_KEY]);
       const apply = function (r) {
+          const sec = r && r[SEC_SETTINGS_KEY];
+          if (sec && sec.linkGuard !== undefined) {
+             _settings.linkGuard = !!sec.linkGuard;
+          }
         const s = r && r[SETTINGS_KEY];
         if (s) {
           _settings.inj = s.inj !== false;
           _settings.injMode = s.injMode === "warn" ? "warn" : "remove";
           _settings.linkClean = s.linkClean !== false;
+            _settings.ytDislike = s.ytDislike !== false;
+            
           _settings.shopClean = !!s.shopClean;
           _settings.trackerBlockAll = !!s.trackerBlockAll;
           _settings.trackerBlock = Array.isArray(s.trackerBlock) ? s.trackerBlock.slice(0, 50) : [];
           _settings.scamWarn = s.scamWarn !== false;
+          _settings.disableAllLinks = !!s.disableAllLinks;
         }
         cb();
       };
       if (p && typeof p.then === "function") p.then(apply).catch(function () { cb(); });
-      else api.get(SETTINGS_KEY, apply);
+      else api.get([SETTINGS_KEY, SEC_SETTINGS_KEY], apply);
     } catch (e) { cb(); }
   }
   function _scanTrackers() {
@@ -401,15 +436,106 @@
     return { count: hits.length, samples: hits.slice(0, 3) };
   }
 
+  function _showLinkGuardModal(href) {
+    if (document.getElementById('sf-link-guard-modal')) return;
+    const m = document.createElement('div');
+    m.id = 'sf-link-guard-modal';
+    m.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.8);z-index:999999999;display:flex;align-items:center;justify-content:center;font-family:sans-serif;color:#fff;backdrop-filter:blur(5px);';
+    
+    const box = document.createElement('div');
+    box.style.cssText = 'background:#1e293b;padding:30px;border-radius:12px;max-width:500px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,0.5);border:1px solid #334155;';
+    
+    const icon = document.createElement('div');
+    icon.textContent = '🛑';
+    icon.style.cssText = 'font-size:40px;margin-bottom:15px;';
+    
+    const title = document.createElement('h2');
+    title.textContent = 'Điểm Dừng An Toàn (Link Guard)';
+    title.style.cssText = 'margin:0 0 15px;color:#f8fafc;font-size:22px;';
+    
+    const p = document.createElement('p');
+    p.textContent = 'Bạn chuẩn bị rời khỏi trang web này và truy cập vào đường dẫn bên ngoài:';
+    p.style.cssText = 'margin:0 0 20px;color:#94a3b8;font-size:15px;line-height:1.5;';
+    
+    const linkDiv = document.createElement('div');
+    linkDiv.textContent = href;
+    linkDiv.style.cssText = 'background:#0f172a;padding:12px;border-radius:8px;word-break:break-all;color:#38bdf8;margin-bottom:25px;font-family:monospace;border:1px solid #1e293b;';
+    
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex;gap:15px;justify-content:center;';
+    
+    const btnCancel = document.createElement('button');
+    btnCancel.textContent = 'Hủy (Quay lại)';
+    btnCancel.style.cssText = 'padding:10px 20px;border-radius:8px;border:none;background:#334155;color:#fff;cursor:pointer;font-weight:bold;';
+    
+    const btnProceed = document.createElement('button');
+    btnProceed.textContent = 'Tiếp tục';
+    btnProceed.style.cssText = 'padding:10px 20px;border-radius:8px;border:none;background:#ef4444;color:#fff;cursor:pointer;font-weight:bold;';
+    
+    btnCancel.addEventListener('click', function(e) { e.preventDefault(); m.parentNode.removeChild(m); });
+    btnProceed.addEventListener('click', function(e) { e.preventDefault(); m.parentNode.removeChild(m); window.open(href, '_blank', 'noopener'); });
+    
+    btnRow.appendChild(btnCancel);
+    btnRow.appendChild(btnProceed);
+    box.appendChild(icon);
+    box.appendChild(title);
+    box.appendChild(p);
+    box.appendChild(linkDiv);
+    box.appendChild(btnRow);
+    m.appendChild(box);
+    document.body.appendChild(m);
+  }
+
+  function _handleLinkGuard(e) {
+    if (!_settings.linkGuard) return;
+    if (!e.isTrusted) return;
+    const t = e.target;
+    const a = t && t.closest ? t.closest("a[href]") : null;
+    if (!a) return;
+    
+    let href = a.getAttribute('href');
+    if (!href || href.startsWith('javascript:') || href.startsWith('#') || href.startsWith('/')) return;
+    
+    // Unwrap Facebook redirect
+    if (href.indexOf('l.php?u=') > -1 || href.indexOf('l.facebook.com/l.php') > -1) {
+       try {
+         const u = new URL(href, window.location.href);
+         const inner = u.searchParams.get('u');
+         if (inner) href = decodeURIComponent(inner);
+       } catch (err) {}
+    }
+    
+    try {
+      const u = new URL(href, window.location.href);
+      if (u.hostname && u.hostname !== window.location.hostname && !u.hostname.includes('facebook.com') && !u.hostname.includes('messenger.com')) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        _showLinkGuardModal(u.href);
+      }
+    } catch (err) {}
+  }
+
   // Click-time link cleaning (capture phase, before navigation resolves).
   try {
     document.addEventListener("click", function (e) {
+      _handleLinkGuard(e);
       if (!_settings.linkClean || e.button !== 0 || !e.isTrusted) return;
       if (!_detectPlatform()) return;
       const t = e.target;
       const a = t && t.closest ? t.closest("a[href]") : null;
       if (a) _cleanHref(a);
     }, true);
+    document.addEventListener("auxclick", function(e) {
+      _handleLinkGuard(e);
+      if (!_settings.linkClean || !e.isTrusted) return;
+      if (!_detectPlatform()) return;
+      const t = e.target;
+      const a = t && t.closest ? t.closest("a[href]") : null;
+      if (a) _cleanHref(a);
+    }, true);
+    document.addEventListener("mousedown", _handleLinkGuard, true);
+    document.addEventListener("pointerdown", _handleLinkGuard, true);
   } catch (e) {}
 
   try { _readSettings(_refresh); } catch (e) {}
@@ -417,7 +543,7 @@
     const api = _storage();
     if (api && api.onChanged) {
       api.onChanged.addListener(function (changes, area) {
-        if (area === "local" && changes && changes[SETTINGS_KEY]) _readSettings(_refresh);
+        if (area === "local" && changes && (changes[SETTINGS_KEY] || changes[SEC_SETTINGS_KEY])) _readSettings(_refresh);
       });
     }
   } catch (e) {}

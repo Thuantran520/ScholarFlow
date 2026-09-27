@@ -1,0 +1,57 @@
+  <!-- Userscripts Tab -->
+  <div id="tab-userscripts" class="tab-section">
+    <div class="sf-card">
+      <div class="sf-card-header">
+        <h2 style="font-size: 13px; margin: 0; display: flex; align-items: center; gap: 6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+          <span data-i18n="userscripts_title">Quản lý Script (Mini-Tampermonkey)</span>
+        </h2>
+      </div>
+      <div class="sf-card-body" style="padding: 10px;">
+        
+        <!-- Firefox Permission Warning -->
+        <div id="us-ff-perm-box" class="us-alert" style="display: none; background: rgba(239, 68, 68, 0.1); border-left: 3px solid #ef4444; padding: 8px; border-radius: 4px; margin-bottom: 12px;">
+          <p style="font-size: 11px; margin: 0 0 6px 0; color: #ef4444;" data-i18n="us_ff_perm_desc">Tính năng này cần quyền chạy script (Firefox yêu cầu cấp quyền thủ công).</p>
+          <button id="btn-us-req-perm" class="btn btn-primary" style="font-size: 11px; padding: 4px 8px;" data-i18n="us_btn_req_perm">Cấp quyền ngay</button>
+        </div>
+
+        <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;" data-i18n="userscripts_desc">Thêm và chạy các kịch bản Javascript tùy chỉnh trên bất kỳ trang web nào.</p>
+
+        <!-- Script List -->
+        <div id="us-list-container">
+          <ul id="us-list" class="us-list" style="list-style: none; padding: 0; margin: 0; margin-bottom: 10px;">
+            <!-- Rendered by JS -->
+          </ul>
+          <button id="btn-us-add" class="btn btn-secondary" style="width: 100%; font-size: 12px; padding: 6px;" data-i18n="us_btn_add">+ Thêm Script Mới</button>
+        </div>
+
+        <!-- Editor View (Hidden by default) -->
+        <div id="us-editor-container" style="display: none;">
+          <input type="hidden" id="us-edit-id">
+          
+          <div style="margin-bottom: 8px;">
+            <label style="font-size: 11px; font-weight: 500;" data-i18n="us_label_name">Tên Script</label>
+            <input type="text" id="us-edit-name" class="form-control" style="width: 100%; font-size: 12px; padding: 4px 6px;" placeholder="VD: Bỏ qua quảng cáo YT">
+          </div>
+          
+          <div style="margin-bottom: 8px;">
+            <label style="font-size: 11px; font-weight: 500;" data-i18n="us_label_matches">URL Áp dụng (Matches)</label>
+            <input type="text" id="us-edit-matches" class="form-control" style="width: 100%; font-size: 12px; padding: 4px 6px;" placeholder="*://*.youtube.com/*">
+            <div style="font-size: 9px; color: var(--text-muted); margin-top: 2px;">Ngăn cách nhiều URL bằng dấu phẩy.</div>
+          </div>
+          
+          <div style="margin-bottom: 8px;">
+            <label style="font-size: 11px; font-weight: 500;" data-i18n="us_label_code">Mã JavaScript</label>
+            <textarea id="us-edit-code" class="form-control" style="width: 100%; height: 120px; font-family: monospace; font-size: 11px; padding: 6px; white-space: pre;" placeholder="console.log('Hello World!');"></textarea>
+          </div>
+
+          <div style="display: flex; gap: 8px;">
+            <button id="btn-us-save" class="btn btn-primary" style="flex: 1; font-size: 12px;" data-i18n="us_btn_save">Luu</button>
+            <button id="btn-us-test" class="btn btn-secondary" style="flex: 1; font-size: 12px; background: #22c55e; color: white; border: none;">▶ Ch?y th?</button>
+            <button id="btn-us-cancel" class="btn btn-secondary" style="font-size: 12px;" data-i18n="us_btn_cancel">Hủy</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>

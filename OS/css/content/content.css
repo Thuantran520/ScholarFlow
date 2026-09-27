@@ -216,6 +216,69 @@ html.super-redactions-paused .super-redact-blackout * {
   visibility: visible !important;
 }
 
+/* 7b. Inline Word-Level Redaction & Social Media Avatar Redaction */
+.sf-redact-inline {
+  display: inline !important;
+  border-radius: 3px !important;
+  vertical-align: baseline !important;
+  box-decoration-break: clone !important;
+  -webkit-box-decoration-break: clone !important;
+  transition: filter 0.15s ease !important;
+}
+
+.sf-redact-inline.super-redact-blur {
+  filter: blur(var(--super-blur-val, 12px)) !important;
+  user-select: none !important;
+  pointer-events: auto !important;
+}
+
+.sf-redact-inline.super-redact-blackout {
+  background-color: #000000 !important;
+  color: transparent !important;
+  text-shadow: none !important;
+  user-select: none !important;
+}
+
+.sf-redact-inline.super-redact-pixelate {
+  filter: contrast(180%) blur(6px) !important;
+  user-select: none !important;
+}
+
+.sf-redact-inline.super-redact-hide {
+  display: none !important;
+}
+
+html.super-redactions-paused .sf-redact-inline.super-redact-blur {
+  filter: none !important;
+  user-select: auto !important;
+}
+
+html.super-redactions-paused .sf-redact-inline.super-redact-blackout {
+  background-color: transparent !important;
+  color: inherit !important;
+  user-select: auto !important;
+}
+
+html.super-redactions-paused .sf-redact-inline.super-redact-pixelate {
+  filter: none !important;
+  user-select: auto !important;
+}
+
+.sf-redact-avatar.super-redact-blur {
+  filter: blur(var(--super-blur-val, 16px)) !important;
+  user-select: none !important;
+}
+
+.sf-redact-avatar.super-redact-blackout {
+  filter: brightness(0) !important;
+  user-select: none !important;
+}
+
+html.super-redactions-paused .sf-redact-avatar {
+  filter: none !important;
+  user-select: auto !important;
+}
+
 /* 8. In-Page High Visibility Countdown HUD */
 #super-inpage-countdown-hud {
   position: fixed !important;

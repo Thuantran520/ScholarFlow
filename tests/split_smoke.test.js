@@ -250,10 +250,10 @@ async function main() {
     const navCount = w.document.querySelectorAll(".main-nav-btn").length;
     const tabCount = w.document.querySelectorAll(".tab-section").length;
     const ids = [...w.document.querySelectorAll(".main-nav-btn")].map(b => b.dataset.target);
-    check(navCount === 18, `18 nav buttons (found ${navCount})`);
-    check(tabCount === 18, `18 tab sections (found ${tabCount})`);
-    check(["tab-cite", "tab-ai", "tab-flow", "tab-redact", "tab-capture", "tab-cookie", "tab-autofill", "tab-todo", "tab-pomo", "tab-cal", "tab-tabmgr", "tab-testhelper", "tab-security", "tab-social", "tab-lingua", "tab-dm", "tab-scratchpad"].every(t => ids.includes(t)),
-      `all 18 targets present in nav: ${ids.join(",")}`);
+    check(navCount === 19, `19 nav buttons (found ${navCount})`);
+    check(tabCount === 19, `19 tab sections (found ${tabCount})`);
+    check(["tab-cite", "tab-ai", "tab-flow", "tab-redact", "tab-capture", "tab-cookie", "tab-autofill", "tab-todo", "tab-pomo", "tab-cal", "tab-tabmgr", "tab-testhelper", "tab-security", "tab-social", "tab-lingua", "tab-dm", "tab-qr", "tab-scratchpad", "tab-userscripts"].every(t => ids.includes(t)),
+      `all 19 targets present in nav: ${ids.join(",")}`);
   }
 
   // 1c. Tab-manager music player banner (local media agent + on/off pref)
@@ -924,8 +924,8 @@ async function main() {
     const viCount = w.Object.keys(w.I18N_DATA.vi).filter(k => k.startsWith("content_")).length;
     const enCount = w.Object.keys(w.I18N_DATA.en).filter(k => k.startsWith("content_")).length;
     const prCount = w.Object.keys(w.I18N_DATA.vi).filter(k => k.startsWith("privacy_")).length;
-    check(viCount === 41 && enCount === 41 && prCount === 43,
-      `namespace keys present in locale dumps (content_*=41, privacy_*=43; got ${viCount}/${enCount}/${prCount})`);
+    check(viCount === 61 && enCount === 61 && prCount === 43,
+      `namespace keys present in locale dumps (content_*=61, privacy_*=43; got ${viCount}/${enCount}/${prCount})`);
   }
 
   // 3. privacy.html standalone page uses the unified i18n engine
@@ -2717,7 +2717,8 @@ async function main() {
       `first right item carries margin-left:auto (lang=${langEl.style.marginLeft}, brand=${brandEl.style.marginLeft})`);
     // hiding the FIRST right item must re-anchor margin-left:auto on the next
     // visible right item so the right group stays flush against the edge
-    w.sfHeaderApply({
+    console.log("NAV BEFORE APPLY:", w.sfNavGetOrder()[0]);
+      w.sfHeaderApply({
       position: "top",
       hidden: { lang: true },
       side: { brand: "left", lang: "right", trust: "right", badge: "right" },
@@ -2730,9 +2731,12 @@ async function main() {
     // the sfHeaderApply above re-rendered the modal rows with its ad-hoc state,
     // so re-apply the injected custom layout before asserting the modal reflects it
     w.sfHeaderApply(custom);
-    const gear = w.document.getElementById("btn-header-settings");
+    console.log("NAV BEFORE GEAR:", w.sfNavGetOrder()[0]);
+      const gear = w.document.getElementById("btn-header-settings");
     check(!!gear, "gear button present in header");
     gear.click();
+      await new Promise(r => setTimeout(r, 40));
+      console.log("NAV AFTER GEAR:", w.sfNavGetOrder()[0]);
     const modal = w.document.getElementById("header-settings-modal");
     check(!!modal && modal.style.display === "block", "gear opens the header settings modal");
     check(w.document.querySelectorAll("#hdrs-item-list .hdrs-item-row").length === 4,
@@ -2793,7 +2797,9 @@ async function main() {
       domAfterTie.indexOf("lang") < domAfterTie.indexOf("brand"),
       `tied orders are renumbered so ▲/▼ always work (lang=${afterTie.order.lang}, brand=${afterTie.order.brand})`);
 
-    const defs = w.sfHeaderReset();
+    console.log("NAV BEFORE RESET:", w.sfNavGetOrder()[0]);
+      const defs = w.sfHeaderReset();
+      console.log("NAV AFTER RESET:", w.sfNavGetOrder()[0]);
     check(defs && defs.position === "top" && defs.side.brand === "left" && defs.side.badge === "right" &&
       defs.hidden.badge === false && defs.order.badge === 2,
       `reset restores the default layout (got ${JSON.stringify(defs)})`);
@@ -2804,22 +2810,25 @@ async function main() {
 
     // --- Main-nav tab reorder ---
     const navDefault = w.sfNavGetOrder();
-    check(Array.isArray(navDefault) && navDefault.length === 18 && navDefault[0] === "tab-cite" &&
-      navDefault[navDefault.length - 1] === "tab-scratchpad",
-      `nav order initialized with 18 default targets (got ${navDefault.length})`);
+    if (! (Array.isArray(navDefault) && navDefault.length === 19 && navDefault[0] === "tab-cite" && navDefault[navDefault.length - 1] === "tab-userscripts")) {
+      console.log("DEBUG NAVDEFAULT:", navDefault);
+    }
+    check(Array.isArray(navDefault) && navDefault.length === 19 && navDefault[0] === "tab-cite" &&
+      navDefault[navDefault.length - 1] === "tab-userscripts",
+      `nav order initialized with 19 default targets (got ${navDefault.length})`);
     const rev = w.sfNavReorder(navDefault.slice().reverse());
     const domNav = [...w.document.querySelectorAll("#nav-wrapper .main-nav-btn")].map(b => b.dataset.target);
-    check(rev && rev[0] === "tab-scratchpad" && rev[rev.length - 1] === "tab-cite" &&
+    check(rev && rev[0] === "tab-userscripts" && rev[rev.length - 1] === "tab-cite" &&
       domNav.join() === rev.join(),
       `nav DOM order follows the reversed order (first=${domNav[0]}, last=${domNav[domNav.length - 1]})`);
     const storedNav = (await w.chrome.storage.local.get("sf_nav_settings")).sf_nav_settings;
-    check(!!storedNav && Array.isArray(storedNav.order) && storedNav.order[0] === "tab-scratchpad",
+    check(!!storedNav && Array.isArray(storedNav.order) && storedNav.order[0] === "tab-userscripts",
       "nav order persisted to sf_nav_settings");
 
     gear.click();
     await new Promise(r => setTimeout(r, 40));
-    check(w.document.querySelectorAll("#hdrs-nav-list .hdrs-item-row").length === 18,
-      `modal renders 18 nav order rows (got ${w.document.querySelectorAll("#hdrs-nav-list .hdrs-item-row").length})`);
+    check(w.document.querySelectorAll("#hdrs-nav-list .hdrs-item-row").length === 19,
+      `modal renders 19 nav order rows (got ${w.document.querySelectorAll("#hdrs-nav-list .hdrs-item-row").length})`);
     const rowMid = w.document.querySelector('#hdrs-nav-list [data-nav-target="tab-ai"]');
     const downBtn = rowMid ? [...rowMid.querySelectorAll(".hdrs-ico-btn")][1] : null;
     check(!!rowMid && !!downBtn && !downBtn.disabled,
@@ -2831,7 +2840,7 @@ async function main() {
       check(afterClick.indexOf("tab-ai") === afterClick.length - 1,
         `down-arrow moves the row (tab-ai now last, got idx ${afterClick.indexOf("tab-ai")})`);
     }
-    const firstRowUp = w.document.querySelector('#hdrs-nav-list [data-nav-target="tab-scratchpad"] .hdrs-ico-btn');
+    const firstRowUp = w.document.querySelector('#hdrs-nav-list [data-nav-target="tab-userscripts"] .hdrs-ico-btn');
     check(!!firstRowUp && firstRowUp.disabled === true,
       "first nav row's up button is disabled");
     w.document.getElementById("btn-reset-header-settings").click();

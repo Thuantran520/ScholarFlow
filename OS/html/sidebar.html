@@ -33,6 +33,8 @@
   <link rel="stylesheet" href="../css/tabs/lingua.css">
   <link rel="stylesheet" href="../css/tabs/darkmode.css">
   <link rel="stylesheet" href="../css/tabs/dual-tabs.css">
+  <link rel="stylesheet" href="../css/tabs/scratchpad.css">
+  <link rel="stylesheet" href="../css/tabs/userscripts.css">
   <!-- Layout -->
   <link rel="stylesheet" href="../css/layout/shell.css">
   <link rel="stylesheet" href="../css/main-nav.css">
@@ -109,7 +111,7 @@
 
   <!-- Main Navigation Segmented Controller -->
   <!-- @@NAV@@ -->
-  <div class="main-nav-bar">
+<div class="main-nav-bar">
     <button id="nav-scroll-left" class="nav-scroll-arrow is-hidden" title="Cuộn trái" data-i18n-title="tip_scroll_left">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
     </button>
@@ -188,16 +190,16 @@
         <span class="nav-label" data-i18n="nav_scratchpad">Sổ Nháp</span>
       </button>
 
+      <button class="main-nav-btn" data-target="tab-userscripts" title="Cài đặt & Quản lý Script" data-i18n-title="tip_tab_userscripts">
+        <span class="nav-icon" id="icon-tab-userscripts"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></span>
+        <span class="nav-label" data-i18n="nav_userscripts">Scripts</span>
+      </button>
+
 </div>
     <button id="nav-scroll-right" class="nav-scroll-arrow" title="Cuộn phải" data-i18n-title="tip_scroll_right">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
     </button>
-        <button class="main-nav-btn" data-target="tab-scratchpad" title="Sổ nháp bay & Highlight học thuật" data-i18n-title="tip_tab_scratchpad">
-        <span class="nav-icon" id="icon-tab-scratchpad"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg></span>
-        <span class="nav-label" data-i18n="nav_scratchpad">Sổ Nháp</span>
-      </button>
-
-</div>
+  </div>
   <!-- @@NAV-END@@ -->
 
 
@@ -1017,8 +1019,13 @@
         🔍 Quét & che dữ liệu nhạy cảm (Email, SĐT, CCCD...)
       </button>
       <div style="display:flex; gap:6px; align-items:center;">
-        <input type="text" id="redact-keyword-input" class="form-control" style="flex:1; font-size:11px; padding:6px;" placeholder="Từ khóa cần che, VD: tên riêng" autocomplete="off">
-        <button class="btn btn-secondary" id="btn-mask-keyword" style="padding:6px 10px; font-size:11px;">Che theo từ</button>
+        <input type="text" id="redact-keyword-input" class="form-control" style="flex:1; font-size:11px; padding:6px;" placeholder="Từ khóa cần che, VD: tên riêng" autocomplete="off" data-i18n-placeholder="ph_redact_keyword">
+        <button class="btn btn-secondary" id="btn-mask-keyword" style="padding:6px 10px; font-size:11px; white-space:nowrap;" data-i18n="btn_mask_keyword">Che theo từ</button>
+      </div>
+      <div id="redact-keyword-chips" style="display:flex; flex-wrap:wrap; gap:4px; margin-top:6px;"></div>
+      <div id="redact-live-badge" style="display:none; font-size:10px; color:#10b981; align-items:center; gap:4px; margin-top:6px;">
+        <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#10b981;"></span>
+        <span data-i18n="lbl_redact_live_active">Tự động che khi lướt feed (Facebook/MXH)</span>
       </div>
     </div>
 
@@ -1146,7 +1153,7 @@
       <div id="element-cap-active-banner" style="display:none; background:rgba(14,165,233,0.15); border:1px solid rgba(14,165,233,0.4); border-radius:8px; padding:8px 10px; margin-bottom:8px; font-size:11.5px;">
         <div style="color:#38bdf8; font-weight:700; display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
           <span data-i18n="banner_cap_element_title">Chế độ chọn khung &amp; Kéo vùng chụp</span>
-          <button id="btn-cancel-cap-element" class="btn-text" style="color:#f87171; font-size:11px;" data-i18n="btn_cancel">[ESC] Hủy</button>
+          <button id="btn-cancel-cap-element" class="btn-text" style="color:#f87171; font-size:11px;" data-i18n="us_btn_cancel">[ESC] Hủy</button>
         </div>
         <div style="color:#cbd5e1; font-size:11px; line-height:1.4;" data-i18n="banner_cap_element_guide_html" data-i18n-html="true">
           • <b>Click vào thẻ/khung</b> hoặc <b>kéo chuột</b> để chọn vùng.<br>
@@ -1548,7 +1555,7 @@
       <div class="rule-card" style="border-color:rgba(245,158,11,0.35); background:rgba(245,158,11,0.06);">
         <div class="rule-card-title" style="color:#f59e0b;" data-i18n="trust_card4_title">⚖️ 4. Thông Tin Bản Quyền &amp; Kỹ Thuật</div>
         <div class="rule-card-body" data-i18n="trust_card4_body_html" data-i18n-html="true">
-          • <b>Phiên bản:</b> ScholarFlow v2.5.3<br>
+          • <b>Phiên bản:</b> ScholarFlow v2.5.4<br>
           • <b>Kiến trúc:</b> Manifest V3 (Chromium 114+ &amp; Firefox 109+ Native Gecko)<br>
           • <b>Bản quyền:</b> Bản quyền phần mềm thuộc về Minh Thuận<br>
           • <b>Chính sách bảo mật:</b> <a href="privacy.html" target="_blank" style="color:#38bdf8; text-decoration:underline;">Xem toàn văn Chính Sách Quyền Riêng Tư (Privacy Policy)</a>
@@ -2378,6 +2385,13 @@
         </div>
         <span class="custom-switch"><input type="checkbox" id="sec-toggle-cookiereject"><span class="switch-slider"></span></span>
       </label>
+      <label class="switch-row" for="sec-toggle-linkguard">
+        <div class="switch-row-left">
+          <span class="switch-row-title" data-i18n="sec_toggle_linkguard">Cảnh báo Link (Link Guard)</span>
+          <span class="switch-row-desc" data-i18n="sec_toggle_linkguard_desc">Hỏi xác nhận khi bấm link chuyển hướng sang web khác</span>
+        </div>
+        <span class="custom-switch"><input type="checkbox" id="sec-toggle-linkguard"><span class="switch-slider"></span></span>
+      </label>
       <label class="switch-row" for="sec-toggle-pasteguard">
         <div class="switch-row-left">
           <span class="switch-row-title" data-i18n="sec_pg_title">Cảnh báo dán nội dung nhạy cảm</span>
@@ -2579,6 +2593,13 @@
           </div>
           <span class="custom-switch"><input type="checkbox" id="soc-link-clean"><span class="switch-slider"></span></span>
         </label>
+        <label class="switch-row" for="soc-link-guard">
+          <div class="switch-row-left">
+            <span class="switch-row-title" data-i18n="soc_link_guard_title">Điểm dừng an toàn khi mở liên kết</span>
+            <span class="switch-row-desc" data-i18n="soc_link_guard_desc">Chặn chuyển trang ngay khi click, hiện màn hình điểm dừng hiển thị rõ tên miền thật và rủi ro trước khi bạn đồng ý mở.</span>
+          </div>
+          <span class="custom-switch"><input type="checkbox" id="soc-link-guard"><span class="switch-slider"></span></span>
+        </label>
         <label class="switch-row" for="soc-shop-clean" style="margin-bottom:0;">
           <div class="switch-row-left">
             <span class="switch-row-title" data-i18n="soc_shop_clean_title">Gỡ link quảng cáo / shop online trong bình luận</span>
@@ -2592,6 +2613,13 @@
             <span class="switch-row-desc" data-i18n="soc_gamble_desc">Chan huong toi trang cai do / casino / lure trong binh luan (kubet, 88bet, bong88... + moi .casino) - co the go chan tung ten mien</span>
           </div>
           <span class="custom-switch"><input type="checkbox" id="soc-gamble-block"><span class="switch-slider"></span></span>
+        </label>
+        <label class="switch-row" for="soc-disable-links" style="margin-bottom:0;">
+          <div class="switch-row-left">
+            <span class="switch-row-title" data-i18n="soc_disable_links_title">Vô hiệu hóa mọi liên kết</span>
+            <span class="switch-row-desc" data-i18n="soc_disable_links_desc">Loại bỏ đường dẫn của tất cả các link trên mạng xã hội, biến chúng thành chữ bình thường để ngăn bấm nhầm.</span>
+          </div>
+          <span class="custom-switch"><input type="checkbox" id="soc-disable-links"><span class="switch-slider"></span></span>
         </label>
         <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.06);">
           <span id="soc-inj-stats" style="font-size:10.5px; color:var(--text-muted); line-height:1.4;">Chưa phát hiện lần chèn mã nào trên tab này.</span>
@@ -3241,27 +3269,408 @@
   </div>
 
     <div id="tab-scratchpad" class="tab-section scratchpad-tab">
-    <div class="sf-feature-card">
-      <div class="sf-feature-header">
-        <h3 data-i18n="scratchpad_title">Sổ nháp bay (Floating Scratchpad)</h3>
+      <div class="scratchpad-header-row">
+        <div class="scratchpad-segmented" id="scratchpad-mode-seg">
+          <button type="button" class="scratchpad-seg-btn active" data-mode="page" id="scratchpad-mode-page">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+            <span data-i18n="scratchpad_mode_page">Trang này</span>
+          </button>
+          <button type="button" class="scratchpad-seg-btn" data-mode="global" id="scratchpad-mode-global">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+            <span data-i18n="scratchpad_mode_global">Toàn cục</span>
+          </button>
+        </div>
+        <div class="scratchpad-status-wrap">
+          <span class="scratchpad-status-dot" id="scratchpad-status-dot"></span>
+          <span id="scratchpad-status-text" data-i18n="scratchpad_saved">Đã lưu</span>
+        </div>
       </div>
-      <p class="sf-feature-desc" data-i18n="scratchpad_desc">Sổ nháp trong suốt trôi nổi trên màn hình, giúp ghi chú nhanh khi đọc tài liệu.</p>
-      <button id="btn-toggle-scratchpad" class="flow-action-btn primary" data-i18n="scratchpad_btn">Mở Sổ nháp</button>
+
+      <div class="scratchpad-toolbar">
+        <div class="scratchpad-tool-group">
+          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-bold" title="In đậm (Ctrl+B)" data-i18n-title="scratchpad_tip_bold"><b>B</b></button>
+          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-italic" title="In nghiêng (Ctrl+I)" data-i18n-title="scratchpad_tip_italic"><i>I</i></button>
+          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-heading" title="Tiêu đề" data-i18n-title="scratchpad_tip_heading">H</button>
+          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-quote" title="Khối trích dẫn" data-i18n-title="scratchpad_tip_quote">”</button>
+          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-list" title="Danh sách" data-i18n-title="scratchpad_tip_list">•</button>
+          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-task" title="Việc cần làm" data-i18n-title="scratchpad_tip_task">☑</button>
+        </div>
+
+        <div class="scratchpad-tool-group">
+          <button type="button" class="scratchpad-tool-btn btn-accent" id="scratchpad-btn-cite" title="Chèn trích dẫn trang hiện tại" data-i18n-title="scratchpad_tip_insert_cite">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+          </button>
+          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-copy" title="Sao chép toàn bộ" data-i18n-title="scratchpad_tip_copy">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+          </button>
+          <button type="button" class="scratchpad-tool-btn" id="btn-toggle-scratchpad" title="Mở cửa sổ nổi trên trang" data-i18n-title="scratchpad_tip_popout">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><polyline points="9 3 9 9 3 9"></polyline></svg>
+          </button>
+          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-clear" title="Xóa sạch ghi chú" data-i18n-title="scratchpad_tip_clear">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="scratchpad-editor-wrap">
+        <textarea id="scratchpad-editor" class="scratchpad-textarea" placeholder="Ghi chú nhanh, trích dẫn học thuật, ý tưởng nghiên cứu... (Hỗ trợ Markdown)" data-i18n-placeholder="scratchpad_placeholder" spellcheck="false"></textarea>
+      </div>
+
+      <div class="scratchpad-footer-row">
+        <span class="scratchpad-counter" id="scratchpad-counter">0 từ • 0 ký tự</span>
+      </div>
+
+      <div class="scratchpad-card">
+        <label class="scratchpad-option-row" for="chk-scratchpad-clipper">
+          <span data-i18n="scratchpad_clipper_toggle">Tự động hiện nút Lưu trích dẫn khi bôi đen văn bản</span>
+          <input type="checkbox" id="chk-scratchpad-clipper" checked>
+        </label>
+      </div>
     </div>
-    
-    <div class="sf-feature-card" style="margin-top: 15px;">
-      <div class="sf-feature-header">
-        <h3 data-i18n="highlighter_title">Bút Dạ Quang Học Thuật</h3>
+
+  <!-- Userscripts Tab -->
+  <div id="tab-userscripts" class="tab-section">
+    <div class="sf-card">
+      <div class="sf-card-header">
+        <h2 style="font-size: 13px; margin: 0; display: flex; align-items: center; gap: 6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+          <span data-i18n="userscripts_title">Quản lý Script</span>
+        </h2>
       </div>
-      <p class="sf-feature-desc" data-i18n="highlighter_desc">Bôi đen văn bản trên web và tô màu highlight (lưu cục bộ).</p>
-      <button id="btn-toggle-highlighter" class="flow-action-btn success" data-i18n="highlighter_btn_on">Bật Highlighter</button>
+      <div class="sf-card-body" style="padding: 10px;">
+        
+        <!-- Firefox Permission Warning -->
+        <div id="us-ff-perm-box" class="us-alert" style="display: none; background: rgba(239, 68, 68, 0.1); border-left: 3px solid #ef4444; padding: 8px; border-radius: 4px; margin-bottom: 12px;">
+          <p style="font-size: 11px; margin: 0 0 6px 0; color: #ef4444;" data-i18n="us_ff_perm_desc">Tính năng này cần quyền chạy script (Firefox yêu cầu cấp quyền thủ công).</p>
+          <button id="btn-us-req-perm" class="btn btn-primary" style="font-size: 11px; padding: 4px 8px;" data-i18n="us_btn_req_perm">Cấp quyền ngay</button>
+        </div>
+
+        <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;" data-i18n="userscripts_desc">Thêm và chạy các kịch bản Javascript tùy chỉnh trên bất kỳ trang web nào.</p>
+
+        <!-- Script List -->
+        <div id="us-list-container">
+          <!-- Search & Filter -->
+          <div style="display: flex; gap: 6px; margin-bottom: 8px; align-items: center;">
+            <div style="position: relative; flex: 1;">
+              <input id="us-search" type="text" class="form-control" style="font-size: 11px; padding: 5px 8px 5px 26px; border-radius: 6px;" placeholder="Tìm kiếm script...">
+              <span class="us-icon" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: #64748b; pointer-events: none;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              </span>
+            </div>
+            <select id="us-filter-status" class="form-control" style="font-size: 11px; padding: 5px 8px; width: auto; border-radius: 6px;">
+              <option value="">Tất cả</option>
+              <option value="current_page">Trang này</option>
+              <option value="active">Đang bật</option>
+              <option value="inactive">Đang tắt</option>
+            </select>
+          </div>
+
+          <div style="display: flex; gap: 6px; margin-bottom: 8px;">
+            <button id="btn-us-add" class="us-btn us-btn-primary" style="flex: 1; height: 30px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <span data-i18n="us_btn_add">Thêm Script Mới</span>
+            </button>
+            <button id="btn-us-template" class="us-btn" style="height: 30px;" title="Chọn mẫu script có sẵn">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+              <span>Mẫu code</span>
+            </button>
+          </div>
+
+          <ul id="us-list" class="us-list" style="list-style: none; padding: 0; margin: 0; margin-bottom: 8px;">
+            <!-- Rendered by JS -->
+          </ul>
+
+          <!-- Secondary utility actions -->
+          <div style="display: flex; gap: 6px; margin-bottom: 8px;">
+            <button id="btn-us-import" class="us-btn us-btn-sm" style="flex: 1;" title="Nhập script từ file máy tính">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+              <span data-i18n="us_btn_import">Nhập file</span>
+            </button>
+            <button id="btn-us-import-url" class="us-btn us-btn-sm" style="flex: 1;" title="Tải script từ liên kết GreasyFork / GitHub">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+              <span data-i18n="us_btn_import_url">Tải URL</span>
+            </button>
+            <button id="btn-us-check-updates" class="us-btn us-btn-sm" style="flex: 1;" title="Kiểm tra phiên bản mới cho các script">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+              <span>Cập nhật</span>
+            </button>
+            <button id="btn-us-export" class="us-btn us-btn-sm" style="flex: 1;" title="Sao lưu toàn bộ script ra file JSON">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              <span data-i18n="us_btn_export">Sao lưu</span>
+            </button>
+          </div>
+
+          <!-- Batch Action Strip -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 4px 8px; background: rgba(0,0,0,0.25); border-radius: 6px; border: 1px solid rgba(255,255,255,0.06);">
+            <span style="font-size: 10px; color: var(--text-muted);">Thao tác nhanh:</span>
+            <div class="us-btn-group">
+              <button id="btn-us-enable-all" class="us-btn us-btn-sm" style="height: 22px; font-size: 10px;" title="Bật tất cả script">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Bật hết</span>
+              </button>
+              <button id="btn-us-disable-all" class="us-btn us-btn-sm" style="height: 22px; font-size: 10px;" title="Tắt tất cả script">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                <span>Tắt hết</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Editor View (Hidden by default) -->
+        <div id="us-editor-container" style="display: none;">
+          <input type="hidden" id="us-edit-id">
+
+          <!-- ── Metadata info bar (parsed from GM header) ── -->
+          <div id="us-meta-bar" class="us-meta-inspector" style="display:none;">
+            <div class="us-meta-title-row">
+              <div style="display:flex; align-items:center; gap:6px; min-width:0;">
+                <span class="us-icon" style="color:#38bdf8;">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+                </span>
+                <span id="us-meta-name" style="font-weight:700; color:#f1f5f9; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
+              </div>
+              <span id="us-meta-version" class="us-pill" style="color:#38bdf8; border-color:rgba(56,189,248,0.3);"></span>
+            </div>
+            <div id="us-meta-desc" class="us-meta-desc"></div>
+            <div class="us-meta-details-row">
+              <span id="us-meta-author" class="us-pill"></span>
+              <span id="us-meta-match" class="us-pill"></span>
+            </div>
+          </div>
+
+          <!-- ── Keyboard shortcut hint ── -->
+          <div style="font-size:9.5px; color:#64748b; margin-bottom:8px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+            <span><kbd style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:3px;padding:1px 5px;font-family:monospace;color:#cbd5e1;">Ctrl+S</kbd> Lưu</span>
+            <span><kbd style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:3px;padding:1px 5px;font-family:monospace;color:#cbd5e1;">Ctrl+Enter</kbd> Chạy thử</span>
+            <span><kbd style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:3px;padding:1px 5px;font-family:monospace;color:#cbd5e1;">Ctrl+H</kbd> Tìm &amp; Thay</span>
+          </div>
+
+          <!-- ── Find & Replace bar ── -->
+          <div id="us-find-bar" style="display:none; background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.12); border-radius:6px; padding:6px; margin-bottom:8px;">
+            <div style="display:flex; gap:4px; align-items:center; margin-bottom:4px;">
+              <input id="us-find-input" class="form-control" placeholder="Tìm..." style="flex:1; font-size:11px; padding:3px 6px; font-family:monospace;">
+              <input id="us-replace-input" class="form-control" placeholder="Thay bằng..." style="flex:1; font-size:11px; padding:3px 6px; font-family:monospace;">
+            </div>
+            <div style="display:flex; gap:4px; align-items:center;">
+              <button id="btn-us-find-prev" class="us-btn us-btn-sm" style="padding:2px 6px;">Trước</button>
+              <button id="btn-us-find-next" class="us-btn us-btn-sm" style="padding:2px 6px;">Sau</button>
+              <button id="btn-us-replace-one" class="us-btn us-btn-sm" style="padding:2px 6px;">Thay 1</button>
+              <button id="btn-us-replace-all" class="us-btn us-btn-sm" style="padding:2px 6px;">Thay hết</button>
+              <span id="us-find-count" style="font-size:10px; color:var(--text-muted); padding:3px 4px; margin-left:auto;"></span>
+            </div>
+          </div>
+
+          <!-- ── Basic metadata fields ── -->
+          <div style="margin-bottom: 8px;">
+            <label style="font-size: 11px; font-weight: 500;" data-i18n="us_label_name">Tên Script</label>
+            <input type="text" id="us-edit-name" class="form-control" style="width: 100%; font-size: 12px; padding: 5px 8px;" placeholder="VD: Bỏ qua quảng cáo YT">
+          </div>
+
+          <!-- ── Collapsible Advanced Settings ── -->
+          <details id="us-advanced-details" style="margin-bottom:8px;">
+            <summary style="font-size:11px; font-weight:600; cursor:pointer; color:var(--text-secondary); padding:4px 0; user-select:none; display:inline-flex; align-items:center; gap:5px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+              <span>Cài đặt nâng cao ▸</span>
+            </summary>
+            <div style="padding-top:8px;">
+
+              <div style="margin-bottom: 8px;">
+                <label style="font-size: 11px; font-weight: 500;" data-i18n="us_label_matches">URL Áp dụng (Matches)</label>
+                <textarea id="us-edit-matches" class="form-control" style="width: 100%; height: 40px; font-size: 11px; padding: 4px; font-family: monospace;" placeholder="*://*.youtube.com/*"></textarea>
+                <div style="font-size: 9px; color: var(--text-muted); margin-top: 2px;" data-i18n="us_matches_hint">Mỗi URL một dòng.</div>
+              </div>
+
+              <div style="margin-bottom: 8px;">
+                <label style="font-size: 11px; font-weight: 500;" data-i18n="us_label_excludes">URL Loại trừ (Excludes)</label>
+                <textarea id="us-edit-excludes" class="form-control" style="width: 100%; height: 40px; font-size: 11px; padding: 4px; font-family: monospace;" placeholder="*://music.youtube.com/*"></textarea>
+                <div style="font-size: 9px; color: var(--text-muted); margin-top: 2px;" data-i18n="us_excludes_hint">Mỗi URL một dòng.</div>
+              </div>
+
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+                <div>
+                  <label style="font-size: 11px; font-weight: 500;" data-i18n="us_label_runat">Thời điểm chạy</label>
+                  <select id="us-edit-runat" class="form-control" style="width: 100%; font-size: 11px; padding: 4px;">
+                    <option value="document_start">document_start (Sớm nhất)</option>
+                    <option value="document_idle" selected>document_idle (Mặc định)</option>
+                    <option value="document_end">document_end (Sau DOM)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size: 11px; font-weight: 500;" title="MAIN: chạy trong ngữ cảnh trang web (truy cập biến window). ISOLATED: an toàn hơn, không chia sẻ scope với trang.">Execution World <span style="color:var(--text-muted);">(?)</span></label>
+                  <select id="us-edit-world" class="form-control" style="width: 100%; font-size: 11px; padding: 4px;">
+                    <option value="MAIN" selected>MAIN (truy cập window)</option>
+                    <option value="ISOLATED">ISOLATED (an toàn hơn)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style="margin-bottom: 8px;">
+                <label style="font-size: 11px; font-weight: 500;" data-i18n="us_label_update_url">URL Tự động cập nhật</label>
+                <input type="text" id="us-edit-update-url" class="form-control" style="width: 100%; font-size: 11px; padding: 4px; font-family: monospace;" placeholder="https://update.greasyfork.org/...">
+                <div style="font-size: 9px; color: var(--text-muted); margin-top: 2px;" data-i18n="us_update_hint">Script sẽ tự làm mới từ link này.</div>
+              </div>
+
+            </div>
+          </details>
+
+          <!-- ── Code Editor with toolbar ── -->
+          <div style="margin-bottom: 8px;">
+            <div class="us-editor-toolbar">
+              <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                <label style="font-size: 11px; font-weight: 600; color: #cbd5e1; display:flex; align-items:center; gap:5px;" data-i18n="us_label_code">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                  <span>Mã JavaScript</span>
+                </label>
+                <span class="us-pill" style="font-size:9.5px; color:#94a3b8; padding:1px 5px;">ES6+</span>
+              </div>
+              <div class="us-btn-group">
+                <button id="btn-us-open-tab" class="us-btn us-btn-sm" title="Mở trình soạn thảo toàn màn hình trong tab mới">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                  <span>Mở tab</span>
+                </button>
+                <button id="btn-us-snippets" class="us-btn us-btn-sm" title="Thư viện code mẫu GM_*">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                  <span>Mẫu GM_*</span>
+                </button>
+                <button id="btn-us-storage-toggle" class="us-btn us-btn-sm" title="Quản lý GM Storage của trang web hiện tại">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+                  <span>Storage</span>
+                </button>
+                <button id="btn-us-parse-meta" class="us-btn us-btn-sm" title="Phân tích header @userscript">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+                  <span>Parse Meta</span>
+                </button>
+                <button id="btn-us-format" class="us-btn us-btn-sm" title="Định dạng / làm đẹp code">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" y1="10" x2="3" y2="10"></line><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="14" x2="3" y2="14"></line><line x1="21" y1="18" x2="3" y2="18"></line></svg>
+                  <span>Format</span>
+                </button>
+                <button id="btn-us-export-single" class="us-btn us-btn-sm" title="Xuất file .user.js">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                  <span>.user.js</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Code editor with line numbers (Constrained container) -->
+            <div style="position:relative; display:flex; height:250px; max-height:250px; border:1px solid rgba(255,255,255,0.12); border-radius:6px 6px 0 0; overflow:hidden; background:#080c14;">
+              <div id="us-line-numbers" style="height:100%; max-height:100%; padding:6px 6px; background:#0d131f; color:#475569; font-family:'JetBrains Mono', Consolas, monospace; font-size:11px; line-height:1.5; text-align:right; min-width:36px; user-select:none; overflow:hidden; white-space:pre; flex-shrink:0; box-sizing:border-box; border-right:1px solid #1e293b;">1</div>
+              <textarea id="us-edit-code" class="form-control" style="flex:1; height:100%; max-height:100%; font-family:'JetBrains Mono', Consolas, monospace; font-size:11px; padding:6px 10px; white-space:pre; resize:none; border:none; border-radius:0; background:transparent; color:#e2e8f0; line-height:1.5; tab-size:2; overflow-y:auto; overflow-x:auto; box-sizing:border-box;" placeholder="console.log('Hello World!');"></textarea>
+            </div>
+            <!-- Statusbar -->
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 8px; font-size:9.5px; color:#64748b; background:#090d16; border:1px solid rgba(255,255,255,0.12); border-top:none; border-radius:0 0 6px 6px;">
+              <div style="display:flex; gap:10px;">
+                <span id="us-cursor-pos">Dòng 1, Cột 1</span>
+                <span id="us-char-count">0 ký tự</span>
+              </div>
+              <div style="display:flex; gap:8px;">
+                <span>JavaScript (ES6+)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Action buttons ── -->
+          <div style="display: flex; gap: 6px; flex-wrap:wrap;">
+            <button id="btn-us-save" class="us-btn us-btn-primary" style="flex: 1; height: 32px; font-size: 11.5px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+              <span data-i18n="us_btn_save">Lưu script</span>
+            </button>
+            <button id="btn-us-test" class="us-btn us-btn-secondary" style="flex: 1; height: 32px; font-size: 11.5px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 21"></polygon></svg>
+              <span>Chạy thử</span>
+            </button>
+            <button id="btn-us-cancel" class="us-btn us-btn-secondary" style="height: 32px; font-size: 11.5px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              <span data-i18n="us_btn_cancel">Đóng</span>
+            </button>
+          </div>
+
+          <!-- ── Console Output ── -->
+          <div id="us-console-panel" class="us-drawer" style="display:none;">
+            <div class="us-drawer-header">
+              <div style="display:flex; gap:6px; align-items:center;">
+                <span class="us-icon">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+                </span>
+                <span>Console Output</span>
+                <span id="us-console-count" style="font-size:9px; color:#64748b;"></span>
+              </div>
+              <div class="us-btn-group">
+                <button id="btn-us-copy-console" class="us-btn us-btn-icon" style="width:20px; height:20px;" title="Sao chép output">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                </button>
+                <button id="btn-us-clear-console" class="us-btn us-btn-icon" style="width:20px; height:20px;" title="Xóa logs">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+              </div>
+            </div>
+            <div id="us-console-output" class="us-drawer-body"></div>
+          </div>
+
+          <!-- ── GM Storage Viewer & Editor ── -->
+          <div id="us-storage-panel" class="us-drawer" style="display:none;">
+            <div class="us-drawer-header">
+              <div style="display:flex; gap:6px; align-items:center;">
+                <span class="us-icon">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+                </span>
+                <span>GM Storage</span>
+              </div>
+              <div class="us-btn-group">
+                <button id="btn-us-add-key-toggle" class="us-btn us-btn-icon" style="width:20px; height:20px;" title="Thêm key mới">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                </button>
+                <button id="btn-us-refresh-storage" class="us-btn us-btn-icon" style="width:20px; height:20px;" title="Làm mới">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                </button>
+                <button id="btn-us-clear-storage" class="us-btn us-btn-icon us-danger" style="width:20px; height:20px;" title="Xóa toàn bộ GM Storage trang này">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+                <button id="btn-us-close-storage" class="us-btn us-btn-icon" style="width:20px; height:20px;" title="Đóng panel GM Storage">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+              </div>
+            </div>
+            <!-- Add key input box (collapsed by default) -->
+            <div id="us-storage-add-box" style="display:none; padding:6px 8px; background:#0c111c; border-bottom:1px solid #1f2937; gap:4px; flex-direction:column;">
+              <input id="us-new-gm-key" type="text" class="form-control" style="font-size:10.5px; padding:3px 6px; font-family:monospace;" placeholder="Key (VD: config_theme)">
+              <div style="display:flex; gap:4px;">
+                <input id="us-new-gm-val" type="text" class="form-control" style="flex:1; font-size:10.5px; padding:3px 6px; font-family:monospace;" placeholder='Value (VD: "dark")'>
+                <button id="btn-us-save-gm-key" class="us-btn us-btn-primary us-btn-sm" style="height:24px; font-size:10px;">Lưu</button>
+              </div>
+            </div>
+            <div id="us-storage-output" class="us-drawer-body" style="max-height:120px;"></div>
+          </div>
+
+          <!-- ── Snippet Picker Modal ── -->
+          <div id="us-snippets-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:90%; max-width:390px; max-height:80vh; background:#0f172a; border:1px solid rgba(56,189,248,0.4); border-radius:8px; box-shadow:0 12px 36px rgba(0,0,0,0.85); z-index:99999; flex-direction:column; overflow:hidden;">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:#1e293b; border-bottom:1px solid #334155;">
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span class="us-icon" style="color:#38bdf8;">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                </span>
+                <span style="font-size:12px; font-weight:700; color:#f1f5f9;">Thư viện Mẫu GM_*</span>
+              </div>
+              <button id="btn-us-close-snippets" class="us-btn us-btn-icon" style="width:22px; height:22px;" title="Đóng">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+            <div id="us-snippets-list" style="padding:10px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:8px;">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+
+        </div>
+
+      </div>
     </div>
   </div>
 
+
+  
   <div class="footer-trust-bar">
     <div class="trust-pill" title="Phiên bản hiện tại" data-i18n-title="tip_trust_version">
       <span class="trust-dot dot-green"></span>
-      <span id="app-version-display">v2.5.3</span>
+      <span id="app-version-display">v2.5.4</span>
     </div>
     <div class="trust-divider">•</div>
     <div class="trust-pill" title="Được phát triển bởi Minh Thuận" data-i18n-title="tip_trust_author">
@@ -3279,7 +3688,7 @@
   <script src="../locales/ja.js"></script>
   <script src="../js/i18n.js"></script>
   <!-- Sidebar controller modules (load order matters - see scripts/split/split_manifest.json) -->
-  <script src="../js/core/browser.js"></script>
+    <script src="../js/core/browser.js"></script>
   <script src="../js/core/constants.js"></script>
   <script src="../js/core/state.js"></script>
   <script src="../js/utils/names.js"></script>
@@ -3322,6 +3731,8 @@
   <script src="../js/tabs/scratchpad.js"></script>
   <script src="../js/tabs/qr.js"></script>
   <script src="../js/debug.js"></script>
+  <script src="../js/core/gm-shim.js"></script>
+  <script src="../js/tabs/userscripts.js"></script>
 </body>
 </html>
 

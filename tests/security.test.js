@@ -21,11 +21,12 @@ const fs = require("fs");
 const path = require("path");
 
 const ROOT = REPO_ROOT;
-const SKIP_DIRS = new Set(["node_modules", ".git", "build", "tests", ".vscode", "scripts"]);
+const SKIP_DIRS = new Set(["node_modules", ".git", "build", "tests", ".vscode", "scripts", "dist"]);
 const ALLOWED_HOSTS = new Set([
   "doi.org",
   "export.arxiv.org",
   "arxiv.org",
+    "api.deepseek.com",
   "www.youtube.com",
   "music.youtube.com",
   "img.youtube.com",
@@ -80,7 +81,9 @@ const ALLOWED_HOSTS = new Set([
   "web.telegram.org",
   "haveibeenpwned.com",
   "browserleaks.com",
-  "www.dnsleaktest.com"
+  "www.dnsleaktest.com",
+  "returnyoutubedislikeapi.com",
+  "update.greasyfork.org"
 ]);
 
 function walk(dir, out = []) {
@@ -186,6 +189,7 @@ async function main() {
       const host = u.replace(/^https?:\/\//, "").split(/[/?#]/)[0];
       if (!host) continue;
       if (host.startsWith("...") || !/^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/i.test(host)) continue; // e.g. "https://.../calendar.ics"
+      if (u.startsWith("http://www.w3.org/")) continue; // XML namespace identifier
       if (u.startsWith("http://") || host === "http") { plainHttp++; continue; }
       if (!ALLOWED_HOSTS.has(host)) netMiss.push(`${path.basename(f)}: ${host}`);
     }

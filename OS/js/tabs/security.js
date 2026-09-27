@@ -2,7 +2,7 @@
 // ScholarFlow module: OS/js/tabs/security.js
 // Security UI: phishing+typo-squat, anti-clickjacking auto-block, unlock per-site
 // ---------------------------------------------------------------------------
-let secState = { phishing: true, clickjack: true, autoBlock: true, clickBlock: true, cookieReject: false, pasteGuard: false, unlockSites: {}, lastScan: null };
+let secState = { phishing: true, clickjack: true, autoBlock: true, clickBlock: true, linkGuard: false, cookieReject: false, pasteGuard: false, unlockSites: {}, lastScan: null };
 let _secCurrentHost = "";
 
 function secLoadSettings() {
@@ -59,7 +59,9 @@ function secUpdateUI() {
   const a = document.getElementById("sec-toggle-autoblock");
   const cb = document.getElementById("sec-toggle-phishclick");
   const u = document.getElementById("sec-toggle-unlock");
-  const g = document.getElementById("sec-toggle-pasteguard");
+  const lg = document.getElementById("sec-toggle-linkguard");
+    if (lg) lg.checked = !!secState.linkGuard;
+    const g = document.getElementById("sec-toggle-pasteguard");
   const r = document.getElementById("sec-toggle-cookiereject");
   if (p) p.checked = !!secState.phishing;
   if (c) c.checked = !!secState.clickjack;
@@ -509,7 +511,9 @@ onReady(function () {
   const btnUnlock = document.getElementById("btn-sec-unlock-now");
   if (btnUnlock) btnUnlock.addEventListener("click", secUnlockNow);
   const g = document.getElementById("sec-toggle-pasteguard");
-  if (g) g.addEventListener("change", function () { secState.pasteGuard = !!g.checked; secSaveSettings(); });
+  const lg = document.getElementById("sec-toggle-linkguard");
+  if (lg) lg.addEventListener("change", function () { secState.linkGuard = !!lg.checked; secSaveSettings(); });
+    if (g) g.addEventListener("change", function () { secState.pasteGuard = !!g.checked; secSaveSettings(); });
   const r = document.getElementById("sec-toggle-cookiereject");
   if (r) r.addEventListener("change", function () { secState.cookieReject = !!r.checked; secSaveSettings(); });
   const btnTrust = document.getElementById("btn-sec-trust");
@@ -546,4 +550,20 @@ onReady(function () {
     const api = (typeof chrome !== "undefined" && chrome.tabs ? chrome.tabs : typeof browser !== "undefined" && browser.tabs ? browser.tabs : null);
     if (api && api.onActivated && api.onActivated.addListener) api.onActivated.addListener(function () { secUpdateActiveHost(secUpdateUI); });
   } catch (e2) {}
+
+
+  const btnReaderMode = document.getElementById("btn-sec-reader-mode");
+  if (btnReaderMode) {
+    btnReaderMode.addEventListener("click", () => {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs[0]) {
+          chrome.tabs.sendMessage(tabs[0].id, { command: "toggleReaderMode" }, (response) => {
+            if (chrome.runtime.lastError) {
+              console.error("ReaderMode: " + chrome.runtime.lastError.message);
+            }
+          });
+        }
+      });
+    });
+  }
 });

@@ -1,6 +1,19 @@
 // Web Super Assistant - Background Service Worker (Manifest V3)
 // Handles: Chrome/Edge Native Side Panel API, Full-Page Screenshot Stitching, Tab Management
 
+// Import background userscript runner & auto-updater
+try {
+  if (typeof importScripts === "function") {
+    importScripts("userscripts_bg.js");
+  }
+} catch (_e) {
+  try {
+    if (typeof importScripts === "function") {
+      importScripts("/OS/js/userscripts_bg.js");
+    }
+  } catch (_e2) {}
+}
+
 // Enable native Side Panel on action click for Chromium browsers (Chrome 114+, Edge 114+)
 try {
   const isEdge = navigator.userAgent.toLowerCase().includes("edg/");

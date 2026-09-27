@@ -1328,7 +1328,50 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
     });
   });
 
-  document.getElementById("btn-mask-keyword")?.addEventListener("click", () => {
+  function sfRenderKeywordRules(rules) {
+    const container = document.getElementById("redact-keyword-chips");
+    const liveBadge = document.getElementById("redact-live-badge");
+    if (!container) return;
+    container.textContent = "";
+    if (!rules || rules.length === 0) {
+      if (liveBadge) liveBadge.style.display = "none";
+      return;
+    }
+    if (liveBadge) liveBadge.style.display = "flex";
+    rules.forEach(r => {
+      const chip = document.createElement("div");
+      chip.className = "redact-keyword-chip";
+      
+      const label = document.createElement("span");
+      label.className = "kw-text";
+      label.textContent = `"${r.keyword}"`;
+      
+      const count = document.createElement("span");
+      count.className = "kw-count";
+      count.textContent = `(${r.count || 0})`;
+
+      const btnDel = document.createElement("button");
+      btnDel.className = "btn-remove-kw";
+      btnDel.textContent = "✕";
+      btnDel.title = window.i18n ? window.i18n.t("tip_remove_kw") : "Xóa quy tắc này";
+      btnDel.addEventListener("click", () => {
+        sendTabMessage({ action: "REMOVE_KEYWORD_RULE", ruleId: r.id }, (res) => {
+          if (res) {
+            sfRenderKeywordRules(res.rules || []);
+            if (res.list) sfSyncRedactionList(res.list);
+            showToast(`✓ Đã xóa "${r.keyword}"`);
+          }
+        });
+      });
+
+      chip.appendChild(label);
+      chip.appendChild(count);
+      chip.appendChild(btnDel);
+      container.appendChild(chip);
+    });
+  }
+
+  function sfTriggerAddKeyword() {
     const kwInput = document.getElementById("redact-keyword-input");
     const kw = ((kwInput && kwInput.value) || "").trim();
     if (!kw) {
@@ -1336,17 +1379,31 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
       return;
     }
     sendTabMessage({
-      action: "MASK_BY_KEYWORD",
+      action: "ADD_KEYWORD_RULE",
       keyword: kw,
       style: currentRedactStyle,
       blurPx: currentBlurPx
     }, (res) => {
+      if (res && res.rules) sfRenderKeywordRules(res.rules);
       if (res && res.list) sfSyncRedactionList(res.list);
       showToast(res && res.count > 0
-        ? `✓ Đã che ${res.count} phần tử chứa "${kw}"!`
-        : `⚠️ Không tìm thấy "${kw}" trên trang.`);
+        ? `✓ Đang tự động che "${kw}" (${res.count} vị trí)!`
+        : `✓ Đã thêm quy tắc "${kw}" (tự che khi lướt feed)!`);
       if (kwInput) kwInput.value = "";
     });
+  }
+
+  document.getElementById("btn-mask-keyword")?.addEventListener("click", sfTriggerAddKeyword);
+  document.getElementById("redact-keyword-input")?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      sfTriggerAddKeyword();
+    }
+  });
+
+  // Query existing keyword rules on load
+  sendTabMessage({ action: "GET_KEYWORD_RULES" }, (res) => {
+    if (res && res.rules) sfRenderKeywordRules(res.rules);
   });
 
   // ── PIN lock for "Xem bản gốc" (reveal original) ──────────────────────────
@@ -1686,6 +1743,7 @@ document.getElementById("btn-quick-swap-tabs")?.addEventListener("click", swapDu
       const rc = document.getElementById("redact-count");
       if (rc) rc.textContent = msg.count || 0;
       if (Array.isArray(msg.list)) renderRedactedList(msg.list);
+      if (Array.isArray(msg.keywordRules)) sfRenderKeywordRules(msg.keywordRules);
     } else if (msg.type === "INSPECT_MODE_CHANGED") {
       isInspectMode = msg.active;
       updateInspectButtonsUI();

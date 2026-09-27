@@ -437,12 +437,53 @@
           break;
 
         case "MASK_BY_KEYWORD":
+        case "ADD_KEYWORD_RULE":
           {
-            const n = (typeof maskByKeyword === "function")
-              ? maskByKeyword(msg.keyword, msg.style, msg.blurPx) : 0;
+            const res = (typeof addKeywordRule === "function")
+              ? addKeywordRule(msg.keyword, msg.style, msg.blurPx)
+              : { count: 0, rules: [] };
             sendResponse({
               success: true,
-              count: n,
+              count: res.count,
+              rules: res.rules,
+              list: getRedactedItemsForSidebar()
+            });
+          }
+          break;
+
+        case "REMOVE_KEYWORD_RULE":
+          {
+            const rules = (typeof removeKeywordRule === "function")
+              ? removeKeywordRule(msg.ruleId)
+              : [];
+            sendResponse({
+              success: true,
+              rules: rules,
+              list: getRedactedItemsForSidebar()
+            });
+          }
+          break;
+
+        case "GET_KEYWORD_RULES":
+          {
+            const rules = (typeof getKeywordRules === "function")
+              ? getKeywordRules()
+              : [];
+            sendResponse({
+              success: true,
+              rules: rules
+            });
+          }
+          break;
+
+        case "CLEAR_ALL_KEYWORD_RULES":
+          {
+            if (typeof clearAllKeywordRules === "function") {
+              clearAllKeywordRules();
+            }
+            sendResponse({
+              success: true,
+              rules: [],
               list: getRedactedItemsForSidebar()
             });
           }

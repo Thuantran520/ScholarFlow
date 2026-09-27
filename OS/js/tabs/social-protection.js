@@ -123,6 +123,7 @@ function socUpdateUI() {
   const set = function (id, v) { const el = document.getElementById(id); if (el) el.checked = !!v; };
   set("soc-inj-shield", socState.inj);
   set("soc-link-clean", socState.linkClean);
+    set("soc-ytdislike", socState.ytDislike);
   set("soc-shop-clean", socState.shopClean);
   set("soc-gamble-block", socState.gamble);
   set("soc-tracker-all", socState.trackerBlockAll);
@@ -470,7 +471,14 @@ onReady(function () {
       socSaveSettings();
     });
   }
-  const linkEl = document.getElementById("soc-link-clean");
+  const ytEl = document.getElementById("soc-ytdislike");
+    if (ytEl) {
+      ytEl.addEventListener("change", function () {
+        socState.ytDislike = !!ytEl.checked;
+        socSaveSettings();
+      });
+    }
+    const linkEl = document.getElementById("soc-link-clean");
   if (linkEl) {
     linkEl.addEventListener("change", function () {
       socState.linkClean = !!linkEl.checked;

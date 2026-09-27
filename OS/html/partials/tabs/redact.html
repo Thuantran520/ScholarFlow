@@ -106,8 +106,13 @@
         <span>Quét & che dữ liệu nhạy cảm (Email, SĐT, CCCD...)</span>
       </button>
       <div style="display:flex; gap:6px; align-items:center;">
-        <input type="text" id="redact-keyword-input" class="form-control" style="flex:1; font-size:11px; padding:6px;" placeholder="Từ khóa cần che, VD: tên riêng" autocomplete="off">
-        <button class="btn btn-secondary" id="btn-mask-keyword" style="padding:6px 10px; font-size:11px;">Che theo từ</button>
+        <input type="text" id="redact-keyword-input" class="form-control" style="flex:1; font-size:11px; padding:6px;" placeholder="Từ khóa cần che, VD: tên riêng" autocomplete="off" data-i18n-placeholder="ph_redact_keyword">
+        <button class="btn btn-secondary" id="btn-mask-keyword" style="padding:6px 10px; font-size:11px; white-space:nowrap;" data-i18n="btn_mask_keyword">Che theo từ</button>
+      </div>
+      <div id="redact-keyword-chips" style="display:flex; flex-wrap:wrap; gap:4px; margin-top:6px;"></div>
+      <div id="redact-live-badge" style="display:none; font-size:10px; color:#10b981; align-items:center; gap:4px; margin-top:6px;">
+        <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#10b981;"></span>
+        <span data-i18n="lbl_redact_live_active">Tự động che khi lướt feed (Facebook/MXH)</span>
       </div>
     </div>
 

@@ -5,9 +5,11 @@
 #
 #   pwsh -NoProfile -File scripts/sync_dist.ps1            # Chrome staging only
 #   pwsh -NoProfile -File scripts/sync_dist.ps1 -Firefox   # + Firefox staging
+#   pwsh -NoProfile -File scripts/sync_dist.ps1 -Edge      # + Edge staging
 # ---------------------------------------------------------------------------
 param(
-    [switch]$Firefox
+    [switch]$Firefox,
+    [switch]$Edge
 )
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
@@ -33,4 +35,5 @@ function Sync-Flavor($name, $manifestSrc) {
 
 Sync-Flavor "load_unpacked_chrome" "manifest_chrome.json"
 if ($Firefox) { Sync-Flavor "load_unpacked_firefox" "manifest_firefox.json" }
-Write-Host ">> Done. Now click RELOAD on the extension in chrome://extensions / about:addons, then F5 the page." -ForegroundColor Cyan
+if ($Edge) { Sync-Flavor "load_unpacked_edge" "manifest_chrome.json" }
+Write-Host ">> Done. Now click RELOAD on the extension in chrome://extensions / edge://extensions / about:addons, then F5 the page." -ForegroundColor Cyan

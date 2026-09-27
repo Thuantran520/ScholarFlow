@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ScholarFlow - Userscript Studio</title>
+  <link rel="stylesheet" href="../css/base/variables.css">
+  <link rel="stylesheet" href="../css/base/base.css">
+  <link rel="stylesheet" href="../css/components/buttons.css">
+  <link rel="stylesheet" href="../css/components/forms.css">
+  <link rel="stylesheet" href="../css/tabs/userscripts.css">
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100vh;
+      overflow: hidden; background: #0b0f19; color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .studio-app {
+      display: flex; flex-direction: column; height: 100vh; width: 100%;
+    }
+    .studio-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 16px; background: #111827; border-bottom: 1px solid #1f2937;
+      gap: 12px; flex-shrink: 0;
+    }
+    .studio-brand {
+      display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; color: #38bdf8;
+    }
+    .studio-title-input {
+      font-size: 13px; font-weight: 600; padding: 4px 8px; border-radius: 4px;
+      background: #1f2937; border: 1px solid #374151; color: #f9fafb; width: 260px;
+    }
+    .studio-actions {
+      display: flex; align-items: center; gap: 6px; margin-left: auto;
+    }
+    .studio-meta-bar {
+      display: flex; gap: 12px; padding: 8px 16px; background: #131d31;
+      border-bottom: 1px solid #1f2937; flex-shrink: 0; align-items: center; flex-wrap: wrap;
+    }
+    .meta-field {
+      display: flex; align-items: center; gap: 6px; font-size: 12px; color: #94a3b8;
+    }
+    .meta-field input, .meta-field select {
+      background: #1e293b; border: 1px solid #334155; color: #f1f5f9;
+      font-size: 11px; padding: 3px 6px; border-radius: 4px; font-family: monospace;
+    }
+    .studio-editor-area {
+      flex: 1; display: flex; position: relative; overflow: hidden; background: #080c14;
+    }
+    .studio-line-numbers {
+      padding: 10px 8px; background: #0f172a; color: #475569;
+      font-family: monospace; font-size: 12px; line-height: 1.6; text-align: right;
+      min-width: 44px; user-select: none; overflow: hidden; white-space: pre;
+      border-right: 1px solid #1e293b; flex-shrink: 0;
+    }
+    .studio-code {
+      flex: 1; height: 100%; font-family: "JetBrains Mono", Consolas, "Fira Code", monospace;
+      font-size: 12px; line-height: 1.6; padding: 10px 12px; background: transparent;
+      color: #e2e8f0; border: none; outline: none; resize: none; tab-size: 2;
+      overflow-y: auto; overflow-x: auto; white-space: pre;
+    }
+    .studio-statusbar {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 4px 16px; background: #0f172a; border-top: 1px solid #1e293b;
+      font-size: 11px; color: #64748b; flex-shrink: 0;
+    }
+    .studio-find-bar {
+      display: none; padding: 6px 16px; background: #1e293b; border-bottom: 1px solid #334155;
+      gap: 6px; align-items: center; flex-shrink: 0;
+    }
+    .studio-console-drawer {
+      display: none; height: 140px; background: #090d16; border-top: 2px solid #3b82f6;
+      flex-direction: column; flex-shrink: 0;
+    }
+    .console-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 4px 12px; background: #111827; border-bottom: 1px solid #1f2937;
+      font-size: 11px; font-weight: 600; color: #94a3b8;
+    }
+    .console-logs {
+      flex: 1; padding: 6px 12px; overflow-y: auto; font-family: monospace;
+      font-size: 11px; white-space: pre-wrap; line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <div class="studio-app">
+
+    <!-- Top Header -->
+    <div class="studio-header">
+      <div class="studio-brand">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+        <span>ScholarFlow Userscript Studio</span>
+      </div>
+
+      <input type="hidden" id="st-edit-id">
+      <input type="text" id="st-edit-name" class="studio-title-input" placeholder="Tên kịch bản...">
+
+      <div class="studio-actions">
+        <button id="btn-st-test" class="us-btn us-btn-secondary" title="Chạy thử kịch bản (Ctrl+Enter)">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 21"></polygon></svg>
+          <span>Chạy thử</span>
+        </button>
+        <button id="btn-st-save" class="us-btn us-btn-primary" title="Lưu kịch bản (Ctrl+S)">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+          <span>Lưu</span>
+        </button>
+        <button id="btn-st-format" class="us-btn us-btn-secondary" title="Định dạng / làm đẹp mã nguồn">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" y1="10" x2="3" y2="10"></line><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="14" x2="3" y2="14"></line><line x1="21" y1="18" x2="3" y2="18"></line></svg>
+          <span>Format</span>
+        </button>
+        <button id="btn-st-parse" class="us-btn us-btn-secondary" title="Phân tích header @userscript">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+          <span>Parse Meta</span>
+        </button>
+        <button id="btn-st-export" class="us-btn us-btn-secondary" title="Xuất file .user.js">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          <span>.user.js</span>
+        </button>
+        <button id="btn-st-find" class="us-btn us-btn-secondary" title="Tìm kiếm và thay thế (Ctrl+H)">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <span>Tìm</span>
+        </button>
+        <button id="btn-st-close" class="us-btn us-btn-secondary us-danger" title="Đóng cửa sổ">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          <span>Đóng</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Metadata & Target Settings Bar -->
+    <div class="studio-meta-bar">
+      <div class="meta-field">
+        <label>URL Áp dụng:</label>
+        <input type="text" id="st-edit-matches" style="width:220px;" placeholder="*://*.youtube.com/*">
+      </div>
+      <div class="meta-field">
+        <label>URL Loại trừ:</label>
+        <input type="text" id="st-edit-excludes" style="width:180px;" placeholder="*://music.youtube.com/*">
+      </div>
+      <div class="meta-field">
+        <label>Thời điểm chạy:</label>
+        <select id="st-edit-runat">
+          <option value="document_start">document_start (Sớm nhất)</option>
+          <option value="document_idle" selected>document_idle (Mặc định)</option>
+          <option value="document_end">document_end (Sau DOM)</option>
+        </select>
+      </div>
+      <div class="meta-field">
+        <label>World:</label>
+        <select id="st-edit-world">
+          <option value="MAIN" selected>MAIN (window)</option>
+          <option value="ISOLATED">ISOLATED (an toàn)</option>
+        </select>
+      </div>
+      <div class="meta-field">
+        <label>URL Tự động cập nhật:</label>
+        <input type="text" id="st-edit-update-url" style="width:240px;" placeholder="https://update.greasyfork.org/...">
+      </div>
+    </div>
+
+    <!-- Find & Replace Toolbar -->
+    <div id="st-find-bar" class="studio-find-bar">
+      <input id="st-find-input" class="form-control" placeholder="Tìm kiếm trong code..." style="font-size:11px; padding:3px 6px; width:200px; font-family:monospace;">
+      <input id="st-replace-input" class="form-control" placeholder="Thay thế bằng..." style="font-size:11px; padding:3px 6px; width:200px; font-family:monospace;">
+      <button id="btn-st-find-prev" class="us-btn us-btn-sm" style="padding:2px 8px;">Trước</button>
+      <button id="btn-st-find-next" class="us-btn us-btn-sm" style="padding:2px 8px;">Sau</button>
+      <button id="btn-st-replace-one" class="us-btn us-btn-sm" style="padding:2px 8px;">Thay 1</button>
+      <button id="btn-st-replace-all" class="us-btn us-btn-sm" style="padding:2px 8px;">Thay tất cả</button>
+      <span id="st-find-count" style="font-size:11px; color:#94a3b8; margin-left:8px;"></span>
+      <button id="btn-st-find-close" class="us-btn us-btn-icon" style="width:20px; height:20px; margin-left:auto;" title="Đóng">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+
+    <!-- Core Editor (Line Numbers + Code Textarea) -->
+    <div class="studio-editor-area">
+      <div id="st-line-numbers" class="studio-line-numbers">1</div>
+      <textarea id="st-edit-code" class="studio-code" spellcheck="false" placeholder="// Viết mã JavaScript của bạn ở đây..."></textarea>
+    </div>
+
+    <!-- Console Drawer -->
+    <div id="st-console-drawer" class="studio-console-drawer">
+      <div class="console-header">
+        <div style="display:flex; align-items:center; gap:6px;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+          <span>Console Output Live</span>
+        </div>
+        <div style="display:flex; gap:6px;">
+          <button id="btn-st-console-clear" class="us-btn us-btn-sm" style="height:20px; font-size:10px;">Xóa log</button>
+          <button id="btn-st-console-close" class="us-btn us-btn-sm" style="height:20px; font-size:10px;">Thu nhỏ</button>
+        </div>
+      </div>
+      <div id="st-console-logs" class="console-logs"></div>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="studio-statusbar">
+      <div style="display:flex; gap:16px;">
+        <span id="st-cursor-pos">Dòng 1, Cột 1</span>
+        <span id="st-line-count">1 dòng</span>
+        <span id="st-char-count">0 ký tự</span>
+      </div>
+      <div style="display:flex; gap:12px; align-items:center;">
+        <button id="btn-st-toggle-console" class="us-btn us-btn-sm" style="height:22px; font-size:10.5px;">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+          <span>Console</span>
+        </button>
+        <span>ScholarFlow MV3</span>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="../js/tabs/userscripts-studio.js"></script>
+</body>
+</html>
