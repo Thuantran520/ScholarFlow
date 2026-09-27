@@ -924,8 +924,8 @@ async function main() {
     const viCount = w.Object.keys(w.I18N_DATA.vi).filter(k => k.startsWith("content_")).length;
     const enCount = w.Object.keys(w.I18N_DATA.en).filter(k => k.startsWith("content_")).length;
     const prCount = w.Object.keys(w.I18N_DATA.vi).filter(k => k.startsWith("privacy_")).length;
-    check(viCount === 61 && enCount === 61 && prCount === 43,
-      `namespace keys present in locale dumps (content_*=61, privacy_*=43; got ${viCount}/${enCount}/${prCount})`);
+    check(viCount === 61 && enCount === 61 && prCount === 50,
+      `namespace keys present in locale dumps (content_*=61, privacy_*=50; got ${viCount}/${enCount}/${prCount})`);
   }
 
   // 3. privacy.html standalone page uses the unified i18n engine

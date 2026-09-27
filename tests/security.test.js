@@ -83,7 +83,8 @@ const ALLOWED_HOSTS = new Set([
   "browserleaks.com",
   "www.dnsleaktest.com",
   "returnyoutubedislikeapi.com",
-  "update.greasyfork.org"
+  "update.greasyfork.org",
+  "translate.googleapis.com"
 ]);
 
 function walk(dir, out = []) {

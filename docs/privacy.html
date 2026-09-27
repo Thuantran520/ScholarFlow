@@ -91,7 +91,7 @@
     <section class="hero">
       <div class="eyebrow">Privacy Policy</div>
       <h1>ScholarFlow — Privacy Policy</h1>
-      <div class="updated">Last updated: September 2026 &nbsp;•&nbsp; Version 2.4.2</div>
+      <div class="updated">Last updated: September 2026 &nbsp;•&nbsp; Version 2.5.4</div>
     </section>
 
     <div class="badge-bar">
@@ -102,7 +102,8 @@
     <div class="highlight">
       <strong>Privacy by Design statement:</strong>
       ScholarFlow is built on a strict Privacy by Design principle. All citation data,
-      screenshots, recordings, redaction masks, cookie profiles, and settings are processed
+      screenshots, recordings, redaction masks, cookie profiles, userscripts, scratch notes,
+      and settings are processed
       <strong>100% locally</strong> on your own browser. The extension has no data-storage server,
       no analytics, no tracking, and never sells or shares user data with any third party.
     </div>
@@ -115,6 +116,9 @@
       <li><strong>Redaction masks:</strong> blur/blackout/pixelate effects are applied directly to the page DOM in your browser. With v2.4.2, your masks are <em>persisted per-site</em> in <code>chrome.storage.local</code> so they survive a page reload — still fully local, never sent anywhere.</li>
       <li><strong>Redaction PIN:</strong> the optional PIN that locks the "View original" button is stored locally as a <em>salted SHA-256 hash</em> — never as plaintext, never transmitted.</li>
       <li><strong>Cookie Manager:</strong> reads and writes cookies for the current site only <em>on your explicit request</em>. Exported cookie files (JSON / raw string / Netscape <code>cookies.txt</code>) and cookie <em>profiles</em> are saved locally on your machine and never leave your device.</li>
+      <li><strong>Userscript Manager &amp; Studio (v2.5.0+):</strong> userscripts you install or write are stored and executed 100% locally in <code>chrome.storage.local</code>. No script code is uploaded or shared outside your device.</li>
+      <li><strong>Floating Scratchpad, Reader Mode &amp; Smart Highlighter:</strong> notes, sanitized reader content, and highlighted selections are saved locally. No page content is transmitted.</li>
+      <li><strong>Social Shield &amp; Anti-Scam Protection:</strong> fraud/gambling detection uses local heuristic and regex pattern lists only — no URLs or history sent to any server.</li>
     </ul>
 
     <h2>2. Browser permissions (Principle of Least Privilege)</h2>
@@ -125,6 +129,9 @@
       <li><code>clipboardWrite</code> — copies citations or screenshots to your clipboard.</li>
       <li><code>sidePanel</code> (Chrome/Edge) — opens the convenient side panel UI.</li>
       <li><code>cookies</code> — <strong>used only by the Cookie Manager</strong>, and only on your direct action. The extension never reads, logs, or shares cookies automatically.</li>
+      <li><code>declarativeNetRequest</code> — locally intercepts known scam/gambling URLs and redirects them to the built-in <code>gamble-block.html</code> warning page. No traffic data is logged.</li>
+      <li><code>browsingData</code> — powers "Clear current site data" to wipe cache &amp; cookies <em>only on your explicit command</em>. Never automatic.</li>
+      <li><code>bookmarks</code> &amp; <code>contextMenus</code> — quick bookmark saving and right-click menu integration on your command. Data stays local.</li>
       <li><code>host_permissions</code> (<code>&lt;all_urls&gt;</code>) — required so capture/redaction work on any page you visit; no data is collected from this broad access.</li>
     </ul>
     <div class="note">
@@ -138,6 +145,7 @@
       <li><strong>OpenAlex API (api.openalex.org)</strong> — 250M+ open scholarly works.</li>
       <li><strong>arXiv API (export.arxiv.org)</strong> — math/CS preprint metadata.</li>
       <li><strong>YouTube oEmbed</strong> — video title and channel when citing educational videos.</li>
+      <li><strong>Userscript GM_xmlhttpRequest:</strong> if a userscript you install uses <code>GM_xmlhttpRequest</code>, those requests are initiated by <em>your script</em> — ScholarFlow does not control the destination. Always verify a script's source before installing.</li>
     </ul>
     <div class="note green">
       All requests are public, anonymous, and never carry cookies, user IDs, or browsing history.
