@@ -302,16 +302,23 @@
           }
 
           const gmShim = `
-const GM_getValue = function(key, def) { try { return JSON.parse(localStorage.getItem('GM_' + key)) ?? def; } catch(e) { return localStorage.getItem('GM_' + key) || def; } };
-const GM_setValue = function(key, val) { localStorage.setItem('GM_' + key, JSON.stringify(val)); };
-const GM_deleteValue = function(key) { localStorage.removeItem('GM_' + key); };
-const GM = {
+var _sfStorageListeners = typeof _sfStorageListeners !== 'undefined' ? _sfStorageListeners : {};
+var GM_getValue = typeof GM_getValue === 'function' ? GM_getValue : function(key, def) { try { return JSON.parse(localStorage.getItem('GM_' + key)) ?? def; } catch(e) { return localStorage.getItem('GM_' + key) || def; } };
+var GM_setValue = typeof GM_setValue === 'function' ? GM_setValue : function(key, val) { localStorage.setItem('GM_' + key, JSON.stringify(val)); };
+var GM_deleteValue = typeof GM_deleteValue === 'function' ? GM_deleteValue : function(key) { localStorage.removeItem('GM_' + key); };
+var GM_listValues = typeof GM_listValues === 'function' ? GM_listValues : function() { var r=[]; for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); if(k&&k.startsWith('GM_')) r.push(k.slice(3)); } return r; };
+var GM_addStyle = typeof GM_addStyle === 'function' ? GM_addStyle : function(css) { var s=document.createElement('style'); s.textContent=css; (document.head||document.documentElement).appendChild(s); return s; };
+var GM_setClipboard = typeof GM_setClipboard === 'function' ? GM_setClipboard : function(text) { try { if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(text).catch(function(){}); } catch(e){} };
+var GM_openInTab = typeof GM_openInTab === 'function' ? GM_openInTab : function(url) { try { window.open(url,'_blank'); } catch(e){} };
+var GM = typeof GM !== 'undefined' ? GM : {
   getValue: async function(key, def) { return GM_getValue(key, def); },
   setValue: async function(key, val) { return GM_setValue(key, val); },
   deleteValue: async function(key) { return GM_deleteValue(key); },
-  addStyle: function(css) { const style = document.createElement('style'); style.textContent = css; (document.head || document.documentElement).appendChild(style); }
+  listValues: async function() { return GM_listValues(); },
+  addStyle: function(css) { return GM_addStyle(css); },
+  setClipboard: function(text) { GM_setClipboard(text); },
+  openInTab: function(url) { GM_openInTab(url); }
 };
-const GM_addStyle = GM.addStyle;
 `;
           await browserApi.scripting.executeScript({
             target: { tabId: tabs[0].id },
@@ -701,19 +708,23 @@ const GM_addStyle = GM.addStyle;
           }
 
           const gmShim = `
-const GM_getValue = function(key, def) { try { return JSON.parse(localStorage.getItem('GM_' + key)) ?? def; } catch(e) { return localStorage.getItem('GM_' + key) || def; } };
-const GM_setValue = function(key, val) { localStorage.setItem('GM_' + key, JSON.stringify(val)); };
-const GM_deleteValue = function(key) { localStorage.removeItem('GM_' + key); };
-const GM_listValues = function() { const r=[]; for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k && k.startsWith('GM_')) r.push(k.slice(3)); } return r; };
-const GM_addStyle = function(css) { const style = document.createElement('style'); style.textContent = css; (document.head || document.documentElement).appendChild(style); return style; };
-const GM = {
+var _sfStorageListeners = typeof _sfStorageListeners !== 'undefined' ? _sfStorageListeners : {};
+var GM_getValue = typeof GM_getValue === 'function' ? GM_getValue : function(key, def) { try { return JSON.parse(localStorage.getItem('GM_' + key)) ?? def; } catch(e) { return localStorage.getItem('GM_' + key) || def; } };
+var GM_setValue = typeof GM_setValue === 'function' ? GM_setValue : function(key, val) { localStorage.setItem('GM_' + key, JSON.stringify(val)); };
+var GM_deleteValue = typeof GM_deleteValue === 'function' ? GM_deleteValue : function(key) { localStorage.removeItem('GM_' + key); };
+var GM_listValues = typeof GM_listValues === 'function' ? GM_listValues : function() { var r=[]; for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); if(k&&k.startsWith('GM_')) r.push(k.slice(3)); } return r; };
+var GM_addStyle = typeof GM_addStyle === 'function' ? GM_addStyle : function(css) { var s=document.createElement('style'); s.textContent=css; (document.head||document.documentElement).appendChild(s); return s; };
+var GM_setClipboard = typeof GM_setClipboard === 'function' ? GM_setClipboard : function(text) { try { if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(text).catch(function(){}); } catch(e){} };
+var GM_openInTab = typeof GM_openInTab === 'function' ? GM_openInTab : function(url) { try { window.open(url,'_blank'); } catch(e){} };
+var GM = typeof GM !== 'undefined' ? GM : {
   getValue: async function(key, def) { return GM_getValue(key, def); },
   setValue: async function(key, val) { return GM_setValue(key, val); },
   deleteValue: async function(key) { return GM_deleteValue(key); },
   listValues: async function() { return GM_listValues(); },
-  addStyle: function(css) { return GM_addStyle(css); }
+  addStyle: function(css) { return GM_addStyle(css); },
+  setClipboard: function(text) { GM_setClipboard(text); },
+  openInTab: function(url) { GM_openInTab(url); }
 };
-const GM_addStyle = GM.addStyle;
 `;
           const codeToRun = (document.getElementById('us-edit-code') || dom.editCode || {value: ''}).value;
 
@@ -1488,6 +1499,16 @@ const GM_addStyle = GM.addStyle;
           if (window._usLogToConsole) {
             window._usLogToConsole(msg.log.level, [msg.log.text]);
           }
+        }
+      });
+    }
+
+    // ── Auto-sync: reload list when sf_custom_scripts changes from any source ──
+    // (e.g. saved from Studio, imported, or updated by background auto-update)
+    if (browserApi.storage && browserApi.storage.onChanged) {
+      browserApi.storage.onChanged.addListener((changes, area) => {
+        if (area === 'local' && changes.sf_custom_scripts) {
+          _load();
         }
       });
     }
