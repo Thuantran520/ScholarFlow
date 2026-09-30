@@ -2004,5 +2004,6 @@ window.I18N_ZH = {
   "us_btn_open_perms": "打开权限页面",
   "us_status_cannot_open": "无法打开权限页面 — 请前往浏览器设置。",
   "us_status_engine_need_userscripts": "等待授予 userScripts 权限 (Firefox)",
-  "us_btn_grant_userscripts": "立即授予 userScripts 权限"
+  "us_btn_grant_userscripts": "立即授予 userScripts 权限",
+  "us_status_no_scripts": "尚未安装任何脚本"
 }

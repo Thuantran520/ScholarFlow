@@ -166,9 +166,38 @@
     box.style.borderLeftColor = style.bar;
     while (box.firstChild) box.removeChild(box.firstChild);
 
+    const head = document.createElement('div');
+    head.className = 'us-ff-perm-head';
+
+    const titleGroup = document.createElement('div');
+    titleGroup.className = 'us-ff-perm-title-group';
+
+    const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    icon.setAttribute('width', '14');
+    icon.setAttribute('height', '14');
+    icon.setAttribute('viewBox', '0 0 24 24');
+    icon.setAttribute('fill', 'none');
+    icon.setAttribute('stroke', 'currentColor');
+    icon.setAttribute('stroke-width', '2.2');
+    icon.setAttribute('stroke-linecap', 'round');
+    icon.setAttribute('stroke-linejoin', 'round');
+    const p1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p1.setAttribute('d', 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z');
+    icon.appendChild(p1);
+    titleGroup.appendChild(icon);
+
     const title = document.createElement('strong');
     title.textContent = t('us_status_title', 'Trạng thái engine');
-    box.appendChild(title);
+    titleGroup.appendChild(title);
+    head.appendChild(titleGroup);
+
+    if (info.needsUserScripts) {
+      const badge = document.createElement('span');
+      badge.className = 'us-ff-perm-badge is-needed';
+      badge.textContent = 'Firefox MV3';
+      head.appendChild(badge);
+    }
+    box.appendChild(head);
 
     const rows = [];
     if (!info.alive) {
@@ -194,9 +223,11 @@
         : t('us_status_perms_ok', 'Đã có scripting + truy cập trang')]);
 
     rows.push([t('us_status_label_registered', 'Script'),
-      String(info.active) + '/' + String(info.total) +
-      t('us_status_registered_suffix', ' đang bật, ') + String(info.registered) +
-      t('us_status_registered_suffix2', ' đã đăng ký')]);
+      info.total === 0
+        ? '0/0 (' + t('us_status_no_scripts', 'Chưa có kịch bản nào') + ')'
+        : String(info.active) + '/' + String(info.total) +
+          t('us_status_registered_suffix', ' đang bật, ') + String(info.registered) +
+          t('us_status_registered_suffix2', ' đã đăng ký')]);
 
     if (info.alive && !info.worldSupported) {
       rows.push([t('us_status_label_world', 'MAIN world'),
@@ -226,11 +257,26 @@
 
     if (info.needsUserScripts) {
       const grant = document.createElement('button');
-      grant.className = 'btn btn-primary';
-      grant.style.fontSize = '11px';
-      grant.style.padding = '4px 10px';
-      grant.style.fontWeight = 'bold';
-      grant.textContent = t('us_btn_grant_userscripts', 'Cấp quyền userScripts ngay');
+      grant.className = 'btn btn-primary us-ff-perm-grant-btn';
+
+      const bolt = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      bolt.setAttribute('width', '12');
+      bolt.setAttribute('height', '12');
+      bolt.setAttribute('viewBox', '0 0 24 24');
+      bolt.setAttribute('fill', 'none');
+      bolt.setAttribute('stroke', 'currentColor');
+      bolt.setAttribute('stroke-width', '2.5');
+      bolt.setAttribute('stroke-linecap', 'round');
+      bolt.setAttribute('stroke-linejoin', 'round');
+      const bp = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+      bp.setAttribute('points', '13 2 3 14 12 14 11 22 21 10 12 10 13 2');
+      bolt.appendChild(bp);
+      grant.appendChild(bolt);
+
+      const grantText = document.createElement('span');
+      grantText.textContent = t('us_btn_grant_userscripts', 'Cấp quyền userScripts ngay');
+      grant.appendChild(grantText);
+
       grant.addEventListener('click', async () => {
         try {
           const perms = browserApi.permissions;

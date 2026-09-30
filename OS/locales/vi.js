@@ -2004,5 +2004,6 @@ window.I18N_VI = {
   "us_btn_open_perms": "Mở trang quyền",
   "us_status_cannot_open": "Không mở được trang quyền — hãy vào cài đặt trình duyệt.",
   "us_status_engine_need_userscripts": "Chờ cấp quyền userScripts (Firefox)",
-  "us_btn_grant_userscripts": "Cấp quyền userScripts ngay"
+  "us_btn_grant_userscripts": "Cấp quyền userScripts ngay",
+  "us_status_no_scripts": "Chưa có kịch bản nào"
 }

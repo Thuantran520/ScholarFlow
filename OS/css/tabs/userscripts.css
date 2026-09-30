@@ -599,35 +599,108 @@
 /* ---------------------------------------------------------------------------
    Engine status panel (only rendered when something is actually wrong)
    --------------------------------------------------------------------------- */
+#us-ff-perm-box.us-alert {
+  background: rgba(30, 27, 46, 0.85) !important;
+  border: 1px solid rgba(244, 63, 94, 0.25) !important;
+  border-left: 4px solid #f43f5e !important;
+  border-radius: 8px !important;
+  padding: 12px 14px !important;
+  margin-bottom: 14px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(8px);
+}
+
+.us-ff-perm-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.us-ff-perm-title-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.us-ff-perm-title-group svg {
+  color: #fb7185;
+}
+
+.us-ff-perm-badge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+
+.us-ff-perm-badge.is-needed {
+  background: rgba(244, 63, 94, 0.18);
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  color: #fda4af;
+}
+
 .us-ff-perm-list {
-  margin: 6px 0 8px 0;
+  margin: 6px 0 10px 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
 }
 
 .us-ff-perm-row {
   display: flex;
-  gap: 6px;
+  align-items: baseline;
+  gap: 8px;
   font-size: 11px;
   line-height: 1.45;
 }
 
 .us-ff-perm-k {
-  flex: 0 0 78px;
-  color: var(--text-dim, #94a3b8);
+  flex: 0 0 85px;
+  color: #94a3b8;
+  font-weight: 600;
 }
 
 .us-ff-perm-v {
   flex: 1 1 auto;
   min-width: 0;
+  color: #e2e8f0;
   overflow-wrap: anywhere;
 }
 
 .us-ff-perm-foot {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.us-ff-perm-grant-btn {
+  background: linear-gradient(135deg, #0284c7, #06b6d4) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(56, 189, 248, 0.4) !important;
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.35) !important;
+  font-weight: 700 !important;
+  font-size: 11px !important;
+  padding: 5px 12px !important;
+  border-radius: 6px !important;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+}
+
+.us-ff-perm-grant-btn:hover {
+  background: linear-gradient(135deg, #0369a1, #0891b2) !important;
+  box-shadow: 0 0 16px rgba(6, 182, 212, 0.5) !important;
+  transform: translateY(-1px);
 }
 
 /* ---------------------------------------------------------------------------

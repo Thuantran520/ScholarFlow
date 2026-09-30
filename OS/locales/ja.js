@@ -2007,5 +2007,6 @@ window.I18N_JA = {
   "us_btn_open_perms": "権限ページを開く",
   "us_status_cannot_open": "権限ページを開けませんでした — ブラウザの設定を開いてください。",
   "us_status_engine_need_userscripts": "userScripts 権限の許可待ち (Firefox)",
-  "us_btn_grant_userscripts": "今すぐ userScripts 権限を許可"
+  "us_btn_grant_userscripts": "今すぐ userScripts 権限を許可",
+  "us_status_no_scripts": "スクリプトはまだインストールされていません"
 }

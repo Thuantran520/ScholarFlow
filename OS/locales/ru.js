@@ -2007,5 +2007,6 @@ window.I18N_RU = {
   "us_btn_open_perms": "Открыть страницу прав",
   "us_status_cannot_open": "Не удалось открыть страницу прав — откройте настройки браузера.",
   "us_status_engine_need_userscripts": "Ожидание разрешения userScripts (Firefox)",
-  "us_btn_grant_userscripts": "Предоставить разрешение userScripts"
+  "us_btn_grant_userscripts": "Предоставить разрешение userScripts",
+  "us_status_no_scripts": "Скрипты ещё не установлены"
 }

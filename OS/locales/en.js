@@ -2007,5 +2007,6 @@ window.I18N_EN = {
   "us_btn_open_perms": "Open permissions page",
   "us_status_cannot_open": "Could not open the permissions page — open your browser settings.",
   "us_status_engine_need_userscripts": "Awaiting userScripts permission (Firefox)",
-  "us_btn_grant_userscripts": "Grant userScripts permission"
+  "us_btn_grant_userscripts": "Grant userScripts permission",
+  "us_status_no_scripts": "No scripts installed yet"
 }
