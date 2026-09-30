@@ -178,6 +178,9 @@
     } else if (info.engineOk) {
       rows.push([t('us_status_label_engine', 'Engine'),
         t('us_status_engine_ok', 'Đang chạy')]);
+    } else if (info.needsUserScripts) {
+      rows.push([t('us_status_label_engine', 'Engine'),
+        t('us_status_engine_need_userscripts', 'Chờ cấp quyền userScripts (Firefox)')]);
     } else {
       rows.push([t('us_status_label_engine', 'Engine'),
         t('us_status_engine_off', 'Không dùng được scripting API')]);
@@ -185,7 +188,7 @@
 
     rows.push([t('us_status_label_perms', 'Quyền'),
       info.needsUserScripts
-        ? t('us_status_perms_missing', 'Thiáº¿u quyá»n: ') + 'userScripts'
+        ? t('us_status_perms_missing', 'Thiếu quyền: ') + 'userScripts'
         : info.missing && info.missing.length
         ? t('us_status_perms_missing', 'Thiếu quyền: ') + info.missing.join(', ')
         : t('us_status_perms_ok', 'Đã có scripting + truy cập trang')]);
@@ -220,8 +223,34 @@
 
     const foot = document.createElement('div');
     foot.className = 'us-ff-perm-foot';
+
+    if (info.needsUserScripts) {
+      const grant = document.createElement('button');
+      grant.className = 'btn btn-primary';
+      grant.style.fontSize = '11px';
+      grant.style.padding = '4px 10px';
+      grant.style.fontWeight = 'bold';
+      grant.textContent = t('us_btn_grant_userscripts', 'Cấp quyền userScripts ngay');
+      grant.addEventListener('click', async () => {
+        try {
+          const perms = browserApi.permissions;
+          const granted = perms && typeof perms.request === 'function'
+            ? await perms.request({ permissions: ['userScripts'] })
+            : false;
+          if (granted) {
+            await browserApi.runtime.sendMessage({ action: 'US_RELOAD' });
+            _checkPermissions();
+            if (typeof _loadScripts === 'function') _loadScripts();
+          }
+        } catch (e) {
+          _checkPermissions();
+        }
+      });
+      foot.appendChild(grant);
+    }
+
     const open = document.createElement('button');
-    open.className = 'btn btn-primary';
+    open.className = 'btn';
     open.style.fontSize = '11px';
     open.style.padding = '4px 8px';
     open.textContent = t('us_btn_open_perms', 'Mở trang quyền');

@@ -2005,5 +2005,7 @@ window.I18N_RU = {
   "us_status_label_world": "MAIN world",
   "us_status_world_unsupported": "Этот браузер не поддерживает world: MAIN — нуждающиеся в нём скрипты не будут работать",
   "us_btn_open_perms": "Открыть страницу прав",
-  "us_status_cannot_open": "Не удалось открыть страницу прав — откройте настройки браузера."
+  "us_status_cannot_open": "Не удалось открыть страницу прав — откройте настройки браузера.",
+  "us_status_engine_need_userscripts": "Ожидание разрешения userScripts (Firefox)",
+  "us_btn_grant_userscripts": "Предоставить разрешение userScripts"
 }

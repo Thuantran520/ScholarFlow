@@ -2005,5 +2005,7 @@ window.I18N_JA = {
   "us_status_label_world": "MAIN world",
   "us_status_world_unsupported": "このブラウザは world: MAIN に対応していません — 必要なスクリプトは動作しません",
   "us_btn_open_perms": "権限ページを開く",
-  "us_status_cannot_open": "権限ページを開けませんでした — ブラウザの設定を開いてください。"
+  "us_status_cannot_open": "権限ページを開けませんでした — ブラウザの設定を開いてください。",
+  "us_status_engine_need_userscripts": "userScripts 権限の許可待ち (Firefox)",
+  "us_btn_grant_userscripts": "今すぐ userScripts 権限を許可"
 }
