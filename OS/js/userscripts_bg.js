@@ -117,8 +117,12 @@ async function _writeScripts(scripts) {
 
 function _buildCode(script) {
   const shimApi = _shim();
-  const code = String((script && script.code) || '');
+  let code = String((script && script.code) || '');
   if (!shimApi || typeof shimApi.build !== 'function') return code;
+  const meta = _meta();
+  if (meta && typeof meta.sanitizeUserscriptCode === 'function') {
+    code = meta.sanitizeUserscriptCode(code);
+  }
   const requireTexts = Array.isArray(script.requires)
     ? script.requires.map((r) => (r && typeof r.text === 'string' ? r.text : '')).filter(Boolean)
     : [];

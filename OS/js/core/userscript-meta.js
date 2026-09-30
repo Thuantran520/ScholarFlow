@@ -301,6 +301,51 @@
     return out;
   }
 
+  function sanitizeUserscriptCode(code) {
+    var src = String(code == null ? '' : code);
+    var gmApiNames = [
+      'GM_getValue', 'GM_setValue', 'GM_deleteValue', 'GM_listValues',
+      'GM_addStyle', 'GM_xmlhttpRequest', 'GM_addValueChangeListener',
+      'GM_removeValueChangeListener', 'GM_setClipboard', 'GM_notification',
+      'GM_openInTab', 'GM_registerMenuCommand', 'GM_unregisterMenuCommand',
+      'GM_info', 'GM_cookie', 'GM_download', 'GM_log'
+    ];
+
+    var gmPattern = gmApiNames.map(escapeRegExp).join('|');
+
+    // 1. Remove top-level const/let/var GM_* = ... declarations
+    //    Matches: const GM_addStyle = ..., let GM_xmlhttpRequest = ..., var GM_getValue = ...
+    var declRe = new RegExp(
+      '^\\s*(?:const|let|var)\\s+(' + gmPattern + ')\\s*=\\s*[^;]+;?',
+      'gm'
+    );
+    src = src.replace(declRe, '');
+
+    // 2. Remove standalone GM_* function declarations: function GM_addStyle() { ... }
+    var funcDeclRe = new RegExp(
+      '^\\s*function\\s+(' + gmPattern + ')\\s*\\([^)]*\\)\\s*\\{',
+      'gm'
+    );
+    src = src.replace(funcDeclRe, '');
+
+    // 3. Replace GM_* references with _sfGM_* (shim internals)
+    //    But only when GM_* is used as a value, not as a property access
+    gmApiNames.forEach(function(name) {
+      var safeName = '_sf' + name;
+      var re = new RegExp('\\b' + escapeRegExp(name) + '\\b(?!\\s*\\()', 'g');
+      // Only replace bare references, not function calls
+      src = src.replace(re, safeName);
+    });
+
+    // 4. Handle GM.xmlHttpRequest -> GM_xmlhttpRequest (already covered by shim)
+    // 5. Handle GM. notation for any remaining GM.* property access
+    src = src.replace(/\bGM\.(getValue|setValue|deleteValue|listValues|addStyle|xmlhttpRequest|addValueChangeListener|removeValueChangeListener|setClipboard|notification|openInTab|registerMenuCommand|unregisterMenuCommand|info|cookie|download|log)\b/g, function(m, method) {
+      return '_sfGM_' + method;
+    });
+
+    return src;
+  }
+
   globalThis.SF_US_META = {
     parse: parse,
     fieldsOf: fieldsOf,
@@ -316,6 +361,7 @@
     extractTag: extractTag,
     matchPatternList: matchPatternList,
     RUN_AT_VALUES: RUN_AT_VALUES,
-    escapeRegExp: escapeRegExp
+    escapeRegExp: escapeRegExp,
+    sanitizeUserscriptCode: sanitizeUserscriptCode
   };
 })();

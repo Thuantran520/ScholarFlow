@@ -7,6 +7,7 @@
 // ── ScholarFlow Userscript Compatibility Layer ──
 // Uses var + typeof guard to prevent redeclaration errors on pages
 // that already define const GM_* polyfills (e.g. Garena CDK pages).
+// Also provides safe global assignment helpers that won't throw on const/frozen bindings.
 var _sfStorageListeners = typeof _sfStorageListeners !== 'undefined' ? _sfStorageListeners : {};
 
 var _sfGM_getValue = typeof GM_getValue === 'function' ? GM_getValue : function(key, def) {
@@ -122,6 +123,24 @@ var _sfGM_openInTab = typeof GM_openInTab === 'function' ? GM_openInTab : functi
   try { window.open(url, '_blank'); } catch(e) {}
 };
 
+// Safe global assignment helper — never throws even if binding is const/frozen
+var _sfSafeDefine = function(name, value) {
+  try {
+    if (typeof window[name] === 'undefined') {
+      window[name] = value;
+    } else {
+      try { window[name] = value; } catch(e) {}
+      try {
+        Object.defineProperty(window, name, {
+          value: value,
+          writable: true,
+          configurable: true
+        });
+      } catch(e2) {}
+    }
+  } catch(e) {}
+};
+
 try {
   // Ensure GM object exists (handle const/frozen GM case)
   var _sfGM = {};
@@ -166,17 +185,18 @@ try {
     }
   }
 
-  if (typeof GM_getValue === 'undefined') GM_getValue = _sfGM_getValue;
-  if (typeof GM_setValue === 'undefined') GM_setValue = _sfGM_setValue;
-  if (typeof GM_deleteValue === 'undefined') GM_deleteValue = _sfGM_deleteValue;
-  if (typeof GM_listValues === 'undefined') GM_listValues = _sfGM_listValues;
-  if (typeof GM_addStyle === 'undefined') GM_addStyle = _sfGM_addStyle;
-  if (typeof GM_xmlhttpRequest === 'undefined') GM_xmlhttpRequest = _sfGM_xmlhttpRequest;
-  if (typeof GM_addValueChangeListener === 'undefined') GM_addValueChangeListener = _sfGM_addValueChangeListener;
-  if (typeof GM_removeValueChangeListener === 'undefined') GM_removeValueChangeListener = _sfGM_removeValueChangeListener;
-  if (typeof GM_setClipboard === 'undefined') GM_setClipboard = _sfGM_setClipboard;
-  if (typeof GM_notification === 'undefined') GM_notification = _sfGM_notification;
-  if (typeof GM_openInTab === 'undefined') GM_openInTab = _sfGM_openInTab;
+  // Install global GM_* functions using safe define (won't throw on const/frozen)
+  _sfSafeDefine('GM_getValue', _sfGM_getValue);
+  _sfSafeDefine('GM_setValue', _sfGM_setValue);
+  _sfSafeDefine('GM_deleteValue', _sfGM_deleteValue);
+  _sfSafeDefine('GM_listValues', _sfGM_listValues);
+  _sfSafeDefine('GM_addStyle', _sfGM_addStyle);
+  _sfSafeDefine('GM_xmlhttpRequest', _sfGM_xmlhttpRequest);
+  _sfSafeDefine('GM_addValueChangeListener', _sfGM_addValueChangeListener);
+  _sfSafeDefine('GM_removeValueChangeListener', _sfGM_removeValueChangeListener);
+  _sfSafeDefine('GM_setClipboard', _sfGM_setClipboard);
+  _sfSafeDefine('GM_notification', _sfGM_notification);
+  _sfSafeDefine('GM_openInTab', _sfGM_openInTab);
 } catch(e) {}
 `;
 
