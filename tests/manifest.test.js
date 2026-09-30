@@ -136,6 +136,10 @@ async function main() {
   check(Boolean(ffRoot.browser_specific_settings && ffRoot.browser_specific_settings.gecko &&
     /^[\w.-]+@[\w.-]+$/.test(ffRoot.browser_specific_settings.gecko.id || "")),
     "FF manifest ships a valid gecko extension id");
+  check((ffRoot.optional_permissions || []).includes("userScripts"),
+    "FF manifest declares the optional userScripts permission for stored userscripts");
+  check(!(chrome.optional_permissions || []).includes("userScripts"),
+    "Chrome keeps its existing scripting.registerContentScripts userscript engine");
 
   check(JSON.stringify(ffShip) === JSON.stringify(ffRoot),
     "manifest_firefox.json is byte-identical to root manifest.json");
@@ -156,6 +160,59 @@ async function main() {
   check(exists("OS/html/sidebar.html") && exists("OS/css/content.css") &&
     ["icon16.png", "icon48.png", "icon128.png"].every(exists),
     "key assets exist (sidebar.html, content.css, icon16/48/128)");
+
+  // Every static import specifier in shipped code must resolve. A wrong
+  // relative path kills the importing module at load time; when that module is
+  // the background engine the whole extension silently stops answering and the
+  // UI just reports "engine unavailable", so it is easy to misdiagnose.
+  console.log("ES module imports resolve:");
+  const jsRoot = path.join(ROOT, "OS", "js");
+  const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    const p = path.join(dir, e.name);
+    if (e.isDirectory()) return walk(p);
+    return e.isFile() && e.name.endsWith(".js") ? [p] : [];
+  });
+  const IMPORT_RE = /(?:^|[\s;}])(?:import|export)\s[^;]*?from\s*['"]([^'"]+)['"]|(?:^|[\s;}])import\s*['"]([^'"]+)['"]/g;
+  const unresolved = [];
+  let scanned = 0;
+  for (const file of walk(jsRoot)) {
+    const src = fs.readFileSync(file, "utf8");
+    scanned++;
+    let m;
+    IMPORT_RE.lastIndex = 0;
+    while ((m = IMPORT_RE.exec(src)) !== null) {
+      const spec = m[1] || m[2];
+      // Bare specifiers are either browser globals or builtins; only relative
+      // paths can be wrong in a way that breaks the load.
+      if (!spec.startsWith(".") && !spec.startsWith("/")) continue;
+      const target = path.resolve(path.dirname(file), spec);
+      if (!fs.existsSync(target)) {
+        unresolved.push(path.relative(ROOT, file).replace(/\\/g, "/") + " -> " + spec);
+      }
+    }
+  }
+  check(scanned > 50, `scanned ${scanned} shipped JS files for import specifiers`);
+  check(unresolved.length === 0, "every relative import resolves to a file on disk" +
+    (unresolved.length ? ` -> ${JSON.stringify(unresolved.slice(0, 6))}` : ""));
+
+  // The background must actually load as a module, not merely parse. This is
+  // the only check that catches a runtime/module-graph failure in the engine.
+  const bgPath = path.join(jsRoot, "userscripts_bg.js");
+  if (exists("OS/js/userscripts_bg.js")) {
+    try {
+      const { execFileSync } = require("node:child_process");
+      const probe = path.join(ROOT, "tests", "fixtures", "probe-background.cjs");
+      const out = execFileSync(process.execPath, [probe], {
+        cwd: ROOT, encoding: "utf8", timeout: 30000, stdio: ["ignore", "pipe", "pipe"]
+      });
+      check(/BACKGROUND_MODULE_OK/.test(out), "background engine module graph loads" +
+        (/\nFAIL:.*/.exec(out) ? " -> " + /\nFAIL:(.*)/.exec(out)[1].trim() : ""));
+    } catch (e) {
+      const msg = String((e && e.stdout) || (e && e.message) || e);
+      check(/BACKGROUND_MODULE_OK/.test(msg), "background engine module graph loads -> " +
+        msg.split("\n").filter((l) => /FAIL|Error|Cannot find/.test(l)).slice(0, 2).join(" | "));
+    }
+  }
 
   finish("manifest.test.js");
 }

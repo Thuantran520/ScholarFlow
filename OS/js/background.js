@@ -1,18 +1,13 @@
 // Web Super Assistant - Background Service Worker (Manifest V3)
 // Handles: Chrome/Edge Native Side Panel API, Full-Page Screenshot Stitching, Tab Management
 
-// Import background userscript runner & auto-updater
-try {
-  if (typeof importScripts === "function") {
-    importScripts("userscripts_bg.js");
-  }
-} catch (_e) {
-  try {
-    if (typeof importScripts === "function") {
-      importScripts("/OS/js/userscripts_bg.js");
-    }
-  } catch (_e2) {}
-}
+// Userscript engine (registration, GM bridge, bibliographic bridge).
+// Loaded as an ES module so it resolves identically in the Chromium MV3
+// service worker and the Firefox MV3 event page. The previous
+// `importScripts()` call never resolved under MV3, which silently disabled
+// every userscript on Chrome/Edge. Both manifests now declare
+// background.type = "module".
+import './userscripts_bg.js';
 
 // Enable native Side Panel on action click for Chromium browsers (Chrome 114+, Edge 114+)
 try {

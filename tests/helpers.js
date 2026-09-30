@@ -41,6 +41,7 @@ const CS_CHUNK = [
 // ---------------------------------------------------------------------------
 function makeChromeStub(storeInit = {}) {
   const store = { ...storeInit };
+  const onChanged = [];
   const storageLocal = {
     get(key, cb) {
       let res = {};
@@ -54,9 +55,16 @@ function makeChromeStub(storeInit = {}) {
       return p;
     },
     set(obj, cb) {
+      const changes = {};
+      for (const k of Object.keys(obj)) {
+        changes[k] = { oldValue: store[k], newValue: obj[k] };
+      }
       Object.assign(store, obj);
       const p = Promise.resolve();
       if (typeof cb === "function") { p.then(cb); return undefined; }
+      for (const fn of onChanged.slice()) {
+        try { fn(changes, "local"); } catch (_e) { /* listener threw */ }
+      }
       return p;
     },
     remove(keys, cb) {
@@ -66,9 +74,23 @@ function makeChromeStub(storeInit = {}) {
       return p;
     }
   };
+  const storageArea = {
+    local: storageLocal,
+    sync: storageLocal,
+    onChanged: {
+      addListener: (fn) => { onChanged.push(fn); },
+      removeListener: (fn) => {
+        const i = onChanged.indexOf(fn);
+        if (i > -1) onChanged.splice(i, 1);
+      }
+    }
+  };
   return {
-    storage: { local: storageLocal, sync: storageLocal },
+    storage: storageArea,
     runtime: {
+      // Real extensions expose storage under chrome.runtime.storage; code that
+      // reaches it that way must see the same area.
+      storage: storageArea,
       getManifest: () => ({ name: "ScholarFlow", version: "0.0.0-test", manifest_version: 3 }),
       getURL: (p) => "chrome-extension://test/" + p,
       sendMessage: (...args) => { if (args.length > 1 && typeof args[args.length - 1] === "function") args[args.length - 1]({}); return Promise.resolve({}); },

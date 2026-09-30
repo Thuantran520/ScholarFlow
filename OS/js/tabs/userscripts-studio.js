@@ -10,6 +10,22 @@
 
   let _scripts = [];
   let _currentScript = null;
+  // Revision of the record as it was when the editor was populated. Any save
+  // whose stored revision differs from this is a concurrent edit by the
+  // sidebar (or by another Studio tab) and must be reconciled, not clobbered.
+  let _baseRev = 0;
+  let _baseCode = '';
+  let _saving = false;
+  const SYNC = globalThis.SF_US_SYNC || null;
+  const EDITOR_LABEL = 'Userscript Studio';
+
+  function _notify(message, type) {
+    if (SYNC && typeof SYNC.toast === 'function') SYNC.toast(message, type);
+  }
+
+  function _editorLabel() {
+    try { return t('us_editor_studio'); } catch (e) { return EDITOR_LABEL; }
+  }
 
   // DOM elements
   const el = {
@@ -94,78 +110,168 @@
     return meta;
   }
 
-  function loadData() {
-    browserApi.storage.local.get('sf_custom_scripts', (res) => {
-      _scripts = res.sf_custom_scripts || [];
-      if (scriptId) {
-        _currentScript = _scripts.find(s => s.id === scriptId);
-      }
-      if (_currentScript) {
-        if (el.id) el.id.value = _currentScript.id;
-        if (el.name) el.name.value = _currentScript.name || '';
-        if (el.matches) el.matches.value = (_currentScript.matches || []).join(', ');
-        if (el.excludes) el.excludes.value = (_currentScript.excludes || []).join(', ');
-        if (el.runAt) el.runAt.value = _currentScript.runAt || 'document_idle';
-        if (el.world) el.world.value = _currentScript.world || 'MAIN';
-        if (el.updateUrl) el.updateUrl.value = _currentScript.updateUrl || '';
-        if (el.code) el.code.value = _currentScript.code || '';
-        document.title = (_currentScript.name || 'Script') + ' - ScholarFlow Studio';
-      } else {
-        if (el.id) el.id.value = 'script_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
-        if (el.name) el.name.value = 'Kịch bản mới';
-        if (el.matches) el.matches.value = '*://*/*';
-        if (el.excludes) el.excludes.value = '';
-        if (el.runAt) el.runAt.value = 'document_idle';
-        if (el.world) el.world.value = 'MAIN';
-        if (el.updateUrl) el.updateUrl.value = '';
-        if (el.code) el.code.value = '// ==UserScript==\n// @name         Kịch bản mới\n// @match        *://*/*\n// @grant        GM_getValue\n// @grant        GM_setValue\n// ==/UserScript==\n\nconsole.log("ScholarFlow Userscript loaded!");\n';
-      }
-      setTimeout(updateLineNumbers, 20);
-      setTimeout(updateCursorPos, 20);
-    });
+  function fillForm(script) {
+    _currentScript = script || null;
+    _baseRev = script ? (Number(script.rev) || 0) : 0;
+    _baseCode = script ? String(script.code || '') : '';
+    if (el.id) el.id.value = script ? script.id : 'script_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+    if (el.name) el.name.value = script ? (script.name || '') : 'Kịch bản mới';
+    if (el.matches) el.matches.value = script ? ((script.matches || []).join(', ')) : '*://*/*';
+    if (el.excludes) el.excludes.value = script ? ((script.excludes || []).join(', ')) : '';
+    if (el.runAt) el.runAt.value = (script && script.runAt) || 'document_idle';
+    if (el.world) el.world.value = (script && script.world) || 'MAIN';
+    if (el.updateUrl) el.updateUrl.value = (script && script.updateUrl) || '';
+    if (el.code) el.code.value = script ? String(script.code || '') : '// ==UserScript==\n// @name         Kịch bản mới\n// @match        *://*/*\n// @grant        GM_getValue\n// @grant        GM_setValue\n// ==/UserScript==\n\nconsole.log("ScholarFlow Userscript loaded!");\n';
+    document.title = (script ? (script.name || 'Script') : 'Kịch bản mới') + ' - ScholarFlow Studio';
+    setTimeout(updateLineNumbers, 20);
+    setTimeout(updateCursorPos, 20);
   }
 
-  function saveScript() {
-    const id = (el.id && el.id.value) || ('script_' + Date.now());
-    const name = (el.name && el.name.value.trim()) || 'Không tên';
-    let matches = el.matches ? el.matches.value.split(/[,\n]/).map(s => s.trim()).filter(s => s) : [];
-    if (matches.length === 0) matches = ['<all_urls>'];
-    let excludes = el.excludes ? el.excludes.value.split(/[,\n]/).map(s => s.trim()).filter(s => s) : [];
-    const runAt = (el.runAt && el.runAt.value) || 'document_idle';
-    const world = (el.world && el.world.value) || 'MAIN';
-    const updateUrl = (el.updateUrl && el.updateUrl.value.trim()) || '';
-    const code = (el.code && el.code.value) || '';
-
-    const idx = _scripts.findIndex(s => s.id === id);
-    const existing = idx > -1 ? _scripts[idx] : {};
-    const scriptData = Object.assign({}, existing, {
-      id, name, matches, excludes, code, active: existing.active !== false,
-      runAt, world, updateUrl
-    });
-
-    if (idx > -1) {
-      _scripts[idx] = scriptData;
+  async function loadData() {
+    if (SYNC) {
+      _scripts = typeof SYNC.readAllEnsured === 'function'
+        ? await SYNC.readAllEnsured(_editorLabel())
+        : await SYNC.readAll();
     } else {
-      _scripts.push(scriptData);
+      _scripts = await browserApi.storage.local.get('sf_custom_scripts')
+        .then((res) => res.sf_custom_scripts || []);
     }
-
-    browserApi.storage.local.set({ sf_custom_scripts: _scripts }, () => {
-      if (browserApi.runtime && browserApi.runtime.sendMessage) {
-        browserApi.runtime.sendMessage({ action: 'RELOAD_USERSCRIPTS' }).catch(() => {});
-      }
-      if (el.btnSave) {
-        const label = el.btnSave.querySelector('span');
-        if (label) label.textContent = 'Đã lưu!';
-        el.btnSave.style.borderColor = '#10b981';
-        el.btnSave.style.color = '#34d399';
-        setTimeout(() => {
-          if (label) label.textContent = 'Lưu';
-          el.btnSave.style.borderColor = '';
-          el.btnSave.style.color = '';
-        }, 1500);
-      }
-    });
+    fillForm(_scripts.find((s) => s.id === scriptId) || null);
   }
+
+  /** Ask before overwriting a version another surface saved in the meantime. */
+  async function resolveConflict(stored) {
+    const mine = (el.code && el.code.value) || '';
+    const theirs = String((stored && stored.code) || '');
+    if (!SYNC) return 'overwrite';
+    const choice = await SYNC.showConflict({
+      name: (el.name && el.name.value) || (stored && stored.name) || '',
+      leftText: theirs,
+      rightText: mine,
+      leftMeta: SYNC.describeEditor(stored)
+    });
+    if (choice === 'theirs') {
+      fillForm(stored);
+      _notify(t('us_conflict_took_theirs'), 'info');
+    }
+    return choice;
+  }
+
+  async function saveScript() {
+    if (_saving) return;
+    _saving = true;
+    try {
+      const id = (el.id && el.id.value) ||
+        ('script_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9));
+      const name = (el.name && el.name.value.trim()) || 'Không tên';
+      let matches = el.matches ? el.matches.value.split(/[,\n]/).map((s) => s.trim()).filter((s) => s) : [];
+      if (matches.length === 0) matches = ['<all_urls>'];
+      const excludes = el.excludes ? el.excludes.value.split(/[,\n]/).map((s) => s.trim()).filter((s) => s) : [];
+      const runAt = (el.runAt && el.runAt.value) || 'document_idle';
+      const world = (el.world && el.world.value) || 'MAIN';
+      const updateUrl = (el.updateUrl && el.updateUrl.value.trim()) || '';
+      const code = (el.code && el.code.value) || '';
+
+      // Always re-read right before writing: the sidebar may have saved between
+      // our own read and this click. readAllEnsured() also backfills ids, so a
+      // record from an older version can never be matched by accident.
+      const fresh = SYNC
+        ? (typeof SYNC.readAllEnsured === 'function' ? await SYNC.readAllEnsured(_editorLabel()) : await SYNC.readAll())
+        : await browserApi.storage.local
+          .get('sf_custom_scripts').then((r) => (r && r.sf_custom_scripts) || []);
+      _scripts = fresh;
+      const idx = fresh.findIndex((s) => s.id === id);
+      const existing = idx > -1 ? fresh[idx] : {};
+
+      if (idx > -1 && SYNC && SYNC.revOf(existing) !== _baseRev) {
+        const storedCode = String(existing.code || '');
+        const codeChanged = storedCode !== _baseCode;
+        if (codeChanged) {
+          const choice = await resolveConflict(existing);
+          if (choice !== 'overwrite') return;
+        } else {
+          // Only metadata drifted (e.g. toggled on/off) — merge, don't prompt.
+          _notify(t('us_conflict_merged_meta'), 'info');
+        }
+      }
+
+      const merged = idx > -1 ? fresh[idx] : {};
+      const payload = Object.assign({}, merged, {
+        id, name, matches, excludes, code,
+        active: merged.active !== false,
+        runAt, world, updateUrl
+      });
+      const stamped = SYNC
+        ? SYNC.stamp(payload, _editorLabel(), SYNC.SESSION_ID)
+        : Object.assign(payload, { rev: (Number(payload.rev) || 0) + 1, updatedAt: Date.now() });
+
+      const next = fresh.slice();
+      if (idx > -1) next[idx] = stamped; else next.push(stamped);
+
+      // The Studio keeps no id of its own, so a save opened for a script that
+      // another surface removed - or a re-save after an import - would land on a
+      // brand new id and duplicate it. Carry over every record this write does
+      // not mention, exactly like the sidebar does; only a deliberate delete
+      // (allowDelete) is allowed to drop one.
+      const keptIds = new Set(next.map((r) => r && r.id).filter(Boolean));
+      const survivors = fresh.filter((r) => r && r.id && !keptIds.has(r.id));
+      const merged2 = survivors.length ? survivors.concat(next) : next;
+
+      if (SYNC) await SYNC.writeAll(merged2); else await browserApi.storage.local.set({ sf_custom_scripts: merged2 });
+      _scripts = merged2;
+      _baseRev = SYNC ? SYNC.revOf(stamped) : (Number(stamped.rev) || 0);
+      _baseCode = code;
+      _currentScript = stamped;
+
+      if (browserApi.runtime && browserApi.runtime.sendMessage) {
+        browserApi.runtime.sendMessage({ action: 'US_RELOAD' }).catch(() => {});
+      }
+      _flashSaved();
+    } catch (e) {
+      _notify(t('us_save_failed') + ': ' + ((e && e.message) || e), 'error');
+    } finally {
+      _saving = false;
+    }
+  }
+
+  function _flashSaved() {
+    if (!el.btnSave) return;
+    const label = el.btnSave.querySelector('span');
+    if (label) label.textContent = t('us_saved');
+    el.btnSave.style.borderColor = '#10b981';
+    el.btnSave.style.color = '#34d399';
+    setTimeout(() => {
+      if (label) label.textContent = t('us_save');
+      el.btnSave.style.borderColor = '';
+      el.btnSave.style.color = '';
+    }, 1500);
+  }
+
+  /**
+   * The sidebar (or another Studio tab) saved something while this editor was
+   * open. Adopt it silently when the buffer is untouched, otherwise leave the
+   * buffer alone and let the next save raise the diff prompt.
+   */
+  function _watchRemote(info) {
+    _scripts = info.scripts;
+    if (!scriptId || info.changedIds.indexOf(scriptId) === -1) return;
+    const incoming = info.scripts.find((s) => s.id === scriptId);
+    const buffer = (el.code && el.code.value) || '';
+    const dirty = buffer !== _baseCode;
+    const plan = SYNC
+      ? SYNC.planRemoteChange({ incoming: incoming, editorOpen: true, dirty: dirty })
+      : { action: dirty ? 'warn' : 'adopt' };
+
+    if (plan.action === 'adopt') {
+      fillForm(incoming);
+      _notify(t('us_synced_from_other'), 'success');
+      return;
+    }
+    // 'warn' keeps _baseRev/_baseCode pinned to what the editor was opened at,
+    // so saveScript() still sees the stale revision and raises the diff prompt.
+    _notify(t('us_conflict_pending'), 'warn');
+  }
+
 
   async function testScript() {
     if (!el.code) return;
@@ -183,25 +289,16 @@
       }
 
       const gmShim = `
-// ScholarFlow GM shim — var+typeof guards prevent redeclaration errors
-// on pages that already declare const GM_* polyfills (e.g. Garena/cdkgarena).
-var _sfStorageListeners = typeof _sfStorageListeners !== 'undefined' ? _sfStorageListeners : {};
-var GM_getValue = typeof GM_getValue === 'function' ? GM_getValue : function(key, def) { try { return JSON.parse(localStorage.getItem('GM_' + key)) ?? def; } catch(e) { return localStorage.getItem('GM_' + key) || def; } };
-var GM_setValue = typeof GM_setValue === 'function' ? GM_setValue : function(key, val) { localStorage.setItem('GM_' + key, JSON.stringify(val)); };
-var GM_deleteValue = typeof GM_deleteValue === 'function' ? GM_deleteValue : function(key) { localStorage.removeItem('GM_' + key); };
-var GM_listValues = typeof GM_listValues === 'function' ? GM_listValues : function() { var r=[]; for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); if(k&&k.startsWith('GM_')) r.push(k.slice(3)); } return r; };
-var GM_addStyle = typeof GM_addStyle === 'function' ? GM_addStyle : function(css) { var s=document.createElement('style'); s.textContent=css; (document.head||document.documentElement).appendChild(s); return s; };
-var GM_setClipboard = typeof GM_setClipboard === 'function' ? GM_setClipboard : function(text) { try { if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(text).catch(function(){}); } catch(e){} };
-var GM_openInTab = typeof GM_openInTab === 'function' ? GM_openInTab : function(url) { try { window.open(url,'_blank'); } catch(e){} };
-var GM = typeof GM !== 'undefined' ? GM : {
+const GM_getValue = function(key, def) { try { return JSON.parse(localStorage.getItem('GM_' + key)) ?? def; } catch(e) { return localStorage.getItem('GM_' + key) || def; } };
+const GM_setValue = function(key, val) { localStorage.setItem('GM_' + key, JSON.stringify(val)); };
+const GM_deleteValue = function(key) { localStorage.removeItem('GM_' + key); };
+const GM = {
   getValue: async function(key, def) { return GM_getValue(key, def); },
   setValue: async function(key, val) { return GM_setValue(key, val); },
   deleteValue: async function(key) { return GM_deleteValue(key); },
-  listValues: async function() { return GM_listValues(); },
-  addStyle: function(css) { return GM_addStyle(css); },
-  setClipboard: function(text) { GM_setClipboard(text); },
-  openInTab: function(url) { GM_openInTab(url); }
+  addStyle: function(css) { const style = document.createElement('style'); style.textContent = css; (document.head || document.documentElement).appendChild(style); }
 };
+const GM_addStyle = GM.addStyle;
 `;
       const runnerWrapper = `(function() {
   function _relay(level, args) {
@@ -454,5 +551,8 @@ var GM = typeof GM !== 'undefined' ? GM : {
   document.addEventListener('DOMContentLoaded', () => {
     setupEvents();
     loadData();
+    // Keep this tab in step with the sidebar: a save there shows up here
+    // without a reload, and a concurrent edit is flagged instead of lost.
+    if (SYNC && typeof SYNC.watch === 'function') SYNC.watch(_watchRemote);
   });
 })();

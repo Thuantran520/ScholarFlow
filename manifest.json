@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ScholarFlow - Trợ Lý Học Thuật",
-  "version": "2.5.4",
+  "version": "2.5.5",
   "description": "ScholarFlow: Advanced academic & web productivity assistant — Multi-format citations (IEEE, APA, Harvard, MLA, BibTeX), Userscripts Studio, smart screen capture & recording, privacy DOM redaction, Scratchpad & Social Shield.",
   "permissions": [
     "tabs",
@@ -14,6 +14,9 @@
     "contextMenus",
     "browsingData",
     "declarativeNetRequest"
+  ],
+  "optional_permissions": [
+    "userScripts"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -37,6 +40,7 @@
         "OS/js/content/highlighter.js",
         "OS/js/content/scratchpad.js",
         "OS/js/content/reader.js",
+        "OS/js/content/userscripts_runner.js",
         "OS/js/content/main.js"
       ],
       "css": [
@@ -100,7 +104,8 @@
   "background": {
     "scripts": [
       "OS/js/background.js"
-    ]
+    ],
+    "type": "module"
   },
   "icons": {
     "16": "icon16.png",
@@ -127,8 +132,5 @@
         "<all_urls>"
       ]
     }
-  ],
-  "optional_permissions": [
-    "userScripts"
   ]
 }

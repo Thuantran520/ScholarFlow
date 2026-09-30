@@ -94,5 +94,34 @@ module.exports = [
       // Security
       "no-caller": "error"
     }
+  },
+  {
+    // Background entry point and the userscript engine are loaded as ES modules
+    // (background.type = "module"), so they need import/export support and the
+    // service-worker globals.
+    files: ["OS/js/background.js", "OS/js/userscripts_bg.js"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "module",
+      globals: {
+        window: "readonly",
+        document: "readonly",
+        chrome: "readonly",
+        browser: "readonly",
+        console: "readonly",
+        setTimeout: "readonly",
+        clearTimeout: "readonly",
+        fetch: "readonly",
+        AbortController: "readonly",
+        AbortSignal: "readonly",
+        URL: "readonly",
+        TextEncoder: "readonly",
+        TextDecoder: "readonly",
+        location: "readonly",
+        crypto: "readonly",
+        self: "readonly",
+        globalThis: "readonly"
+      }
+    }
   }
 ];

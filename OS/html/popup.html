@@ -1568,7 +1568,7 @@
       <div class="rule-card" style="border-color:rgba(245,158,11,0.35); background:rgba(245,158,11,0.06);">
         <div class="rule-card-title" style="color:#f59e0b;" data-i18n="trust_card4_title">⚖️ 4. Thông Tin Bản Quyền &amp; Kỹ Thuật</div>
         <div class="rule-card-body" data-i18n="trust_card4_body_html" data-i18n-html="true">
-          • <b>Phiên bản:</b> ScholarFlow v2.5.4<br>
+          • <b>Phiên bản:</b> ScholarFlow v2.5.5<br>
           • <b>Kiến trúc:</b> Manifest V3 (Chromium 114+ &amp; Firefox 109+ Native Gecko)<br>
           • <b>Bản quyền:</b> Bản quyền phần mềm thuộc về Minh Thuận<br>
           • <b>Chính sách bảo mật:</b> <a href="privacy.html" target="_blank" style="color:#38bdf8; text-decoration:underline;">Xem toàn văn Chính Sách Quyền Riêng Tư (Privacy Policy)</a>
@@ -3397,11 +3397,10 @@
       </div>
       <div class="sf-card-body" style="padding: 10px;">
         
-        <!-- Firefox Permission Warning -->
-        <div id="us-ff-perm-box" class="us-alert" style="display: none; background: rgba(239, 68, 68, 0.1); border-left: 3px solid #ef4444; padding: 8px; border-radius: 4px; margin-bottom: 12px;">
-          <p style="font-size: 11px; margin: 0 0 6px 0; color: #ef4444;" data-i18n="us_ff_perm_desc">Tính năng này cần quyền chạy script (Firefox yêu cầu cấp quyền thủ công).</p>
-          <button id="btn-us-req-perm" class="btn btn-primary" style="font-size: 11px; padding: 4px 8px;" data-i18n="us_btn_req_perm">Cấp quyền ngay</button>
-        </div>
+        <!-- Engine/permission status. Populated by _checkPermissions() only when
+             something is genuinely wrong, so a visible box always means a real
+             problem. See _renderStatus() in OS/js/tabs/userscripts.js. -->
+        <div id="us-ff-perm-box" class="us-alert" style="display: none; border-left: 3px solid #ef4444; padding: 8px; border-radius: 4px; margin-bottom: 12px;"></div>
 
         <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;" data-i18n="userscripts_desc">Thêm và chạy các kịch bản Javascript tùy chỉnh trên bất kỳ trang web nào.</p>
 
@@ -3434,7 +3433,11 @@
             </button>
           </div>
 
-          <ul id="us-list" class="us-list" style="list-style: none; padding: 0; margin: 0; margin-bottom: 8px;">
+          <div id="us-diag-bar" style="display: flex; gap: 6px; align-items: center; margin-bottom: 6px; font-size: 10.5px; color: var(--text-muted);">
+   <span id="us-diag-counts"></span>
+   <button type="button" id="us-diag-btn" class="us-hidden-clear" data-i18n="us_diag_btn">Chẩn đoán</button>
+</div>
+<ul id="us-list" class="us-list" style="list-style: none; padding: 0; margin: 0; margin-bottom: 8px;">
             <!-- Rendered by JS -->
           </ul>
 
@@ -3728,7 +3731,7 @@
   <div class="footer-trust-bar">
     <div class="trust-pill" title="Phiên bản hiện tại" data-i18n-title="tip_trust_version">
       <span class="trust-dot dot-green"></span>
-      <span id="app-version-display">v2.5.4</span>
+      <span id="app-version-display">v2.5.5</span>
     </div>
     <div class="trust-divider">•</div>
     <div class="trust-pill" title="Được phát triển bởi Minh Thuận" data-i18n-title="tip_trust_author">
@@ -3788,8 +3791,10 @@
   <script src="../js/tabs/scratchpad.js"></script>
   <script src="../js/tabs/qr.js"></script>
   <script src="../js/debug.js"></script>
-  <script src="../js/core/gm-shim.js"></script>
-  <script src="../js/tabs/userscripts.js"></script>
+<script src="../js/core/gm-shim.js"></script>
+<script src="../js/core/userscript-meta.js"></script>
+<script src="../js/core/userscript-sync.js"></script>
+<script src="../js/tabs/userscripts.js"></script>
 </body>
 </html>
 

@@ -1,118 +1,162 @@
 // OS/js/content/userscripts_runner.js
+// Bridge between the page (where userscripts run) and the background engine.
+//
+// Userscripts are injected by the background through
+// scripting.registerContentScripts() with world: "MAIN", so they live in the
+// page's JS context and cannot touch extension APIs. This content script runs
+// in the isolated world and relays the DOM CustomEvents they emit to the
+// background, and the answers back.
+//
+// It deliberately does NOT inject anything itself any more — that used to make
+// it fight with the registered scripts and fail under strict page CSP.
 (function() {
-  const browserApi = (typeof browser !== 'undefined' && browser) ? browser : chrome;
-  
-  if (!browserApi || !browserApi.storage) return;
+  'use strict';
 
-  const GM_SHIM = `
-// ScholarFlow GM shim — var+typeof guards prevent redeclaration errors
-// on pages that already declare const GM_* polyfills (e.g. Garena/cdkgarena).
-var _sfStorageListeners = typeof _sfStorageListeners !== 'undefined' ? _sfStorageListeners : {};
-var GM_getValue = typeof GM_getValue === 'function' ? GM_getValue : function(key, def) { try { return JSON.parse(localStorage.getItem('GM_' + key)) ?? def; } catch(e) { return localStorage.getItem('GM_' + key) || def; } };
-var GM_setValue = typeof GM_setValue === 'function' ? GM_setValue : function(key, val) { localStorage.setItem('GM_' + key, JSON.stringify(val)); };
-var GM_deleteValue = typeof GM_deleteValue === 'function' ? GM_deleteValue : function(key) { localStorage.removeItem('GM_' + key); };
-var GM_listValues = typeof GM_listValues === 'function' ? GM_listValues : function() { var r=[]; for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); if(k&&k.startsWith('GM_')) r.push(k.slice(3)); } return r; };
-var GM_addStyle = typeof GM_addStyle === 'function' ? GM_addStyle : function(css) { var s=document.createElement('style'); s.textContent=css; (document.head||document.documentElement).appendChild(s); return s; };
-var GM_setClipboard = typeof GM_setClipboard === 'function' ? GM_setClipboard : function(text) { try { if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(text).catch(function(){}); } catch(e){} };
-var GM_openInTab = typeof GM_openInTab === 'function' ? GM_openInTab : function(url) { try { window.open(url,'_blank'); } catch(e){} };
-var GM = typeof GM !== 'undefined' ? GM : {
-  getValue: async function(key, def) { return GM_getValue(key, def); },
-  setValue: async function(key, val) { return GM_setValue(key, val); },
-  deleteValue: async function(key) { return GM_deleteValue(key); },
-  listValues: async function() { return GM_listValues(); },
-  addStyle: function(css) { return GM_addStyle(css); },
-  setClipboard: function(text) { GM_setClipboard(text); },
-  openInTab: function(url) { GM_openInTab(url); }
-};
-`;
+  const api = (typeof browser !== 'undefined' && browser.runtime) ? browser : ((typeof chrome !== 'undefined' && chrome.runtime) ? chrome : null);
+  if (!api || !api.runtime || !api.runtime.onMessage) return;
 
-  // Relay live Userscript console logs to extension popup/sidebar/studio
-  document.addEventListener('__SF_US_LOG__', (e) => {
-    if (!e || !e.detail) return;
+  const EXT = (typeof browser !== 'undefined' && browser.runtime && browser.runtime.getURL)
+    ? browser.runtime.getURL('')
+    : ((typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getURL) ? chrome.runtime.getURL('') : '');
+  // Never relay anything to the extension's own pages: the sidebar and the
+  // Studio already have the APIs and must not be treated as a content tab.
+  const ON_EXTENSION_PAGE = (function() {
+    try { return !!(EXT && location.href.indexOf(EXT) === 0); } catch (e) { return false; }
+  })();
+
+  function send(message) {
     try {
-      if (browserApi.runtime && browserApi.runtime.sendMessage) {
-        browserApi.runtime.sendMessage({
-          action: 'SF_US_LIVE_LOG',
-          log: e.detail
-        }).catch(() => {});
+      const p = api.runtime.sendMessage(message);
+      if (p && typeof p.catch === 'function') p.catch(() => {});
+    } catch (_e) { /* extension context invalidated */ }
+  }
+
+  // Fire a message and relay the answer back into the page. The shim waits on a
+  // DOM event keyed by reqId, so every request MUST come back with its reqId or
+  // the userscript sits until its 15s timeout.
+  function request(message, eventName, reqId) {
+    const reply = (detail) => {
+      respond(eventName, Object.assign({}, detail, { reqId: reqId }));
+    };
+    let p;
+    try {
+      // Both engines (Firefox and Chrome 99+) answer with a promise here.
+      p = api.runtime.sendMessage(message);
+    } catch (_e) {
+      reply({ error: 'ScholarFlow: extension context invalidated' });
+      return;
+    }
+    if (p && typeof p.then === 'function') {
+      p.then(
+        function (res) { reply(res && typeof res === 'object' ? res : { value: res }); },
+        function (err) { reply({ error: 'ScholarFlow: ' + String((err && err.message) || err) }); }
+      );
+      return;
+    }
+    // No promise: answer rather than re-send, so the request is never duplicated.
+    reply({ value: p === undefined ? null : p });
+  }
+
+  function respond(name, detail) {
+    try {
+      document.dispatchEvent(new CustomEvent(name, { detail: detail }));
+    } catch (_e) { /* document gone */ }
+  }
+
+  function on(name, handler) {
+    document.addEventListener(name, function(ev) {
+      if (!ev || !ev.detail) return;
+      try { handler(ev.detail); } catch (_e) { /* never break the page */ }
+    }, true);
+  }
+
+  // ---- console log feed ---------------------------------------------------
+  on('__SF_US_LOG__', function(detail) {
+    send({
+      action: 'SF_US_LIVE_LOG',
+      log: {
+        level: String(detail.level || 'log'),
+        text: String(detail.text == null ? '' : detail.text).slice(0, 4000),
+        scriptId: detail.scriptId || null,
+        name: detail.name || '',
+        url: location.href.slice(0, 500),
+        time: detail.time || Date.now()
       }
-    } catch (_err) {}
+    });
   });
 
-  function runScripts() {
-    browserApi.storage.local.get("sf_custom_scripts", (res) => {
-      const scripts = res.sf_custom_scripts || [];
-      const currentUrl = window.location.href;
-      
-      scripts.forEach(s => {
-        if (!s.active || !s.code) return;
-        
-        let matched = false;
-        for (const m of (s.matches || [])) {
-          if (m === "<all_urls>") { 
-            matched = true; 
-            break; 
-          }
-          // Convert match pattern to regex
-          // e.g. *://*.youtube.com/* -> ^.*:\/\/.*\.youtube\.com\/.*$
-          let regexStr = '^' + m.replace(/\./g, '\\.')
-                                .replace(/\*/g, '.*')
-                                .replace(/\//g, '\\/') + '$';
-          if (new RegExp(regexStr).test(currentUrl)) { 
-            matched = true; 
-            break; 
-          }
-        }
-        
-        if (!matched) return;
-        
-        // Inject script tag with GM shim and console interceptor
-        try {
-          const scriptEl = document.createElement('script');
-          const scriptName = s.name || s.id;
-          scriptEl.textContent = `(function() {
-  function _relay(level, args) {
-    try {
-      const text = args.map(a => {
-        try { return (typeof a === 'object' && a !== null) ? JSON.stringify(a) : String(a); }
-        catch(e) { return String(a); }
-      }).join(' ');
-      document.dispatchEvent(new CustomEvent('__SF_US_LOG__', {
-        detail: { level: level, text: text, scriptId: ${JSON.stringify(s.id)}, name: ${JSON.stringify(scriptName)}, time: Date.now() }
-      }));
-    } catch(e) {}
-  }
-  const _origLog = console.log, _origWarn = console.warn, _origError = console.error, _origInfo = console.info;
-  console.log = function(...a) { _relay('log', a); _origLog.apply(console, a); };
-  console.warn = function(...a) { _relay('warn', a); _origWarn.apply(console, a); };
-  console.error = function(...a) { _relay('error', a); _origError.apply(console, a); };
-  console.info = function(...a) { _relay('info', a); _origInfo.apply(console, a); };
+  // ---- run statistics -----------------------------------------------------
+  on('__SF_US_READY__', function(detail) {
+    if (detail && detail.scriptId) send({ action: 'US_SCRIPT_RAN', scriptId: detail.scriptId });
+  });
 
-  try {
-    ${GM_SHIM}
-    ${s.code}
-  } catch(err) {
-    _relay('error', ['[Lỗi Userscript]', err.stack || err.message || String(err)]);
-  }
-})();`;
-          scriptEl.dataset.sfScriptId = s.id;
-          
-          // Steal nonce to bypass strict CSP (e.g., YouTube)
-          const nonceTag = document.querySelector('script[nonce]');
-          if (nonceTag) {
-            scriptEl.setAttribute('nonce', nonceTag.getAttribute('nonce'));
-          }
+  // ---- GM_xmlhttpRequest --------------------------------------------------
+  // The background needs the caller identity to namespace its per-script
+  // storage, and the shim is waiting on __SF_US_XHR_RES__ keyed by reqId.
+  on('__SF_US_XHR_REQ__', function(detail) {
+    if (!detail || !detail.reqId) return;
+    request(
+      { action: 'GM_XHR', req: detail },
+      '__SF_US_XHR_RES__',
+      detail.reqId
+    );
+  });
 
-          (document.documentElement).appendChild(scriptEl);
-          console.log("[ScholarFlow] Injected userscript: " + scriptName);
-        } catch (e) {
-          console.error("[ScholarFlow] Failed to inject userscript: " + s.name, e);
-        }
-      });
+  on('__SF_US_XHR_ABORT__', function(detail) {
+    if (detail && detail.reqId) send({ action: 'US_XHR_ABORT', reqId: detail.reqId });
+  });
+
+  // ---- ScholarFlow bridge -------------------------------------------------
+  // scriptId/name travel in the envelope, but the background reads them from the
+  // payload, so they are merged in here; without this every userscript shares
+  // the "anon" storage bucket.
+  on('__SF_US_BRIDGE_REQ__', function(detail) {
+    if (!detail || !detail.reqId) return;
+    const payload = Object.assign(
+      {},
+      (detail.payload && typeof detail.payload === 'object') ? detail.payload : null,
+      { scriptId: detail.scriptId || 'anon', name: detail.name || '' }
+    );
+    request(
+      { action: 'US_BRIDGE', method: detail.method, payload: payload },
+      '__SF_US_BRIDGE_RES__',
+      detail.reqId
+    );
+  });
+
+  // ---- GM_registerMenuCommand --------------------------------------------
+  on('__SF_US_MENU_ADD__', function(detail) {
+    if (!detail || !detail.id) return;
+    send({
+      action: 'US_MENU_REGISTER',
+      entry: {
+        id: String(detail.id),
+        caption: String(detail.caption == null ? '' : detail.caption),
+        scriptId: detail.scriptId || null,
+        scriptName: detail.scriptName || '',
+        accessKey: detail.accessKey || ''
+      }
     });
-  }
+  });
 
-  // Run immediately for document_idle/start
-  runScripts();
+  // ---- menu commands invoked from the extension UI ------------------------
+  // The sidebar cannot call a page callback directly, so it asks the tab to
+  // dispatch the click and the shim looks the entry up by id.
+  try {
+    if (api.runtime.onMessage && api.runtime.onMessage.addListener) {
+      api.runtime.onMessage.addListener(function(message) {
+        if (!message || message.action !== 'SF_US_MENU_CLICK') return undefined;
+        respond('__SF_US_MENU_CLICK__', { id: String(message.id || '') });
+        return Promise.resolve({ ok: true });
+      });
+    }
+  } catch (_e) { /* messaging unavailable */ }
 
+  if (ON_EXTENSION_PAGE) return;
+
+  // Tell the background which page this is, so the sidebar can offer
+  // "chạy thử script trên trang này" without a second round-trip.
+  try {
+    document.documentElement.setAttribute('data-sf-userscripts', 'ready');
+  } catch (_e) { /* ignore */ }
 })();

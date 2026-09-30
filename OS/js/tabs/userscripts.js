@@ -5,6 +5,10 @@
   let _scripts = [];
   let _searchQuery = '';
   let _searchStatus = '';
+  // Revision + code body of each record as this surface last saw it. A save
+  // whose stored revision differs from this is a concurrent edit elsewhere.
+  const _baseRevs = Object.create(null);
+  const _baseCodes = Object.create(null);
 
   const SCRIPT_TEMPLATES = [
     {
@@ -90,24 +94,181 @@
     editCode: document.getElementById('us-edit-code'),
     btnSave: document.getElementById('btn-us-save'),
     btnCancel: document.getElementById('btn-us-cancel'),
-    ffPermBox: document.getElementById('us-ff-perm-box'),
-    btnReqPerm: document.getElementById('btn-us-req-perm')
+    ffPermBox: document.getElementById('us-ff-perm-box')
   };
 
   async function _checkPermissions() {
-    // Only Firefox has browser.permissions.contains that checks optional permissions for userScripts
-    if (typeof browserApi.permissions !== "undefined" && typeof browserApi.permissions.contains === "function") {
-      try {
-        const hasPerm = await browserApi.permissions.contains({ permissions: ["userScripts"] });
-        if (!hasPerm) {
-          if (dom.ffPermBox) dom.ffPermBox.style.display = 'block';
-        } else {
-          if (dom.ffPermBox) dom.ffPermBox.style.display = 'none';
-        }
-      } catch (e) {
-        console.warn("Permission check failed", e);
-      }
+    // Honest status, no theatre. The engine runs through
+    // scripting.registerContentScripts(), so there is no optional grant to
+    // request: what we can actually report is (a) whether the background answers
+    // at all, (b) whether the permissions the manifest declares are present,
+    // and (c) whether the browser supports what we register. Anything else
+    // would be a guess.
+    const box = dom.ffPermBox;
+    if (!box) return;
+
+    let status = null;
+    let transportError = '';
+    try {
+      status = await browserApi.runtime.sendMessage({ action: 'US_STATUS' });
+    } catch (e) {
+      transportError = String((e && e.message) || e);
     }
+
+    // What the manifest actually declares, so a missing entry is visible here
+    // instead of surfacing later as "engine unavailable".
+    const manifest = (browserApi.runtime && browserApi.runtime.getManifest)
+      ? browserApi.runtime.getManifest() : { permissions: [], host_permissions: [] };
+    const perms = [].concat(manifest.permissions || []);
+    const hosts = [].concat(manifest.host_permissions || manifest.optional_host_permissions || []);
+    const missing = [];
+    if (perms.indexOf('scripting') === -1) missing.push('scripting');
+    if (!hosts.some((h) => h === '<all_urls>' || /^https?:\/\/\*\//.test(h))) missing.push('host');
+
+    const alive = !!(status && status.ok);
+    const engineOk = alive && !!status.available && !status.needsUserScripts;
+
+    let level = 'ok';
+    if (!alive) level = 'error';
+    else if (!engineOk || missing.length || status.needsUserScripts) level = 'error';
+    else if (status.worldSupported === false) level = 'warn';
+
+    _renderStatus(box, level, {
+      engineOk: engineOk,
+      alive: alive,
+      transportError: transportError,
+      missing: missing,
+      needsUserScripts: !!(status && status.needsUserScripts),
+      worldSupported: status ? status.worldSupported !== false : true,
+      registered: status ? Number(status.registered && status.registered.length) || 0 : 0,
+      active: status ? Number(status.active) || 0 : 0,
+      total: status ? Number(status.total) || 0 : 0
+    });
+  }
+
+  const _STATUS_STYLE = {
+    ok: { bg: 'rgba(34, 197, 94, 0.1)', bar: '#22c55e' },
+    warn: { bg: 'rgba(234, 179, 8, 0.12)', bar: '#eab308' },
+    error: { bg: 'rgba(239, 68, 68, 0.1)', bar: '#ef4444' }
+  };
+
+  function _renderStatus(box, level, info) {
+    // Silence means healthy. A box that is always on screen trains people to
+    // ignore it, which is exactly how the old always-red panel became noise.
+    if (level === 'ok') {
+      box.style.display = 'none';
+      while (box.firstChild) box.removeChild(box.firstChild);
+      return;
+    }
+    const style = _STATUS_STYLE[level] || _STATUS_STYLE.ok;
+    box.style.display = 'block';
+    box.style.background = style.bg;
+    box.style.borderLeftColor = style.bar;
+    while (box.firstChild) box.removeChild(box.firstChild);
+
+    const title = document.createElement('strong');
+    title.textContent = t('us_status_title', 'Trạng thái engine');
+    box.appendChild(title);
+
+    const rows = [];
+    if (!info.alive) {
+      rows.push([t('us_status_label_engine', 'Engine'),
+        t('us_status_engine_dead', 'Không phản hồi — tải lại extension') +
+        (info.transportError ? ' (' + info.transportError + ')' : '')]);
+    } else if (info.engineOk) {
+      rows.push([t('us_status_label_engine', 'Engine'),
+        t('us_status_engine_ok', 'Đang chạy')]);
+    } else {
+      rows.push([t('us_status_label_engine', 'Engine'),
+        t('us_status_engine_off', 'Không dùng được scripting API')]);
+    }
+
+    rows.push([t('us_status_label_perms', 'Quyền'),
+      info.needsUserScripts
+        ? t('us_status_perms_missing', 'Thiáº¿u quyá»n: ') + 'userScripts'
+        : info.missing && info.missing.length
+        ? t('us_status_perms_missing', 'Thiếu quyền: ') + info.missing.join(', ')
+        : t('us_status_perms_ok', 'Đã có scripting + truy cập trang')]);
+
+    rows.push([t('us_status_label_registered', 'Script'),
+      String(info.active) + '/' + String(info.total) +
+      t('us_status_registered_suffix', ' đang bật, ') + String(info.registered) +
+      t('us_status_registered_suffix2', ' đã đăng ký')]);
+
+    if (info.alive && !info.worldSupported) {
+      rows.push([t('us_status_label_world', 'MAIN world'),
+        t('us_status_world_unsupported',
+          'Trình duyệt này chưa hỗ trợ world: MAIN — script cần MAIN sẽ không chạy')]);
+    }
+
+    const list = document.createElement('div');
+    list.className = 'us-ff-perm-list';
+    for (const pair of rows) {
+      const row = document.createElement('div');
+      row.className = 'us-ff-perm-row';
+      const k = document.createElement('span');
+      k.className = 'us-ff-perm-k';
+      k.textContent = pair[0];
+      const v = document.createElement('span');
+      v.className = 'us-ff-perm-v';
+      v.textContent = pair[1];
+      row.appendChild(k);
+      row.appendChild(v);
+      list.appendChild(row);
+    }
+    box.appendChild(list);
+
+    const foot = document.createElement('div');
+    foot.className = 'us-ff-perm-foot';
+    const open = document.createElement('button');
+    open.className = 'btn btn-primary';
+    open.style.fontSize = '11px';
+    open.style.padding = '4px 8px';
+    open.textContent = t('us_btn_open_perms', 'Mở trang quyền');
+    open.addEventListener('click', () => _openPermissionsPage());
+    foot.appendChild(open);
+    const retry = document.createElement('button');
+    retry.className = 'btn';
+    retry.style.fontSize = '11px';
+    retry.style.padding = '4px 8px';
+    retry.textContent = t('us_btn_retry_engine', 'Kiểm tra lại');
+    retry.addEventListener('click', async () => {
+      if (info.needsUserScripts) {
+        // Firefox requires permissions.request() to originate in an extension
+        // page's user gesture. Calling it here keeps that gesture intact.
+        try {
+          const perms = browserApi.permissions;
+          const granted = perms && typeof perms.request === 'function'
+            ? await perms.request({ permissions: ['userScripts'] })
+            : false;
+          if (granted) await browserApi.runtime.sendMessage({ action: 'US_RELOAD' });
+        } catch (e) { /* refresh below reports a denied or unavailable grant */ }
+      }
+      _checkPermissions();
+    });
+    foot.appendChild(retry);
+    box.appendChild(foot);
+  }
+
+  /**
+   * Best-effort jump to the place where the user can actually grant what is
+   * missing. There is no single cross-browser API for this, and
+   * management.openOptionsPage() only opens *our* options page, so try the
+   * browser's own extension manager and fall back.
+   */
+  async function _openPermissionsPage() {
+    const id = (browserApi.runtime && browserApi.runtime.id) || '';
+    const candidates = [
+      'chrome://extensions/?id=' + encodeURIComponent(id),
+      'about:addons'
+    ];
+    for (const url of candidates) {
+      try {
+        await browserApi.tabs.create({ url: url });
+        return;
+      } catch (e) { /* try the next one */ }
+    }
+    _notify(t('us_status_cannot_open', 'Không mở được trang quyền — hãy vào cài đặt trình duyệt.'), 'warn');
   }
 
   let _currentTabUrl = '';
@@ -136,34 +297,411 @@
     });
   }
 
-  function _load() {
-    _updateCurrentTabUrl().finally(() => {
-      browserApi.storage.local.get("sf_custom_scripts", (res) => {
-        _scripts = res.sf_custom_scripts || [];
-        _render();
+  const SYNC = globalThis.SF_US_SYNC || null;
+  // One parser for every entry point (editor, file import, URL import, engine)
+  // so a script's scope can never be parsed one way on the way in and another
+  // way on the way out.
+  const META = globalThis.SF_US_META || null;
+  const EDITOR_LABEL = 'sidebar';
+
+  /** Id for a genuinely new record. Never reuse an existing script's id. */
+  function _newScriptId() {
+    return 'script_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+  }
+
+  function _notify(message, type) {
+    if (SYNC && typeof SYNC.toast === 'function') { SYNC.toast(message, type); return; }
+    if (typeof SF_showToast === 'function') SF_showToast(message, type || 'info');
+  }
+
+  function _stampWith(record) {
+    if (!SYNC) {
+      return Object.assign({}, record, { rev: (Number(record.rev) || 0) + 1, updatedAt: Date.now() });
+    }
+    return SYNC.stamp(record, t('us_editor_sidebar') || EDITOR_LABEL, SYNC.SESSION_ID);
+  }
+
+  /**
+   * Persist one script with last-writer-wins protection.
+   *
+   * Re-reads storage immediately before writing, compares the stored revision
+   * with the revision this editor was opened at, and — when another surface
+   * (the Studio, or a second sidebar) saved a *different* code body in the
+   * meantime — shows the line diff and asks before overwriting.
+   *
+   * @returns {Promise<boolean>} true when the record was written.
+   */
+  async function _commitScript(fields) {
+    const fresh = await _readFresh();
+    _scripts = fresh;
+    const idx = fresh.findIndex((s) => s && s.id === fields.id);
+    const stored = idx > -1 ? fresh[idx] : null;
+
+    // Diagnostic: what this save intends to do. Paste the whole line
+    // back to me when a save looks wrong.
+    try { console.log(
+      '[SF-US] commit id=' + JSON.stringify(fields.id) +
+      ' fresh=' + fresh.length +
+      ' idx=' + idx +
+      ' storedName=' + JSON.stringify(stored ? stored.name : null) +
+      ' storedId=' + JSON.stringify(stored ? stored.id : null) +
+      ' baseRev=' + JSON.stringify(_baseRevs[fields.id] || null) +
+      ' storedRev=' + JSON.stringify(stored ? SYNC.revOf(stored) : null) +
+      ' hasSync=' + !!SYNC
+    ); } catch (_e) { /* ignore */ }
+
+    if (stored && SYNC) {
+      const openedRev = Number(_baseRevs[fields.id] || 0);
+      if (SYNC.revOf(stored) !== openedRev && String(stored.code || '') !== _baseCodes[fields.id]) {
+        const choice = await SYNC.showConflict({
+          name: fields.name || stored.name || '',
+          leftText: String(stored.code || ''),
+          rightText: String(fields.code || ''),
+          leftMeta: SYNC.describeEditor(stored)
+        });
+        if (choice === 'theirs') {
+          _adoptStored(stored, idx);
+          return false;
+        }
+        if (choice !== 'overwrite') return false;
+        _notify(t('us_conflict_overwritten'), 'warn');
+      }
+    }
+
+    const merged = Object.assign({}, stored || {}, fields, {
+      active: (stored && stored.active) !== false
+    });
+    const stamped = _stampWith(merged);
+    const next = fresh.slice();
+    if (idx > -1) next[idx] = stamped; else next.push(stamped);
+    await _writeAll(next);
+    _rememberBase(stamped);
+    return true;
+  }
+
+  function _adoptStored(stored, idx) {
+    _scripts = _scripts.slice();
+    if (idx > -1) _scripts[idx] = stored;
+    _render();
+    _notify(t('us_conflict_took_theirs'), 'info');
+  }
+
+  function _rememberBase(record) {
+    if (!record) return;
+    _baseRevs[record.id] = Number(record.rev) || 0;
+    _baseCodes[record.id] = String(record.code || '');
+  }
+
+  function _idOf(record) {
+    return record && typeof record.id === 'string' && record.id ? record.id : null;
+  }
+
+  /**
+   * Last line of defence: a write may never drop a record that is still in
+   * storage unless the caller said the removal was intentional.
+   *
+   * Every bug that showed up as "my script got overwritten" had the same shape
+   * - a write built from something other than the current list, so the records
+   * it did not know about silently disappeared. Re-attaching them here makes
+   * that class of failure impossible to observe, whatever the cause; a user who
+   * clicks delete still gets a delete, because that path opts in.
+   */
+  async function _writeAll(list, opts) {
+    let out = list;
+    const before = _scripts.length;
+    if (!(opts && opts.allowDelete)) {
+      const current = await _readFresh();
+      const kept = new Set(out.map(_idOf));
+      const survivors = current.filter((c) => {
+        const id = _idOf(c);
+        return id && !kept.has(id);
       });
+      if (survivors.length) out = survivors.concat(out);
+    }
+    // Diagnostic: what actually got persisted. Stack trace only when
+    // a write is empty, because that is the observed overwrite case.
+    if (out.length === 0) {
+      try { console.log('[SF-US] WRITE-EMPTY caller:\n' + new Error().stack); } catch (_e) { /* ignore */ }
+    }
+    if (SYNC) {
+      _scripts = out;
+      await SYNC.writeAll(out);
+    } else {
+      _scripts = out;
+      await browserApi.storage.local.set({ sf_custom_scripts: out });
+    }
+    _diagNote('write',
+      (opts && opts.allowDelete ? 'delete ' : '') +
+      before + '->' + out.length +
+      ' [' + out.map((r) => r.name || '?').join('|') + ']');
+    _render();
+    if (browserApi.runtime && browserApi.runtime.sendMessage) {
+      browserApi.runtime.sendMessage({ action: "US_RELOAD" }).catch(() => {});
+    }
+  }
+
+  /**
+   * A save from the Studio (or another window) landed. Refresh the list; if the
+   * editor is open on that script and its buffer is still untouched, load the
+   * new version so both views agree immediately.
+   */
+  function _onRemoteChange(info) {
+    _scripts = info.scripts;
+    info.changedIds.forEach((id) => {
+      const incoming = _scripts.find((s) => s.id === id);
+      const buffer = document.getElementById('us-edit-code');
+      const text = buffer ? buffer.value : null;
+      const editorOpen = _isEditorOpenFor(id);
+      const dirty = editorOpen && text !== null && text !== _baseCodes[id];
+
+      const plan = SYNC
+        ? SYNC.planRemoteChange({ incoming: incoming, editorOpen: editorOpen, dirty: dirty })
+        : { action: incoming ? (editorOpen ? 'warn' : 'forget') : 'forget' };
+
+      if (plan.action === 'adopt') {
+        // Untouched buffer: adopt the other side's version straight away so
+        // both windows show the same thing without a reload.
+        _fillEditorFrom(incoming);
+        _notify(t('us_synced_from_other'), 'success');
+        return;
+      }
+      // 'warn' deliberately leaves _baseRevs/_baseCodes alone. Advancing them
+      // here would make the next save compare the fresh revision against
+      // itself, skip the diff prompt and silently overwrite the other surface.
+      if (plan.action === 'forget') {
+        delete _baseRevs[id];
+        delete _baseCodes[id];
+        return;
+      }
+      _notify(t('us_conflict_pending'), 'warn');
+    });
+    _render();
+  }
+
+  function _load() {
+    try { console.log('[SF-US-LOAD] start'); } catch (_e) { /* ignore */ }
+    _updateCurrentTabUrl().finally(async () => {
+      if (SYNC) {
+        _scripts = typeof SYNC.readAllEnsured === 'function'
+          ? await SYNC.readAllEnsured(EDITOR_LABEL)
+          : await SYNC.readAll();
+      } else {
+        _scripts = await browserApi.storage.local.get("sf_custom_scripts")
+          .then((res) => res.sf_custom_scripts || []);
+      }
+      try { console.log('[SF-US-LOAD] done scripts=' + _scripts.length + ' ids=[' + _scripts.map((s) => s && s.id).join('|') + ']'); } catch (_e) { /* ignore */ }
+      _scripts.forEach((s) => _rememberBase(s));
+      _render();
     });
   }
 
-  function _save() {
-    browserApi.storage.local.set({ sf_custom_scripts: _scripts }, () => {
-      _render();
-      // Notify background to reload scripts
-      if (browserApi.runtime && browserApi.runtime.sendMessage) {
-        browserApi.runtime.sendMessage({ action: "RELOAD_USERSCRIPTS" }).catch(()=>{});
+  const ARRAY_FIELDS = ['matches', 'includes', 'excludeMatches', 'excludes', 'requires', 'resources'];
+
+  /**
+   * Coerce a stored record into the shape the rest of this module expects.
+   *
+   * Records written by older builds can hold `matches` as a string rather than
+   * a list, or be null outright. The renderer calls `list.some(...)` on those
+   * fields, so a single bad record throws *after* the list has already been
+   * emptied - the whole tab then renders blank and every script looks deleted.
+   * Normalising on the way in makes that impossible, and repairs the data on
+   * the next write instead of leaving it broken.
+   */
+  function _sanitize(list) {
+    const out = [];
+    for (const rec of (Array.isArray(list) ? list : [])) {
+      if (!rec || typeof rec !== 'object') continue;
+      const clean = Object.assign({}, rec);
+      if (typeof clean.name !== 'string') clean.name = String(clean.name == null ? '' : clean.name);
+      if (typeof clean.code !== 'string') clean.code = String(clean.code == null ? '' : clean.code);
+      for (const f of ARRAY_FIELDS) {
+        const v = clean[f];
+        if (v == null) { clean[f] = []; continue; }
+        if (Array.isArray(v)) { clean[f] = v.map((x) => String(x)); continue; }
+        // A bare string (or anything else) means one entry, not a list.
+        clean[f] = typeof v === 'string'
+          ? v.split(/\s+/).filter(Boolean)
+          : (typeof v === 'object' ? Object.keys(v) : [String(v)]);
       }
+      if (typeof clean.active !== 'boolean') clean.active = clean.active !== false;
+      out.push(clean);
+    }
+    return out;
+  }
+
+  /** Re-read the freshest list before writing anything back. */
+  async function _readFresh() {
+    if (SYNC) {
+      const raw = typeof SYNC.readAllEnsured === 'function'
+        ? await SYNC.readAllEnsured(EDITOR_LABEL)
+        : await SYNC.readAll();
+      return _sanitize(raw);
+    }
+    const r = await browserApi.storage.local.get('sf_custom_scripts');
+    const list = (r && r.sf_custom_scripts) || [];
+    return _sanitize(SYNC && SYNC.ensureIds ? SYNC.ensureIds(list).list : list);
+  }
+
+  /**
+   * Locate a record in a freshly read list.
+   *
+   * Identity is the id, but records written by older versions have no id at
+   * all, and `findIndex(s => s.id === undefined)` happily returns the *first*
+   * one - which then gets rewritten when a different record was meant. So an
+   * id-less record is matched on its own content instead.
+   */
+  function _locate(list, script) {
+    if (!script) return -1;
+    if (typeof script.id === 'string' && script.id) {
+      return list.findIndex((s) => s && s.id === script.id);
+    }
+    return list.findIndex((s) => s && !s.id &&
+      s.name === script.name && String(s.code || '') === String(script.code || ''));
+  }
+
+  /**
+   * Read-modify-write against the freshest data.
+   *
+   * Writing the in-memory array back wholesale is how this page used to lose
+   * work: every small action (toggle, reorder, delete, duplicate) rewrote all
+   * records from memory, so anything another surface saved in the meantime was
+   * silently dropped - and a stale list makes an unrelated record look like the
+   * one being edited, which looks exactly like "my new script overwrote the
+   * old one". The mutation now always runs against what is actually stored.
+   */
+  async function _mutateAll(mutator, opts) {
+    const fresh = await _readFresh();
+    const next = mutator(fresh) || fresh;
+    await _writeAll(next, opts);
+  }
+
+  async function _save() {
+    const fresh = await _readFresh();
+    const next = fresh.map((s) => _stampWith(s));
+    _scripts.forEach((s) => {
+      const i = _locate(next, s);
+      if (i > -1) _rememberBase(next[i]);
     });
+    await _writeAll(next);
+  }
+
+  /**
+   * Drop the search box and status filter.
+   *
+   * A filter left in place after an install hides the script that was just
+   * added - the list simply does not grow, which reads as "my new script
+   * overwrote the old one". The record was there all along; nothing was
+   * displayed. So anything that creates or installs a record clears the
+   * filters first, and the list says so whenever it is hiding something.
+   */
+  function _resetFilters() {
+    _searchQuery = '';
+    _searchStatus = '';
+    const searchInput = document.getElementById('us-search');
+    if (searchInput) searchInput.value = '';
+    const filterEl = document.getElementById('us-filter-status');
+    if (filterEl) filterEl.value = '';
+    // Re-render here rather than leaving it to the caller: the save that
+    // triggered this already painted the list with the old filter, and
+    // _closeEditor() does not repaint, so without this the list stays stale.
+    _render();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Diagnostics
+  //
+  // "My new script replaced the old one" has two very different causes - the
+  // record was never stored, or it was stored and the list failed to show it -
+  // and they look identical on screen. The bar below the search box always
+  // states both numbers, so the distinction is readable without guessing, and
+  // the button dumps a copyable report of every write this surface made.
+  // ---------------------------------------------------------------------------
+  const DIAG_MAX = 40;
+  let _diagLog = [];
+  let _diagId = 0;
+
+  function _diagNote(action, detail) {
+    const entry = {
+      at: new Date().toISOString().slice(11, 23),
+      n: ++_diagId,
+      surface: EDITOR_LABEL,
+      action: action,
+      detail: detail || '',
+      url: (function () { try { return location.href.slice(0, 90); } catch (_e) { return '?'; } })()
+    };
+    _diagLog.push(entry);
+    if (_diagLog.length > DIAG_MAX) _diagLog.shift();
+    try { console.log('[SF-US]', JSON.stringify(entry)); } catch (_e) { /* no console */ }
+  }
+
+  const _shownCards = () => dom.list ? dom.list.querySelectorAll('li.us-item-card').length : 0;
+
+  function _diagUpdate() {
+    const el = document.getElementById('us-diag-counts');
+    if (!el) return;
+    _readFresh().then(function (stored) {
+      const n = stored.length;
+      const shown = _shownCards();
+      let txt = t('us_diag_stored', 'Lưu: {0} · Hiện: {1}').replace('{0}', n).replace('{1}', shown);
+      const f = [];
+      if (_searchQuery) f.push('"' + _searchQuery + '"');
+      if (_searchStatus) f.push(_searchStatus);
+      if (f.length) txt += t('us_diag_filtered', ' · đang lọc: {0}').replace('{0}', f.join(', '));
+      el.textContent = txt;
+    });
+  }
+
+  function _diagReport() {
+    return _readFresh().then(function (stored) {
+      const shown = _shownCards();
+      const lines = [];
+      let mf = { version: '?' };
+      try { mf = (globalThis.browserApi || browserApi).runtime.getManifest(); } catch (_e) { /* ignore */ }
+      lines.push('ScholarFlow ' + (mf.version || '?') + ' - surface: ' + EDITOR_LABEL);
+      lines.push('URL: ' + location.href);
+      lines.push('');
+      lines.push('STORED ' + stored.length + ' / SHOWN ' + shown);
+      lines.push('filter: query="' + _searchQuery + '" status="' + _searchStatus + '"');
+      lines.push('');
+      lines.push('RECORDS');
+      stored.forEach(function (s, i) {
+        lines.push('  [' + i + '] name=' + JSON.stringify(s.name) +
+          ' id=' + JSON.stringify(s.id || '(none)') +
+          ' rev=' + (s.rev || '(none)') +
+          ' by=' + JSON.stringify(s.updatedBy || '(none)'));
+      });
+      lines.push('');
+      lines.push('WRITES THIS SESSION (' + _diagLog.length + ')');
+      _diagLog.forEach(function (e) {
+        lines.push('  #' + e.n + ' ' + e.at + ' [' + e.surface + '] ' + e.action + ' ' + e.detail);
+      });
+      return lines.join('\n');
+    });
+  }
+
+  function _diagWire() {
+    const btn = document.getElementById('us-diag-btn');
+    if (btn) {
+      btn.onclick = function () {
+        _diagReport().then(function (txt) {
+          console.log('[SF-US] REPORT\n' + txt);
+          _notify(txt, 'info', 12000);
+        });
+      };    }
   }
 
   function _render() {
     if (!dom.list) return;
     dom.list.innerHTML = '';
+    _diagUpdate();
 
-    // Filter by search + status
+    // Filter by search + status. Sanitised first so a malformed record cannot
+    // throw here and blank the list that was just cleared.
     const q = _searchQuery.toLowerCase();
-    const filtered = _scripts.filter(s => {
+    const rows = _sanitize(_scripts);
+    const filtered = rows.filter(s => {
       const matchText = !q || (s.name || '').toLowerCase().includes(q) ||
-                        (s.matches || []).some(m => m.includes(q));
+                        s.matches.some(m => m.toLowerCase().includes(q));
       let matchStatus = true;
       if (_searchStatus === 'active') {
         matchStatus = s.active !== false;
@@ -177,21 +715,90 @@
     
     if (filtered.length === 0) {
       const empty = document.createElement('li');
-      empty.style.cssText = 'font-size:11px;color:var(--text-muted);text-align:center;padding:12px 10px;';
+      empty.className = 'us-empty-state';
       if (_searchStatus === 'current_page') {
-        empty.textContent = 'Không có script nào áp dụng cho trang này';
+        empty.textContent = t('us_empty_current_page', 'Không có script nào áp dụng cho trang này');
+      } else if (_searchStatus === 'inactive') {
+        empty.textContent = t('us_empty_inactive', 'Không có script nào đang tắt');
+      } else if (_searchStatus === 'active') {
+        empty.textContent = t('us_empty_active', 'Không có script nào đang bật');
       } else if (_scripts.length === 0) {
-        empty.textContent = 'Chưa có script nào';
+        empty.textContent = t('us_empty_none', 'Chưa có script nào');
       } else {
-        empty.textContent = 'Không tìm thấy script nào';
+        empty.textContent = t('us_empty_nomatch', 'Không tìm thấy script nào');
       }
       dom.list.appendChild(empty);
+      // A filter that hides everything is the worst case of "my scripts are
+      // gone": say how many are hidden and hand back a way out.
+      if (_scripts.length > 0) {
+        const rescue = document.createElement('li');
+        rescue.className = 'us-hidden-note';
+        const kept = document.createElement('span');
+        kept.textContent = _scripts.length === 1
+          ? t('us_hidden_one', '1 script vẫn còn, đang bị bộ lọc che')
+          : t('us_hidden_many', '{0} script vẫn còn, đang bị bộ lọc che').replace('{0}', _scripts.length);
+        const showAll = document.createElement('button');
+        showAll.type = 'button';
+        showAll.className = 'us-hidden-clear';
+        showAll.textContent = t('us_show_all', 'Xem tất cả');
+        showAll.onclick = () => _resetFilters();
+        rescue.appendChild(kept);
+        rescue.appendChild(showAll);
+        dom.list.appendChild(rescue);
+      }
+      _diagUpdate();
       return;
     }
 
+    // Never hide records silently: a script that exists but is filtered out
+    // looks exactly like a script that was overwritten.
+    if (filtered.length < _scripts.length) {
+      const hidden = document.createElement('li');
+      hidden.className = 'us-hidden-note';
+      const hiddenN = _scripts.length - filtered.length;
+      const label = document.createElement('span');
+      label.textContent = hiddenN === 1
+        ? '1 script đang bị bộ lọc che'
+        : hiddenN + ' script đang bị bộ lọc che';
+      const showAll = document.createElement('button');
+      showAll.type = 'button';
+      showAll.className = 'us-hidden-clear';
+      showAll.textContent = 'Xem tất cả';
+      showAll.onclick = () => _resetFilters();
+      hidden.appendChild(label);
+      hidden.appendChild(showAll);
+      dom.list.appendChild(hidden);
+    }
+
+    // Build each card defensively: a record that cannot be rendered must cost
+    // only its own row. If anything throws mid-loop the list would otherwise
+    // stay half-built or empty, which is indistinguishable from data loss.
     filtered.forEach((script) => {
-      const li = document.createElement('li');
-      li.className = 'us-item-card';
+    let li;
+    try {
+      li = _renderRow(script);
+    } catch (err) {
+      try { console.warn('[SF-US] skipped an unreadable record', script, err); } catch (_e) { /* ignore */ }
+      li = document.createElement('li');
+      li.className = 'us-item-card us-item-broken';
+      const msg = document.createElement('span');
+      msg.className = 'us-item-title';
+      msg.textContent = (script && script.name) || '(không đọc được)';
+      const hint = document.createElement('span');
+      hint.className = 'us-broken-hint';
+      hint.textContent = 'Bản ghi lỗi — không hiển thị được, vẫn còn trong dữ liệu';
+      li.appendChild(msg);
+      li.appendChild(hint);
+    }
+    dom.list.appendChild(li);
+    });
+
+    _diagUpdate();
+  }
+
+  function _renderRow(script) {
+    const li = document.createElement('li');
+    li.className = 'us-item-card';
 
       // --- Top Row ---
       const topRow = document.createElement('div');
@@ -205,16 +812,20 @@
       cb.className = 'us-checkbox';
       cb.checked = script.active !== false;
       cb.title = script.active !== false ? 'Đang bật - Nhấn để tắt' : 'Đang tắt - Nhấn để bật';
-      cb.onchange = () => {
-        script.active = cb.checked;
-        _save();
-      };
+        cb.onchange = () => {
+          const on = cb.checked;
+          _mutateAll((list) => {
+            const i = _locate(list, script);
+            if (i > -1) list[i] = _stampWith(Object.assign({}, list[i], { active: on }));
+            return list;
+          });
+        };
 
       const title = document.createElement('span');
       title.className = 'us-item-title';
       title.textContent = script.name || "Không tên";
       title.title = 'Nhấn để chỉnh sửa: ' + (script.name || 'Script');
-      title.onclick = () => _edit(script.id);
+      title.onclick = () => _edit(_idOf(script), script);
 
       infoWrap.appendChild(cb);
       infoWrap.appendChild(title);
@@ -263,12 +874,20 @@
       btnUp.title = 'Di chuyển lên';
       btnUp.disabled = scriptIdx === 0;
       btnUp.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>';
-      btnUp.onclick = () => {
-        if (scriptIdx > 0) {
-          [_scripts[scriptIdx - 1], _scripts[scriptIdx]] = [_scripts[scriptIdx], _scripts[scriptIdx - 1]];
-          _save();
-        }
-      };
+        btnUp.onclick = () => {
+          const i = _locate(_scripts, script);
+          if (i > 0) {
+            _mutateAll((list) => {
+              const at = _locate(list, script);
+              if (at > 0) {
+                const tmp = list[at - 1];
+                list[at - 1] = list[at];
+                list[at] = tmp;
+              }
+              return list;
+            });
+          }
+        };
 
       // Move Down
       const btnDown = document.createElement('button');
@@ -277,12 +896,20 @@
       btnDown.title = 'Di chuyển xuống';
       btnDown.disabled = scriptIdx === _scripts.length - 1;
       btnDown.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>';
-      btnDown.onclick = () => {
-        if (scriptIdx < _scripts.length - 1) {
-          [_scripts[scriptIdx], _scripts[scriptIdx + 1]] = [_scripts[scriptIdx + 1], _scripts[scriptIdx]];
-          _save();
-        }
-      };
+        btnDown.onclick = () => {
+          const i = _locate(_scripts, script);
+          if (i > -1 && i < _scripts.length - 1) {
+            _mutateAll((list) => {
+              const at = _locate(list, script);
+              if (at > -1 && at < list.length - 1) {
+                const tmp = list[at + 1];
+                list[at + 1] = list[at];
+                list[at] = tmp;
+              }
+              return list;
+            });
+          }
+        };
 
       // Apply / Run
       const btnRun = document.createElement('button');
@@ -302,35 +929,21 @@
           }
 
           const gmShim = `
-var _sfStorageListeners = typeof _sfStorageListeners !== 'undefined' ? _sfStorageListeners : {};
-var GM_getValue = typeof GM_getValue === 'function' ? GM_getValue : function(key, def) { try { return JSON.parse(localStorage.getItem('GM_' + key)) ?? def; } catch(e) { return localStorage.getItem('GM_' + key) || def; } };
-var GM_setValue = typeof GM_setValue === 'function' ? GM_setValue : function(key, val) { localStorage.setItem('GM_' + key, JSON.stringify(val)); };
-var GM_deleteValue = typeof GM_deleteValue === 'function' ? GM_deleteValue : function(key) { localStorage.removeItem('GM_' + key); };
-var GM_listValues = typeof GM_listValues === 'function' ? GM_listValues : function() { var r=[]; for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); if(k&&k.startsWith('GM_')) r.push(k.slice(3)); } return r; };
-var GM_addStyle = typeof GM_addStyle === 'function' ? GM_addStyle : function(css) { var s=document.createElement('style'); s.textContent=css; (document.head||document.documentElement).appendChild(s); return s; };
-var GM_setClipboard = typeof GM_setClipboard === 'function' ? GM_setClipboard : function(text) { try { if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(text).catch(function(){}); } catch(e){} };
-var GM_openInTab = typeof GM_openInTab === 'function' ? GM_openInTab : function(url) { try { window.open(url,'_blank'); } catch(e){} };
-var GM = typeof GM !== 'undefined' ? GM : {
+const GM_getValue = function(key, def) { try { return JSON.parse(localStorage.getItem('GM_' + key)) ?? def; } catch(e) { return localStorage.getItem('GM_' + key) || def; } };
+const GM_setValue = function(key, val) { localStorage.setItem('GM_' + key, JSON.stringify(val)); };
+const GM_deleteValue = function(key) { localStorage.removeItem('GM_' + key); };
+const GM = {
   getValue: async function(key, def) { return GM_getValue(key, def); },
   setValue: async function(key, val) { return GM_setValue(key, val); },
   deleteValue: async function(key) { return GM_deleteValue(key); },
-  listValues: async function() { return GM_listValues(); },
-  addStyle: function(css) { return GM_addStyle(css); },
-  setClipboard: function(text) { GM_setClipboard(text); },
-  openInTab: function(url) { GM_openInTab(url); }
+  addStyle: function(css) { const style = document.createElement('style'); style.textContent = css; (document.head || document.documentElement).appendChild(style); }
 };
+const GM_addStyle = GM.addStyle;
 `;
-          await browserApi.scripting.executeScript({
-            target: { tabId: tabs[0].id },
-            func: (codeStr) => {
-              const s = document.createElement('script');
-              s.textContent = codeStr;
-              const nonce = document.querySelector('script[nonce]')?.getAttribute('nonce');
-              if (nonce) s.setAttribute('nonce', nonce);
-              (document.documentElement || document.head).appendChild(s);
-            },
-            args: [gmShim + '\n' + script.code]
+          const result = await browserApi.runtime.sendMessage({
+            action: 'US_RUN_ONCE', tabId: tabs[0].id, script: script
           });
+          if (!result || !result.ok) throw new Error((result && result.error) || 'Unable to run script on this page');
           btnRun.title = 'Đã áp dụng thành công!';
         } catch (e) {
           alert("Lỗi khi áp dụng: " + e.message);
@@ -343,7 +956,10 @@ var GM = typeof GM !== 'undefined' ? GM : {
       btnEdit.className = 'us-btn us-btn-icon';
       btnEdit.title = 'Chỉnh sửa script';
       btnEdit.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>';
-      btnEdit.onclick = () => _edit(script.id);
+      // A record from an older version has no id, so pass the record itself:
+      // _edit(undefined) would take the "brand new script" branch and silently
+      // open a blank editor instead of this script.
+      btnEdit.onclick = () => _edit(_idOf(script), script);
 
       // Open Web Studio
       const btnOpenWeb = document.createElement('button');
@@ -364,13 +980,15 @@ var GM = typeof GM !== 'undefined' ? GM : {
       btnDupe.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
       btnDupe.onclick = () => {
         const clone = Object.assign({}, script, {
-          id: 'script_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9),
+          id: _newScriptId(),
           name: script.name + ' (bản sao)',
           runCount: 0,
           lastRun: null
         });
-        _scripts.push(clone);
-        _save();
+        _mutateAll((list) => {
+          list.push(clone);
+          return list;
+        });
       };
 
       // Delete
@@ -381,8 +999,11 @@ var GM = typeof GM !== 'undefined' ? GM : {
       btnDel.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>';
       btnDel.onclick = () => {
         if (confirm("Xóa script \"" + script.name + "\"?")) {
-          _scripts = _scripts.filter(s => s.id !== script.id);
-          _save();
+          _mutateAll((list) => {
+            const at = _locate(list, script);
+            if (at > -1) list.splice(at, 1);
+            return list;
+          }, { allowDelete: true });
         }
       };
 
@@ -427,9 +1048,8 @@ var GM = typeof GM !== 'undefined' ? GM : {
       bottomRow.appendChild(sizePill);
 
       li.appendChild(bottomRow);
-      dom.list.appendChild(li);
-    });
-  }
+      return li;
+    }
 
 
 
@@ -488,7 +1108,7 @@ var GM = typeof GM !== 'undefined' ? GM : {
     if (metaDesc) metaDesc.textContent = meta.description || '';
   }
 
-  function _edit(id) {
+  function _edit(id, record) {
     dom.listContainer.style.display = 'none';
     dom.editor.style.display = 'block';
 
@@ -509,19 +1129,11 @@ var GM = typeof GM !== 'undefined' ? GM : {
     const editCode     = document.getElementById('us-edit-code');
 
     if (id) {
-      const script = _scripts.find(s => s.id === id);
+      const script = _scripts.find(s => s.id === id) || record;
       if (!script) return;
-      if (editId) editId.value = script.id;
-      if (editName) editName.value = script.name || "";
-      if (editMatches) editMatches.value = (script.matches || []).join('\n');
-      if (editExcludes) editExcludes.value = (script.excludes || []).join('\n');
-      if (editRunAt) editRunAt.value = script.runAt || "document_idle";
-      if (editWorld) editWorld.value = script.world || "MAIN";
-      if (editUpdateUrl) editUpdateUrl.value = script.updateUrl || "";
-      if (editCode) {
-        editCode.value = script.code || "";
-        _showMetaBar(_parseGMMetadata(script.code || ''));
-      }
+      _fillEditorFrom(script);
+    } else if (record) {
+      _fillEditorFrom(record);
     } else {
       if (editId) editId.value = "";
       if (editName) editName.value = "";
@@ -538,6 +1150,38 @@ var GM = typeof GM !== 'undefined' ? GM : {
     setTimeout(_updateCursorPos, 10);
   }
 
+  /** Populate the open editor from a stored record (open, or accept a remote save). */
+  function _fillEditorFrom(script) {
+    const editId        = document.getElementById('us-edit-id');
+    const editName      = document.getElementById('us-edit-name');
+    const editMatches   = document.getElementById('us-edit-matches');
+    const editExcludes  = document.getElementById('us-edit-excludes');
+    const editRunAt     = document.getElementById('us-edit-runat');
+    const editWorld     = document.getElementById('us-edit-world');
+    const editUpdateUrl = document.getElementById('us-edit-update-url');
+    const editCode      = document.getElementById('us-edit-code');
+    if (editId) editId.value = script.id;
+    if (editName) editName.value = script.name || "";
+    if (editMatches) editMatches.value = (script.matches || []).join('\n');
+    if (editExcludes) editExcludes.value = (script.excludes || []).join('\n');
+    if (editRunAt) editRunAt.value = script.runAt || "document_idle";
+    if (editWorld) editWorld.value = script.world || "MAIN";
+    if (editUpdateUrl) editUpdateUrl.value = script.updateUrl || "";
+    if (editCode) {
+      editCode.value = script.code || "";
+      _showMetaBar(_parseGMMetadata(script.code || ''));
+    }
+    _rememberBase(script);
+    setTimeout(_updateLineNumbers, 10);
+    setTimeout(_updateCursorPos, 10);
+  }
+
+  function _isEditorOpenFor(id) {
+    if (!dom.editor || dom.editor.style.display !== 'block') return false;
+    const editId = document.getElementById('us-edit-id');
+    return !!(editId && editId.value === id);
+  }
+
   function _closeEditor() {
     dom.listContainer.style.display = 'block';
     dom.editor.style.display = 'none';
@@ -549,20 +1193,12 @@ var GM = typeof GM !== 'undefined' ? GM : {
   function _init() {
     if (!dom.list) return;
 
+    _diagWire();
     _checkPermissions();
     _load();
-
-    if (dom.btnReqPerm) {
-      dom.btnReqPerm.onclick = async () => {
-        if (browserApi.permissions && browserApi.permissions.request) {
-          const granted = await browserApi.permissions.request({ permissions: ["userScripts"] });
-          if (granted) {
-            dom.ffPermBox.style.display = 'none';
-            alert("Đã cấp quyền thành công!");
-          }
-        }
-      };
-    }
+    // Adopt saves made in the Studio (or another window) immediately, and flag
+    // concurrent edits on the script currently open instead of losing them.
+    if (SYNC && typeof SYNC.watch === 'function') SYNC.watch(_onRemoteChange);
 
     dom.btnAdd.onclick = () => _edit();
     
@@ -575,103 +1211,123 @@ var GM = typeof GM !== 'undefined' ? GM : {
           const file = e.target.files[0];
           if (!file) return;
           const reader = new FileReader();
-          reader.onload = (e) => {
+          reader.onload = async (e) => {
             const code = e.target.result;
-            // Basic parsing of Greasemonkey header
-            let name = file.name;
-            const nameMatch = code.match(/@name\s+(.+)/);
-            if (nameMatch) name = nameMatch[1].trim();
-            
-            let matches = [];
-            const matchRe = /@match\s+(.+)/g;
-            let m;
-            while ((m = matchRe.exec(code)) !== null) {
-              matches.push(m[1].trim());
+            if (!META) {
+              _notify(t('us_import_failed', 'Không tải được: ') + 'meta', 'error');
+              return;
             }
-            if (matches.length === 0) matches = ["*://*/*"];
-            
-            let excludes = [];
-            const excludeRe = /@exclude\s+(.+)/g;
-            while ((m = excludeRe.exec(code)) !== null) {
-              excludes.push(m[1].trim());
+            // Same parser the URL import and the engine use, so an @include-only
+            // script (very common on Greasy Fork) does not silently collapse to
+            // "*://*/*" the way a hand-rolled @match scan used to.
+            const fields = META.fieldsOf({ code: code });
+            if (!META.parse(code)) {
+              _notify(t('us_import_no_header', 'File không có khối // ==UserScript== nên không cài được.'), 'error');
+              return;
             }
-            
-            const scriptData = {
-              id: 'script_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9),
-              name,
-              matches,
-              excludes,
-              code,
-              active: true,
-              runAt: "document_idle"
-            };
-            
-            _scripts.push(scriptData);
-            _save();
-            alert("Đã nhập script thành công!");
+            // fieldsOf() lets a record field win over the header, so the file
+            // name is only a fallback - a real @name must not be replaced by
+            // "foo.user.js".
+            if (!fields.name) fields.name = file.name;
+            // Re-importing a file we already hold updates that record instead of
+            // piling up a copy, using the same @updateURL identity as the URL flow.
+            const key = String(fields.updateUrl || '');
+            const dup = key ? _scripts.find((s) => s && String(s.updateUrl || '') === key) : null;
+            const ok = await _commitScript(Object.assign({}, fields, {
+              id: (dup && dup.id) || _newScriptId()
+            }));
+            if (ok) {
+              _resetFilters();
+              _notify(dup
+                ? t('us_import_updated', 'Đã cập nhật script: ') + (fields.name || dup.name || '')
+                : t('us_import_done', 'Đã cài ') + 1 + t('us_import_done_suffix', ' script.'), 'success');
+            }
           };
           reader.readAsText(file);
         };
         input.click();
       };
     }
-    
     if (dom.btnImportUrl) {
       dom.btnImportUrl.onclick = async () => {
-        const url = prompt("Nhập URL của script (VD: https://update.greasyfork.org/...):");
-        if (!url) return;
         const label = dom.btnImportUrl.querySelector('span');
+        const idle = label ? label.textContent : '';
+        if (!SYNC) { _notify(t('us_review_none', 'Không có script nào tải được.'), 'error'); return; }
+
         try {
-          if (label) label.textContent = "Đang tải...";
-          
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000);
-          const response = await fetch(url, { signal: controller.signal });
-          clearTimeout(timeoutId);
-          
-          if (!response.ok) throw new Error("HTTP " + response.status);
-          const code = await response.text();
-          
-          let name = url.split('/').pop().split('?')[0];
-          const nameMatch = code.match(/@name\s+(.+)/);
-          if (nameMatch) name = nameMatch[1].trim();
-          
-          let matches = [];
-          const matchRe = /@match\s+(.+)/g;
-          let m;
-          while ((m = matchRe.exec(code)) !== null) {
-            matches.push(m[1].trim());
+          const urls = await SYNC.showImportPrompt();
+          if (!urls.length) return;
+          if (label) label.textContent = t('us_import_fetching', 'Đang tải...');
+
+          // The background downloads and parses; it writes nothing. The source
+          // has to be reviewed here before it can reach storage.
+          let items = [];
+          try {
+            const res = await browserApi.runtime.sendMessage({ action: 'US_FETCH_SCRIPTS', urls: urls });
+            items = (res && res.items) || [];
+          } catch (e) {
+            _notify(t('us_import_failed', 'Không tải được: ') + (e && e.message ? e.message : ''), 'error');
+            return;
           }
-          if (matches.length === 0) matches = ["*://*/*"];
-          
-          let excludes = [];
-          const excludeRe = /@exclude\s+(.+)/g;
-          while ((m = excludeRe.exec(code)) !== null) {
-            excludes.push(m[1].trim());
+
+          const split = SYNC.partitionImport(items);
+          for (const f of split.failed) {
+            _notify(f.url + ' — ' + f.error, 'error');
           }
-          
-          const scriptData = {
-            id: 'script_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9),
-            name,
-            matches,
-            excludes,
-            code,
-            active: true,
-            runAt: "document_idle",
-            updateUrl: url
-          };
-          
-          _scripts.push(scriptData);
-          _save();
-          if (label) label.textContent = "Tải URL";
-          alert("Đã tải và nhập script thành công!");
-        } catch (e) {
-          if (label) label.textContent = "Tải URL";
-          alert("Lỗi tải script: " + e.message);
+          if (!split.ok.length) {
+            _notify(t('us_import_none_ok', 'Không tải được script nào.'), 'error');
+            return;
+          }
+
+          // Re-importing a script we already have should update it in place,
+          // not pile up copies. @updateURL is stable per script, so use it as
+          // the identity key; the review card then says so out loud.
+          for (const item of split.ok) {
+            const key = String(item.updateUrl || item.sourceUrl || item.url || '');
+            const dup = key ? _scripts.find((s) => s && String(s.updateUrl || '') === key) : null;
+            item.targetId = dup ? dup.id : '';
+            item.isUpdateOf = dup ? (dup.name || '') : '';
+          }
+
+          const chosen = await SYNC.showScriptReview(split.ok);
+          if (!chosen.length) return;
+
+          // Show what was just installed, whatever the list is filtered to.
+          _resetFilters();
+
+          let installed = 0;
+          for (const item of chosen) {
+            // Route through _commitScript so an install hits the same conflict
+            // check and revision bookkeeping as a manual save.
+            await _commitScript({
+              id: item.targetId || _newScriptId(),
+              name: item.name,
+              namespace: item.namespace,
+              version: item.version,
+              description: item.description,
+              author: item.author,
+              homepage: item.homepage,
+              code: item.code,
+              matches: item.matches,
+              includes: item.includes,
+              excludeMatches: item.excludeMatches,
+              excludes: item.excludes,
+              requires: item.requires,
+              resources: item.resources,
+              runAt: item.runAt,
+              noframes: item.noframes,
+              updateUrl: item.updateUrl || item.sourceUrl || item.url
+            });
+            installed++;
+          }
+          _notify(t('us_import_done', 'Đã cài ') + installed + t('us_import_done_suffix', ' script.'), 'success');
+          _render();
+        } finally {
+          if (label) label.textContent = idle;
         }
       };
     }
-    
+
     if (dom.btnExport) {
       dom.btnExport.onclick = () => {
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(_scripts, null, 2));
@@ -708,23 +1364,19 @@ var GM = typeof GM !== 'undefined' ? GM : {
           }
 
           const gmShim = `
-var _sfStorageListeners = typeof _sfStorageListeners !== 'undefined' ? _sfStorageListeners : {};
-var GM_getValue = typeof GM_getValue === 'function' ? GM_getValue : function(key, def) { try { return JSON.parse(localStorage.getItem('GM_' + key)) ?? def; } catch(e) { return localStorage.getItem('GM_' + key) || def; } };
-var GM_setValue = typeof GM_setValue === 'function' ? GM_setValue : function(key, val) { localStorage.setItem('GM_' + key, JSON.stringify(val)); };
-var GM_deleteValue = typeof GM_deleteValue === 'function' ? GM_deleteValue : function(key) { localStorage.removeItem('GM_' + key); };
-var GM_listValues = typeof GM_listValues === 'function' ? GM_listValues : function() { var r=[]; for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); if(k&&k.startsWith('GM_')) r.push(k.slice(3)); } return r; };
-var GM_addStyle = typeof GM_addStyle === 'function' ? GM_addStyle : function(css) { var s=document.createElement('style'); s.textContent=css; (document.head||document.documentElement).appendChild(s); return s; };
-var GM_setClipboard = typeof GM_setClipboard === 'function' ? GM_setClipboard : function(text) { try { if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(text).catch(function(){}); } catch(e){} };
-var GM_openInTab = typeof GM_openInTab === 'function' ? GM_openInTab : function(url) { try { window.open(url,'_blank'); } catch(e){} };
-var GM = typeof GM !== 'undefined' ? GM : {
+const GM_getValue = function(key, def) { try { return JSON.parse(localStorage.getItem('GM_' + key)) ?? def; } catch(e) { return localStorage.getItem('GM_' + key) || def; } };
+const GM_setValue = function(key, val) { localStorage.setItem('GM_' + key, JSON.stringify(val)); };
+const GM_deleteValue = function(key) { localStorage.removeItem('GM_' + key); };
+const GM_listValues = function() { const r=[]; for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k && k.startsWith('GM_')) r.push(k.slice(3)); } return r; };
+const GM_addStyle = function(css) { const style = document.createElement('style'); style.textContent = css; (document.head || document.documentElement).appendChild(style); return style; };
+const GM = {
   getValue: async function(key, def) { return GM_getValue(key, def); },
   setValue: async function(key, val) { return GM_setValue(key, val); },
   deleteValue: async function(key) { return GM_deleteValue(key); },
   listValues: async function() { return GM_listValues(); },
-  addStyle: function(css) { return GM_addStyle(css); },
-  setClipboard: function(text) { GM_setClipboard(text); },
-  openInTab: function(url) { GM_openInTab(url); }
+  addStyle: function(css) { return GM_addStyle(css); }
 };
+const GM_addStyle = GM.addStyle;
 `;
           const codeToRun = (document.getElementById('us-edit-code') || dom.editCode || {value: ''}).value;
 
@@ -820,7 +1472,7 @@ var GM = typeof GM !== 'undefined' ? GM : {
       };
     }
     
-    dom.btnSave.onclick = () => {
+    dom.btnSave.onclick = async () => {
       const editId = document.getElementById('us-edit-id');
       const editName = document.getElementById('us-edit-name');
       const editMatches = document.getElementById('us-edit-matches');
@@ -830,7 +1482,7 @@ var GM = typeof GM !== 'undefined' ? GM : {
       const editUpdateUrl = document.getElementById('us-edit-update-url');
       const editCode = document.getElementById('us-edit-code');
 
-      const id = (editId && editId.value) || 'script_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+      const id = (editId && editId.value) || _newScriptId();
       const name = editName ? editName.value.trim() : "";
       
       let matches = editMatches ? editMatches.value.split('\n').map(s => s.trim()).filter(s => s) : [];
@@ -842,21 +1494,10 @@ var GM = typeof GM !== 'undefined' ? GM : {
       const updateUrl = editUpdateUrl ? editUpdateUrl.value.trim() : "";
       const code = editCode ? editCode.value : "";
 
-      const idx = _scripts.findIndex(s => s.id === id);
-      const existing = idx > -1 ? _scripts[idx] : {};
-      const scriptData = Object.assign({}, existing, {
-        id, name, matches, excludes, code, active: existing.active !== false,
-        runAt, world, updateUrl
+      const ok = await _commitScript({
+        id, name, matches, excludes, runAt, world, updateUrl, code
       });
-
-      if (idx > -1) {
-        _scripts[idx] = scriptData;
-      } else {
-        _scripts.push(scriptData);
-      }
-
-      _save();
-      _closeEditor();
+      if (ok) { _resetFilters(); _closeEditor(); }
     };
 
     // ── Keyboard shortcuts in editor ──────────────────────────
@@ -1082,18 +1723,22 @@ var GM = typeof GM !== 'undefined' ? GM : {
     // ── Enable All / Disable All buttons in list ───────────────
     const btnEnableAll = document.getElementById('btn-us-enable-all');
     const btnDisableAll = document.getElementById('btn-us-disable-all');
-    if (btnEnableAll) {
-      btnEnableAll.onclick = () => {
-        _scripts.forEach(s => { s.active = true; });
-        _save();
-      };
-    }
-    if (btnDisableAll) {
-      btnDisableAll.onclick = () => {
-        _scripts.forEach(s => { s.active = false; });
-        _save();
-      };
-    }
+      if (btnEnableAll) {
+        btnEnableAll.onclick = () => {
+          _mutateAll((list) => {
+            list.forEach((s) => { s.active = true; });
+            return list;
+          });
+        };
+      }
+      if (btnDisableAll) {
+        btnDisableAll.onclick = () => {
+          _mutateAll((list) => {
+            list.forEach((s) => { s.active = false; });
+            return list;
+          });
+        };
+      }
 
     // ── Check Updates Button ────────────────────────────────────
     const btnCheckUpdates = document.getElementById('btn-us-check-updates');
@@ -1499,16 +2144,6 @@ var GM = typeof GM !== 'undefined' ? GM : {
           if (window._usLogToConsole) {
             window._usLogToConsole(msg.log.level, [msg.log.text]);
           }
-        }
-      });
-    }
-
-    // ── Auto-sync: reload list when sf_custom_scripts changes from any source ──
-    // (e.g. saved from Studio, imported, or updated by background auto-update)
-    if (browserApi.storage && browserApi.storage.onChanged) {
-      browserApi.storage.onChanged.addListener((changes, area) => {
-        if (area === 'local' && changes.sf_custom_scripts) {
-          _load();
         }
       });
     }

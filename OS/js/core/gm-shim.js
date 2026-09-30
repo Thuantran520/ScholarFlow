@@ -9,13 +9,13 @@
 // that already define const GM_* polyfills (e.g. Garena CDK pages).
 var _sfStorageListeners = typeof _sfStorageListeners !== 'undefined' ? _sfStorageListeners : {};
 
-var GM_getValue = typeof GM_getValue === 'function' ? GM_getValue : function(key, def) {
+var _sfGM_getValue = typeof GM_getValue === 'function' ? GM_getValue : function(key, def) {
   try { return JSON.parse(localStorage.getItem('GM_' + key)) ?? def; }
   catch(e) { return localStorage.getItem('GM_' + key) || def; }
 };
 
-var GM_setValue = typeof GM_setValue === 'function' ? GM_setValue : function(key, val) {
-  var oldVal = GM_getValue(key, undefined);
+var _sfGM_setValue = typeof GM_setValue === 'function' ? GM_setValue : function(key, val) {
+  var oldVal = _sfGM_getValue(key, undefined);
   localStorage.setItem('GM_' + key, JSON.stringify(val));
   try {
     document.dispatchEvent(new CustomEvent('__SF_GM_VAL_CHANGE__', {
@@ -24,8 +24,8 @@ var GM_setValue = typeof GM_setValue === 'function' ? GM_setValue : function(key
   } catch(e) {}
 };
 
-var GM_deleteValue = typeof GM_deleteValue === 'function' ? GM_deleteValue : function(key) {
-  var oldVal = GM_getValue(key, undefined);
+var _sfGM_deleteValue = typeof GM_deleteValue === 'function' ? GM_deleteValue : function(key) {
+  var oldVal = _sfGM_getValue(key, undefined);
   localStorage.removeItem('GM_' + key);
   try {
     document.dispatchEvent(new CustomEvent('__SF_GM_VAL_CHANGE__', {
@@ -34,7 +34,7 @@ var GM_deleteValue = typeof GM_deleteValue === 'function' ? GM_deleteValue : fun
   } catch(e) {}
 };
 
-var GM_listValues = typeof GM_listValues === 'function' ? GM_listValues : function() {
+var _sfGM_listValues = typeof GM_listValues === 'function' ? GM_listValues : function() {
   var r = [];
   for (var i = 0; i < localStorage.length; i++) {
     var k = localStorage.key(i);
@@ -43,14 +43,14 @@ var GM_listValues = typeof GM_listValues === 'function' ? GM_listValues : functi
   return r;
 };
 
-var GM_addStyle = typeof GM_addStyle === 'function' ? GM_addStyle : function(css) {
+var _sfGM_addStyle = typeof GM_addStyle === 'function' ? GM_addStyle : function(css) {
   var style = document.createElement('style');
   style.textContent = css;
   (document.head || document.documentElement).appendChild(style);
   return style;
 };
 
-var GM_xmlhttpRequest = typeof GM_xmlhttpRequest === 'function' ? GM_xmlhttpRequest : function(details) {
+var _sfGM_xmlhttpRequest = typeof GM_xmlhttpRequest === 'function' ? GM_xmlhttpRequest : function(details) {
   if (!details || !details.url) return;
   var reqId = 'xhr_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
   var onRes = function(e) {
@@ -77,7 +77,7 @@ var GM_xmlhttpRequest = typeof GM_xmlhttpRequest === 'function' ? GM_xmlhttpRequ
   }));
 };
 
-var GM_addValueChangeListener = typeof GM_addValueChangeListener === 'function' ? GM_addValueChangeListener : function(name, callback) {
+var _sfGM_addValueChangeListener = typeof GM_addValueChangeListener === 'function' ? GM_addValueChangeListener : function(name, callback) {
   var listenerId = 'vcl_' + Math.random().toString(36).substring(2, 9);
   var handler = function(e) {
     if (e.detail && e.detail.key === name && typeof callback === 'function') {
@@ -89,14 +89,14 @@ var GM_addValueChangeListener = typeof GM_addValueChangeListener === 'function' 
   return listenerId;
 };
 
-var GM_removeValueChangeListener = typeof GM_removeValueChangeListener === 'function' ? GM_removeValueChangeListener : function(listenerId) {
+var _sfGM_removeValueChangeListener = typeof GM_removeValueChangeListener === 'function' ? GM_removeValueChangeListener : function(listenerId) {
   if (_sfStorageListeners[listenerId]) {
     document.removeEventListener('__SF_GM_VAL_CHANGE__', _sfStorageListeners[listenerId]);
     delete _sfStorageListeners[listenerId];
   }
 };
 
-var GM_setClipboard = typeof GM_setClipboard === 'function' ? GM_setClipboard : function(text) {
+var _sfGM_setClipboard = typeof GM_setClipboard === 'function' ? GM_setClipboard : function(text) {
   try {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).catch(function() {});
@@ -104,7 +104,7 @@ var GM_setClipboard = typeof GM_setClipboard === 'function' ? GM_setClipboard : 
   } catch(e) {}
 };
 
-var GM_notification = typeof GM_notification === 'function' ? GM_notification : function(text, title, image, onclick) {
+var _sfGM_notification = typeof GM_notification === 'function' ? GM_notification : function(text, title, image, onclick) {
   try {
     var toast = document.createElement('div');
     toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999999;background:#0f172a;color:#f8fafc;border:1px solid #38bdf8;border-radius:8px;padding:10px 14px;box-shadow:0 10px 30px rgba(0,0,0,0.8);font-family:sans-serif;font-size:12px;cursor:pointer;display:flex;gap:8px;align-items:center;transition:opacity 0.3s;max-width:320px;';
@@ -118,36 +118,90 @@ var GM_notification = typeof GM_notification === 'function' ? GM_notification : 
   } catch(e) {}
 };
 
-var GM_openInTab = typeof GM_openInTab === 'function' ? GM_openInTab : function(url, options) {
+var _sfGM_openInTab = typeof GM_openInTab === 'function' ? GM_openInTab : function(url, options) {
   try { window.open(url, '_blank'); } catch(e) {}
 };
 
-var GM = typeof GM !== 'undefined' ? GM : {
-  getValue: async function(key, def) { return GM_getValue(key, def); },
-  setValue: async function(key, val) { return GM_setValue(key, val); },
-  deleteValue: async function(key) { return GM_deleteValue(key); },
-  listValues: async function() { return GM_listValues(); },
-  addStyle: function(css) { return GM_addStyle(css); },
-  xmlHttpRequest: function(details) {
+try {
+  // Ensure GM object exists (handle const/frozen GM case)
+  var _sfGM = {};
+  _sfGM.getValue = function(key, def) { return _sfGM_getValue(key, def); };
+  _sfGM.setValue = function(key, val) { return _sfGM_setValue(key, val); };
+  _sfGM.deleteValue = function(key) { return _sfGM_deleteValue(key); };
+  _sfGM.listValues = function() { return _sfGM_listValues(); };
+  _sfGM.addStyle = function(css) { return _sfGM_addStyle(css); };
+  _sfGM.xmlHttpRequest = function(details) {
     return new Promise(function(resolve, reject) {
       var d = Object.assign({}, details, {
         onload: function(r) { resolve(r); },
         onerror: function(err) { reject(err); }
       });
-      GM_xmlhttpRequest(d);
+      _sfGM_xmlhttpRequest(d);
     });
-  },
-  setClipboard: function(text) { GM_setClipboard(text); },
-  notification: function(text, title, image, onclick) { GM_notification(text, title, image, onclick); },
-  openInTab: function(url, options) { GM_openInTab(url, options); }
-};
+  };
+  _sfGM.setClipboard = function(text) { _sfGM_setClipboard(text); };
+  _sfGM.notification = function(text, title, image, onclick) { _sfGM_notification(text, title, image, onclick); };
+  _sfGM.openInTab = function(url, options) { _sfGM_openInTab(url, options); };
+
+  // Try to install on global GM (override if possible)
+  try {
+    if (typeof GM === 'undefined') {
+      GM = _sfGM;
+    } else {
+      // Try to define properties on existing GM
+      Object.keys(_sfGM).forEach(function(k) {
+        try { GM[k] = _sfGM[k]; } catch(e) {}
+      });
+    }
+  } catch(e) {
+    // If GM is const/frozen, try to redefine window.GM
+    try {
+      Object.defineProperty(window, 'GM', {
+        value: _sfGM,
+        writable: true,
+        configurable: true
+      });
+    } catch(e2) {
+      // Last resort: the global functions GM_openInTab etc. are already set below
+    }
+  }
+
+  if (typeof GM_getValue === 'undefined') GM_getValue = _sfGM_getValue;
+  if (typeof GM_setValue === 'undefined') GM_setValue = _sfGM_setValue;
+  if (typeof GM_deleteValue === 'undefined') GM_deleteValue = _sfGM_deleteValue;
+  if (typeof GM_listValues === 'undefined') GM_listValues = _sfGM_listValues;
+  if (typeof GM_addStyle === 'undefined') GM_addStyle = _sfGM_addStyle;
+  if (typeof GM_xmlhttpRequest === 'undefined') GM_xmlhttpRequest = _sfGM_xmlhttpRequest;
+  if (typeof GM_addValueChangeListener === 'undefined') GM_addValueChangeListener = _sfGM_addValueChangeListener;
+  if (typeof GM_removeValueChangeListener === 'undefined') GM_removeValueChangeListener = _sfGM_removeValueChangeListener;
+  if (typeof GM_setClipboard === 'undefined') GM_setClipboard = _sfGM_setClipboard;
+  if (typeof GM_notification === 'undefined') GM_notification = _sfGM_notification;
+  if (typeof GM_openInTab === 'undefined') GM_openInTab = _sfGM_openInTab;
+} catch(e) {}
 `;
 
+  function buildConsoleRelay(scriptId, scriptName) {
+    return '';
+  }
+
+  function build(opts) {
+    var code = GM_SHIM_CODE;
+    if (opts && opts.require && Array.isArray(opts.require)) {
+      opts.require.forEach(function(r) {
+        if (r && r.text) code += '\n' + r.text;
+      });
+    }
+    if (opts && opts.code) {
+      code += '\n' + opts.code;
+    }
+    return code;
+  }
 
   if (typeof window !== 'undefined') {
     window.SF_GM_SHIM = GM_SHIM_CODE;
   }
   if (typeof globalThis !== 'undefined') {
     globalThis.SF_FULL_GM_SHIM = GM_SHIM_CODE;
+    globalThis.SF_US_SHIM = { build: build, buildConsoleRelay: buildConsoleRelay };
   }
 })();

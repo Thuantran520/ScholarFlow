@@ -83,9 +83,12 @@ const ALLOWED_HOSTS = new Set([
   "browserleaks.com",
   "www.dnsleaktest.com",
   "returnyoutubedislikeapi.com",
-  "update.greasyfork.org",
-  "translate.googleapis.com"
-]);
+"update.greasyfork.org",
+   // Greasy Fork script pages, so "import from URL" accepts a page link and
+   // resolves the real .user.js behind it.
+   "greasyfork.org",
+   "translate.googleapis.com"
+   ]);
 
 function walk(dir, out = []) {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -210,6 +213,51 @@ async function main() {
       (m.content_security_policy && String(m.content_security_policy));
     const bad = csp && /unsafe-eval|unsafe-inline/.test(JSON.stringify(csp));
     check(!bad, `${mf}: no content_security_policy with unsafe-eval/unsafe-inline`);
+  }
+
+  // --- 8. Reader mode: the article is rebuilt, not innerHTML'd ---------------
+  console.log("Reader mode sanitiser:");
+  const readerFile = path.join(ROOT, "OS", "js", "content", "reader.js");
+  if (fs.existsSync(readerFile)) {
+    const readerSrc = fs.readFileSync(readerFile, "utf8");
+    check(!/\.innerHTML\s*=/.test(readerSrc), "reader.js assigns no innerHTML");
+    check(!/insertAdjacentHTML/.test(readerSrc), "reader.js calls no insertAdjacentHTML");
+
+    const { JSDOM } = require("jsdom");
+    const dom = new JSDOM(
+      `<!doctype html><html><body>
+         <article id="hostile">
+           <h1>A perfectly ordinary heading</h1>
+           <p onclick="window.__pwned=1">Body copy that is definitely long enough to pass the filter.</p>
+           <script>window.__pwned = 1;<\/script>
+           <img src="javascript:window.__pwned=1" onerror="window.__pwned=1">
+           <a href="javascript:window.__pwned=1">click</a>
+           <iframe src="https://evil.example/"></iframe>
+         </article>
+       </body></html>`,
+      { runScripts: "outside-only", url: "https://news.example/story" }
+    );
+    const { window } = dom;
+    window.chrome = { runtime: { onMessage: { addListener() {} } } };
+    // jsdom reports zero-size rects; the reader's own filter needs real ones.
+    window.Element.prototype.getBoundingClientRect = function () {
+      return { width: 800, height: 400, top: 0, left: 0, right: 800, bottom: 400 };
+    };
+    window.eval(readerSrc);
+    window.toggleReaderMode();
+
+    const out = window.document.getElementById("sf-cyber-reader");
+    check(!!out, "reader mode renders its container");
+    const html = out ? out.innerHTML : "";
+    check(!/__pwned/.test(html), "no handler or script text survives into the reader output");
+    check(!window.__pwned, "no page-supplied code executed");
+    check(out.querySelector("script") === null, "script elements are stripped");
+    check(out.querySelector("iframe") === null, "iframes are stripped");
+    check(!/onerror|onclick=/.test(html), "inline event attributes are stripped");
+    check(!/<[a-z]+[^>]*\son[a-z]+\s*=/i.test(html), "no element carries an inline on* handler");
+    check(!/javascript:/i.test(html), "javascript: URLs are stripped");
+    check(/A perfectly ordinary heading/.test(html), "the real article text is preserved");
+    check(!!window.document.getElementById("sf-close-reader"), "the close button is still built");
   }
 
   finish("security.test.js");
