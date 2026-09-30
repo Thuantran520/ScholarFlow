@@ -313,20 +313,81 @@
 
     var gmPattern = gmApiNames.map(escapeRegExp).join('|');
 
-    // 1. Remove top-level const/let/var GM_* = ... declarations
-    //    Matches: const GM_addStyle = ..., let GM_xmlhttpRequest = ..., var GM_getValue = ...
-    var declRe = new RegExp(
-      '^\\s*(?:const|let|var)\\s+(' + gmPattern + ')\\s*=\\s*[^;]+;?',
-      'gm'
-    );
-    src = src.replace(declRe, '');
+    // 1. Remove top-level const/let/var GM_* = ... declarations (handles multi-line)
+    //    Uses a brace/bracket/paren counter to find the true end of the statement
+    function removeVarDeclarations(s, pattern) {
+      var lines = s.split('\n');
+      var out = [];
+      var i = 0;
+      while (i < lines.length) {
+        var line = lines[i];
+        var m = line.match(new RegExp('^\\s*(?:const|let|var)\\s+(' + pattern + ')\\s*='));
+        if (!m) {
+          out.push(line);
+          i++;
+          continue;
+        }
+        // Found a GM_* declaration - skip until we find the terminating semicolon at brace level 0
+        var brace = 0, bracket = 0, paren = 0, inString = false, stringChar = '';
+        var found = false;
+        for (var j = i; j < lines.length; j++) {
+          var l = lines[j];
+          for (var k = 0; k < l.length; k++) {
+            var ch = l[k];
+            var prev = k > 0 ? l[k - 1] : '';
+            if (inString) {
+              if (ch === stringChar && prev !== '\\') inString = false;
+            } else if (ch === '"' || ch === "'" || ch === '`') {
+              inString = true; stringChar = ch;
+            } else if (ch === '{') brace++;
+            else if (ch === '}') brace--;
+            else if (ch === '[') bracket++;
+            else if (ch === ']') bracket--;
+            else if (ch === '(') paren++;
+            else if (ch === ')') paren--;
+            else if (ch === ';' && brace === 0 && bracket === 0 && paren === 0) {
+              found = true; break;
+            }
+          }
+          if (found) { i = j + 1; break; }
+        }
+        if (!found) { i = lines.length; break; }
+      }
+      return out.join('\n');
+    }
+
+    src = removeVarDeclarations(src, gmPattern);
 
     // 2. Remove standalone GM_* function declarations: function GM_addStyle() { ... }
-    var funcDeclRe = new RegExp(
-      '^\\s*function\\s+(' + gmPattern + ')\\s*\\([^)]*\\)\\s*\\{',
-      'gm'
-    );
-    src = src.replace(funcDeclRe, '');
+    function removeFuncDeclarations(s, pattern) {
+      var lines = s.split('\n');
+      var out = [];
+      var i = 0;
+      while (i < lines.length) {
+        var line = lines[i];
+        var m = line.match(new RegExp('^\\s*function\\s+(' + pattern + ')\\s*\\('));
+        if (!m) {
+          out.push(line);
+          i++;
+          continue;
+        }
+        // Skip function declaration + body
+        var brace = 0, found = false;
+        for (var j = i; j < lines.length; j++) {
+          var l = lines[j];
+          for (var k = 0; k < l.length; k++) {
+            var ch = l[k];
+            if (ch === '{') brace++;
+            else if (ch === '}') { brace--; if (brace === 0) { found = true; break; } }
+          }
+          if (found) { i = j + 1; break; }
+        }
+        if (!found) { i = lines.length; break; }
+      }
+      return out.join('\n');
+    }
+
+    src = removeFuncDeclarations(src, gmPattern);
 
     // 3. Replace GM_* references with _sfGM_* (shim internals)
     //    But only when GM_* is used as a value, not as a property access
