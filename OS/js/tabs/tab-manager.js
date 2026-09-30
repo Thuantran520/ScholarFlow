@@ -6,6 +6,10 @@
 let tabmgrState = { tabs: [], filter: "", sort: "title_asc", groupMode: "none", collapsed: {} };
 let tabmgrSessions = [];
 const TABMGR_GX_LIMITER_KEY = "sf_tabmgr_gx_limiter";
+const TABMGR_GX_CPU_KEY = "sf_tabmgr_cpu_limiter";
+const TABMGR_GX_GPU_KEY = "sf_tabmgr_gpu_limiter";
+const TABMGR_GX_ACTIVE_TAB_KEY = "sf_tabmgr_gx_active_tab";
+
 const DEFAULT_GX_LIMITER = {
   enabled: true,
   limitGB: 4.0,
@@ -16,7 +20,23 @@ const DEFAULT_GX_LIMITER = {
   protectPinned: true,
   protectActive: true
 };
+
+const DEFAULT_CPU_LIMITER = {
+  enabled: true,
+  limitPct: 50,
+  hardLimit: true
+};
+
+const DEFAULT_GPU_LIMITER = {
+  enabled: true,
+  limitPct: 60,
+  hardLimit: true
+};
+
 let tabmgrGxLimiter = Object.assign({}, DEFAULT_GX_LIMITER);
+let tabmgrCpuLimiter = Object.assign({}, DEFAULT_CPU_LIMITER);
+let tabmgrGpuLimiter = Object.assign({}, DEFAULT_GPU_LIMITER);
+let tabmgrGxActiveTab = "ram";
 
 function _getTabsApi() {
   try {
@@ -386,7 +406,7 @@ function tabmgrDiscardTab(tabId) {
     else api.discard(tabId, function () { tabmgrLoadTabs(); showToast(t("tabmgr_toast_discarded")); });
   } catch (e) { showToast(t("tabmgr_toast_discard_err")); }
 }
-function tabmgrCloseDuplicates() {
+function _tabmgrFindDuplicateTabs() {
   const seen = {};
   const dupIds = [];
 
@@ -422,6 +442,11 @@ function tabmgrCloseDuplicates() {
     }
   });
 
+  return dupIds;
+}
+
+function tabmgrCloseDuplicates() {
+  const dupIds = _tabmgrFindDuplicateTabs();
   if (dupIds.length === 0) { showToast(t("tabmgr_toast_no_dup")); return; }
   const api = _getTabsApi();
   if (!api || !api.remove) return;
@@ -494,9 +519,66 @@ function _tabmgrComputeRamEstimate() {
   return totalMB;
 }
 
+function _tabmgrComputeCpuEstimate() {
+  let load = 0;
+  (tabmgrState.tabs || []).forEach(function (tab) {
+    if (tab.discarded) return;
+    if (tab.active) {
+      load += 8;
+    } else if (tab.audible || _tabmgrFuncGroup(tab) === "video") {
+      load += 16;
+    } else {
+      load += 1.8;
+    }
+  });
+  const timeJitter = Math.sin(Date.now() / 4000) * 2;
+  return Math.max(2, Math.min(100, Math.round(load + timeJitter)));
+}
+
+function _tabmgrComputeGpuEstimate() {
+  let load = 0;
+  (tabmgrState.tabs || []).forEach(function (tab) {
+    if (tab.discarded) return;
+    const func = _tabmgrFuncGroup(tab);
+    if (func === "video" || tab.audible) {
+      load += 14;
+    } else if (tab.active) {
+      load += 6;
+    } else {
+      load += 0.8;
+    }
+  });
+  const timeJitter = Math.cos(Date.now() / 3500) * 1.5;
+  return Math.max(1, Math.min(100, Math.round(load + timeJitter)));
+}
+
+function _tabmgrUpdatePctCapsule(sliderId, fillId, thumbId, valId) {
+  const slider = document.getElementById(sliderId);
+  if (!slider) return;
+  const min = parseFloat(slider.min) || 10;
+  const max = parseFloat(slider.max) || 100;
+  const val = parseFloat(slider.value) || 50;
+  const ratio = Math.max(0, Math.min(100, ((val - min) / (max - min)) * 100));
+
+  const fillEl = document.getElementById(fillId);
+  const thumbEl = document.getElementById(thumbId);
+  const valEl = document.getElementById(valId);
+  if (fillEl) fillEl.style.width = ratio.toFixed(1) + "%";
+  if (thumbEl) {
+    thumbEl.style.left = ratio.toFixed(1) + "%";
+    thumbEl.style.transform = "translate(-" + ratio.toFixed(1) + "%, -50%)";
+  }
+  if (valEl) valEl.textContent = Math.round(val) + "%";
+}
+
 function _tabmgrUpdateGxMeter() {
   const cardEl = document.getElementById("tabmgr-gx-card");
   const bodyEl = document.getElementById("tabmgr-gx-body");
+  const isEnabled = !!tabmgrGxLimiter.enabled;
+  if (cardEl) cardEl.classList.toggle("is-collapsed", !isEnabled);
+  if (bodyEl) bodyEl.style.display = isEnabled ? "flex" : "none";
+
+  // 1. RAM PANE TELEMETRY
   const usageValEl = document.getElementById("tabmgr-gx-usage-val");
   const barFillEl = document.getElementById("tabmgr-gx-bar-fill");
   const sliderValEl = document.getElementById("tabmgr-gx-slider-val");
@@ -508,10 +590,6 @@ function _tabmgrUpdateGxMeter() {
   const needleGroup = document.getElementById("tabmgr-gauge-needle-group");
   const statusEl = document.getElementById("tabmgr-gauge-status");
   const statusText = document.getElementById("tabmgr-gauge-status-text");
-
-  const isEnabled = !!tabmgrGxLimiter.enabled;
-  if (cardEl) cardEl.classList.toggle("is-collapsed", !isEnabled);
-  if (bodyEl) bodyEl.style.display = isEnabled ? "flex" : "none";
 
   const totalMB = _tabmgrComputeRamEstimate();
   const totalGB = totalMB / 1024;
@@ -531,34 +609,34 @@ function _tabmgrUpdateGxMeter() {
   if (hardLimitEl) hardLimitEl.checked = !!tabmgrGxLimiter.hardLimit;
   if (timeoutEl) timeoutEl.value = String(tabmgrGxLimiter.sleepTimeout);
 
-  const pct = Math.min(100, Math.max(0, Math.round((totalMB / (limitGB * 1024)) * 100)));
+  const ramPct = Math.min(100, Math.max(0, Math.round((totalMB / (limitGB * 1024)) * 100)));
 
   if (sliderEl) {
     _tabmgrUpdateSliderCapsule(sliderEl);
   }
 
   if (gaugeBar) {
-    const dashoffset = Math.round(226 * (1 - pct / 100));
+    const dashoffset = Math.round(226 * (1 - ramPct / 100));
     gaugeBar.style.strokeDashoffset = String(dashoffset);
-    if (pct >= 85) {
+    if (ramPct >= 85) {
       gaugeBar.setAttribute("stroke", "url(#tabmgrModernDangerGrad)");
-    } else if (pct >= 70) {
+    } else if (ramPct >= 70) {
       gaugeBar.setAttribute("stroke", "url(#tabmgrModernWarnGrad)");
     } else {
       gaugeBar.setAttribute("stroke", "url(#tabmgrModernGrad)");
     }
   }
   if (needleGroup) {
-    const angle = -90 + (pct / 100) * 180;
+    const angle = -90 + (ramPct / 100) * 180;
     needleGroup.style.transformOrigin = "100px 94px";
     needleGroup.style.transform = "rotate(" + angle.toFixed(1) + "deg)";
   }
   if (statusEl && statusText) {
     statusEl.classList.remove("is-cruising", "is-boost", "is-redline");
-    if (pct >= 85) {
+    if (ramPct >= 85) {
       statusEl.classList.add("is-redline");
       statusText.textContent = "REDLINE";
-    } else if (pct >= 70) {
+    } else if (ramPct >= 70) {
       statusEl.classList.add("is-boost");
       statusText.textContent = "BOOST";
     } else {
@@ -568,9 +646,132 @@ function _tabmgrUpdateGxMeter() {
   }
 
   if (barFillEl) {
-    barFillEl.style.width = pct + "%";
-    barFillEl.classList.toggle("is-warning", pct >= 75 && pct < 90);
-    barFillEl.classList.toggle("is-danger", pct >= 90);
+    barFillEl.style.width = ramPct + "%";
+    barFillEl.classList.toggle("is-warning", ramPct >= 75 && ramPct < 90);
+    barFillEl.classList.toggle("is-danger", ramPct >= 90);
+  }
+
+  const ramBadge = document.getElementById("tabmgr-gx-badge-ram");
+  if (ramBadge) {
+    ramBadge.textContent = _tabmgrFormatRamBound(tabmgrGxLimiter.maxScaleGB || 16);
+  }
+
+  // 2. CPU PANE TELEMETRY
+  const cpuLoad = _tabmgrComputeCpuEstimate();
+  const cpuLimit = tabmgrCpuLimiter.limitPct || 50;
+  const cpuValEl = document.getElementById("tabmgr-cpu-usage-val");
+  const cpuBadge = document.getElementById("tabmgr-gx-badge-cpu");
+  const cpuGaugeBar = document.getElementById("tabmgr-cpu-gauge-bar");
+  const cpuStatus = document.getElementById("tabmgr-cpu-status");
+  const cpuStatusText = document.getElementById("tabmgr-cpu-status-text");
+  const cpuSlider = document.getElementById("tabmgr-cpu-slider");
+  const cpuHardLimit = document.getElementById("tabmgr-cpu-hard-limit");
+
+  if (cpuValEl) cpuValEl.textContent = cpuLoad + "% / " + cpuLimit + "%";
+  if (cpuBadge) cpuBadge.textContent = cpuLoad + "%";
+  if (cpuSlider && document.activeElement !== cpuSlider) cpuSlider.value = String(cpuLimit);
+  if (cpuHardLimit) cpuHardLimit.checked = !!tabmgrCpuLimiter.hardLimit;
+
+  _tabmgrUpdatePctCapsule("tabmgr-cpu-slider", "tabmgr-cpu-capsule-fill", "tabmgr-cpu-capsule-thumb", "tabmgr-cpu-slider-val");
+
+  const cpuRatio = Math.min(1, Math.max(0, cpuLoad / Math.max(1, cpuLimit)));
+  if (cpuGaugeBar) {
+    const dashoffset = Math.round(226 * (1 - cpuRatio));
+    cpuGaugeBar.style.strokeDashoffset = String(dashoffset);
+    if (cpuRatio >= 0.85) {
+      cpuGaugeBar.setAttribute("stroke", "url(#tabmgrModernDangerGrad)");
+    } else if (cpuRatio >= 0.7) {
+      cpuGaugeBar.setAttribute("stroke", "url(#tabmgrModernWarnGrad)");
+    } else {
+      cpuGaugeBar.setAttribute("stroke", "url(#tabmgrCpuGrad)");
+    }
+  }
+  if (cpuStatus && cpuStatusText) {
+    cpuStatus.classList.remove("is-cruising", "is-boost", "is-redline");
+    if (cpuRatio >= 0.85) {
+      cpuStatus.classList.add("is-redline");
+      cpuStatusText.textContent = "TURBO";
+    } else if (cpuRatio >= 0.7) {
+      cpuStatus.classList.add("is-boost");
+      cpuStatusText.textContent = "ACTIVE";
+    } else {
+      cpuStatus.classList.add("is-cruising");
+      cpuStatusText.textContent = "CRUISING";
+    }
+  }
+  const cpuPresets = document.querySelectorAll("#tabmgr-cpu-presets .tabmgr-gx-preset-btn");
+  cpuPresets.forEach(function (btn) {
+    const v = parseInt(btn.getAttribute("data-val"), 10);
+    btn.classList.toggle("is-active", Math.abs(v - cpuLimit) < 2);
+  });
+
+  // 3. GPU PANE TELEMETRY
+  const gpuLoad = _tabmgrComputeGpuEstimate();
+  const gpuLimit = tabmgrGpuLimiter.limitPct || 60;
+  const gpuValEl = document.getElementById("tabmgr-gpu-usage-val");
+  const gpuBadge = document.getElementById("tabmgr-gx-badge-gpu");
+  const gpuGaugeBar = document.getElementById("tabmgr-gpu-gauge-bar");
+  const gpuStatus = document.getElementById("tabmgr-gpu-status");
+  const gpuStatusText = document.getElementById("tabmgr-gpu-status-text");
+  const gpuSlider = document.getElementById("tabmgr-gpu-slider");
+  const gpuHardLimit = document.getElementById("tabmgr-gpu-hard-limit");
+
+  if (gpuValEl) gpuValEl.textContent = gpuLoad + "% / " + gpuLimit + "%";
+  if (gpuBadge) gpuBadge.textContent = gpuLoad + "%";
+  if (gpuSlider && document.activeElement !== gpuSlider) gpuSlider.value = String(gpuLimit);
+  if (gpuHardLimit) gpuHardLimit.checked = !!tabmgrGpuLimiter.hardLimit;
+
+  _tabmgrUpdatePctCapsule("tabmgr-gpu-slider", "tabmgr-gpu-capsule-fill", "tabmgr-gpu-capsule-thumb", "tabmgr-gpu-slider-val");
+
+  const gpuRatio = Math.min(1, Math.max(0, gpuLoad / Math.max(1, gpuLimit)));
+  if (gpuGaugeBar) {
+    const dashoffset = Math.round(226 * (1 - gpuRatio));
+    gpuGaugeBar.style.strokeDashoffset = String(dashoffset);
+  }
+  if (gpuStatus && gpuStatusText) {
+    gpuStatus.classList.remove("is-cruising", "is-boost", "is-redline");
+    if (gpuRatio >= 0.85) {
+      gpuStatus.classList.add("is-redline");
+      gpuStatusText.textContent = "HEAVY";
+    } else if (gpuRatio >= 0.6) {
+      gpuStatus.classList.add("is-boost");
+      gpuStatusText.textContent = "BALANCED";
+    } else {
+      gpuStatus.classList.add("is-cruising");
+      gpuStatusText.textContent = "ECO";
+    }
+  }
+  const gpuPresets = document.querySelectorAll("#tabmgr-gpu-presets .tabmgr-gx-preset-btn");
+  gpuPresets.forEach(function (btn) {
+    const v = parseInt(btn.getAttribute("data-val"), 10);
+    btn.classList.toggle("is-active", Math.abs(v - gpuLimit) < 2);
+  });
+
+  // 4. PANES VISIBILITY & NAV BAR SYNC
+  const navBtns = document.querySelectorAll(".tabmgr-gx-nav-btn");
+  navBtns.forEach(function (btn) {
+    btn.classList.toggle("is-active", btn.getAttribute("data-gx-tab") === tabmgrGxActiveTab);
+  });
+
+  const paneRam = document.getElementById("tabmgr-gx-pane-ram");
+  const paneCpu = document.getElementById("tabmgr-gx-pane-cpu");
+  const paneGpu = document.getElementById("tabmgr-gx-pane-gpu");
+  if (paneRam) paneRam.style.display = (tabmgrGxActiveTab === "ram") ? "flex" : "none";
+  if (paneCpu) paneCpu.style.display = (tabmgrGxActiveTab === "cpu") ? "flex" : "none";
+  if (paneGpu) paneGpu.style.display = (tabmgrGxActiveTab === "gpu") ? "flex" : "none";
+
+  const headBadgeTitle = document.querySelector(".tabmgr-gx-head .tabmgr-gx-badge span[data-i18n]");
+  if (headBadgeTitle) {
+    if (tabmgrGxActiveTab === "cpu") {
+      headBadgeTitle.setAttribute("data-i18n", "tabmgr_gx_cpu_title");
+      headBadgeTitle.textContent = t("tabmgr_gx_cpu_title");
+    } else if (tabmgrGxActiveTab === "gpu") {
+      headBadgeTitle.setAttribute("data-i18n", "tabmgr_gx_gpu_title");
+      headBadgeTitle.textContent = t("tabmgr_gx_gpu_title");
+    } else {
+      headBadgeTitle.setAttribute("data-i18n", "tabmgr_gx_limiter_title");
+      headBadgeTitle.textContent = t("tabmgr_gx_limiter_title");
+    }
   }
 }
 
@@ -700,13 +901,27 @@ function _tabmgrUpdateSliderTrack(el) {
 function _tabmgrSaveGxLimiter() {
   const obj = {};
   obj[TABMGR_GX_LIMITER_KEY] = tabmgrGxLimiter;
+  obj[TABMGR_GX_CPU_KEY] = tabmgrCpuLimiter;
+  obj[TABMGR_GX_GPU_KEY] = tabmgrGpuLimiter;
+  obj[TABMGR_GX_ACTIVE_TAB_KEY] = tabmgrGxActiveTab;
   storSet(obj);
 }
 
 function _tabmgrInitGxLimiter() {
-  storGet([TABMGR_GX_LIMITER_KEY], function (res) {
-    if (res && res[TABMGR_GX_LIMITER_KEY]) {
-      tabmgrGxLimiter = Object.assign({}, DEFAULT_GX_LIMITER, res[TABMGR_GX_LIMITER_KEY]);
+  storGet([TABMGR_GX_LIMITER_KEY, TABMGR_GX_CPU_KEY, TABMGR_GX_GPU_KEY, TABMGR_GX_ACTIVE_TAB_KEY], function (res) {
+    if (res) {
+      if (res[TABMGR_GX_LIMITER_KEY]) {
+        tabmgrGxLimiter = Object.assign({}, DEFAULT_GX_LIMITER, res[TABMGR_GX_LIMITER_KEY]);
+      }
+      if (res[TABMGR_GX_CPU_KEY]) {
+        tabmgrCpuLimiter = Object.assign({}, DEFAULT_CPU_LIMITER, res[TABMGR_GX_CPU_KEY]);
+      }
+      if (res[TABMGR_GX_GPU_KEY]) {
+        tabmgrGpuLimiter = Object.assign({}, DEFAULT_GPU_LIMITER, res[TABMGR_GX_GPU_KEY]);
+      }
+      if (res[TABMGR_GX_ACTIVE_TAB_KEY]) {
+        tabmgrGxActiveTab = res[TABMGR_GX_ACTIVE_TAB_KEY];
+      }
     }
     const sliderEl = document.getElementById("tabmgr-gx-slider");
     const maxBound = document.getElementById("tabmgr-gx-slider-max-bound");
@@ -732,6 +947,19 @@ function _tabmgrInitGxLimiter() {
       }
       _tabmgrRenderPresets(targetMax);
       _tabmgrUpdateGxMeter();
+    });
+  });
+
+  // Nav buttons for RAM / CPU / GPU switching
+  const navBtns = document.querySelectorAll(".tabmgr-gx-nav-btn");
+  navBtns.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      const tab = btn.getAttribute("data-gx-tab");
+      if (tab) {
+        tabmgrGxActiveTab = tab;
+        _tabmgrSaveGxLimiter();
+        _tabmgrUpdateGxMeter();
+      }
     });
   });
 
@@ -772,7 +1000,7 @@ function _tabmgrInitGxLimiter() {
 
   const cardEl = document.getElementById("tabmgr-gx-card");
   if (cardEl) {
-    const presetBtns = cardEl.querySelectorAll(".tabmgr-gx-preset-btn");
+    const presetBtns = cardEl.querySelectorAll(".tabmgr-gx-presets-row:not(#tabmgr-cpu-presets):not(#tabmgr-gpu-presets) .tabmgr-gx-preset-btn");
     presetBtns.forEach(function (btn) {
       btn.addEventListener("click", function () {
         const val = parseFloat(btn.getAttribute("data-val"));
@@ -811,14 +1039,136 @@ function _tabmgrInitGxLimiter() {
     });
   }
 
+  // CPU Limiter Controls
+  const cpuSlider = document.getElementById("tabmgr-cpu-slider");
+  if (cpuSlider) {
+    cpuSlider.addEventListener("input", function () {
+      tabmgrCpuLimiter.limitPct = parseInt(cpuSlider.value, 10);
+      _tabmgrUpdateGxMeter();
+    });
+    cpuSlider.addEventListener("change", function () {
+      tabmgrCpuLimiter.limitPct = parseInt(cpuSlider.value, 10);
+      _tabmgrSaveGxLimiter();
+      _tabmgrCheckCpuGpuEnforcement();
+    });
+  }
+  const cpuPresets = document.querySelectorAll("#tabmgr-cpu-presets .tabmgr-gx-preset-btn");
+  cpuPresets.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      const val = parseInt(btn.getAttribute("data-val"), 10);
+      if (!isNaN(val)) {
+        tabmgrCpuLimiter.limitPct = val;
+        if (cpuSlider) cpuSlider.value = String(val);
+        _tabmgrSaveGxLimiter();
+        _tabmgrUpdateGxMeter();
+        _tabmgrCheckCpuGpuEnforcement();
+      }
+    });
+  });
+  const cpuHardLimit = document.getElementById("tabmgr-cpu-hard-limit");
+  if (cpuHardLimit) {
+    cpuHardLimit.addEventListener("change", function () {
+      tabmgrCpuLimiter.hardLimit = cpuHardLimit.checked;
+      _tabmgrSaveGxLimiter();
+      _tabmgrCheckCpuGpuEnforcement();
+    });
+  }
+
+  // GPU Limiter Controls
+  const gpuSlider = document.getElementById("tabmgr-gpu-slider");
+  if (gpuSlider) {
+    gpuSlider.addEventListener("input", function () {
+      tabmgrGpuLimiter.limitPct = parseInt(gpuSlider.value, 10);
+      _tabmgrUpdateGxMeter();
+    });
+    gpuSlider.addEventListener("change", function () {
+      tabmgrGpuLimiter.limitPct = parseInt(gpuSlider.value, 10);
+      _tabmgrSaveGxLimiter();
+      _tabmgrCheckCpuGpuEnforcement();
+    });
+  }
+  const gpuPresets = document.querySelectorAll("#tabmgr-gpu-presets .tabmgr-gx-preset-btn");
+  gpuPresets.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      const val = parseInt(btn.getAttribute("data-val"), 10);
+      if (!isNaN(val)) {
+        tabmgrGpuLimiter.limitPct = val;
+        if (gpuSlider) gpuSlider.value = String(val);
+        _tabmgrSaveGxLimiter();
+        _tabmgrUpdateGxMeter();
+        _tabmgrCheckCpuGpuEnforcement();
+      }
+    });
+  });
+  const gpuHardLimit = document.getElementById("tabmgr-gpu-hard-limit");
+  if (gpuHardLimit) {
+    gpuHardLimit.addEventListener("change", function () {
+      tabmgrGpuLimiter.hardLimit = gpuHardLimit.checked;
+      _tabmgrSaveGxLimiter();
+      _tabmgrCheckCpuGpuEnforcement();
+    });
+  }
+
   const wakeAllBtn = document.getElementById("btn-tabmgr-wake-all");
   if (wakeAllBtn) wakeAllBtn.addEventListener("click", tabmgrWakeAll);
+}
+
+function _tabmgrCheckCpuGpuEnforcement() {
+  if (!tabmgrGxLimiter.enabled) return;
+  const api = _getTabsApi();
+  if (!api || !api.discard) return;
+
+  // CPU hard limit: if CPU load exceeds limit, suspend heavy background tabs
+  if (tabmgrCpuLimiter.hardLimit) {
+    const cpuLoad = _tabmgrComputeCpuEstimate();
+    if (cpuLoad > tabmgrCpuLimiter.limitPct) {
+      const candidates = tabmgrState.tabs.filter(function (t) {
+        if (t.discarded) return false;
+        if (t.active) return false;
+        if (t.pinned) return false;
+        return true;
+      });
+      candidates.sort(function (a, b) {
+        const aVideo = _tabmgrFuncGroup(a) === "video";
+        const bVideo = _tabmgrFuncGroup(b) === "video";
+        if (aVideo !== bVideo) return aVideo ? -1 : 1;
+        return (a.lastAccessed || 0) - (b.lastAccessed || 0);
+      });
+      if (candidates.length > 0) {
+        try {
+          api.discard(candidates[0].id);
+          setTimeout(function () { tabmgrLoadTabs(); }, 400);
+        } catch (e) {}
+      }
+    }
+  }
+
+  // GPU hard limit: if GPU load exceeds limit, suspend background media / canvas tabs
+  if (tabmgrGpuLimiter.hardLimit) {
+    const gpuLoad = _tabmgrComputeGpuEstimate();
+    if (gpuLoad > tabmgrGpuLimiter.limitPct) {
+      const candidates = tabmgrState.tabs.filter(function (t) {
+        if (t.discarded) return false;
+        if (t.active) return false;
+        if (t.pinned) return false;
+        return _tabmgrFuncGroup(t) === "video" || t.audible;
+      });
+      if (candidates.length > 0) {
+        try {
+          api.discard(candidates[0].id);
+          setTimeout(function () { tabmgrLoadTabs(); }, 400);
+        } catch (e) {}
+      }
+    }
+  }
 }
 
 function _tabmgrCheckRamEnforcement() {
   if (!tabmgrGxLimiter.enabled) return;
   const api = _getTabsApi();
   if (!api || !api.discard) return;
+
+  _tabmgrCheckCpuGpuEnforcement();
 
   const totalMB = _tabmgrComputeRamEstimate();
   const limitMB = tabmgrGxLimiter.limitGB * 1024;
@@ -877,14 +1227,56 @@ function _tabmgrCheckRamEnforcement() {
 function tabmgrOptimizeRam() {
   const api = _getTabsApi();
   if (!api || !api.discard) { showToast(t("tabmgr_toast_no_discard_api")); return; }
+
+  // 1. Detect duplicates to eliminate redundancy together with RAM optimization
+  const dupIds = _tabmgrFindDuplicateTabs();
+  const dupSet = {};
+  dupIds.forEach(function (id) { dupSet[id] = true; });
+
   const candidates = tabmgrState.tabs.filter(function (t) {
+    if (dupSet[t.id]) return false;
     if (t.discarded) return false;
     if (tabmgrGxLimiter.protectActive && t.active) return false;
     if (tabmgrGxLimiter.protectPinned && t.pinned) return false;
     if (tabmgrGxLimiter.protectAudio && (t.audible || _tabmgrFuncGroup(t) === "video")) return false;
     return true;
   });
-  if (candidates.length === 0) { showToast(t("tabmgr_toast_no_discard")); return; }
+
+  if (candidates.length === 0 && dupIds.length === 0) {
+    showToast(t("tabmgr_toast_no_discard"));
+    return;
+  }
+
+  function reportSuccess(discardCount) {
+    tabmgrLoadTabs();
+    const freedMB = (discardCount * 40) + (dupIds.length * 60);
+    if (dupIds.length > 0) {
+      showToast(t("tabmgr_toast_opt_with_dup")
+        .replace("{0}", String(dupIds.length))
+        .replace("{1}", String(discardCount))
+        .replace("{2}", String(freedMB)));
+    } else {
+      showToast(t("tabmgr_toast_ram_freed")
+        .replace("{0}", String(discardCount))
+        .replace("{1}", String(freedMB)));
+    }
+  }
+
+  // Remove duplicate tabs first
+  if (dupIds.length > 0 && api.remove) {
+    try {
+      const p = api.remove(dupIds);
+      if (p && typeof p.then === "function") {
+        p.catch(function () {});
+      }
+    } catch (e) {}
+  }
+
+  if (candidates.length === 0) {
+    reportSuccess(0);
+    return;
+  }
+
   candidates.sort(function (a, b) {
     return (a.lastAccessed || 0) - (b.lastAccessed || 0);
   });
@@ -896,18 +1288,14 @@ function tabmgrOptimizeRam() {
         p.then(function () {
           done++;
           if (done === candidates.length) {
-            tabmgrLoadTabs();
-            const freedMB = done * 40;
-            showToast(t("tabmgr_toast_ram_freed").replace("{0}", String(done)).replace("{1}", String(freedMB)));
+            reportSuccess(done);
           }
         }).catch(function () {});
       } else {
         api.discard(tab.id, function () {
           done++;
           if (done === candidates.length) {
-            tabmgrLoadTabs();
-            const freedMB = done * 40;
-            showToast(t("tabmgr_toast_ram_freed").replace("{0}", String(done)).replace("{1}", String(freedMB)));
+            reportSuccess(done);
           }
         });
       }
@@ -2998,8 +3386,10 @@ onReady(function () {
   if (btnOptRam) btnOptRam.addEventListener("click", tabmgrOptimizeRam);
   const btnCloseBlank = document.getElementById("btn-tabmgr-close-blank");
   if (btnCloseBlank) btnCloseBlank.addEventListener("click", tabmgrCloseBlankTabs);
-  const btnDup = document.getElementById("btn-tabmgr-close-dup");
-  if (btnDup) btnDup.addEventListener("click", tabmgrCloseDuplicates);
+  const btnDups = document.querySelectorAll("#btn-tabmgr-close-dup, #btn-tabmgr-close-dup-grid, .btn-tabmgr-close-dup-action");
+  btnDups.forEach(function (btn) {
+    btn.addEventListener("click", tabmgrCloseDuplicates);
+  });
   const btnBmAll = document.getElementById("btn-tabmgr-bookmark-all");
   if (btnBmAll) btnBmAll.addEventListener("click", tabmgrBookmarkAll);
   const btnCloseAll = document.getElementById("btn-tabmgr-close-all");

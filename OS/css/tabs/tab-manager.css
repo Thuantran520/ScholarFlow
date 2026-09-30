@@ -159,6 +159,78 @@
   transition: all 0.2s ease;
 }
 
+/* Cockpit Tab Switcher */
+.tabmgr-gx-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 3px;
+  margin-top: 2px;
+  margin-bottom: 8px;
+}
+
+.tabmgr-gx-nav-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 5px 4px;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  user-select: none;
+}
+
+.tabmgr-gx-nav-btn:hover {
+  color: #f1f5f9;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tabmgr-gx-nav-btn.is-active {
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.35);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.18);
+}
+
+.tabmgr-gx-nav-btn[data-gx-tab="cpu"].is-active {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.35);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.18);
+}
+
+.tabmgr-gx-nav-btn[data-gx-tab="gpu"].is-active {
+  color: #a855f7;
+  background: rgba(168, 85, 247, 0.12);
+  border-color: rgba(168, 85, 247, 0.35);
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.18);
+}
+
+.tabmgr-gx-nav-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.07);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.tabmgr-gx-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .tabmgr-gx-card.is-collapsed {
   padding: 7px 10px;
   background: rgba(15, 23, 42, 0.25);
