@@ -379,11 +379,36 @@ async function _runUserScriptNow(tabId, script) {
         target: { tabId: Number(tabId) },
         world: world,
         func: function(codeToExec) {
+          // Trusted Types policy resolution to prevent sink type mismatch violations
+          let policy = null;
+          if (typeof window !== 'undefined' && window.trustedTypes) {
+            try {
+              if (window.trustedTypes.defaultPolicy && typeof window.trustedTypes.defaultPolicy.createScript === 'function') {
+                policy = window.trustedTypes.defaultPolicy;
+              }
+            } catch (_e) {}
+            if (!policy && typeof window.trustedTypes.createPolicy === 'function') {
+              const names = ['scholarflow', 'scholarflow#us', 'default', 'userscript'];
+              for (const name of names) {
+                try {
+                  policy = window.trustedTypes.createPolicy(name, {
+                    createScript: (s) => s,
+                    createScriptURL: (s) => s
+                  });
+                  if (policy) break;
+                } catch (_pErr) {}
+              }
+            }
+          }
+          const trustedCode = (policy && typeof policy.createScript === 'function')
+            ? policy.createScript(codeToExec)
+            : codeToExec;
+
           // 1. Direct evaluation via page global (bypasses script-src-elem when page CSP has 'unsafe-eval')
           try {
             const runner = typeof window !== 'undefined' ? window['ev' + 'al'] : null;
             if (typeof runner === 'function') {
-              runner(codeToExec);
+              runner(trustedCode);
               return;
             }
           } catch (_evalErr) {}
@@ -394,7 +419,10 @@ async function _runUserScriptNow(tabId, script) {
               const blob = new Blob([codeToExec], { type: 'text/javascript' });
               const blobUrl = URL.createObjectURL(blob);
               const s = document.createElement('script');
-              s.src = blobUrl;
+              const srcVal = (policy && typeof policy.createScriptURL === 'function')
+                ? policy.createScriptURL(blobUrl)
+                : blobUrl;
+              s.src = srcVal;
               (document.documentElement || document.head).appendChild(s);
               s.remove();
               URL.revokeObjectURL(blobUrl);
@@ -402,15 +430,33 @@ async function _runUserScriptNow(tabId, script) {
             } catch (_blobErr) {}
           }
 
-          // 3. Fallback inline script with nonce if present
+          // 3. Fallback inline script with nonce and Trusted Types
           try {
             const s = document.createElement('script');
-            s.textContent = codeToExec;
             const nonceEl = document.querySelector('script[nonce]');
             const nonce = (nonceEl && (nonceEl.nonce || nonceEl.getAttribute('nonce'))) || '';
             if (nonce) s.setAttribute('nonce', nonce);
-            (document.documentElement || document.head).appendChild(s);
-            s.remove();
+
+            let setOk = false;
+            try {
+              s.textContent = trustedCode;
+              setOk = true;
+            } catch (_tc) {
+              try {
+                s.text = trustedCode;
+                setOk = true;
+              } catch (_t) {
+                try {
+                  s.appendChild(document.createTextNode(codeToExec));
+                  setOk = true;
+                } catch (_cn) {}
+              }
+            }
+
+            if (setOk) {
+              (document.documentElement || document.head).appendChild(s);
+              s.remove();
+            }
           } catch(err) {
             console.error('[ScholarFlow] Execute script failed', err);
           }
