@@ -1600,17 +1600,40 @@
       btnParseMeta.onclick = () => {
         const ta = document.getElementById('us-edit-code');
         if (!ta) return;
-        const meta = _parseGMMetadata(ta.value);
+        const metaApi = (typeof window !== 'undefined' && window.SF_US_META) || (typeof globalThis !== 'undefined' && globalThis.SF_US_META);
+        const meta = metaApi ? metaApi.parse(ta.value) : _parseGMMetadata(ta.value);
         if (!meta) { alert('Không tìm thấy ==UserScript== header trong code.'); return; }
         _showMetaBar(meta);
-        // Auto-fill name if empty
+
+        // Auto-fill name
         const editName = document.getElementById('us-edit-name');
-        if (editName && !editName.value && meta.name) editName.value = meta.name;
-        // Auto-fill matches
-        if (meta.match) {
-          const editMatches = document.getElementById('us-edit-matches');
-          if (editMatches) editMatches.value = meta.match;
+        if (editName && meta.name) editName.value = meta.name;
+
+        // Auto-fill all matches
+        const fields = metaApi ? metaApi.fieldsOf({ code: ta.value }) : null;
+        const editMatches = document.getElementById('us-edit-matches');
+        if (editMatches) {
+          if (fields && fields.matches && fields.matches.length) {
+            editMatches.value = fields.matches.join('\n');
+          } else if (meta.match) {
+            editMatches.value = Array.isArray(meta.matches) ? meta.matches.join('\n') : meta.match;
+          }
         }
+
+        // Auto-fill excludes
+        const editExcludes = document.getElementById('us-edit-excludes');
+        if (editExcludes && fields) {
+          const exList = (fields.excludeMatches || []).concat(fields.excludes || []).filter(Boolean);
+          if (exList.length) editExcludes.value = exList.join('\n');
+        }
+
+        // Auto-fill run-at
+        const editRunAt = document.getElementById('us-edit-runat');
+        if (editRunAt && fields && fields.runAt) editRunAt.value = fields.runAt;
+
+        // Auto-fill updateURL
+        const editUpdateUrl = document.getElementById('us-edit-update-url');
+        if (editUpdateUrl && fields && fields.updateUrl) editUpdateUrl.value = fields.updateUrl;
       };
     }
 

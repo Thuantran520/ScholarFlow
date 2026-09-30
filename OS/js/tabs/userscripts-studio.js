@@ -458,10 +458,25 @@
     if (el.btnParse) {
       el.btnParse.onclick = () => {
         if (!el.code) return;
-        const meta = parseGMMetadata(el.code.value);
+        const metaApi = (typeof window !== 'undefined' && window.SF_US_META) || (typeof globalThis !== 'undefined' && globalThis.SF_US_META);
+        const meta = metaApi ? metaApi.parse(el.code.value) : parseGMMetadata(el.code.value);
         if (!meta) { alert('Không tìm thấy header ==UserScript== trong mã!'); return; }
         if (el.name && meta.name) el.name.value = meta.name;
-        if (el.matches && meta.match) el.matches.value = meta.match;
+        
+        const fields = metaApi ? metaApi.fieldsOf({ code: el.code.value }) : null;
+        if (el.matches) {
+          if (fields && fields.matches && fields.matches.length) {
+            el.matches.value = fields.matches.join('\n');
+          } else if (meta.match) {
+            el.matches.value = Array.isArray(meta.matches) ? meta.matches.join('\n') : meta.match;
+          }
+        }
+        if (el.excludes && fields) {
+          const exList = (fields.excludeMatches || []).concat(fields.excludes || []).filter(Boolean);
+          if (exList.length) el.excludes.value = exList.join('\n');
+        }
+        if (el.runAt && fields && fields.runAt) el.runAt.value = fields.runAt;
+        if (el.updateUrl && fields && fields.updateUrl) el.updateUrl.value = fields.updateUrl;
         alert('Đã đồng bộ thông tin từ header: ' + (meta.name || ''));
       };
     }
