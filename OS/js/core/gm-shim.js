@@ -71,21 +71,6 @@ var _sfGM_xmlhttpRequest = typeof GM_xmlhttpRequest === 'function' ? GM_xmlhttpR
   };
   window.addEventListener('message', msgHandler);
 
-  // Also support legacy CustomEvent for same-world cases
-  var legacyHandler = function(e) {
-    if (e.detail && e.detail.reqId === reqId) {
-      document.removeEventListener('__SF_US_XHR_RES__', legacyHandler);
-      window.removeEventListener('message', msgHandler);
-      var res = e.detail;
-      if (res.error) {
-        if (typeof details.onerror === 'function') details.onerror(res);
-      } else {
-        if (typeof details.onload === 'function') details.onload(res);
-      }
-    }
-  };
-  document.addEventListener('__SF_US_XHR_RES__', legacyHandler);
-
   document.dispatchEvent(new CustomEvent('__SF_US_XHR_REQ__', {
     detail: {
       reqId: reqId,
