@@ -540,9 +540,11 @@ function _tabmgrUpdateSliderCapsule(el) {
   const fillEl = document.getElementById("tabmgr-capsule-fill");
   const thumbEl = document.getElementById("tabmgr-capsule-thumb");
   const valEl = document.getElementById("tabmgr-gx-slider-val");
-
-  if (fillEl) fillEl.style.width = ratio + "%";
-  if (thumbEl) thumbEl.style.left = ratio + "%";
+  if (fillEl) fillEl.style.width = ratio.toFixed(1) + "%";
+  if (thumbEl) {
+    thumbEl.style.left = ratio.toFixed(1) + "%";
+    thumbEl.style.transform = "translate(-" + ratio.toFixed(1) + "%, -50%)";
+  }
   if (valEl) valEl.textContent = val.toFixed(1) + " GB";
 
   const container = document.getElementById("tabmgr-gx-card");
