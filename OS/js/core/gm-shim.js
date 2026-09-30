@@ -54,9 +54,28 @@ var _sfGM_addStyle = typeof GM_addStyle === 'function' ? GM_addStyle : function(
 var _sfGM_xmlhttpRequest = typeof GM_xmlhttpRequest === 'function' ? GM_xmlhttpRequest : function(details) {
   if (!details || !details.url) return;
   var reqId = 'xhr_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
-  var onRes = function(e) {
+
+  // Use postMessage for cross-world communication (ISOLATED -> MAIN)
+  // CustomEvent.detail is not accessible across worlds due to Xray wrappers
+  var msgHandler = function(e) {
+    if (e.source !== window) return;
+    if (!e.data || e.data.type !== '__SF_US_XHR_RES__') return;
+    if (e.data.reqId !== reqId) return;
+    window.removeEventListener('message', msgHandler);
+    var res = e.data.payload;
+    if (res && res.error) {
+      if (typeof details.onerror === 'function') details.onerror(res);
+    } else {
+      if (typeof details.onload === 'function') details.onload(res);
+    }
+  };
+  window.addEventListener('message', msgHandler);
+
+  // Also support legacy CustomEvent for same-world cases
+  var legacyHandler = function(e) {
     if (e.detail && e.detail.reqId === reqId) {
-      document.removeEventListener('__SF_US_XHR_RES__', onRes);
+      document.removeEventListener('__SF_US_XHR_RES__', legacyHandler);
+      window.removeEventListener('message', msgHandler);
       var res = e.detail;
       if (res.error) {
         if (typeof details.onerror === 'function') details.onerror(res);
@@ -65,7 +84,8 @@ var _sfGM_xmlhttpRequest = typeof GM_xmlhttpRequest === 'function' ? GM_xmlhttpR
       }
     }
   };
-  document.addEventListener('__SF_US_XHR_RES__', onRes);
+  document.addEventListener('__SF_US_XHR_RES__', legacyHandler);
+
   document.dispatchEvent(new CustomEvent('__SF_US_XHR_REQ__', {
     detail: {
       reqId: reqId,

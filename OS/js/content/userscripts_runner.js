@@ -60,6 +60,8 @@
   function respond(name, detail) {
     try {
       document.dispatchEvent(new CustomEvent(name, { detail: detail }));
+      // Also postMessage for cross-world listeners (ISOLATED -> MAIN)
+      window.postMessage({ type: name, payload: detail }, '*');
     } catch (_e) { /* document gone */ }
   }
 
