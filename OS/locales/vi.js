@@ -1771,7 +1771,7 @@ window.I18N_VI = {
     "tabmgr_gx_protect_pinned_tip": "Không bao giờ cho các tab được ghim vào chế độ ngủ",
     "tabmgr_gx_protect_active": "Bảo vệ tab xem",
     "tabmgr_gx_protect_active_tip": "Luôn giữ tab hiện tại thức",
-    "tabmgr_gx_scale_tip": "Nhấn để đổi thang đo RAM tối đa (16GB, 32GB, 64GB, 128GB, 1TB)",
+    "tabmgr_gx_scale_tip": "Nhấn để đổi thang đo RAM tối đa (8GB, 16GB, 32GB, 64GB, 128GB, 1TB)",
     "tabmgr_btn_wake_all": "Đánh thức tất cả",
     "tabmgr_btn_optimize_ram_tip": "Tạm dừng toàn bộ tab không hoạt động để giải phóng bộ nhớ RAM",
     "tabmgr_toast_wake_all": "Đã đánh thức {0} tab đang ngủ",

@@ -15,6 +15,31 @@ function onReady(fn) {
   }
 }
 
+function syncSidebarHeaderTitle(targetOrBtn) {
+  try {
+    let btn = null;
+    if (typeof targetOrBtn === "string") {
+      btn = document.querySelector('.main-nav-btn[data-target="' + targetOrBtn + '"]');
+    } else if (targetOrBtn && targetOrBtn.nodeType) {
+      btn = targetOrBtn;
+    } else {
+      btn = document.querySelector('.main-nav-btn.active');
+    }
+    let tabName = "";
+    if (btn) {
+      const labelEl = btn.querySelector('.nav-label');
+      tabName = (labelEl && labelEl.textContent) ? labelEl.textContent.trim() : "";
+      if (!tabName && btn.title) tabName = btn.title.split("-")[0].trim();
+    }
+    const fullTitle = tabName ? ("ScholarFlow · " + tabName) : "ScholarFlow";
+    document.title = fullTitle;
+    if (typeof browser !== "undefined" && browser.sidebarAction && typeof browser.sidebarAction.setTitle === "function") {
+      browser.sidebarAction.setTitle({ title: fullTitle });
+    }
+  } catch (_) {}
+}
+window.syncSidebarHeaderTitle = syncSidebarHeaderTitle;
+
 onReady(() => {
   // Main Tabs navigation
   document.querySelectorAll(".main-nav-btn").forEach(btn => {
@@ -22,6 +47,7 @@ onReady(() => {
       document.querySelectorAll(".main-nav-btn").forEach(b => b.classList.remove("active"));
       document.querySelectorAll(".tab-section").forEach(s => s.classList.remove("active"));
       btn.classList.add("active");
+      syncSidebarHeaderTitle(btn);
       const target = btn.dataset.target;
       const sec = document.getElementById(target);
       if (sec) sec.classList.add("active");
@@ -45,6 +71,14 @@ onReady(() => {
         calRenderCalendar();
       }
     });
+  });
+
+  const initialActiveNavBtn = document.querySelector(".main-nav-btn.active");
+  if (initialActiveNavBtn) {
+    syncSidebarHeaderTitle(initialActiveNavBtn);
+  }
+  window.addEventListener("app-language-changed", () => {
+    syncSidebarHeaderTitle();
   });
 
   // Citation Sub-Tabs (Tab 1 only)

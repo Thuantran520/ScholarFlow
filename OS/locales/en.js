@@ -1771,7 +1771,7 @@ window.I18N_EN = {
     "tabmgr_gx_protect_pinned_tip": "Never put pinned tabs to sleep",
     "tabmgr_gx_protect_active": "Protect active tab",
     "tabmgr_gx_protect_active_tip": "Always keep current active tab awake",
-    "tabmgr_gx_scale_tip": "Click to switch max RAM scale (16GB, 32GB, 64GB, 128GB, 1TB)",
+    "tabmgr_gx_scale_tip": "Click to switch max RAM scale (8GB, 16GB, 32GB, 64GB, 128GB, 1TB)",
     "tabmgr_btn_wake_all": "Wake all tabs",
     "tabmgr_btn_optimize_ram_tip": "Put all inactive background tabs to sleep to free up RAM",
     "tabmgr_toast_wake_all": "Woke up {0} sleeping tabs",
