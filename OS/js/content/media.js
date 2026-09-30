@@ -604,18 +604,6 @@
     }
 
     // dir < 0: Backward / Previous track
-    const now = Date.now();
-    const isRapidRepeat = (now - _lastPrevClickStamp < 2500);
-    _lastPrevClickStamp = now;
-    const ct = el ? _num(el.currentTime) : 0;
-
-    // Standard player UX:
-    // If current video has played past restart window and this is the FIRST click,
-    // rewind to 0s (same as Spotify/YouTube/VLC).
-    if (el && ct > _PREV_RESTART_SECONDS && !isRapidRepeat) {
-      try { el.currentTime = 0; } catch (e) {}
-      return getState();
-    }
 
     // Second click (within 2.5s) OR clicking when already near start (<= 3s):
     // Actively navigate to the PREVIOUS video/track!

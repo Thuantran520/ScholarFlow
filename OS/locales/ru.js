@@ -1753,7 +1753,7 @@ window.I18N_RU = {
     "tabmgr_toast_blank_closed": "Закрыто {0} пустых вкладок",
     "tabmgr_toast_no_blank": "Пустых вкладок не найдено",
     "tabmgr_toast_ram_freed": "Приостановлено {0} вкладок, освобождено ~{1} МБ ОЗУ",
-    "tabmgr_gx_limiter_title": "Ограничитель RAM (GX Control)",
+    "tabmgr_gx_limiter_title": "Ограничитель RAM",
     "tabmgr_gx_limiter_toggle": "Переключить ограничение RAM",
     "tabmgr_gx_usage_lbl": "Оценка памяти",
     "tabmgr_gx_limit_setting": "Лимит оперативной памяти:",
@@ -1793,7 +1793,7 @@ window.I18N_RU = {
     "tabmgr_media_open_tab": "Открыть вкладку с музыкой",
     "tabmgr_media_mute": "Без звука",
     "tabmgr_media_unmute": "Включить звук",
-    "tabmgr_media_prev": "Предыдущий трек",
+    "tabmgr_media_prev": "Назад (предыдущая страница)",
     "tabmgr_media_next": "Следующий трек",
     "tabmgr_media_list": "Очередь играющих вкладок — нажмите, чтобы перейти к следующей",
     "tabmgr_media_pause_all": "Остановить воспроизведение во всех остальных вкладках",
@@ -1960,9 +1960,12 @@ window.I18N_RU = {
   "us_import_none_ok": "Не удалось получить ни одного скрипта.",
   "us_import_done": "Установлено ",
   "us_import_done_suffix": " скрипт(ов).",
-  "us_diag_stored": "В хранилище: {0} · Показано: {1}",
-  "us_diag_filtered": " · фильтр: {0}",
-  "us_diag_btn": "Диагностика",
+  "us_diag_stored": "В хранилище: {0} · Показано: {1}"
+,
+  "us_diag_filtered": " · фильтр: {0}"
+,
+  "us_diag_btn": "Диагностика"
+,
   "us_empty_current_page": "Нет скриптов для этой страницы",
   "us_empty_inactive": "Нет выключенных скриптов",
   "us_empty_active": "Нет включённых скриптов",

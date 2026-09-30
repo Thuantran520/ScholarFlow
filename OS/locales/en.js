@@ -1753,7 +1753,7 @@ window.I18N_EN = {
     "tabmgr_toast_blank_closed": "Closed {0} blank tabs",
     "tabmgr_toast_no_blank": "No blank tabs found",
     "tabmgr_toast_ram_freed": "Hibernated {0} tabs, freed ~{1} MB RAM",
-    "tabmgr_gx_limiter_title": "RAM Limiter (GX Control)",
+    "tabmgr_gx_limiter_title": "RAM Limiter",
     "tabmgr_gx_limiter_toggle": "Toggle RAM Limiter",
     "tabmgr_gx_usage_lbl": "Estimated RAM",
     "tabmgr_gx_limit_setting": "RAM limit cap:",
@@ -1793,7 +1793,7 @@ window.I18N_EN = {
     "tabmgr_media_open_tab": "Open music tab",
     "tabmgr_media_mute": "Mute",
     "tabmgr_media_unmute": "Unmute",
-    "tabmgr_media_prev": "Previous track",
+    "tabmgr_media_prev": "Go back (previous page)",
     "tabmgr_media_next": "Next track",
     "tabmgr_media_list": "Playing-tabs queue — click to go to the next one",
     "tabmgr_media_pause_all": "Pause every other playing tab",
@@ -1960,9 +1960,12 @@ window.I18N_EN = {
   "us_import_none_ok": "No scripts could be fetched.",
   "us_import_done": "Installed ",
   "us_import_done_suffix": " script(s).",
-  "us_diag_stored": "Stored: {0} · Shown: {1}",
-  "us_diag_filtered": " · filtered by: {0}",
-  "us_diag_btn": "Diagnose",
+  "us_diag_stored": "Stored: {0} · Shown: {1}"
+,
+  "us_diag_filtered": " · filtered by: {0}"
+,
+  "us_diag_btn": "Diagnose"
+,
   "us_empty_current_page": "No script applies to this page",
   "us_empty_inactive": "No scripts are turned off",
   "us_empty_active": "No scripts are turned on",

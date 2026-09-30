@@ -458,6 +458,8 @@ function _tabmgrComputeRamEstimate() {
 }
 
 function _tabmgrUpdateGxMeter() {
+  const cardEl = document.getElementById("tabmgr-gx-card");
+  const bodyEl = document.getElementById("tabmgr-gx-body");
   const usageValEl = document.getElementById("tabmgr-gx-usage-val");
   const barFillEl = document.getElementById("tabmgr-gx-bar-fill");
   const sliderValEl = document.getElementById("tabmgr-gx-slider-val");
@@ -465,6 +467,14 @@ function _tabmgrUpdateGxMeter() {
   const toggleEl = document.getElementById("tabmgr-gx-limiter-toggle");
   const hardLimitEl = document.getElementById("tabmgr-gx-hard-limit");
   const timeoutEl = document.getElementById("tabmgr-gx-sleep-timeout");
+  const gaugeBar = document.getElementById("tabmgr-gauge-bar");
+  const needleGroup = document.getElementById("tabmgr-gauge-needle-group");
+  const statusEl = document.getElementById("tabmgr-gauge-status");
+  const statusText = document.getElementById("tabmgr-gauge-status-text");
+
+  const isEnabled = !!tabmgrGxLimiter.enabled;
+  if (cardEl) cardEl.classList.toggle("is-collapsed", !isEnabled);
+  if (bodyEl) bodyEl.style.display = isEnabled ? "flex" : "none";
 
   const totalMB = _tabmgrComputeRamEstimate();
   const totalGB = (totalMB / 1024).toFixed(1);
@@ -473,12 +483,35 @@ function _tabmgrUpdateGxMeter() {
   if (usageValEl) usageValEl.textContent = totalGB + " / " + limitGB + " GB";
   if (sliderValEl) sliderValEl.textContent = limitGB + " GB";
   if (sliderEl && document.activeElement !== sliderEl) sliderEl.value = tabmgrGxLimiter.limitGB;
-  if (toggleEl) toggleEl.checked = !!tabmgrGxLimiter.enabled;
+  if (toggleEl) toggleEl.checked = isEnabled;
   if (hardLimitEl) hardLimitEl.checked = !!tabmgrGxLimiter.hardLimit;
   if (timeoutEl) timeoutEl.value = String(tabmgrGxLimiter.sleepTimeout);
 
+  const pct = Math.min(100, Math.max(0, Math.round((totalMB / (tabmgrGxLimiter.limitGB * 1024)) * 100)));
+
+  if (gaugeBar) {
+    const dashoffset = Math.round(226 * (1 - pct / 100));
+    gaugeBar.style.strokeDashoffset = String(dashoffset);
+  }
+  if (needleGroup) {
+    const angle = -90 + (pct / 100) * 180;
+    needleGroup.style.transform = "rotate(" + angle.toFixed(1) + "deg)";
+  }
+  if (statusEl && statusText) {
+    statusEl.classList.remove("is-cruising", "is-boost", "is-redline");
+    if (pct >= 85) {
+      statusEl.classList.add("is-redline");
+      statusText.textContent = "REDLINE";
+    } else if (pct >= 70) {
+      statusEl.classList.add("is-boost");
+      statusText.textContent = "BOOST";
+    } else {
+      statusEl.classList.add("is-cruising");
+      statusText.textContent = "CRUISING";
+    }
+  }
+
   if (barFillEl) {
-    const pct = Math.min(100, Math.max(0, Math.round((totalMB / (tabmgrGxLimiter.limitGB * 1024)) * 100)));
     barFillEl.style.width = pct + "%";
     barFillEl.classList.toggle("is-warning", pct >= 75 && pct < 90);
     barFillEl.classList.toggle("is-danger", pct >= 90);
@@ -1411,6 +1444,12 @@ function _tabmgrMediaStep(dir) {
 function _tabmgrMediaSkip(dir) {
   const tabId = tabmgrMedia.sourceTabId;
   if (!tabId) return;
+  if (dir < 0) {
+    const api = _getTabsApi();
+    if (api && api.goBack) {
+      try { api.goBack(tabId); } catch (e) {}
+    }
+  }
   safeSendTabMessage(tabId, { action: "MEDIA_SKIP", dir: dir }).then(function (res) {
     if (res && res.state) {
       tabmgrMedia.state = res.state;
@@ -2481,7 +2520,7 @@ function _tabmgrMediaRenderPlayer() {
   toolsL.className = "tabmgr-mp-tools-group";
   const toolsR = document.createElement("div");
   toolsR.className = "tabmgr-mp-tools-group";
-  const prevBtn = _tabmgrMediaSvgBtn("M15 18l-6-6 6-6", t("tabmgr_media_prev"), "tabmgr-mp-tbtn tabmgr-mp-prev");
+  const prevBtn = _tabmgrMediaSvgBtn("M19 12H5M12 19l-7-7 7-7", t("tabmgr_media_prev"), "tabmgr-mp-tbtn tabmgr-mp-prev");
   prevBtn.addEventListener("click", function () { _tabmgrMediaSkip(-1); });
   toolsL.appendChild(prevBtn);
   if (state) {

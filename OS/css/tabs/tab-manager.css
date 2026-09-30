@@ -139,7 +139,7 @@
   border-color: rgba(255, 255, 255, 0.12);
 }
 
-/* GX Control: RAM Limiter & Smart Tab Sleeper */
+/* RAM Limiter (Racing Cockpit) */
 .tabmgr-gx-card {
   background: rgba(15, 23, 42, 0.45);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -148,6 +148,17 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.tabmgr-gx-card.is-collapsed {
+  padding: 7px 10px;
+  background: rgba(15, 23, 42, 0.25);
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+.tabmgr-gx-card.is-collapsed .tabmgr-gx-body {
+  display: none !important;
 }
 
 .tabmgr-gx-head {
@@ -170,24 +181,168 @@
   stroke: #38bdf8;
 }
 
-.tabmgr-gx-meter-wrap {
+.tabmgr-gx-body {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
+  animation: tabmgrFadeIn 0.2s ease-out;
 }
 
-.tabmgr-gx-meter-info {
+@keyframes tabmgrFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Racing Speedometer / Tachometer Gauge */
+.tabmgr-racing-gauge-wrap {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  font-size: 10.5px;
-  color: #94a3b8;
+  position: relative;
+  padding: 4px 0 0;
 }
 
-.tabmgr-gx-meter-val {
+.tabmgr-gauge-dial {
+  position: relative;
+  width: 100%;
+  max-width: 220px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.tabmgr-gauge-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+  filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.15));
+}
+
+.tabmgr-gauge-track {
+  stroke: rgba(255, 255, 255, 0.07);
+}
+
+.tabmgr-gauge-redline {
+  stroke: rgba(239, 68, 68, 0.3);
+}
+
+.tabmgr-gauge-fill {
+  transition: stroke-dashoffset 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.4));
+}
+
+.tabmgr-gauge-needle {
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.tabmgr-gauge-tick {
+  font-size: 8px;
   font-weight: 700;
-  color: #e2e8f0;
+  fill: #64748b;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.tabmgr-tick-red {
+  fill: #ef4444;
+  font-weight: 800;
+}
+
+.tabmgr-gauge-center {
+  position: absolute;
+  bottom: 8px;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.tabmgr-gauge-label {
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.tabmgr-gauge-digital {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  line-height: 1.1;
+  margin-top: 1px;
+}
+
+.tabmgr-gauge-num {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #f8fafc;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  letter-spacing: -0.5px;
+  text-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+}
+
+.tabmgr-gauge-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  margin-top: 2px;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+}
+
+.tabmgr-gauge-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tabmgr-gauge-status.is-cruising {
+  background: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+}
+
+.tabmgr-gauge-status.is-cruising .tabmgr-gauge-dot {
+  background: #38bdf8;
+  box-shadow: 0 0 6px #38bdf8;
+}
+
+.tabmgr-gauge-status.is-boost {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.tabmgr-gauge-status.is-boost .tabmgr-gauge-dot {
+  background: #fbbf24;
+  box-shadow: 0 0 6px #fbbf24;
+}
+
+.tabmgr-gauge-status.is-redline {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  animation: tabmgrRedlinePulse 1s infinite alternate;
+}
+
+.tabmgr-gauge-status.is-redline .tabmgr-gauge-dot {
+  background: #ef4444;
+  box-shadow: 0 0 8px #ef4444;
+}
+
+@keyframes tabmgrRedlinePulse {
+  from { box-shadow: 0 0 4px rgba(239, 68, 68, 0.3); }
+  to { box-shadow: 0 0 12px rgba(239, 68, 68, 0.7); }
 }
 
 .tabmgr-gx-bar-bg {

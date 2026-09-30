@@ -1753,7 +1753,7 @@ window.I18N_JA = {
     "tabmgr_toast_blank_closed": "{0}個の空白タブを閉じました",
     "tabmgr_toast_no_blank": "空白タブはありません",
     "tabmgr_toast_ram_freed": "{0}個のタブを休眠させ、約{1} MBのRAMを解放しました",
-    "tabmgr_gx_limiter_title": "RAMリミッター (GX Control)",
+    "tabmgr_gx_limiter_title": "RAMリミッター",
     "tabmgr_gx_limiter_toggle": "RAM制限の切り替え",
     "tabmgr_gx_usage_lbl": "推定RAM使用量",
     "tabmgr_gx_limit_setting": "RAM上限設定：",
@@ -1793,7 +1793,7 @@ window.I18N_JA = {
     "tabmgr_media_open_tab": "音楽タブを開く",
     "tabmgr_media_mute": "ミュート",
     "tabmgr_media_unmute": "ミュート解除",
-    "tabmgr_media_prev": "前の曲",
+    "tabmgr_media_prev": "戻る（前のページ）",
     "tabmgr_media_next": "次の曲",
     "tabmgr_media_list": "再生中タブ一覧 — クリックで次へ",
     "tabmgr_media_pause_all": "他の再生中タブをすべて一時停止",
@@ -1960,9 +1960,12 @@ window.I18N_JA = {
   "us_import_none_ok": "スクリプトを取得できませんでした。",
   "us_import_done": "インストールしました: ",
   "us_import_done_suffix": " 件のスクリプト。",
-  "us_diag_stored": "保存: {0} · 表示: {1}",
-  "us_diag_filtered": " · 絞り込み: {0}",
-  "us_diag_btn": "診断",
+  "us_diag_stored": "保存: {0} · 表示: {1}"
+,
+  "us_diag_filtered": " · 絞り込み: {0}"
+,
+  "us_diag_btn": "診断"
+,
   "us_empty_current_page": "このページに適用するスクリプトはありません",
   "us_empty_inactive": "無効なスクリプトはありません",
   "us_empty_active": "有効なスクリプトはありません",
