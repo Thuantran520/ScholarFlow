@@ -196,6 +196,29 @@ function newWindow(relPaths, stub) {
     "https://example.com/admin/x"), "@exclude-match wins over @match");
   check(META.matchesUrl({ matches: ["*://*/*"], includes: ["*://*.example.com/*"] },
     "https://example.com/a"), "@include can widen the scope");
+
+  // Regex and glob @include extraction
+  const reExtracted = META.extractMatchPatterns("/^https:\\/\\/([\\w-]+\\.)?aliexpress\\.(ru|us|com)\\/*/");
+  check(reExtracted.length === 3, "regex @include extracts all 3 domain variations");
+  check(reExtracted.indexOf("*://*.aliexpress.com/*") !== -1, "extracts .com domain");
+  check(reExtracted.indexOf("*://*.aliexpress.ru/*") !== -1, "extracts .ru domain");
+  check(reExtracted.indexOf("*://*.aliexpress.us/*") !== -1, "extracts .us domain");
+
+  const reScript = META.fieldsOf({ code: "// ==UserScript==\n// @name Re\n// @include /^https:\\/\\/([\\w-]+\\.)?aliexpress\\.(ru|us|com)\\/*/\n// ==/UserScript==" });
+  check(reScript.explicitMatches.length === 3, "fieldsOf promotes regex includes into explicitMatches");
+  check(reScript.matches.indexOf("*://*.aliexpress.com/*") !== -1, "matches includes extracted domain");
+
+  // gm-shim modern API tests
+  const shimWin = loadCore("OS/js/core/gm-shim.js");
+  check(typeof shimWin.SF_GM_SHIM === "string", "SF_GM_SHIM template string is exposed");
+  shimWin.eval(shimWin.SF_GM_SHIM);
+  check(shimWin.unsafeWindow === shimWin, "unsafeWindow is polyfilled to window");
+  check(typeof shimWin.GM_addElement === "function", "GM_addElement is exposed");
+  check(typeof shimWin.GM_waitForElement === "function", "GM_waitForElement is exposed");
+  check(typeof shimWin.GM_getResourceText === "function", "GM_getResourceText is exposed");
+  const elem = shimWin.GM_addElement("div", { id: "sf-test-node", textContent: "works" });
+  check(!!elem && elem.id === "sf-test-node", "GM_addElement creates element with attributes");
+  check(!!shimWin.document.getElementById("sf-test-node"), "GM_addElement appends element to document");
 }
 
 // ---------------------------------------------------------------------------

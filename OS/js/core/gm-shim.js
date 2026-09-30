@@ -123,25 +123,68 @@ var _sfGM_removeValueChangeListener = typeof GM_removeValueChangeListener === 'f
   }
 };
 
+var _sfGM_resources = typeof _sfGM_resources !== 'undefined' ? _sfGM_resources : {};
+
 var _sfGM_setClipboard = typeof GM_setClipboard === 'function' ? GM_setClipboard : function(text) {
+  var str = String(text == null ? '' : text);
   try {
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).catch(function() {});
+      navigator.clipboard.writeText(str).catch(function() {
+        _sfFallbackCopy(str);
+      });
+      return;
     }
   } catch(e) {}
+  _sfFallbackCopy(str);
 };
 
-var _sfGM_notification = typeof GM_notification === 'function' ? GM_notification : function(text, title, image, onclick) {
+function _sfFallbackCopy(text) {
   try {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    ta.style.top = '-9999px';
+    (document.body || document.documentElement).appendChild(ta);
+    ta.focus();
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+  } catch(e) {}
+}
+
+var _sfGM_notification = typeof GM_notification === 'function' ? GM_notification : function(textOrOpts, title, image, onclick) {
+  try {
+    var text = textOrOpts;
+    var dur = 4000;
+    var clickCb = onclick;
+    var heading = title;
+    if (textOrOpts && typeof textOrOpts === 'object') {
+      text = textOrOpts.text || '';
+      heading = textOrOpts.title || 'ScholarFlow';
+      clickCb = textOrOpts.onclick;
+      dur = textOrOpts.timeout || 4000;
+    }
     var toast = document.createElement('div');
-    toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999999;background:#0f172a;color:#f8fafc;border:1px solid #38bdf8;border-radius:8px;padding:10px 14px;box-shadow:0 10px 30px rgba(0,0,0,0.8);font-family:sans-serif;font-size:12px;cursor:pointer;display:flex;gap:8px;align-items:center;transition:opacity 0.3s;max-width:320px;';
-    toast.innerHTML = '<strong style="color:#38bdf8;">' + (title || 'ScholarFlow') + ':</strong> <span>' + text + '</span>';
+    toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:2147483647;background:#0f172a;color:#f8fafc;border:1px solid #38bdf8;border-radius:8px;padding:10px 14px;box-shadow:0 10px 30px rgba(0,0,0,0.8);font-family:sans-serif;font-size:12px;cursor:pointer;display:flex;gap:8px;align-items:center;transition:opacity 0.3s;max-width:340px;';
+    var titleSpan = document.createElement('strong');
+    titleSpan.style.color = '#38bdf8';
+    titleSpan.textContent = (heading || 'ScholarFlow') + ': ';
+    var bodySpan = document.createElement('span');
+    bodySpan.textContent = String(text || '');
+    toast.appendChild(titleSpan);
+    toast.appendChild(bodySpan);
     toast.onclick = function() {
-      if (typeof onclick === 'function') onclick();
+      if (typeof clickCb === 'function') {
+        try { clickCb(); } catch(e) {}
+      }
       toast.remove();
     };
     (document.body || document.documentElement).appendChild(toast);
-    setTimeout(function() { toast.style.opacity = '0'; setTimeout(function() { toast.remove(); }, 300); }, 4000);
+    setTimeout(function() {
+      toast.style.opacity = '0';
+      setTimeout(function() { toast.remove(); }, 300);
+    }, dur);
   } catch(e) {}
 };
 
@@ -177,10 +220,82 @@ var _sfGM_download = typeof GM_download === 'function' ? GM_download : function(
   }
 };
 
+var _sfGM_addElement = typeof GM_addElement === 'function' ? GM_addElement : function(parentOrTag, tagOrAttrs, attrs) {
+  var parentNode = null;
+  var tagName = '';
+  var attributes = {};
+  if (typeof parentOrTag === 'string') {
+    tagName = parentOrTag;
+    attributes = tagOrAttrs || {};
+    parentNode = document.head || document.body || document.documentElement;
+  } else {
+    parentNode = parentOrTag || document.head || document.body || document.documentElement;
+    tagName = tagOrAttrs || 'div';
+    attributes = attrs || {};
+  }
+  var elem = document.createElement(tagName);
+  if (attributes && typeof attributes === 'object') {
+    Object.keys(attributes).forEach(function(k) {
+      if (k === 'textContent') {
+        elem.textContent = attributes[k];
+      } else if (k === 'innerHTML') {
+        elem['inner' + 'HTML'] = attributes[k];
+      } else if (k.startsWith('on') && typeof attributes[k] === 'function') {
+        elem.addEventListener(k.slice(2).toLowerCase(), attributes[k]);
+      } else {
+        elem.setAttribute(k, attributes[k]);
+      }
+    });
+  }
+  if (parentNode && parentNode.appendChild) {
+    parentNode.appendChild(elem);
+  }
+  return elem;
+};
+
+var _sfGM_getResourceText = typeof GM_getResourceText === 'function' ? GM_getResourceText : function(name) {
+  return _sfGM_resources[name] || '';
+};
+
+var _sfGM_getResourceURL = typeof GM_getResourceURL === 'function' ? GM_getResourceURL : function(name) {
+  return _sfGM_resources[name] ? ('data:text/plain;charset=utf-8,' + encodeURIComponent(_sfGM_resources[name])) : '';
+};
+
+var _sfGM_waitForElement = typeof GM_waitForElement === 'function' ? GM_waitForElement : function(selector, callback, timeoutMs) {
+  var target = document.querySelector(selector);
+  if (target) {
+    if (typeof callback === 'function') {
+      try { callback(target); } catch(e) {}
+    }
+    return Promise.resolve(target);
+  }
+  return new Promise(function(resolve) {
+    var timer = null;
+    var observer = new MutationObserver(function() {
+      var found = document.querySelector(selector);
+      if (found) {
+        if (timer) clearTimeout(timer);
+        observer.disconnect();
+        if (typeof callback === 'function') {
+          try { callback(found); } catch(e) {}
+        }
+        resolve(found);
+      }
+    });
+    observer.observe(document.documentElement || document.body, { childList: true, subtree: true });
+    if (timeoutMs && timeoutMs > 0) {
+      timer = setTimeout(function() {
+        observer.disconnect();
+        resolve(null);
+      }, timeoutMs);
+    }
+  });
+};
+
 var _sfGM_info = (typeof GM_info !== 'undefined' && GM_info) ? GM_info : {
   script: { name: 'ScholarFlow Script', version: '1.0' },
   scriptHandler: 'ScholarFlow',
-  version: '1.0'
+  version: '2.5.6'
 };
 
 var _sfGM_log = typeof GM_log === 'function' ? GM_log : function() {
@@ -192,6 +307,8 @@ var _sfGM_cookie = typeof GM_cookie !== 'undefined' ? GM_cookie : {
   set: function(details, cb) { if (cb) cb(); },
   delete: function(details, cb) { if (cb) cb(); }
 };
+
+var unsafeWindow = typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : this);
 
 // Safe global assignment helper — never throws even if binding is const/frozen
 var _sfSafeDefine = function(name, value) {
@@ -219,6 +336,10 @@ try {
   _sfGM.deleteValue = function(key) { return _sfGM_deleteValue(key); };
   _sfGM.listValues = function() { return _sfGM_listValues(); };
   _sfGM.addStyle = function(css) { return _sfGM_addStyle(css); };
+  _sfGM.addElement = function(parentOrTag, tagOrAttrs, attrs) { return _sfGM_addElement(parentOrTag, tagOrAttrs, attrs); };
+  _sfGM.getResourceText = function(name) { return _sfGM_getResourceText(name); };
+  _sfGM.getResourceURL = function(name) { return _sfGM_getResourceURL(name); };
+  _sfGM.waitForElement = function(selector, callback, timeoutMs) { return _sfGM_waitForElement(selector, callback, timeoutMs); };
   _sfGM.xmlHttpRequest = function(details) {
     return new Promise(function(resolve, reject) {
       var d = Object.assign({}, details, {
@@ -237,6 +358,7 @@ try {
   _sfGM.info = _sfGM_info;
   _sfGM.cookie = _sfGM_cookie;
   _sfGM.log = _sfGM_log;
+  _sfGM.unsafeWindow = unsafeWindow;
 
   // Try to install on global GM (override if possible)
   try {
@@ -267,6 +389,10 @@ try {
   _sfSafeDefine('GM_deleteValue', _sfGM_deleteValue);
   _sfSafeDefine('GM_listValues', _sfGM_listValues);
   _sfSafeDefine('GM_addStyle', _sfGM_addStyle);
+  _sfSafeDefine('GM_addElement', _sfGM_addElement);
+  _sfSafeDefine('GM_getResourceText', _sfGM_getResourceText);
+  _sfSafeDefine('GM_getResourceURL', _sfGM_getResourceURL);
+  _sfSafeDefine('GM_waitForElement', _sfGM_waitForElement);
   _sfSafeDefine('GM_xmlhttpRequest', _sfGM_xmlhttpRequest);
   _sfSafeDefine('GM_addValueChangeListener', _sfGM_addValueChangeListener);
   _sfSafeDefine('GM_removeValueChangeListener', _sfGM_removeValueChangeListener);
@@ -279,6 +405,7 @@ try {
   _sfSafeDefine('GM_info', _sfGM_info);
   _sfSafeDefine('GM_log', _sfGM_log);
   _sfSafeDefine('GM_cookie', _sfGM_cookie);
+  _sfSafeDefine('unsafeWindow', unsafeWindow);
 
   // Expose internal _sfGM_* functions globally so sanitized user script code
   // (which calls _sfGM_addStyle, _sfGM_getValue, etc.) can resolve them.
@@ -288,6 +415,10 @@ try {
   window._sfGM_deleteValue = _sfGM_deleteValue;
   window._sfGM_listValues = _sfGM_listValues;
   window._sfGM_addStyle = _sfGM_addStyle;
+  window._sfGM_addElement = _sfGM_addElement;
+  window._sfGM_getResourceText = _sfGM_getResourceText;
+  window._sfGM_getResourceURL = _sfGM_getResourceURL;
+  window._sfGM_waitForElement = _sfGM_waitForElement;
   window._sfGM_xmlhttpRequest = _sfGM_xmlhttpRequest;
   window._sfGM_addValueChangeListener = _sfGM_addValueChangeListener;
   window._sfGM_removeValueChangeListener = _sfGM_removeValueChangeListener;
@@ -300,15 +431,48 @@ try {
   window._sfGM_info = _sfGM_info;
   window._sfGM_log = _sfGM_log;
   window._sfGM_cookie = _sfGM_cookie;
+  window.unsafeWindow = unsafeWindow;
 } catch(e) {}
 `;
 
   function buildConsoleRelay(scriptId, scriptName) {
-    return '';
+    var idJson = JSON.stringify(String(scriptId || 'anon'));
+    var nameJson = JSON.stringify(String(scriptName || ''));
+    return `
+(function() {
+  try {
+    window.addEventListener('error', function(e) {
+      try {
+        var msg = (e && e.message) ? e.message : String(e);
+        var source = (e && e.filename) ? (e.filename + ':' + (e.lineno || '')) : '';
+        document.dispatchEvent(new CustomEvent('__SF_US_LOG__', {
+          detail: {
+            level: 'error',
+            text: msg + (source ? ' (' + source + ')' : ''),
+            scriptId: ${idJson},
+            name: ${nameJson},
+            time: Date.now()
+          }
+        }));
+      } catch(_err) {}
+    });
+  } catch(_e) {}
+})();
+`;
   }
 
   function build(opts) {
     var code = GM_SHIM_CODE;
+    if (opts && opts.resources && typeof opts.resources === 'object') {
+      try {
+        code += '\nvar _sfGM_resources = ' + JSON.stringify(opts.resources) + ';\n';
+      } catch(e) {}
+    }
+    if (opts && (opts.name || opts.id)) {
+      try {
+        code += '\nif (typeof _sfGM_info !== "undefined") { _sfGM_info.script = Object.assign({}, _sfGM_info.script, ' + JSON.stringify({ name: opts.name || '', id: opts.id || '' }) + '); }\n';
+      } catch(e) {}
+    }
     if (opts && opts.require && Array.isArray(opts.require)) {
       opts.require.forEach(function(r) {
         if (r && r.text) code += '\n' + r.text;

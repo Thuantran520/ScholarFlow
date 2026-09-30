@@ -133,16 +133,28 @@
     }
     var matches = arr(s.matches, 'matches');
     var explicitMatches = matches.slice();
-    // Greasy Fork scripts almost never use @match — they use @include globs
-    // instead (e.g. "https://*.youtube.com/*"). registerContentScripts() only
-    // accepts match patterns, so without this a @include-only script would look
-    // like it had no scope at all and never be registered. Every include that is
-    // already a valid match pattern is therefore promoted; the rest stay in
-    // `includes` and are still honoured by matchesUrl().
-    if (!explicitMatches.length) {
-      explicitMatches = (arr(s.includes, 'includes')).filter(function (x) {
-        return isMatchPattern(x);
+    var includes = arr(s.includes, 'includes');
+    var extractedFromIncludes = [];
+    includes.forEach(function(inc) {
+      var pats = extractMatchPatterns(inc);
+      pats.forEach(function(p) {
+        if (extractedFromIncludes.indexOf(p) === -1) {
+          extractedFromIncludes.push(p);
+        }
       });
+    });
+
+    // Greasy Fork scripts often use @include globs or regexes instead of @match
+    // (e.g. "https://*.youtube.com/*" or "/^https:\/\/([\w-]+\.)?aliexpress\.(ru|us|com)\/*/").
+    // registerContentScripts() only accepts match patterns, so without pattern extraction
+    // a @include-only script would look like it had no scope at all and never be registered.
+    if (!explicitMatches.length) {
+      explicitMatches = extractedFromIncludes.slice();
+    } else if ((explicitMatches.length === 1 && (explicitMatches[0] === '*://*/*' || explicitMatches[0] === '<all_urls>')) && extractedFromIncludes.length) {
+      explicitMatches = extractedFromIncludes.slice();
+      if (matches.indexOf('*://*/*') !== -1 && explicitMatches.indexOf('*://*/*') === -1) {
+        explicitMatches.push('*://*/*');
+      }
     }
     if (!matches.length && explicitMatches.length) matches = explicitMatches.slice();
     if (!matches.length) matches = ['<all_urls>'];
@@ -162,7 +174,7 @@
       excludeMatches: arr(s.excludes, 'excludeMatches').concat(
         Array.isArray(meta.excludes) ? meta.excludes.filter(function (x) { return isMatchPattern(x); }) : []
       ).filter(function (v, i, a) { return a.indexOf(v) === i; }),
-      includes: arr(s.includes, 'includes'),
+      includes: includes,
       excludes: (Array.isArray(s.excludes) ? s.excludes.filter(isGlob) : []).concat(
         Array.isArray(meta.excludes) ? meta.excludes.filter(function (x) { return !isMatchPattern(x); }) : []
       ).filter(function (v, i, a) { return a.indexOf(v) === i; }),
@@ -173,6 +185,50 @@
       updateUrl: s.updateUrl || meta.updateURL || meta.downloadURL || '',
       runAt: normalizeRunAt(s.runAt || meta.runAt)
     };
+  }
+
+  function extractMatchPatterns(v) {
+    var s = String(v == null ? '' : v).trim();
+    if (!s) return [];
+    if (/^(\*|https?|file|ftp):\/\/([^/]+)(\/.*)$/.test(s)) {
+      return [s];
+    }
+    if (/^(\*|https?|file|ftp):\/\/([^/]+)$/.test(s)) {
+      return [s + '/*'];
+    }
+    if (/^http\*:\/\/([^/]+)(\/.*)?$/.test(s)) {
+      var host = RegExp.$1;
+      var path = RegExp.$2 || '/*';
+      return ['*://' + host + (path.charAt(0) === '/' ? path : ('/' + path))];
+    }
+    var globMatch = /^(?:\*:\/\/|\*\.|\*)?([a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)(\/.*|\*)?$/.exec(s);
+    if (globMatch && !s.startsWith('/') && globMatch[1].indexOf('.') !== -1 && globMatch[1].indexOf('*') === -1) {
+      return ['*://*.' + globMatch[1] + '/*'];
+    }
+    if (s.startsWith('/') && (s.endsWith('/') || s.lastIndexOf('/') > 0)) {
+      var lastSlash = s.lastIndexOf('/');
+      var body = s.slice(1, lastSlash);
+      body = body.replace(/^\^https?:?\\\/\\\/?/i, '').replace(/[\$\/].*$/, '');
+      var reGroup = /([a-zA-Z0-9-]+)\\?\.\(([^)]+)\)/.exec(body);
+      if (reGroup) {
+        var base = reGroup[1];
+        var tlds = reGroup[2].split('|').map(function(t) {
+          return t.replace(/\\/g, '').trim();
+        }).filter(Boolean);
+        var res = [];
+        tlds.forEach(function(tld) {
+          if (/^[a-zA-Z0-9.-]+$/.test(tld)) {
+            res.push('*://*.' + base + '.' + tld + '/*');
+          }
+        });
+        if (res.length) return res;
+      }
+      var reSimple = /([a-zA-Z0-9-]+)\\?\.([a-zA-Z]{2,})/.exec(body);
+      if (reSimple && reSimple[1] !== 'w' && reSimple[1] !== 'd') {
+        return ['*://*.' + reSimple[1] + '.' + reSimple[2] + '/*'];
+      }
+    }
+    return [];
   }
 
   function isMatchPattern(v) {
@@ -305,7 +361,8 @@
     var src = String(code == null ? '' : code);
     var gmApiNames = [
       'GM_getValue', 'GM_setValue', 'GM_deleteValue', 'GM_listValues',
-      'GM_addStyle', 'GM_xmlhttpRequest', 'GM_addValueChangeListener',
+      'GM_addStyle', 'GM_addElement', 'GM_getResourceText', 'GM_getResourceURL',
+      'GM_waitForElement', 'GM_xmlhttpRequest', 'GM_addValueChangeListener',
       'GM_removeValueChangeListener', 'GM_setClipboard', 'GM_notification',
       'GM_openInTab', 'GM_registerMenuCommand', 'GM_unregisterMenuCommand',
       'GM_info', 'GM_cookie', 'GM_download', 'GM_log'
@@ -395,7 +452,7 @@
     });
 
     // 4. Handle GM. notation for any remaining GM.* property access
-    src = src.replace(/\bGM\.(getValue|setValue|deleteValue|listValues|addStyle|xmlhttpRequest|addValueChangeListener|removeValueChangeListener|setClipboard|notification|openInTab|registerMenuCommand|unregisterMenuCommand|info|cookie|download|log)\b/g, function(m, method) {
+    src = src.replace(/\bGM\.(getValue|setValue|deleteValue|listValues|addStyle|addElement|getResourceText|getResourceURL|waitForElement|xmlhttpRequest|addValueChangeListener|removeValueChangeListener|setClipboard|notification|openInTab|registerMenuCommand|unregisterMenuCommand|info|cookie|download|log)\b/g, function(m, method) {
       return '_sfGM_' + method;
     });
 
@@ -405,6 +462,7 @@
   globalThis.SF_US_META = {
     parse: parse,
     fieldsOf: fieldsOf,
+    extractMatchPatterns: extractMatchPatterns,
     matchesUrl: matchesUrl,
     patternToRegExp: patternToRegExp,
     globToRegExp: globToRegExp,
