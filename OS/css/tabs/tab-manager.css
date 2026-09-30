@@ -547,6 +547,18 @@
   user-select: none;
 }
 
+.tabmgr-capsule-bound.is-clickable {
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tabmgr-capsule-bound.is-clickable:hover {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.25);
+}
+
 .tabmgr-capsule-track-container {
   position: relative;
   flex: 1;

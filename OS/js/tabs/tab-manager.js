@@ -9,6 +9,7 @@ const TABMGR_GX_LIMITER_KEY = "sf_tabmgr_gx_limiter";
 const DEFAULT_GX_LIMITER = {
   enabled: true,
   limitGB: 4.0,
+  maxScaleGB: 16,
   hardLimit: false,
   sleepTimeout: 15,
   protectAudio: true,
@@ -388,19 +389,55 @@ function tabmgrDiscardTab(tabId) {
 function tabmgrCloseDuplicates() {
   const seen = {};
   const dupIds = [];
-  tabmgrState.tabs.forEach(function (tab) {
-    const u = (tab.url || "").trim();
-    if (!u || u.indexOf("chrome" + "://") === 0 || u.indexOf("about" + ":") === 0) return;
-    if (seen[u]) dupIds.push(tab.id);
-    else seen[u] = true;
+
+  // Sort so active tabs and pinned tabs come first (are preserved)
+  const sorted = tabmgrState.tabs.slice().sort(function (a, b) {
+    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+    if (a.active !== b.active) return a.active ? -1 : 1;
+    return (a.index || 0) - (b.index || 0);
   });
+
+  sorted.forEach(function (tab) {
+    if (!tab || !tab.id) return;
+    if (tab.pinned) return;
+
+    let key;
+    if (_tabmgrIsBlankTab(tab)) {
+      // Group ALL blank and browser new tab pages under one single key
+      key = "__sf_blank_newtab__";
+    } else {
+      const u = (tab.url || "").trim();
+      if (!u) return;
+      // Skip non-blank browser-internal pages (e.g. settings, extensions)
+      if ((u.startsWith("chrome://") || u.startsWith("about:") || u.startsWith("edge://")) && !_tabmgrIsBlankTab(tab)) {
+        return;
+      }
+      key = u.replace(/#.*$/, "").replace(/\/+$/, "").toLowerCase();
+    }
+
+    if (seen[key]) {
+      dupIds.push(tab.id);
+    } else {
+      seen[key] = true;
+    }
+  });
+
   if (dupIds.length === 0) { showToast(t("tabmgr_toast_no_dup")); return; }
   const api = _getTabsApi();
   if (!api || !api.remove) return;
   try {
     const p = api.remove(dupIds);
-    if (p && typeof p.then === "function") p.then(function () { tabmgrLoadTabs(); showToast(t("tabmgr_toast_dup_closed").replace("{0}", String(dupIds.length))); }).catch(function () {});
-    else api.remove(dupIds, function () { tabmgrLoadTabs(); showToast(t("tabmgr_toast_dup_closed").replace("{0}", String(dupIds.length))); });
+    if (p && typeof p.then === "function") {
+      p.then(function () {
+        tabmgrLoadTabs();
+        showToast(t("tabmgr_toast_dup_closed").replace("{0}", String(dupIds.length)));
+      }).catch(function () {});
+    } else {
+      api.remove(dupIds, function () {
+        tabmgrLoadTabs();
+        showToast(t("tabmgr_toast_dup_closed").replace("{0}", String(dupIds.length)));
+      });
+    }
   } catch (e) {}
 }
 function tabmgrBookmarkAll() {
@@ -477,17 +514,24 @@ function _tabmgrUpdateGxMeter() {
   if (bodyEl) bodyEl.style.display = isEnabled ? "flex" : "none";
 
   const totalMB = _tabmgrComputeRamEstimate();
-  const totalGB = (totalMB / 1024).toFixed(1);
-  const limitGB = (tabmgrGxLimiter.limitGB || 4.0).toFixed(1);
+  const totalGB = totalMB / 1024;
+  const limitGB = tabmgrGxLimiter.limitGB || 4.0;
 
-  if (usageValEl) usageValEl.textContent = totalGB + " / " + limitGB + " GB";
-  if (sliderValEl) sliderValEl.textContent = limitGB + " GB";
+  let formattedDisplay;
+  if (limitGB >= 1024) {
+    formattedDisplay = (totalGB / 1024).toFixed(2) + " / " + (limitGB / 1024).toFixed(1) + " TB";
+  } else {
+    formattedDisplay = totalGB.toFixed(1) + " / " + limitGB.toFixed(1) + " GB";
+  }
+
+  if (usageValEl) usageValEl.textContent = formattedDisplay;
+  if (sliderValEl) sliderValEl.textContent = _tabmgrFormatRam(limitGB);
   if (sliderEl && document.activeElement !== sliderEl) sliderEl.value = tabmgrGxLimiter.limitGB;
   if (toggleEl) toggleEl.checked = isEnabled;
   if (hardLimitEl) hardLimitEl.checked = !!tabmgrGxLimiter.hardLimit;
   if (timeoutEl) timeoutEl.value = String(tabmgrGxLimiter.sleepTimeout);
 
-  const pct = Math.min(100, Math.max(0, Math.round((totalMB / (tabmgrGxLimiter.limitGB * 1024)) * 100)));
+  const pct = Math.min(100, Math.max(0, Math.round((totalMB / (limitGB * 1024)) * 100)));
 
   if (sliderEl) {
     _tabmgrUpdateSliderCapsule(sliderEl);
@@ -530,6 +574,52 @@ function _tabmgrUpdateGxMeter() {
   }
 }
 
+const RAM_SCALE_TIERS = [16, 32, 64, 128, 1024];
+
+function _tabmgrFormatRam(gbVal) {
+  const n = parseFloat(gbVal);
+  if (isNaN(n) || n <= 0) return "0.0 GB";
+  if (n >= 1024) {
+    const tb = n / 1024;
+    return tb.toFixed(1) + " TB";
+  }
+  return n.toFixed(1) + " GB";
+}
+
+function _tabmgrFormatRamBound(gbVal) {
+  const n = parseFloat(gbVal);
+  if (isNaN(n) || n <= 0) return "0 GB";
+  if (n >= 1024) {
+    const tb = n / 1024;
+    return (tb % 1 === 0 ? tb.toFixed(0) : tb.toFixed(1)) + " TB";
+  }
+  return Math.round(n) + " GB";
+}
+
+function _tabmgrGetPresetsForMax(maxGB) {
+  if (maxGB >= 1024) return [64, 128, 256, 512, 1024];
+  if (maxGB >= 128) return [16, 32, 64, 96, 128];
+  if (maxGB >= 64) return [8, 16, 32, 48, 64];
+  if (maxGB >= 32) return [4, 8, 16, 24, 32];
+  return [2, 4, 8, 12, 16];
+}
+
+function _tabmgrRenderPresets(maxGB) {
+  const presetVals = _tabmgrGetPresetsForMax(maxGB);
+  const rows = document.querySelectorAll(".tabmgr-gx-presets-row");
+  rows.forEach(function (row) {
+    const btns = row.querySelectorAll(".tabmgr-gx-preset-btn");
+    btns.forEach(function (btn, idx) {
+      if (idx < presetVals.length) {
+        const v = presetVals[idx];
+        btn.setAttribute("data-val", String(v));
+        btn.textContent = _tabmgrFormatRamBound(v);
+        btn.classList.toggle("is-active", Math.abs(v - (tabmgrGxLimiter.limitGB || 4.0)) < 0.1);
+      }
+    });
+  });
+}
+
 function _tabmgrUpdateSliderCapsule(el) {
   if (!el) return;
   const min = parseFloat(el.min) || 1;
@@ -545,7 +635,7 @@ function _tabmgrUpdateSliderCapsule(el) {
     thumbEl.style.left = ratio.toFixed(1) + "%";
     thumbEl.style.transform = "translate(-" + ratio.toFixed(1) + "%, -50%)";
   }
-  if (valEl) valEl.textContent = val.toFixed(1) + " GB";
+  if (valEl) valEl.textContent = _tabmgrFormatRam(val);
 
   const container = document.getElementById("tabmgr-gx-card");
   if (container) {
@@ -573,18 +663,63 @@ function _tabmgrInitGxLimiter() {
       tabmgrGxLimiter = Object.assign({}, DEFAULT_GX_LIMITER, res[TABMGR_GX_LIMITER_KEY]);
     }
     const sliderEl = document.getElementById("tabmgr-gx-slider");
-    if (sliderEl) {
-      if (typeof navigator !== "undefined" && navigator.deviceMemory) {
-        const sysMem = Math.max(4, Math.min(32, Math.round(navigator.deviceMemory * 2)));
-        sliderEl.max = String(sysMem);
-        const maxBound = document.getElementById("tabmgr-gx-slider-max-bound");
-        if (maxBound) maxBound.textContent = sysMem + " GB";
+    const maxBound = document.getElementById("tabmgr-gx-slider-max-bound");
+    let targetMax = tabmgrGxLimiter.maxScaleGB || 16;
+
+    if (!tabmgrGxLimiter.maxScaleGB && typeof navigator !== "undefined" && navigator.deviceMemory) {
+      const devMem = navigator.deviceMemory;
+      targetMax = Math.max(16, Math.min(32, Math.round(devMem * 2)));
+    }
+    if (tabmgrGxLimiter.limitGB > targetMax) {
+      for (let i = 0; i < RAM_SCALE_TIERS.length; i++) {
+        if (RAM_SCALE_TIERS[i] >= tabmgrGxLimiter.limitGB) {
+          targetMax = RAM_SCALE_TIERS[i];
+          break;
+        }
       }
+    }
+
+    if (sliderEl) {
+      sliderEl.max = String(targetMax);
+      sliderEl.step = targetMax >= 1024 ? "8" : (targetMax >= 64 ? "1" : "0.5");
       sliderEl.value = tabmgrGxLimiter.limitGB;
       _tabmgrUpdateSliderTrack(sliderEl);
     }
+    if (maxBound) {
+      maxBound.textContent = _tabmgrFormatRamBound(targetMax);
+    }
+    _tabmgrRenderPresets(targetMax);
     _tabmgrUpdateGxMeter();
   });
+
+  const maxBound = document.getElementById("tabmgr-gx-slider-max-bound");
+  if (maxBound) {
+    maxBound.addEventListener("click", function () {
+      const sliderEl = document.getElementById("tabmgr-gx-slider");
+      if (!sliderEl) return;
+      const curMax = parseFloat(sliderEl.max) || 16;
+      let nextIdx = 0;
+      for (let i = 0; i < RAM_SCALE_TIERS.length; i++) {
+        if (RAM_SCALE_TIERS[i] > curMax + 0.1) {
+          nextIdx = i;
+          break;
+        }
+      }
+      const newMax = RAM_SCALE_TIERS[nextIdx];
+      sliderEl.max = String(newMax);
+      sliderEl.step = newMax >= 1024 ? "8" : (newMax >= 64 ? "1" : "0.5");
+      if (tabmgrGxLimiter.limitGB > newMax) {
+        tabmgrGxLimiter.limitGB = newMax;
+      }
+      tabmgrGxLimiter.maxScaleGB = newMax;
+      _tabmgrSaveGxLimiter();
+      maxBound.textContent = _tabmgrFormatRamBound(newMax);
+      _tabmgrRenderPresets(newMax);
+      _tabmgrUpdateSliderCapsule(sliderEl);
+      _tabmgrUpdateGxMeter();
+      showToast(t("tabmgr_gx_scale_tip"));
+    });
+  }
 
   const toggleEl = document.getElementById("tabmgr-gx-limiter-toggle");
   if (toggleEl) {
@@ -601,7 +736,7 @@ function _tabmgrInitGxLimiter() {
       const val = parseFloat(sliderEl.value);
       tabmgrGxLimiter.limitGB = val;
       const sliderValEl = document.getElementById("tabmgr-gx-slider-val");
-      if (sliderValEl) sliderValEl.textContent = val.toFixed(1) + " GB";
+      if (sliderValEl) sliderValEl.textContent = _tabmgrFormatRam(val);
       _tabmgrUpdateSliderTrack(sliderEl);
       _tabmgrUpdateGxMeter();
     });
@@ -626,7 +761,7 @@ function _tabmgrInitGxLimiter() {
             _tabmgrUpdateSliderTrack(sEl);
           }
           const sValEl = document.getElementById("tabmgr-gx-slider-val");
-          if (sValEl) sValEl.textContent = val.toFixed(1) + " GB";
+          if (sValEl) sValEl.textContent = _tabmgrFormatRam(val);
           _tabmgrSaveGxLimiter();
           _tabmgrUpdateGxMeter();
           _tabmgrCheckRamEnforcement();
