@@ -47,6 +47,11 @@ var _sfGM_listValues = typeof GM_listValues === 'function' ? GM_listValues : fun
 var _sfGM_addStyle = typeof GM_addStyle === 'function' ? GM_addStyle : function(css) {
   var style = document.createElement('style');
   style.textContent = css;
+  try {
+    var nonceEl = document.querySelector('style[nonce], script[nonce]');
+    var nonce = (nonceEl && (nonceEl.nonce || nonceEl.getAttribute('nonce'))) || '';
+    if (nonce) style.setAttribute('nonce', nonce);
+  } catch(e) {}
   (document.head || document.documentElement).appendChild(style);
   return style;
 };

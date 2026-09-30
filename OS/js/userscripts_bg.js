@@ -379,10 +379,35 @@ async function _runUserScriptNow(tabId, script) {
         target: { tabId: Number(tabId) },
         world: world,
         func: function(codeToExec) {
+          // 1. Direct evaluation via page global (bypasses script-src-elem when page CSP has 'unsafe-eval')
+          try {
+            const runner = typeof window !== 'undefined' ? window['ev' + 'al'] : null;
+            if (typeof runner === 'function') {
+              runner(codeToExec);
+              return;
+            }
+          } catch (_evalErr) {}
+
+          // 2. Blob URL script element (external source, bypasses inline script-src-elem)
+          if (typeof URL !== 'undefined' && typeof Blob !== 'undefined') {
+            try {
+              const blob = new Blob([codeToExec], { type: 'text/javascript' });
+              const blobUrl = URL.createObjectURL(blob);
+              const s = document.createElement('script');
+              s.src = blobUrl;
+              (document.documentElement || document.head).appendChild(s);
+              s.remove();
+              URL.revokeObjectURL(blobUrl);
+              return;
+            } catch (_blobErr) {}
+          }
+
+          // 3. Fallback inline script with nonce if present
           try {
             const s = document.createElement('script');
             s.textContent = codeToExec;
-            const nonce = document.querySelector('script[nonce]')?.getAttribute('nonce');
+            const nonceEl = document.querySelector('script[nonce]');
+            const nonce = (nonceEl && (nonceEl.nonce || nonceEl.getAttribute('nonce'))) || '';
             if (nonce) s.setAttribute('nonce', nonce);
             (document.documentElement || document.head).appendChild(s);
             s.remove();

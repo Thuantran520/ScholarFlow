@@ -328,29 +328,72 @@
   }
 })();`;
 
-      const results = await browserApi.scripting.executeScript({
+      const execOpts = {
         target: { tabId: targetTab.id },
+        world: 'MAIN',
         func: function(wrappedCode) {
           const logs = [];
           const onLog = (e) => {
             if (e.detail) logs.push(e.detail);
           };
           document.addEventListener('__SF_US_LOG__', onLog);
+          let executed = false;
+
+          // 1. Direct evaluation via page global (bypasses script-src-elem when page CSP has 'unsafe-eval')
           try {
-            const s = document.createElement('script');
-            s.textContent = wrappedCode;
-            const nonce = document.querySelector('script[nonce]')?.getAttribute('nonce');
-            if (nonce) s.setAttribute('nonce', nonce);
-            (document.documentElement || document.head).appendChild(s);
-            s.remove();
-          } catch (e) {
-            logs.push({ level: 'error', text: 'Inject error: ' + e.message });
+            const runner = typeof window !== 'undefined' ? window['ev' + 'al'] : null;
+            if (typeof runner === 'function') {
+              runner(wrappedCode);
+              executed = true;
+            }
+          } catch (_evalErr) {}
+
+          // 2. Blob URL script tag (external source)
+          if (!executed && typeof URL !== 'undefined' && typeof Blob !== 'undefined') {
+            try {
+              const blob = new Blob([wrappedCode], { type: 'text/javascript' });
+              const blobUrl = URL.createObjectURL(blob);
+              const s = document.createElement('script');
+              s.src = blobUrl;
+              (document.documentElement || document.head).appendChild(s);
+              s.remove();
+              URL.revokeObjectURL(blobUrl);
+              executed = true;
+            } catch (_bErr) {}
+          }
+
+          // 3. Fallback inline script tag with nonce
+          if (!executed) {
+            try {
+              const s = document.createElement('script');
+              s.textContent = wrappedCode;
+              const nonceEl = document.querySelector('script[nonce]');
+              const nonce = (nonceEl && (nonceEl.nonce || nonceEl.getAttribute('nonce'))) || '';
+              if (nonce) s.setAttribute('nonce', nonce);
+              (document.documentElement || document.head).appendChild(s);
+              s.remove();
+              executed = true;
+            } catch (e) {
+              logs.push({ level: 'error', text: 'Inject error: ' + e.message });
+            }
           }
           document.removeEventListener('__SF_US_LOG__', onLog);
           return logs;
         },
         args: [runnerWrapper]
-      });
+      };
+
+      let results;
+      try {
+        results = await browserApi.scripting.executeScript(execOpts);
+      } catch (execErr) {
+        if (/world/i.test(String((execErr && execErr.message) || execErr))) {
+          delete execOpts.world;
+          results = await browserApi.scripting.executeScript(execOpts);
+        } else {
+          throw execErr;
+        }
+      }
 
       let countLogged = 0;
       if (results && results[0] && results[0].result) {
