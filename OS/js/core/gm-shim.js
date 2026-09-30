@@ -202,6 +202,21 @@ try {
   _sfSafeDefine('GM_setClipboard', _sfGM_setClipboard);
   _sfSafeDefine('GM_notification', _sfGM_notification);
   _sfSafeDefine('GM_openInTab', _sfGM_openInTab);
+
+  // Expose internal _sfGM_* functions globally so sanitized user script code
+  // (which calls _sfGM_addStyle, _sfGM_getValue, etc.) can resolve them.
+  // The sanitizer rewrites GM_addStyle -> _sfGM_addStyle, etc.
+  window._sfGM_getValue = _sfGM_getValue;
+  window._sfGM_setValue = _sfGM_setValue;
+  window._sfGM_deleteValue = _sfGM_deleteValue;
+  window._sfGM_listValues = _sfGM_listValues;
+  window._sfGM_addStyle = _sfGM_addStyle;
+  window._sfGM_xmlhttpRequest = _sfGM_xmlhttpRequest;
+  window._sfGM_addValueChangeListener = _sfGM_addValueChangeListener;
+  window._sfGM_removeValueChangeListener = _sfGM_removeValueChangeListener;
+  window._sfGM_setClipboard = _sfGM_setClipboard;
+  window._sfGM_notification = _sfGM_notification;
+  window._sfGM_openInTab = _sfGM_openInTab;
 } catch(e) {}
 `;
 
