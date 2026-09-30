@@ -139,6 +139,202 @@
   border-color: rgba(255, 255, 255, 0.12);
 }
 
+/* GX Control: RAM Limiter & Smart Tab Sleeper */
+.tabmgr-gx-card {
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tabmgr-gx-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tabmgr-gx-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #38bdf8;
+}
+
+.tabmgr-gx-badge svg {
+  flex-shrink: 0;
+  stroke: #38bdf8;
+}
+
+.tabmgr-gx-meter-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tabmgr-gx-meter-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10.5px;
+  color: #94a3b8;
+}
+
+.tabmgr-gx-meter-val {
+  font-weight: 700;
+  color: #e2e8f0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.tabmgr-gx-bar-bg {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  position: relative;
+}
+
+.tabmgr-gx-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #38bdf8, #818cf8);
+  transition: width 0.3s ease, background 0.3s ease;
+}
+
+.tabmgr-gx-bar-fill.is-warning {
+  background: linear-gradient(90deg, #fbbf24, #f59e0b);
+}
+
+.tabmgr-gx-bar-fill.is-danger {
+  background: linear-gradient(90deg, #f87171, #ef4444);
+}
+
+.tabmgr-gx-slider-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tabmgr-gx-slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10.5px;
+  color: #94a3b8;
+}
+
+.tabmgr-gx-highlight {
+  color: #38bdf8;
+  font-weight: 700;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.tabmgr-gx-range {
+  width: 100%;
+  height: 5px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+
+.tabmgr-gx-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #38bdf8;
+  cursor: pointer;
+  border: 2px solid #0f172a;
+  box-shadow: 0 0 6px rgba(56, 189, 248, 0.5);
+  transition: transform 0.1s ease;
+}
+
+.tabmgr-gx-range::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.tabmgr-gx-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #38bdf8;
+  cursor: pointer;
+  border: 2px solid #0f172a;
+  box-shadow: 0 0 6px rgba(56, 189, 248, 0.5);
+}
+
+.tabmgr-gx-options-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.tabmgr-gx-check-lbl {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  color: #cbd5e1;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tabmgr-gx-check-lbl input[type="checkbox"] {
+  accent-color: #38bdf8;
+  cursor: pointer;
+}
+
+.tabmgr-gx-select {
+  font-size: 10.5px;
+  padding: 4px 8px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+  color: #cbd5e1;
+  cursor: pointer;
+  outline: none;
+}
+
+.tabmgr-gx-select:focus {
+  border-color: #38bdf8;
+}
+
+.tabmgr-gx-protect-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.tabmgr-gx-protect-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9.5px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.15);
+  color: #7dd3fc;
+  cursor: default;
+}
+
+.tabmgr-gx-protect-tag svg {
+  flex-shrink: 0;
+}
+
 /* Controls row */
 .tabmgr-control-row {
   display: flex;

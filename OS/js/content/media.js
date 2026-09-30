@@ -561,14 +561,22 @@
     return null;
   }
 
+  let _lastPrevClickStamp = 0;
+
+  function _dispatchPrevShortcut(rootDoc) {
+    try {
+      const target = rootDoc.activeElement || rootDoc.body || rootDoc.documentElement;
+      const opts = { key: "P", code: "KeyP", keyCode: 80, which: 80, shiftKey: true, bubbles: true, cancelable: true };
+      target.dispatchEvent(new KeyboardEvent("keydown", opts));
+      target.dispatchEvent(new KeyboardEvent("keypress", opts));
+      target.dispatchEvent(new KeyboardEvent("keyup", opts));
+      return true;
+    } catch (e) { return false; }
+  }
+
   function _skip(dir) {
     const el = _getActive();
     const rootDoc = (el && el.ownerDocument) || document;
-    // A control YouTube keeps RENDERED but DISABLED (e.g. .ytp-prev-button on a
-    // video with no previous) is a no-op when clicked, yet _skipFind still finds
-    // it — clicking it and returning is exactly what made "previous" look dead
-    // until the tab was re-focused. Treat a disabled control as absent so we fall
-    // through to the queue/restart path.
     const _enabled = function (n) {
       if (!n) return false;
       try { if (n.disabled === true) return false; } catch (e) {}
@@ -576,30 +584,78 @@
       try { if (n.classList && (n.classList.contains("disabled") || n.classList.contains("ytp-button-disabled"))) return false; } catch (e) {}
       return true;
     };
-    // Prefer the site's OWN previous/next control: on any page that exposes one,
-    // "Previous" truly steps back to the previous video/track instead of just
-    // restarting the current one (the site itself applies any restart-gate). Only
-    // when no such control exists do we fall back to a local restart-to-start.
-    const btn = el ? _skipFind(el, dir > 0 ? 1 : -1) : null;
-    if (btn && _enabled(btn) && typeof btn.click === "function") {
-      try { btn.click(); } catch (e) {}
-      return getState();
-    }
-    // YouTube-specific: no (enabled) prev control in the player, so click the
-    // previous item in the visible queue/playlist (if one exists) — a real
-    // "previous video".
-    if (el && dir < 0) {
-      const yp = _ytPreviousItem(rootDoc);
-      if (yp && typeof yp.click === "function") {
-        try { yp.click(); } catch (e) {}
+
+    if (dir > 0) {
+      // Forward / Next track
+      const btnNext = el ? _skipFind(el, 1) : null;
+      if (btnNext && _enabled(btnNext) && typeof btnNext.click === "function") {
+        try { btnNext.click(); } catch (e) {}
         return getState();
       }
-    }
-    if (el && dir < 0) {
-      const ct = _num(el.currentTime);
-      if (ct > _PREV_RESTART_SECONDS) {
-        try { el.currentTime = 0; } catch (e) {}
+      // YouTube fallback shortcut Shift+N
+      if (/youtube\.com/i.test(location.hostname)) {
+        try {
+          const t = rootDoc.activeElement || rootDoc.body || rootDoc.documentElement;
+          t.dispatchEvent(new KeyboardEvent("keydown", { key: "N", code: "KeyN", keyCode: 78, which: 78, shiftKey: true, bubbles: true }));
+          t.dispatchEvent(new KeyboardEvent("keyup", { key: "N", code: "KeyN", keyCode: 78, which: 78, shiftKey: true, bubbles: true }));
+        } catch (e) {}
       }
+      return getState();
+    }
+
+    // dir < 0: Backward / Previous track
+    const now = Date.now();
+    const isRapidRepeat = (now - _lastPrevClickStamp < 2500);
+    _lastPrevClickStamp = now;
+    const ct = el ? _num(el.currentTime) : 0;
+
+    // Standard player UX:
+    // If current video has played past restart window and this is the FIRST click,
+    // rewind to 0s (same as Spotify/YouTube/VLC).
+    if (el && ct > _PREV_RESTART_SECONDS && !isRapidRepeat) {
+      try { el.currentTime = 0; } catch (e) {}
+      return getState();
+    }
+
+    // Second click (within 2.5s) OR clicking when already near start (<= 3s):
+    // Actively navigate to the PREVIOUS video/track!
+    // 1. Try finding in-page previous track button
+    const btnPrev = el ? _skipFind(el, -1) : null;
+    if (btnPrev && _enabled(btnPrev) && typeof btnPrev.click === "function") {
+      try { btnPrev.click(); } catch (e) {}
+      return getState();
+    }
+
+    // 2. YouTube-specific previous item in visible queue/playlist
+    const yp = _ytPreviousItem(rootDoc);
+    if (yp && typeof yp.click === "function") {
+      try { yp.click(); } catch (e) {}
+      return getState();
+    }
+
+    // 3. YouTube Shift+P shortcut (native shortcut for previous video)
+    if (/youtube\.com/i.test(location.hostname)) {
+      _dispatchPrevShortcut(rootDoc);
+      // If history exists and Shift+P didn't navigate, allow history.back
+      if (window.history && window.history.length > 1) {
+        setTimeout(function () {
+          if (el && _num(el.currentTime) <= 1 && window.history.length > 1) {
+            try { window.history.back(); } catch (e) {}
+          }
+        }, 300);
+      }
+      return getState();
+    }
+
+    // 4. Try browser history back if previous video was on this domain
+    if (window.history && window.history.length > 1) {
+      try { window.history.back(); } catch (e) {}
+      return getState();
+    }
+
+    // 5. Fallback: reset to start
+    if (el) {
+      try { el.currentTime = 0; } catch (e) {}
     }
     return getState();
   }

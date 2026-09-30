@@ -5,6 +5,17 @@
 // ---------------------------------------------------------------------------
 let tabmgrState = { tabs: [], filter: "", sort: "title_asc", groupMode: "none", collapsed: {} };
 let tabmgrSessions = [];
+const TABMGR_GX_LIMITER_KEY = "sf_tabmgr_gx_limiter";
+const DEFAULT_GX_LIMITER = {
+  enabled: true,
+  limitGB: 4.0,
+  hardLimit: false,
+  sleepTimeout: 15,
+  protectAudio: true,
+  protectPinned: true,
+  protectActive: true
+};
+let tabmgrGxLimiter = Object.assign({}, DEFAULT_GX_LIMITER);
 
 function _getTabsApi() {
   try {
@@ -130,6 +141,7 @@ function tabmgrRenderList() {
     tabmgrState.tabs.forEach(function (t) { domains[_tabmgrDomain(t.url || "")] = true; });
     domainBadge.textContent = String(Object.keys(domains).length);
   }
+  _tabmgrUpdateGxMeter();
   if (!list) return;
   while (list.firstChild) list.removeChild(list.firstChild);
   const res = _tabmgrSortedFiltered();
@@ -429,11 +441,192 @@ function tabmgrDiscardAll() {
   });
   if (done === 0) setTimeout(function () { tabmgrLoadTabs(); }, 500);
 }
+function _tabmgrComputeRamEstimate() {
+  let totalMB = 350;
+  (tabmgrState.tabs || []).forEach(function (tab) {
+    if (tab.discarded) {
+      totalMB += 10;
+    } else if (tab.audible || _tabmgrFuncGroup(tab) === "video") {
+      totalMB += 260;
+    } else if (_tabmgrFuncGroup(tab) === "academic" || _tabmgrFuncGroup(tab) === "docs" || _tabmgrFuncGroup(tab) === "code") {
+      totalMB += 160;
+    } else {
+      totalMB += 95;
+    }
+  });
+  return totalMB;
+}
+
+function _tabmgrUpdateGxMeter() {
+  const usageValEl = document.getElementById("tabmgr-gx-usage-val");
+  const barFillEl = document.getElementById("tabmgr-gx-bar-fill");
+  const sliderValEl = document.getElementById("tabmgr-gx-slider-val");
+  const sliderEl = document.getElementById("tabmgr-gx-slider");
+  const toggleEl = document.getElementById("tabmgr-gx-limiter-toggle");
+  const hardLimitEl = document.getElementById("tabmgr-gx-hard-limit");
+  const timeoutEl = document.getElementById("tabmgr-gx-sleep-timeout");
+
+  const totalMB = _tabmgrComputeRamEstimate();
+  const totalGB = (totalMB / 1024).toFixed(1);
+  const limitGB = (tabmgrGxLimiter.limitGB || 4.0).toFixed(1);
+
+  if (usageValEl) usageValEl.textContent = totalGB + " / " + limitGB + " GB";
+  if (sliderValEl) sliderValEl.textContent = limitGB + " GB";
+  if (sliderEl && document.activeElement !== sliderEl) sliderEl.value = tabmgrGxLimiter.limitGB;
+  if (toggleEl) toggleEl.checked = !!tabmgrGxLimiter.enabled;
+  if (hardLimitEl) hardLimitEl.checked = !!tabmgrGxLimiter.hardLimit;
+  if (timeoutEl) timeoutEl.value = String(tabmgrGxLimiter.sleepTimeout);
+
+  if (barFillEl) {
+    const pct = Math.min(100, Math.max(0, Math.round((totalMB / (tabmgrGxLimiter.limitGB * 1024)) * 100)));
+    barFillEl.style.width = pct + "%";
+    barFillEl.classList.toggle("is-warning", pct >= 75 && pct < 90);
+    barFillEl.classList.toggle("is-danger", pct >= 90);
+  }
+}
+
+function _tabmgrSaveGxLimiter() {
+  const obj = {};
+  obj[TABMGR_GX_LIMITER_KEY] = tabmgrGxLimiter;
+  storSet(obj);
+}
+
+function _tabmgrInitGxLimiter() {
+  storGet([TABMGR_GX_LIMITER_KEY], function (res) {
+    if (res && res[TABMGR_GX_LIMITER_KEY]) {
+      tabmgrGxLimiter = Object.assign({}, DEFAULT_GX_LIMITER, res[TABMGR_GX_LIMITER_KEY]);
+    }
+    const sliderEl = document.getElementById("tabmgr-gx-slider");
+    if (sliderEl) {
+      if (typeof navigator !== "undefined" && navigator.deviceMemory) {
+        const sysMem = Math.max(4, Math.min(32, Math.round(navigator.deviceMemory * 2)));
+        sliderEl.max = String(sysMem);
+      }
+      sliderEl.value = tabmgrGxLimiter.limitGB;
+    }
+    _tabmgrUpdateGxMeter();
+  });
+
+  const toggleEl = document.getElementById("tabmgr-gx-limiter-toggle");
+  if (toggleEl) {
+    toggleEl.addEventListener("change", function () {
+      tabmgrGxLimiter.enabled = toggleEl.checked;
+      _tabmgrSaveGxLimiter();
+      _tabmgrUpdateGxMeter();
+    });
+  }
+
+  const sliderEl = document.getElementById("tabmgr-gx-slider");
+  if (sliderEl) {
+    sliderEl.addEventListener("input", function () {
+      const val = parseFloat(sliderEl.value);
+      tabmgrGxLimiter.limitGB = val;
+      const sliderValEl = document.getElementById("tabmgr-gx-slider-val");
+      if (sliderValEl) sliderValEl.textContent = val.toFixed(1) + " GB";
+      _tabmgrUpdateGxMeter();
+    });
+    sliderEl.addEventListener("change", function () {
+      tabmgrGxLimiter.limitGB = parseFloat(sliderEl.value);
+      _tabmgrSaveGxLimiter();
+      _tabmgrCheckRamEnforcement();
+    });
+  }
+
+  const hardLimitEl = document.getElementById("tabmgr-gx-hard-limit");
+  if (hardLimitEl) {
+    hardLimitEl.addEventListener("change", function () {
+      tabmgrGxLimiter.hardLimit = hardLimitEl.checked;
+      _tabmgrSaveGxLimiter();
+      _tabmgrCheckRamEnforcement();
+    });
+  }
+
+  const timeoutEl = document.getElementById("tabmgr-gx-sleep-timeout");
+  if (timeoutEl) {
+    timeoutEl.addEventListener("change", function () {
+      tabmgrGxLimiter.sleepTimeout = parseInt(timeoutEl.value, 10) || 0;
+      _tabmgrSaveGxLimiter();
+      _tabmgrCheckRamEnforcement();
+    });
+  }
+
+  const wakeAllBtn = document.getElementById("btn-tabmgr-wake-all");
+  if (wakeAllBtn) wakeAllBtn.addEventListener("click", tabmgrWakeAll);
+}
+
+function _tabmgrCheckRamEnforcement() {
+  if (!tabmgrGxLimiter.enabled) return;
+  const api = _getTabsApi();
+  if (!api || !api.discard) return;
+
+  const totalMB = _tabmgrComputeRamEstimate();
+  const limitMB = tabmgrGxLimiter.limitGB * 1024;
+
+  // 1. Hard Limit enforcement: If RAM usage exceeds limit, sleep LRU tabs until within bounds
+  if (tabmgrGxLimiter.hardLimit && totalMB > limitMB) {
+    const candidates = tabmgrState.tabs.filter(function (t) {
+      if (t.discarded) return false;
+      if (tabmgrGxLimiter.protectActive && t.active) return false;
+      if (tabmgrGxLimiter.protectPinned && t.pinned) return false;
+      if (tabmgrGxLimiter.protectAudio && (t.audible || _tabmgrFuncGroup(t) === "video")) return false;
+      return true;
+    });
+    candidates.sort(function (a, b) {
+      return (a.lastAccessed || 0) - (b.lastAccessed || 0);
+    });
+
+    let excessMB = totalMB - limitMB;
+    let freedCount = 0;
+    for (let i = 0; i < candidates.length && excessMB > 0; i++) {
+      const c = candidates[i];
+      try {
+        api.discard(c.id);
+        freedCount++;
+        excessMB -= 75;
+      } catch (e) {}
+    }
+    if (freedCount > 0) {
+      setTimeout(function () { tabmgrLoadTabs(); }, 400);
+    }
+  }
+
+  // 2. Idle Timeout enforcement: auto-sleep inactive tabs older than sleepTimeout
+  if (tabmgrGxLimiter.sleepTimeout > 0) {
+    const idleThresholdMs = tabmgrGxLimiter.sleepTimeout * 60 * 1000;
+    const now = Date.now();
+    let idleFreed = 0;
+    tabmgrState.tabs.forEach(function (t) {
+      if (t.discarded) return;
+      if (tabmgrGxLimiter.protectActive && t.active) return;
+      if (tabmgrGxLimiter.protectPinned && t.pinned) return;
+      if (tabmgrGxLimiter.protectAudio && (t.audible || _tabmgrFuncGroup(t) === "video")) return;
+      if (t.lastAccessed && (now - t.lastAccessed > idleThresholdMs)) {
+        try {
+          api.discard(t.id);
+          idleFreed++;
+        } catch (e) {}
+      }
+    });
+    if (idleFreed > 0) {
+      setTimeout(function () { tabmgrLoadTabs(); }, 400);
+    }
+  }
+}
+
 function tabmgrOptimizeRam() {
   const api = _getTabsApi();
   if (!api || !api.discard) { showToast(t("tabmgr_toast_no_discard_api")); return; }
-  const candidates = tabmgrState.tabs.filter(function (t) { return !t.active && !t.pinned && !t.discarded; });
+  const candidates = tabmgrState.tabs.filter(function (t) {
+    if (t.discarded) return false;
+    if (tabmgrGxLimiter.protectActive && t.active) return false;
+    if (tabmgrGxLimiter.protectPinned && t.pinned) return false;
+    if (tabmgrGxLimiter.protectAudio && (t.audible || _tabmgrFuncGroup(t) === "video")) return false;
+    return true;
+  });
   if (candidates.length === 0) { showToast(t("tabmgr_toast_no_discard")); return; }
+  candidates.sort(function (a, b) {
+    return (a.lastAccessed || 0) - (b.lastAccessed || 0);
+  });
   let done = 0;
   candidates.forEach(function (tab) {
     try {
@@ -454,6 +647,40 @@ function tabmgrOptimizeRam() {
             tabmgrLoadTabs();
             const freedMB = done * 40;
             showToast(t("tabmgr_toast_ram_freed").replace("{0}", String(done)).replace("{1}", String(freedMB)));
+          }
+        });
+      }
+    } catch (e) {}
+  });
+  if (done === 0) setTimeout(function () { tabmgrLoadTabs(); }, 500);
+}
+
+function tabmgrWakeAll() {
+  const api = _getTabsApi();
+  if (!api || !api.reload) return;
+  const sleepingTabs = tabmgrState.tabs.filter(function (t) { return t.discarded; });
+  if (sleepingTabs.length === 0) {
+    showToast(t("tabmgr_toast_no_wake"));
+    return;
+  }
+  let done = 0;
+  sleepingTabs.forEach(function (tab) {
+    try {
+      const p = api.reload(tab.id);
+      if (p && typeof p.then === "function") {
+        p.then(function () {
+          done++;
+          if (done === sleepingTabs.length) {
+            tabmgrLoadTabs();
+            showToast(t("tabmgr_toast_wake_all").replace("{0}", String(done)));
+          }
+        }).catch(function () {});
+      } else {
+        api.reload(tab.id, function () {
+          done++;
+          if (done === sleepingTabs.length) {
+            tabmgrLoadTabs();
+            showToast(t("tabmgr_toast_wake_all").replace("{0}", String(done)));
           }
         });
       }
@@ -2470,14 +2697,15 @@ onReady(function () {
   const btnGroupBrowser = document.getElementById("btn-tabmgr-group-browser");
   if (btnGroupBrowser) btnGroupBrowser.addEventListener("click", tabmgrGroupInBrowser);
   // refresh active-tab display rides on tabmgrRenderList itself (no dedicated hook)
+  _tabmgrInitGxLimiter();
   tabmgrLoadTabs();
   tabmgrLoadSessions();
-  document.addEventListener("visibilitychange", function () { if (!document.hidden) { tabmgrLoadTabs(); tabmgrMediaRefresh(); } });
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) { tabmgrLoadTabs(); tabmgrMediaRefresh(); _tabmgrCheckRamEnforcement(); } });
   // Debounced event refresh: onUpdated fires many times per page-load; coalesce bursts.
   let _tabmgrEvT = null;
   function _tabmgrEventRefresh() {
     if (_tabmgrEvT) return;
-    _tabmgrEvT = setTimeout(function () { _tabmgrEvT = null; tabmgrLoadTabs(); _tabmgrMediaEventRefresh(); }, 200);
+    _tabmgrEvT = setTimeout(function () { _tabmgrEvT = null; tabmgrLoadTabs(); _tabmgrMediaEventRefresh(); _tabmgrCheckRamEnforcement(); }, 200);
   }
   try {
     const api = _getTabsApi();
@@ -2495,5 +2723,5 @@ onReady(function () {
   } catch (e2) {}
   // Safety net: if the host window never got the event (popup closed on blur in Firefox,
   // listener threw earlier, background throttle...), soft-poll only while this page is visible.
-  setInterval(function () { if (!document.hidden) tabmgrLoadTabs(); }, 4000);
+  setInterval(function () { if (!document.hidden) { tabmgrLoadTabs(); _tabmgrCheckRamEnforcement(); } }, 5000);
 });

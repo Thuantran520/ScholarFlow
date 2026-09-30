@@ -11,13 +11,76 @@
           <span class="tabmgr-stat-pill is-ram" id="tabmgr-ram-saved">~0 MB</span>
         </div>
       </div>
-      <div class="tabmgr-hero-actions">
-        <button id="btn-tabmgr-optimize-ram" class="tabmgr-opt-btn" title="Tạm dừng toàn bộ tab không hoạt động để giải phóng bộ nhớ RAM">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg>
-          <span data-i18n="tabmgr_btn_optimize_ram">Tối ưu RAM</span>
-        </button>
-        <button id="btn-tabmgr-close-dup" class="tabmgr-sub-btn" data-i18n="tabmgr_btn_close_dup">Đóng trùng</button>
-        <button id="btn-tabmgr-close-blank" class="tabmgr-sub-btn" data-i18n="tabmgr_btn_close_blank">Đóng tab rỗng</button>
+
+      <!-- GX Control: RAM Limiter Panel -->
+      <div class="tabmgr-gx-card">
+        <div class="tabmgr-gx-head">
+          <div class="tabmgr-gx-badge">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 19v-3M10 19v-3M14 19v-3M18 19v-3M6 5v3M10 5v3M14 5v3M18 5v3M4 8h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2z"></path></svg>
+            <span data-i18n="tabmgr_gx_limiter_title">RAM Limiter (GX Control)</span>
+          </div>
+          <label class="tabmgr-media-switch" title="Bật/Tắt giới hạn RAM" data-i18n-title="tabmgr_gx_limiter_toggle">
+            <input type="checkbox" id="tabmgr-gx-limiter-toggle" checked>
+            <span class="tabmgr-media-switch-slider"></span>
+          </label>
+        </div>
+
+        <div class="tabmgr-gx-meter-wrap">
+          <div class="tabmgr-gx-meter-info">
+            <span class="tabmgr-gx-meter-label" data-i18n="tabmgr_gx_usage_lbl">RAM ước tính</span>
+            <span class="tabmgr-gx-meter-val" id="tabmgr-gx-usage-val">0.0 / 4.0 GB</span>
+          </div>
+          <div class="tabmgr-gx-bar-bg">
+            <div id="tabmgr-gx-bar-fill" class="tabmgr-gx-bar-fill" style="width: 25%;"></div>
+          </div>
+        </div>
+
+        <div class="tabmgr-gx-slider-row">
+          <div class="tabmgr-gx-slider-header">
+            <span data-i18n="tabmgr_gx_limit_setting">Mức giới hạn RAM:</span>
+            <strong id="tabmgr-gx-slider-val" class="tabmgr-gx-highlight">4.0 GB</strong>
+          </div>
+          <input type="range" id="tabmgr-gx-slider" class="tabmgr-gx-range" min="1" max="16" step="0.5" value="4">
+        </div>
+
+        <div class="tabmgr-gx-options-row">
+          <label class="tabmgr-gx-check-lbl" title="Khi bật, tự động ép ngủ các tab nền ngay khi RAM chạm ngưỡng giới hạn" data-i18n-title="tabmgr_gx_hard_limit_tip">
+            <input type="checkbox" id="tabmgr-gx-hard-limit">
+            <span data-i18n="tabmgr_gx_hard_limit">Giới hạn cứng (Hard Limit)</span>
+          </label>
+          <select id="tabmgr-gx-sleep-timeout" class="tabmgr-gx-select" title="Thời gian tự động cho tab không hoạt động vào chế độ ngủ" data-i18n-title="tabmgr_gx_timeout_tip">
+            <option value="0" data-i18n="tabmgr_gx_sleep_manual">Ngủ thủ công</option>
+            <option value="5" data-i18n="tabmgr_gx_sleep_5m">Ngủ sau 5 phút</option>
+            <option value="15" selected data-i18n="tabmgr_gx_sleep_15m">Ngủ sau 15 phút</option>
+            <option value="30" data-i18n="tabmgr_gx_sleep_30m">Ngủ sau 30 phút</option>
+            <option value="60" data-i18n="tabmgr_gx_sleep_1h">Ngủ sau 1 giờ</option>
+          </select>
+        </div>
+
+        <div class="tabmgr-gx-protect-row">
+          <span class="tabmgr-gx-protect-tag" title="Không bao giờ cho tab đang phát âm thanh hoặc video vào chế độ ngủ" data-i18n-title="tabmgr_gx_protect_audio_tip">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+            <span data-i18n="tabmgr_gx_protect_audio">Bảo vệ âm thanh</span>
+          </span>
+          <span class="tabmgr-gx-protect-tag" title="Không bao giờ cho các tab được ghim vào chế độ ngủ" data-i18n-title="tabmgr_gx_protect_pinned_tip">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a1 1 0 0 0 0-2H8a1 1 0 0 0 0 2h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path></svg>
+            <span data-i18n="tabmgr_gx_protect_pinned">Bảo vệ ghim</span>
+          </span>
+          <span class="tabmgr-gx-protect-tag" title="Luôn giữ tab hiện tại thức" data-i18n-title="tabmgr_gx_protect_active_tip">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
+            <span data-i18n="tabmgr_gx_protect_active">Bảo vệ tab xem</span>
+          </span>
+        </div>
+
+        <div class="tabmgr-hero-actions" style="margin-top:8px;">
+          <button id="btn-tabmgr-optimize-ram" class="tabmgr-opt-btn" title="Tạm dừng toàn bộ tab không hoạt động để giải phóng bộ nhớ RAM" data-i18n-title="tabmgr_btn_optimize_ram_tip">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg>
+            <span data-i18n="tabmgr_btn_optimize_ram">Tối ưu RAM ngay</span>
+          </button>
+          <button id="btn-tabmgr-wake-all" class="tabmgr-sub-btn" data-i18n="tabmgr_btn_wake_all">Đánh thức tất cả</button>
+          <button id="btn-tabmgr-close-dup" class="tabmgr-sub-btn" data-i18n="tabmgr_btn_close_dup">Đóng trùng</button>
+          <button id="btn-tabmgr-close-blank" class="tabmgr-sub-btn" data-i18n="tabmgr_btn_close_blank">Đóng tab rỗng</button>
+        </div>
       </div>
     </div>
 
