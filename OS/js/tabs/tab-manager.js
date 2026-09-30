@@ -609,16 +609,17 @@ function _tabmgrDetectSmartRam(callback) {
   function fallback() {
     const cores = (typeof navigator !== "undefined" && navigator.hardwareConcurrency) || 4;
     const devMem = (typeof navigator !== "undefined" && navigator.deviceMemory) || 8;
+    // Low-end / mobile / entry-level laptop: <= 4GB RAM reported
     if (devMem <= 4 || (cores <= 4 && devMem <= 6)) {
       return callback(8);
     }
+    // High-end workstation / server with >= 24 threads (Threadripper, Xeon, i9-14900K, M2/M3 Ultra)
     if (cores >= 24) {
-      return callback(64);
-    }
-    if (cores >= 14) {
       return callback(32);
     }
-    if (cores >= 8 || devMem >= 8) {
+    // Standard desktop / gaming PC / modern laptop (e.g. Ryzen 7 5700X3D with 16 threads, Core i5/i7)
+    // Steam hardware survey: 16GB is the dominant configuration
+    if (cores >= 6 || devMem >= 8) {
       return callback(16);
     }
     return callback(8);
@@ -710,14 +711,11 @@ function _tabmgrInitGxLimiter() {
     const sliderEl = document.getElementById("tabmgr-gx-slider");
     const maxBound = document.getElementById("tabmgr-gx-slider-max-bound");
 
-    const applyLimiterConfig = function (targetMax) {
+    _tabmgrDetectSmartRam(function (sysRamGB) {
+      const targetMax = sysRamGB || 16;
+      tabmgrGxLimiter.maxScaleGB = targetMax;
       if (tabmgrGxLimiter.limitGB > targetMax) {
-        for (let i = 0; i < RAM_SCALE_TIERS.length; i++) {
-          if (RAM_SCALE_TIERS[i] >= tabmgrGxLimiter.limitGB) {
-            targetMax = RAM_SCALE_TIERS[i];
-            break;
-          }
-        }
+        tabmgrGxLimiter.limitGB = targetMax;
       }
 
       if (sliderEl) {
@@ -728,46 +726,21 @@ function _tabmgrInitGxLimiter() {
       }
       if (maxBound) {
         maxBound.textContent = _tabmgrFormatRamBound(targetMax);
+        maxBound.classList.remove("is-clickable");
+        maxBound.classList.add("is-hardware-locked");
+        maxBound.setAttribute("title", t("tabmgr_gx_scale_tip", [targetMax + " GB"]));
       }
       _tabmgrRenderPresets(targetMax);
       _tabmgrUpdateGxMeter();
-    };
-
-    if (tabmgrGxLimiter.maxScaleGB) {
-      applyLimiterConfig(tabmgrGxLimiter.maxScaleGB);
-    } else {
-      _tabmgrDetectSmartRam(function (detectedMax) {
-        applyLimiterConfig(detectedMax);
-      });
-    }
+    });
   });
 
   const maxBound = document.getElementById("tabmgr-gx-slider-max-bound");
   if (maxBound) {
+    // Rigid lock: user cannot switch tiers manually. Clicking informs detected hardware lock.
     maxBound.addEventListener("click", function () {
-      const sliderEl = document.getElementById("tabmgr-gx-slider");
-      if (!sliderEl) return;
-      const curMax = parseFloat(sliderEl.max) || 16;
-      let nextIdx = 0;
-      for (let i = 0; i < RAM_SCALE_TIERS.length; i++) {
-        if (RAM_SCALE_TIERS[i] > curMax + 0.1) {
-          nextIdx = i;
-          break;
-        }
-      }
-      const newMax = RAM_SCALE_TIERS[nextIdx];
-      sliderEl.max = String(newMax);
-      sliderEl.step = newMax >= 1024 ? "8" : (newMax >= 64 ? "1" : "0.5");
-      if (tabmgrGxLimiter.limitGB > newMax) {
-        tabmgrGxLimiter.limitGB = newMax;
-      }
-      tabmgrGxLimiter.maxScaleGB = newMax;
-      _tabmgrSaveGxLimiter();
-      maxBound.textContent = _tabmgrFormatRamBound(newMax);
-      _tabmgrRenderPresets(newMax);
-      _tabmgrUpdateSliderCapsule(sliderEl);
-      _tabmgrUpdateGxMeter();
-      showToast(t("tabmgr_gx_scale_tip"));
+      const curMax = tabmgrGxLimiter.maxScaleGB || 16;
+      showToast(t("tabmgr_gx_scale_tip", [curMax + " GB"]));
     });
   }
 

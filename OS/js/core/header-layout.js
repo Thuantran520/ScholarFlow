@@ -329,9 +329,6 @@
         } catch (e) {}
       }
     }
-    if (typeof syncSidebarHeaderTitle === 'function') {
-      syncSidebarHeaderTitle(val);
-    }
   }
 
   function commitNav() {

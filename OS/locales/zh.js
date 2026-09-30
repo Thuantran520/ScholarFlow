@@ -1771,7 +1771,7 @@ window.I18N_ZH = {
     "tabmgr_gx_protect_pinned_tip": "绝不休眠固定的标签页",
     "tabmgr_gx_protect_active": "保护当前活动标签",
     "tabmgr_gx_protect_active_tip": "始终保持当前正在查看的标签页活跃",
-    "tabmgr_gx_scale_tip": "点击切换最大RAM标尺 (8GB, 16GB, 32GB, 64GB, 128GB, 1TB)",
+    "tabmgr_gx_scale_tip": "系统RAM: {0} (已按机器硬件识别并锁定)",
     "tabmgr_btn_wake_all": "唤醒所有标签",
     "tabmgr_btn_optimize_ram_tip": "暂停所有非活动后台标签页以释放内存",
     "tabmgr_toast_wake_all": "已唤醒 {0} 个休眠标签页",

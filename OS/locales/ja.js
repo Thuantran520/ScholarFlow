@@ -1771,7 +1771,7 @@ window.I18N_JA = {
     "tabmgr_gx_protect_pinned_tip": "固定されたタブは休眠させません",
     "tabmgr_gx_protect_active": "アクティブタブを保護",
     "tabmgr_gx_protect_active_tip": "現在表示中のタブは常に起動状態を維持",
-    "tabmgr_gx_scale_tip": "クリックして最大RAMスケールを切り替え (8GB, 16GB, 32GB, 64GB, 128GB, 1TB)",
+    "tabmgr_gx_scale_tip": "システムRAM: {0} (ハードウェア検出・固定済み)",
     "tabmgr_btn_wake_all": "すべて復帰",
     "tabmgr_btn_optimize_ram_tip": "非アクティブなバックグラウンドタブを休眠させてRAMを解放",
     "tabmgr_toast_wake_all": "{0}個の休眠タブを復帰させました",

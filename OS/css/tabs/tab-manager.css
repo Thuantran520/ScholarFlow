@@ -559,6 +559,14 @@
   box-shadow: 0 0 8px rgba(56, 189, 248, 0.25);
 }
 
+.tabmgr-capsule-bound.is-hardware-locked {
+  cursor: default;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  box-shadow: 0 0 6px rgba(56, 189, 248, 0.15);
+}
+
 .tabmgr-capsule-track-container {
   position: relative;
   flex: 1;

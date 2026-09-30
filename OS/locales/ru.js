@@ -1771,7 +1771,7 @@ window.I18N_RU = {
     "tabmgr_gx_protect_pinned_tip": "Никогда не усыплять закрепленные вкладки",
     "tabmgr_gx_protect_active": "Защита активной",
     "tabmgr_gx_protect_active_tip": "Всегда держать текущую активную вкладку бодрствующей",
-    "tabmgr_gx_scale_tip": "Нажмите, чтобы переключить масштаб RAM (8GB, 16GB, 32GB, 64GB, 128GB, 1TB)",
+    "tabmgr_gx_scale_tip": "Системная RAM: {0} (Аппаратно определено и заблокировано)",
     "tabmgr_btn_wake_all": "Разбудить все",
     "tabmgr_btn_optimize_ram_tip": "Усыпить все неактивные фоновые вкладки для освобождения RAM",
     "tabmgr_toast_wake_all": "Пробуждено {0} спящих вкладок",
