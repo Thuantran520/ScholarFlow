@@ -60,9 +60,11 @@
   function respond(name, detail) {
     try {
       document.dispatchEvent(new CustomEvent(name, { detail: detail }));
-      // Also postMessage for cross-world listeners (ISOLATED -> MAIN)
-      window.postMessage({ type: name, payload: detail }, '*');
     } catch (_e) { /* document gone */ }
+    try {
+      // Also postMessage for cross-world listeners (ISOLATED -> MAIN)
+      window.postMessage({ type: name, reqId: detail && detail.reqId, payload: detail }, '*');
+    } catch (_e) {}
   }
 
   function on(name, handler) {
@@ -71,6 +73,22 @@
       try { handler(ev.detail); } catch (_e) { /* never break the page */ }
     }, true);
   }
+
+  // Cross-world postMessage listener for Firefox Xray wrapper boundary (MAIN -> ISOLATED)
+  window.addEventListener('message', function(ev) {
+    if (ev.source !== window || !ev.data || typeof ev.data !== 'object') return;
+    if (ev.data.type === '__SF_US_XHR_REQ__') {
+      const detail = ev.data.payload || ev.data;
+      if (!detail || !detail.reqId) return;
+      request(
+        { action: 'GM_XHR', req: detail },
+        '__SF_US_XHR_RES__',
+        detail.reqId
+      );
+    } else if (ev.data.type === '__SF_US_XHR_ABORT__' && ev.data.reqId) {
+      send({ action: 'US_XHR_ABORT', reqId: ev.data.reqId });
+    }
+  });
 
   // ---- console log feed ---------------------------------------------------
   on('__SF_US_LOG__', function(detail) {

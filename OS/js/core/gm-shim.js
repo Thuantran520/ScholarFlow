@@ -55,14 +55,16 @@ var _sfGM_xmlhttpRequest = typeof GM_xmlhttpRequest === 'function' ? GM_xmlhttpR
   if (!details || !details.url) return;
   var reqId = 'xhr_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
 
-  // Use postMessage for cross-world communication (ISOLATED -> MAIN)
-  // CustomEvent.detail is not accessible across worlds due to Xray wrappers
+  // Use postMessage for cross-world communication (ISOLATED <-> MAIN)
+  // CustomEvent.detail is not accessible across worlds in Firefox due to Xray wrappers
   var msgHandler = function(e) {
-    if (e.source !== window) return;
-    if (!e.data || e.data.type !== '__SF_US_XHR_RES__') return;
-    if (e.data.reqId !== reqId) return;
+    if (e.source !== window || !e.data || typeof e.data !== 'object') return;
+    if (e.data.type !== '__SF_US_XHR_RES__') return;
+    var resReqId = e.data.reqId || (e.data.payload && e.data.payload.reqId);
+    if (resReqId !== reqId) return;
     window.removeEventListener('message', msgHandler);
-    var res = e.data.payload;
+    document.removeEventListener('__SF_US_XHR_RES__', legacyHandler);
+    var res = e.data.payload || e.data;
     if (res && res.error) {
       if (typeof details.onerror === 'function') details.onerror(res);
     } else {
@@ -71,16 +73,35 @@ var _sfGM_xmlhttpRequest = typeof GM_xmlhttpRequest === 'function' ? GM_xmlhttpR
   };
   window.addEventListener('message', msgHandler);
 
-  document.dispatchEvent(new CustomEvent('__SF_US_XHR_REQ__', {
-    detail: {
-      reqId: reqId,
-      url: details.url,
-      method: details.method || 'GET',
-      headers: details.headers || {},
-      data: details.data || null,
-      timeout: details.timeout || 30000
+  var legacyHandler = function(e) {
+    var d = e && e.detail;
+    if (d && d.reqId === reqId) {
+      document.removeEventListener('__SF_US_XHR_RES__', legacyHandler);
+      window.removeEventListener('message', msgHandler);
+      if (d.error) {
+        if (typeof details.onerror === 'function') details.onerror(d);
+      } else {
+        if (typeof details.onload === 'function') details.onload(d);
+      }
     }
-  }));
+  };
+  document.addEventListener('__SF_US_XHR_RES__', legacyHandler);
+
+  var reqPayload = {
+    reqId: reqId,
+    url: details.url,
+    method: details.method || 'GET',
+    headers: details.headers || {},
+    data: details.data || null,
+    timeout: details.timeout || 30000
+  };
+
+  try {
+    document.dispatchEvent(new CustomEvent('__SF_US_XHR_REQ__', { detail: reqPayload }));
+  } catch(e) {}
+  try {
+    window.postMessage({ type: '__SF_US_XHR_REQ__', reqId: reqId, payload: reqPayload }, '*');
+  } catch(e) {}
 };
 
 var _sfGM_addValueChangeListener = typeof GM_addValueChangeListener === 'function' ? GM_addValueChangeListener : function(name, callback) {
