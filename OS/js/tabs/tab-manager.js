@@ -489,12 +489,17 @@ function _tabmgrUpdateGxMeter() {
 
   const pct = Math.min(100, Math.max(0, Math.round((totalMB / (tabmgrGxLimiter.limitGB * 1024)) * 100)));
 
+  if (sliderEl) {
+    _tabmgrUpdateSliderTrack(sliderEl);
+  }
+
   if (gaugeBar) {
-    const dashoffset = Math.round(226 * (1 - pct / 100));
+    const dashoffset = Math.round(214 * (1 - pct / 100));
     gaugeBar.style.strokeDashoffset = String(dashoffset);
   }
   if (needleGroup) {
     const angle = -90 + (pct / 100) * 180;
+    needleGroup.style.transformOrigin = "100px 94px";
     needleGroup.style.transform = "rotate(" + angle.toFixed(1) + "deg)";
   }
   if (statusEl && statusText) {
@@ -518,6 +523,15 @@ function _tabmgrUpdateGxMeter() {
   }
 }
 
+function _tabmgrUpdateSliderTrack(el) {
+  if (!el) return;
+  const min = parseFloat(el.min) || 1;
+  const max = parseFloat(el.max) || 16;
+  const val = parseFloat(el.value) || 4;
+  const ratio = Math.max(0, Math.min(100, ((val - min) / (max - min)) * 100));
+  el.style.background = "linear-gradient(90deg, #38bdf8 0%, #0284c7 " + ratio.toFixed(1) + "%, rgba(255, 255, 255, 0.08) " + ratio.toFixed(1) + "%, rgba(255, 255, 255, 0.08) 100%)";
+}
+
 function _tabmgrSaveGxLimiter() {
   const obj = {};
   obj[TABMGR_GX_LIMITER_KEY] = tabmgrGxLimiter;
@@ -536,6 +550,7 @@ function _tabmgrInitGxLimiter() {
         sliderEl.max = String(sysMem);
       }
       sliderEl.value = tabmgrGxLimiter.limitGB;
+      _tabmgrUpdateSliderTrack(sliderEl);
     }
     _tabmgrUpdateGxMeter();
   });
@@ -556,6 +571,7 @@ function _tabmgrInitGxLimiter() {
       tabmgrGxLimiter.limitGB = val;
       const sliderValEl = document.getElementById("tabmgr-gx-slider-val");
       if (sliderValEl) sliderValEl.textContent = val.toFixed(1) + " GB";
+      _tabmgrUpdateSliderTrack(sliderEl);
       _tabmgrUpdateGxMeter();
     });
     sliderEl.addEventListener("change", function () {
