@@ -490,12 +490,19 @@ function _tabmgrUpdateGxMeter() {
   const pct = Math.min(100, Math.max(0, Math.round((totalMB / (tabmgrGxLimiter.limitGB * 1024)) * 100)));
 
   if (sliderEl) {
-    _tabmgrUpdateSliderTrack(sliderEl);
+    _tabmgrUpdateSliderCapsule(sliderEl);
   }
 
   if (gaugeBar) {
-    const dashoffset = Math.round(214 * (1 - pct / 100));
+    const dashoffset = Math.round(226 * (1 - pct / 100));
     gaugeBar.style.strokeDashoffset = String(dashoffset);
+    if (pct >= 85) {
+      gaugeBar.setAttribute("stroke", "url(#tabmgrModernDangerGrad)");
+    } else if (pct >= 70) {
+      gaugeBar.setAttribute("stroke", "url(#tabmgrModernWarnGrad)");
+    } else {
+      gaugeBar.setAttribute("stroke", "url(#tabmgrModernGrad)");
+    }
   }
   if (needleGroup) {
     const angle = -90 + (pct / 100) * 180;
@@ -523,13 +530,20 @@ function _tabmgrUpdateGxMeter() {
   }
 }
 
-function _tabmgrUpdateSliderTrack(el) {
+function _tabmgrUpdateSliderCapsule(el) {
   if (!el) return;
   const min = parseFloat(el.min) || 1;
   const max = parseFloat(el.max) || 16;
   const val = parseFloat(el.value) || 4;
   const ratio = Math.max(0, Math.min(100, ((val - min) / (max - min)) * 100));
-  el.style.background = "linear-gradient(90deg, #06b6d4 0%, #38bdf8 " + (ratio * 0.75).toFixed(1) + "%, #3b82f6 " + ratio.toFixed(1) + "%, rgba(255, 255, 255, 0.08) " + ratio.toFixed(1) + "%, rgba(255, 255, 255, 0.08) 100%)";
+
+  const fillEl = document.getElementById("tabmgr-capsule-fill");
+  const thumbEl = document.getElementById("tabmgr-capsule-thumb");
+  const valEl = document.getElementById("tabmgr-gx-slider-val");
+
+  if (fillEl) fillEl.style.width = ratio + "%";
+  if (thumbEl) thumbEl.style.left = ratio + "%";
+  if (valEl) valEl.textContent = val.toFixed(1) + " GB";
 
   const container = document.getElementById("tabmgr-gx-card");
   if (container) {
@@ -539,6 +553,10 @@ function _tabmgrUpdateSliderTrack(el) {
       btn.classList.toggle("is-active", Math.abs(v - val) < 0.1);
     });
   }
+}
+
+function _tabmgrUpdateSliderTrack(el) {
+  _tabmgrUpdateSliderCapsule(el);
 }
 
 function _tabmgrSaveGxLimiter() {
@@ -771,14 +789,65 @@ function tabmgrWakeAll() {
   });
   if (done === 0) setTimeout(function () { tabmgrLoadTabs(); }, 500);
 }
+function _tabmgrIsBlankTab(t) {
+  if (!t || t.pinned) return false;
+  const u = (t.url || "").trim().toLowerCase().replace(/\/+$/, "");
+  const title = (t.title || "").trim().toLowerCase();
+
+  // Common blank / new tab URLs
+  if (
+    u === "about:blank" ||
+    u === "about:newtab" ||
+    u === "about:home" ||
+    u === "chrome://newtab" ||
+    u === "chrome://new-tab-page" ||
+    u === "edge://newtab" ||
+    u === "opera://startpage" ||
+    u === "vivaldi://startpage"
+  ) {
+    return true;
+  }
+
+  // Browser-specific new tab URLs with query params or subpaths
+  if (
+    u.startsWith("about:newtab") ||
+    u.startsWith("about:home") ||
+    u.startsWith("chrome://newtab") ||
+    u.startsWith("chrome://new-tab-page") ||
+    u.startsWith("edge://newtab")
+  ) {
+    return true;
+  }
+
+  // Empty url or blank url
+  if (u === "" || u === "about:blank") {
+    return true;
+  }
+
+  // Title-based fallback for newly opened or pending tabs
+  const blankTitles = [
+    "new tab",
+    "tab mới",
+    "trang mới",
+    "blank page",
+    "untitled",
+    "thẻ mới",
+    "新标签页",
+    "новыя вкладка",
+    "новая вкладка",
+    "新しいタブ"
+  ];
+  if ((u === "" || u.startsWith("about:") || u.startsWith("chrome://")) && blankTitles.indexOf(title) !== -1) {
+    return true;
+  }
+
+  return false;
+}
+
 function tabmgrCloseBlankTabs() {
   const api = _getTabsApi();
   if (!api || !api.remove) return;
-  const blankTabs = tabmgrState.tabs.filter(function (t) {
-    const u = (t.url || "").trim().toLowerCase();
-    const title = (t.title || "").trim().toLowerCase();
-    return !t.pinned && (u === "about:blank" || u === "chrome://newtab/" || u === "edge://newtab/" || (u === "" && title === ""));
-  });
+  const blankTabs = tabmgrState.tabs.filter(_tabmgrIsBlankTab);
   if (blankTabs.length === 0) { showToast(t("tabmgr_toast_no_blank")); return; }
   const ids = blankTabs.map(function (t) { return t.id; });
   try {

@@ -2260,24 +2260,26 @@
         </div>
 
         <div id="tabmgr-gx-body" class="tabmgr-gx-body">
-          <!-- Racing Speedometer / Tachometer Gauge -->
-          <div class="tabmgr-racing-gauge-wrap">
-            <div class="tabmgr-gauge-dial">
-              <svg class="tabmgr-gauge-svg" viewBox="0 0 200 102">
+          <!-- Modern Minimalist Glowing Arc Gauge (Image 2 style) -->
+          <div class="tabmgr-modern-gauge-wrap">
+            <div class="tabmgr-modern-gauge-dial">
+              <svg class="tabmgr-modern-gauge-svg" viewBox="0 0 200 110">
                 <defs>
-                  <linearGradient id="tabmgrGaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stop-color="#06b6d4" />
-                    <stop offset="45%" stop-color="#38bdf8" />
-                    <stop offset="75%" stop-color="#fbbf24" />
+                  <linearGradient id="tabmgrModernGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#38bdf8" />
+                    <stop offset="50%" stop-color="#818cf8" />
+                    <stop offset="100%" stop-color="#c084fc" />
+                  </linearGradient>
+                  <linearGradient id="tabmgrModernWarnGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#fbbf24" />
+                    <stop offset="100%" stop-color="#f59e0b" />
+                  </linearGradient>
+                  <linearGradient id="tabmgrModernDangerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#f43f5e" />
                     <stop offset="100%" stop-color="#ef4444" />
                   </linearGradient>
-                  <linearGradient id="tabmgrNeedleGrad" x1="0%" y1="100%" x2="0%" y2="0%">
-                    <stop offset="0%" stop-color="#0284c7" />
-                    <stop offset="60%" stop-color="#38bdf8" />
-                    <stop offset="100%" stop-color="#e0f2fe" />
-                  </linearGradient>
-                  <filter id="tabmgrNeedleGlow" x="-50%" y="-50%" width="200%" height="200%">
-                    <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur" />
+                  <filter id="tabmgrModernGlow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="3" result="blur" />
                     <feMerge>
                       <feMergeNode in="blur" />
                       <feMergeNode in="SourceGraphic" />
@@ -2285,64 +2287,18 @@
                   </filter>
                 </defs>
 
-                <!-- Outer Ambient Bezel Dash Track -->
-                <path class="tabmgr-gauge-outer-ring" d="M 22 94 A 78 78 0 0 1 178 94" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1.5" stroke-dasharray="2 3" />
+                <!-- Background Track Arc -->
+                <path class="tabmgr-modern-track" d="M 28 96 A 72 72 0 0 1 172 96" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="15" stroke-linecap="round" />
 
-                <!-- Background Arc -->
-                <path class="tabmgr-gauge-track" d="M 32 94 A 68 68 0 0 1 168 94" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="9" stroke-linecap="round" />
+                <!-- Active Progress Arc with Rich Glow -->
+                <path id="tabmgr-gauge-bar" class="tabmgr-modern-fill" d="M 28 96 A 72 72 0 0 1 172 96" fill="none" stroke="url(#tabmgrModernGrad)" stroke-width="15" stroke-linecap="round" stroke-dasharray="226" stroke-dashoffset="170" filter="url(#tabmgrModernGlow)" />
 
-                <!-- Redline Arc segment (75% to 100%) -->
-                <path class="tabmgr-gauge-redline" d="M 148 46 A 68 68 0 0 1 168 94" fill="none" stroke="rgba(239, 68, 68, 0.28)" stroke-width="9" stroke-linecap="round" />
-
-                <!-- Active Progress Arc -->
-                <path id="tabmgr-gauge-bar" class="tabmgr-gauge-fill" d="M 32 94 A 68 68 0 0 1 168 94" fill="none" stroke="url(#tabmgrGaugeGrad)" stroke-width="9" stroke-linecap="round" stroke-dasharray="214" stroke-dashoffset="160" />
-
-                <!-- Radial Tachometer Scale Ticks -->
-                <g class="tabmgr-gauge-ticks">
-                  <!-- 0% -->
-                  <line x1="34" y1="94" x2="42" y2="94" stroke="#38bdf8" stroke-width="2" />
-                  <line x1="37" y1="79" x2="44" y2="82" stroke="rgba(255,255,255,0.2)" stroke-width="1.2" />
-                  <!-- 25% (1/4) -->
-                  <line x1="45" y1="64" x2="52" y2="69" stroke="#38bdf8" stroke-width="2" />
-                  <line x1="57" y1="52" x2="62" y2="57" stroke="rgba(255,255,255,0.2)" stroke-width="1.2" />
-                  <line x1="77" y1="36" x2="80" y2="43" stroke="rgba(255,255,255,0.2)" stroke-width="1.2" />
-                  <!-- 50% (1/2) -->
-                  <line x1="100" y1="26" x2="100" y2="34" stroke="#818cf8" stroke-width="2" />
-                  <line x1="123" y1="36" x2="120" y2="43" stroke="rgba(255,255,255,0.2)" stroke-width="1.2" />
-                  <line x1="143" y1="52" x2="138" y2="57" stroke="rgba(255,255,255,0.2)" stroke-width="1.2" />
-                  <!-- 75% (3/4 Redline zone start) -->
-                  <line x1="155" y1="64" x2="148" y2="69" stroke="#ef4444" stroke-width="2" />
-                  <line x1="163" y1="79" x2="156" y2="82" stroke="rgba(239,68,68,0.55)" stroke-width="1.2" />
-                  <!-- 100% (MAX) -->
-                  <line x1="166" y1="94" x2="158" y2="94" stroke="#ef4444" stroke-width="2.2" />
-                </g>
-
-                <!-- Speedometer Needle -->
-                <g id="tabmgr-gauge-needle-group" class="tabmgr-gauge-needle" style="transform-origin: 100px 94px; transform: rotate(-60deg);">
-                  <!-- Needle glow backing -->
-                  <path d="M 98 94 L 99.3 22 L 100.7 22 L 102 94 Z" fill="#38bdf8" opacity="0.4" filter="url(#tabmgrNeedleGlow)" />
-                  <!-- Needle tapered blade -->
-                  <path d="M 98.4 94 L 99.5 22 L 100.5 22 L 101.6 94 Z" fill="url(#tabmgrNeedleGrad)" />
-                  <!-- Needle pointer tip -->
-                  <polygon points="99.2,26 100.8,26 100,18" fill="#f8fafc" filter="url(#tabmgrNeedleGlow)" />
-                  <!-- Center metallic hub -->
-                  <circle cx="100" cy="94" r="8" fill="#090d16" stroke="#38bdf8" stroke-width="1.8" />
-                  <circle cx="100" cy="94" r="4" fill="#1e293b" stroke="rgba(255, 255, 255, 0.25)" stroke-width="0.8" />
-                  <circle cx="100" cy="94" r="1.8" fill="#38bdf8" />
-                </g>
-
-                <!-- Tachometer Scale Marks -->
-                <text x="20" y="98" class="tabmgr-gauge-tick">0</text>
-                <text x="36" y="52" class="tabmgr-gauge-tick">1/4</text>
-                <text x="100" y="16" text-anchor="middle" class="tabmgr-gauge-tick">1/2</text>
-                <text x="164" y="52" class="tabmgr-gauge-tick tabmgr-tick-red">3/4</text>
-                <text x="180" y="98" text-anchor="end" class="tabmgr-gauge-tick tabmgr-tick-red">MAX</text>
+                <!-- Hidden needle element for JS compatibility -->
+                <g id="tabmgr-gauge-needle-group" style="display:none;"></g>
               </svg>
-              <div class="tabmgr-gauge-center">
-                <span class="tabmgr-gauge-label" data-i18n="tabmgr_gx_usage_lbl">RAM ước tính</span>
-                <div class="tabmgr-gauge-digital">
-                  <span id="tabmgr-gx-usage-val" class="tabmgr-gauge-num">0.0 / 4.0 GB</span>
-                </div>
+              <div class="tabmgr-modern-center">
+                <span id="tabmgr-gx-usage-val" class="tabmgr-modern-val">0.0 / 4.0 GB</span>
+                <span class="tabmgr-modern-label" data-i18n="tabmgr_gx_usage_lbl">RAM ước tính</span>
                 <div id="tabmgr-gauge-status" class="tabmgr-gauge-status is-cruising">
                   <span class="tabmgr-gauge-dot"></span>
                   <span id="tabmgr-gauge-status-text">CRUISING</span>
@@ -2353,30 +2309,26 @@
             <div class="tabmgr-gx-bar-bg" style="display:none;"><div id="tabmgr-gx-bar-fill" class="tabmgr-gx-bar-fill" style="width: 25%;"></div></div>
           </div>
 
+          <!-- Capsule Pill Slider (Image 1 style) -->
           <div class="tabmgr-gx-slider-row">
             <div class="tabmgr-gx-slider-header">
               <div class="tabmgr-gx-slider-label-group">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 19v-3M10 19v-3M14 19v-3M18 19v-3M6 5v3M10 5v3M14 5v3M18 5v3M2 8h20v8H2z"></path></svg>
                 <span data-i18n="tabmgr_gx_limit_setting">Mức giới hạn RAM:</span>
               </div>
-              <div class="tabmgr-gx-val-hud">
-                <span class="tabmgr-gx-val-dot"></span>
-                <strong id="tabmgr-gx-slider-val" class="tabmgr-gx-highlight">4.0 GB</strong>
-              </div>
             </div>
-            <div class="tabmgr-gx-slider-track-wrap">
-              <span class="tabmgr-gx-slider-bound">1 GB</span>
-              <div class="tabmgr-gx-range-box">
-                <input type="range" id="tabmgr-gx-slider" class="tabmgr-gx-range" min="1" max="16" step="0.5" value="4">
-                <div class="tabmgr-gx-ticks-bar">
-                  <span class="tabmgr-gx-tick-mark" style="left: 0%;"></span>
-                  <span class="tabmgr-gx-tick-mark" style="left: 20%;"></span>
-                  <span class="tabmgr-gx-tick-mark is-mid" style="left: 46.7%;"></span>
-                  <span class="tabmgr-gx-tick-mark" style="left: 73.3%;"></span>
-                  <span class="tabmgr-gx-tick-mark is-max" style="left: 100%;"></span>
+            <div class="tabmgr-capsule-slider-wrap">
+              <span class="tabmgr-capsule-bound">1 GB</span>
+              <div class="tabmgr-capsule-track-container">
+                <div class="tabmgr-capsule-track">
+                  <div id="tabmgr-capsule-fill" class="tabmgr-capsule-fill" style="width: 20%;"></div>
+                  <div id="tabmgr-capsule-thumb" class="tabmgr-capsule-thumb" style="left: 20%;">
+                    <strong id="tabmgr-gx-slider-val" class="tabmgr-capsule-val">4.0 GB</strong>
+                  </div>
                 </div>
+                <input type="range" id="tabmgr-gx-slider" class="tabmgr-capsule-input" min="1" max="16" step="0.5" value="4">
               </div>
-              <span class="tabmgr-gx-slider-bound" id="tabmgr-gx-slider-max-bound">16 GB</span>
+              <span class="tabmgr-capsule-bound" id="tabmgr-gx-slider-max-bound">16 GB</span>
             </div>
             <div class="tabmgr-gx-presets-row">
               <button type="button" class="tabmgr-gx-preset-btn" data-val="2">2 GB</button>

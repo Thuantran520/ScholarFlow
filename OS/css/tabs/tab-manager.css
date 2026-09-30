@@ -201,6 +201,76 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Modern Minimalist Glowing Semicircle Arc Gauge (Image 2 style) */
+.tabmgr-modern-gauge-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  padding: 10px 0 6px;
+  background: radial-gradient(circle at 50% 80%, rgba(56, 189, 248, 0.08) 0%, rgba(15, 23, 42, 0) 70%);
+  border-radius: 12px;
+}
+
+.tabmgr-modern-gauge-dial {
+  position: relative;
+  width: 100%;
+  max-width: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.tabmgr-modern-gauge-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+  filter: drop-shadow(0 4px 18px rgba(56, 189, 248, 0.2));
+}
+
+.tabmgr-modern-track {
+  stroke: rgba(255, 255, 255, 0.08);
+  transition: stroke 0.3s ease;
+}
+
+.tabmgr-modern-fill {
+  transition: stroke-dashoffset 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), stroke 0.3s ease;
+}
+
+.tabmgr-modern-center {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+  width: 100%;
+}
+
+.tabmgr-modern-val {
+  font-size: 17px;
+  font-weight: 800;
+  color: #f8fafc;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  letter-spacing: -0.5px;
+  text-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
+  line-height: 1.2;
+}
+
+.tabmgr-modern-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-top: 1px;
+}
+
 /* Racing Speedometer / Tachometer Gauge */
 .tabmgr-racing-gauge-wrap {
   display: flex;
@@ -453,6 +523,113 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   letter-spacing: 0.5px;
   text-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+}
+
+/* Capsule Pill Slider (Image 1 style) */
+.tabmgr-capsule-slider-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin: 6px 0 4px;
+}
+
+.tabmgr-capsule-bound {
+  font-size: 9px;
+  font-weight: 800;
+  color: #94a3b8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  padding: 2px 6px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
+}
+
+.tabmgr-capsule-track-container {
+  position: relative;
+  flex: 1;
+  height: 28px;
+  display: flex;
+  align-items: center;
+}
+
+.tabmgr-capsule-track {
+  position: relative;
+  width: 100%;
+  height: 22px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 999px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6);
+  overflow: visible;
+}
+
+.tabmgr-capsule-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #0284c7 0%, #38bdf8 100%);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.45);
+  transition: width 0.1s ease;
+  pointer-events: none;
+}
+
+.tabmgr-capsule-thumb {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  height: 26px;
+  min-width: 58px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: #0b1324;
+  border: 1.5px solid #38bdf8;
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.65), inset 0 1px 2px rgba(255, 255, 255, 0.35), 0 3px 6px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  pointer-events: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.tabmgr-capsule-val {
+  font-size: 11px;
+  font-weight: 800;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: #38bdf8;
+  letter-spacing: 0.2px;
+  text-shadow: 0 0 8px rgba(56, 189, 248, 0.7);
+  white-space: nowrap;
+}
+
+.tabmgr-capsule-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  margin: 0;
+  cursor: pointer;
+  z-index: 2;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.tabmgr-capsule-track-container:hover .tabmgr-capsule-thumb,
+.tabmgr-capsule-track-container:focus-within .tabmgr-capsule-thumb {
+  border-color: #7dd3fc;
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.95), inset 0 1px 2px #fff, 0 3px 8px rgba(0, 0, 0, 0.6);
+  transform: translate(-50%, -50%) scale(1.04);
+}
+
+.tabmgr-capsule-track-container:active .tabmgr-capsule-thumb {
+  border-color: #e0f2fe;
+  transform: translate(-50%, -50%) scale(1.08);
 }
 
 .tabmgr-gx-slider-track-wrap {
