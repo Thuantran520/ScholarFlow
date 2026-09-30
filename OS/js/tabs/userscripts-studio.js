@@ -288,18 +288,14 @@
         return;
       }
 
-      const gmShim = `
-const GM_getValue = function(key, def) { try { return JSON.parse(localStorage.getItem('GM_' + key)) ?? def; } catch(e) { return localStorage.getItem('GM_' + key) || def; } };
-const GM_setValue = function(key, val) { localStorage.setItem('GM_' + key, JSON.stringify(val)); };
-const GM_deleteValue = function(key) { localStorage.removeItem('GM_' + key); };
-const GM = {
-  getValue: async function(key, def) { return GM_getValue(key, def); },
-  setValue: async function(key, val) { return GM_setValue(key, val); },
-  deleteValue: async function(key) { return GM_deleteValue(key); },
-  addStyle: function(css) { const style = document.createElement('style'); style.textContent = css; (document.head || document.documentElement).appendChild(style); }
-};
-const GM_addStyle = GM.addStyle;
-`;
+      const rawCode = el.code.value || '';
+      const meta = (typeof window !== 'undefined' && window.SF_US_META) || (typeof globalThis !== 'undefined' && globalThis.SF_US_META);
+      let codeToRun = rawCode;
+      if (meta && typeof meta.sanitizeUserscriptCode === 'function') {
+        codeToRun = meta.sanitizeUserscriptCode(codeToRun);
+      }
+      const gmShim = (typeof window !== 'undefined' && window.SF_GM_SHIM) || (typeof globalThis !== 'undefined' && globalThis.SF_FULL_GM_SHIM) || '';
+
       const runnerWrapper = `(function() {
   function _relay(level, args) {
     try {
@@ -326,7 +322,7 @@ const GM_addStyle = GM.addStyle;
 
   try {
     ${gmShim}
-    ${el.code.value}
+    ${codeToRun}
   } catch(err) {
     _relay('error', ['[Lỗi runtime]', err.stack || err.message || String(err)]);
   }

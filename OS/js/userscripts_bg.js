@@ -350,24 +350,55 @@ async function _requestFirefoxUserScriptsPermission() {
   }
 }
 
-/** Run one user-selected script immediately without adding an inline <script>
- * element to the page. CSP-protected sites such as Facebook correctly reject
- * inline script text, even if a nonce is copied from the page. */
-async function _runFirefoxUserScriptNow(tabId, script) {
-  const userScripts = _userScripts();
-  if (!userScripts || typeof userScripts.execute !== 'function') {
-    return { ok: false, error: 'userScripts permission is required' };
+/** Run one user-selected script immediately. Supports both Firefox userScripts.execute
+ * and Chrome/Firefox scripting.executeScript. */
+async function _runUserScriptNow(tabId, script) {
+  const code = _buildCode(script || {});
+  const world = script && script.world === 'ISOLATED' ? 'ISOLATED' : 'MAIN';
+
+  if (_isFirefox) {
+    const userScripts = _userScripts();
+    if (userScripts && typeof userScripts.execute === 'function') {
+      try {
+        await userScripts.execute({
+          target: { tabId: Number(tabId) },
+          js: [{ code: code }],
+          world: world === 'ISOLATED' ? 'USER_SCRIPT' : 'MAIN'
+        });
+        return { ok: true };
+      } catch (e) {
+        // Fall back to scripting.executeScript below
+      }
+    }
   }
-  try {
-    await userScripts.execute({
-      target: { tabId: Number(tabId) },
-      js: [{ code: _buildCode(script || {}) }],
-      world: script && script.world === 'ISOLATED' ? 'USER_SCRIPT' : 'MAIN'
-    });
-    return { ok: true };
-  } catch (e) {
-    return { ok: false, error: String((e && e.message) || e) };
+
+  const scripting = _scripting();
+  if (scripting && typeof scripting.executeScript === 'function') {
+    try {
+      await scripting.executeScript({
+        target: { tabId: Number(tabId) },
+        world: world,
+        func: function(codeToExec) {
+          try {
+            const s = document.createElement('script');
+            s.textContent = codeToExec;
+            const nonce = document.querySelector('script[nonce]')?.getAttribute('nonce');
+            if (nonce) s.setAttribute('nonce', nonce);
+            (document.documentElement || document.head).appendChild(s);
+            s.remove();
+          } catch(err) {
+            console.error('[ScholarFlow] Execute script failed', err);
+          }
+        },
+        args: [code]
+      });
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: String((e && e.message) || e) };
+    }
   }
+
+  return { ok: false, error: 'Script execution API unavailable' };
 }
 
 function _scheduleRegister(reason) {
@@ -1142,9 +1173,7 @@ function _wire() {
         return reply(_isFirefox ? _requestFirefoxUserScriptsPermission() : Promise.resolve({ ok: true, notNeeded: true }));
 
       case 'US_RUN_ONCE':
-        return reply(_isFirefox
-          ? _runFirefoxUserScriptNow(request.tabId, request.script)
-          : Promise.resolve({ ok: false, error: 'run once is not available in this browser' }));
+        return reply(_runUserScriptNow(request.tabId, request.script));
 
       case 'US_SCRIPT_RAN':
         _scheduleRunStats(request.scriptId);

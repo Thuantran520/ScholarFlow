@@ -128,6 +128,50 @@ var _sfGM_openInTab = typeof GM_openInTab === 'function' ? GM_openInTab : functi
   try { window.open(url, '_blank'); } catch(e) {}
 };
 
+var _sfGM_registerMenuCommand = typeof GM_registerMenuCommand === 'function' ? GM_registerMenuCommand : function(caption, onClick) {
+  try {
+    document.dispatchEvent(new CustomEvent('__SF_US_MENU_REQ__', {
+      detail: { caption: caption }
+    }));
+  } catch(e) {}
+  return caption;
+};
+
+var _sfGM_unregisterMenuCommand = typeof GM_unregisterMenuCommand === 'function' ? GM_unregisterMenuCommand : function() {};
+
+var _sfGM_download = typeof GM_download === 'function' ? GM_download : function(options) {
+  if (typeof options === 'string') options = { url: options, name: '' };
+  if (!options || !options.url) return;
+  try {
+    var a = document.createElement('a');
+    a.href = options.url;
+    if (options.name) a.download = options.name;
+    a.target = '_blank';
+    (document.body || document.documentElement).appendChild(a);
+    a.click();
+    a.remove();
+    if (typeof options.onload === 'function') options.onload();
+  } catch(e) {
+    if (typeof options.onerror === 'function') options.onerror(e);
+  }
+};
+
+var _sfGM_info = (typeof GM_info !== 'undefined' && GM_info) ? GM_info : {
+  script: { name: 'ScholarFlow Script', version: '1.0' },
+  scriptHandler: 'ScholarFlow',
+  version: '1.0'
+};
+
+var _sfGM_log = typeof GM_log === 'function' ? GM_log : function() {
+  console.log.apply(console, arguments);
+};
+
+var _sfGM_cookie = typeof GM_cookie !== 'undefined' ? GM_cookie : {
+  list: function(details, cb) { if (cb) cb([]); },
+  set: function(details, cb) { if (cb) cb(); },
+  delete: function(details, cb) { if (cb) cb(); }
+};
+
 // Safe global assignment helper — never throws even if binding is const/frozen
 var _sfSafeDefine = function(name, value) {
   try {
@@ -166,6 +210,12 @@ try {
   _sfGM.setClipboard = function(text) { _sfGM_setClipboard(text); };
   _sfGM.notification = function(text, title, image, onclick) { _sfGM_notification(text, title, image, onclick); };
   _sfGM.openInTab = function(url, options) { _sfGM_openInTab(url, options); };
+  _sfGM.registerMenuCommand = function(caption, onClick) { return _sfGM_registerMenuCommand(caption, onClick); };
+  _sfGM.unregisterMenuCommand = function(id) { return _sfGM_unregisterMenuCommand(id); };
+  _sfGM.download = function(options) { return _sfGM_download(options); };
+  _sfGM.info = _sfGM_info;
+  _sfGM.cookie = _sfGM_cookie;
+  _sfGM.log = _sfGM_log;
 
   // Try to install on global GM (override if possible)
   try {
@@ -202,6 +252,12 @@ try {
   _sfSafeDefine('GM_setClipboard', _sfGM_setClipboard);
   _sfSafeDefine('GM_notification', _sfGM_notification);
   _sfSafeDefine('GM_openInTab', _sfGM_openInTab);
+  _sfSafeDefine('GM_registerMenuCommand', _sfGM_registerMenuCommand);
+  _sfSafeDefine('GM_unregisterMenuCommand', _sfGM_unregisterMenuCommand);
+  _sfSafeDefine('GM_download', _sfGM_download);
+  _sfSafeDefine('GM_info', _sfGM_info);
+  _sfSafeDefine('GM_log', _sfGM_log);
+  _sfSafeDefine('GM_cookie', _sfGM_cookie);
 
   // Expose internal _sfGM_* functions globally so sanitized user script code
   // (which calls _sfGM_addStyle, _sfGM_getValue, etc.) can resolve them.
@@ -217,6 +273,12 @@ try {
   window._sfGM_setClipboard = _sfGM_setClipboard;
   window._sfGM_notification = _sfGM_notification;
   window._sfGM_openInTab = _sfGM_openInTab;
+  window._sfGM_registerMenuCommand = _sfGM_registerMenuCommand;
+  window._sfGM_unregisterMenuCommand = _sfGM_unregisterMenuCommand;
+  window._sfGM_download = _sfGM_download;
+  window._sfGM_info = _sfGM_info;
+  window._sfGM_log = _sfGM_log;
+  window._sfGM_cookie = _sfGM_cookie;
 } catch(e) {}
 `;
 

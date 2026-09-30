@@ -928,18 +928,6 @@
             return;
           }
 
-          const gmShim = `
-const GM_getValue = function(key, def) { try { return JSON.parse(localStorage.getItem('GM_' + key)) ?? def; } catch(e) { return localStorage.getItem('GM_' + key) || def; } };
-const GM_setValue = function(key, val) { localStorage.setItem('GM_' + key, JSON.stringify(val)); };
-const GM_deleteValue = function(key) { localStorage.removeItem('GM_' + key); };
-const GM = {
-  getValue: async function(key, def) { return GM_getValue(key, def); },
-  setValue: async function(key, val) { return GM_setValue(key, val); },
-  deleteValue: async function(key) { return GM_deleteValue(key); },
-  addStyle: function(css) { const style = document.createElement('style'); style.textContent = css; (document.head || document.documentElement).appendChild(style); }
-};
-const GM_addStyle = GM.addStyle;
-`;
           const result = await browserApi.runtime.sendMessage({
             action: 'US_RUN_ONCE', tabId: tabs[0].id, script: script
           });
@@ -1363,22 +1351,13 @@ const GM_addStyle = GM.addStyle;
             window._usLogToConsole('info', ['--- Bắt đầu chạy thử: ' + scriptName + ' trên ' + (targetTab.title || targetTab.url) + ' ---']);
           }
 
-          const gmShim = `
-const GM_getValue = function(key, def) { try { return JSON.parse(localStorage.getItem('GM_' + key)) ?? def; } catch(e) { return localStorage.getItem('GM_' + key) || def; } };
-const GM_setValue = function(key, val) { localStorage.setItem('GM_' + key, JSON.stringify(val)); };
-const GM_deleteValue = function(key) { localStorage.removeItem('GM_' + key); };
-const GM_listValues = function() { const r=[]; for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k && k.startsWith('GM_')) r.push(k.slice(3)); } return r; };
-const GM_addStyle = function(css) { const style = document.createElement('style'); style.textContent = css; (document.head || document.documentElement).appendChild(style); return style; };
-const GM = {
-  getValue: async function(key, def) { return GM_getValue(key, def); },
-  setValue: async function(key, val) { return GM_setValue(key, val); },
-  deleteValue: async function(key) { return GM_deleteValue(key); },
-  listValues: async function() { return GM_listValues(); },
-  addStyle: function(css) { return GM_addStyle(css); }
-};
-const GM_addStyle = GM.addStyle;
-`;
-          const codeToRun = (document.getElementById('us-edit-code') || dom.editCode || {value: ''}).value;
+          const rawCode = (document.getElementById('us-edit-code') || dom.editCode || {value: ''}).value;
+          const meta = (typeof window !== 'undefined' && window.SF_US_META) || (typeof globalThis !== 'undefined' && globalThis.SF_US_META);
+          let codeToRun = rawCode;
+          if (meta && typeof meta.sanitizeUserscriptCode === 'function') {
+            codeToRun = meta.sanitizeUserscriptCode(codeToRun);
+          }
+          const gmShim = (typeof window !== 'undefined' && window.SF_GM_SHIM) || (typeof globalThis !== 'undefined' && globalThis.SF_FULL_GM_SHIM) || '';
 
           const runnerWrapper = `(function() {
   function _relay(level, args) {
