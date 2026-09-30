@@ -1311,7 +1311,7 @@ window.I18N_VI = {
    "privacy_lang_ru": "🇷🇺 Tiếng Nga",
    "privacy_lang_ja": "🇯🇵 Tiếng Nhật",
    "privacy_doc_title": "ScholarFlow – Chính Sách Quyền Riêng Tư & Bảo Mật",
-   "privacy_last_updated": "Cập nhật lần cuối: Tháng 09/2026 | Phiên bản 2.5.5",
+   "privacy_last_updated": "Cập nhật lần cuối: Tháng 09/2026 | Phiên bản 2.5.6",
    "privacy_compliance_badge": "Tuân thủ Chrome Web Store & Mozilla Add-ons Policies",
    "privacy_verified_badge": "Cam kết 100% Cục Bộ – Tuyệt Đối Không Thu Thập Dữ Liệu Cá Nhân",
    "privacy_summary_title": "Tuyên Bố Cốt Lõi (Privacy by Design):",

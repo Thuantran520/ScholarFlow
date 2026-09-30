@@ -5,6 +5,14 @@ Tất cả thay đổi đáng chú ý của dự án đều được ghi tại �
 
 ---
 
+## [2.5.6] - Unreleased
+
+### Added
+- **Phiên bản phát triển mới**: Cơ sở cho các tính năng cải tiến lớn sắp tới (UI/UX nâng cấp, hiệu năng tốt hơn, bảo mật 강화).
+
+### Changed
+- Nâng cấp version lên 2.5.6 cho chu kỳ phát triển tiếp theo.
+
 ## [2.5.5] - Unreleased
 
 ### Added

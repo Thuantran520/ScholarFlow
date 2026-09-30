@@ -1311,7 +1311,7 @@ window.I18N_EN = {
    "privacy_lang_ru": "🇷🇺 Russian",
    "privacy_lang_ja": "🇯🇵 Japanese",
    "privacy_doc_title": "ScholarFlow – Privacy Policy & Security Commitment",
-   "privacy_last_updated": "Last updated: September 2026 \| Version 2.5.5",
+   "privacy_last_updated": "Last updated: September 2026 | Version 2.5.6",
    "privacy_compliance_badge": "Compliant with Chrome Web Store & Mozilla Add-ons Developer Policies",
    "privacy_verified_badge": "100% Local Processing – Zero Personal Data Collection Guarantee",
    "privacy_summary_title": "Core Commitment (Privacy by Design):",
