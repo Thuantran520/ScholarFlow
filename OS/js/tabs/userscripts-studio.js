@@ -308,14 +308,23 @@
       }));
     } catch(e) {}
   }
+  function _isBenign(str) {
+    if (!str) return false;
+    return /ResizeObserver loop/i.test(str) || /Script error\./i.test(str);
+  }
   const _origLog = console.log, _origWarn = console.warn, _origError = console.error, _origInfo = console.info;
   console.log = function(...a) { _relay('log', a); _origLog.apply(console, a); };
   console.warn = function(...a) { _relay('warn', a); _origWarn.apply(console, a); };
-  console.error = function(...a) { _relay('error', a); _origError.apply(console, a); };
+  console.error = function(...a) {
+    const msg = a.map(x => String((x && x.message) || x)).join(' ');
+    if (!_isBenign(msg)) _relay('error', a);
+    _origError.apply(console, a);
+  };
   console.info = function(...a) { _relay('info', a); _origInfo.apply(console, a); };
 
   window.addEventListener('error', function(e) {
     if (e && e.message) {
+      if (_isBenign(e.message)) return;
       _relay('error', ['[Lỗi Uncaught]', e.message, e.filename ? '(' + e.filename + ':' + e.lineno + ')' : '']);
     }
   });
@@ -327,6 +336,33 @@
     _relay('error', ['[Lỗi runtime]', err.stack || err.message || String(err)]);
   }
 })();`;
+
+      // Prefer native userScripts API if available (bypasses all page CSP and Trusted Types)
+      const usApi = (typeof browserApi !== 'undefined' && browserApi.userScripts) ? browserApi.userScripts : null;
+      if (usApi && typeof usApi.execute === 'function') {
+        try {
+          await usApi.execute({
+            target: { tabId: targetTab.id },
+            js: [{ code: runnerWrapper }],
+            world: 'USER_SCRIPT'
+          });
+          logToConsole('info', ['✓ Kịch bản đã được nạp qua userScripts API thành công.']);
+          if (el.btnTest) {
+            const label = el.btnTest.querySelector('span');
+            if (label) label.textContent = 'Đã chạy!';
+            el.btnTest.style.borderColor = '#10b981';
+            el.btnTest.style.color = '#34d399';
+            setTimeout(() => {
+              if (label) label.textContent = 'Chạy thử';
+              el.btnTest.style.borderColor = '';
+              el.btnTest.style.color = '';
+            }, 2000);
+          }
+          return;
+        } catch (_usErr) {
+          // Fall back to scripting.executeScript below
+        }
+      }
 
       const execOpts = {
         target: { tabId: targetTab.id },
