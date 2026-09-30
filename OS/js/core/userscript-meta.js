@@ -314,7 +314,6 @@
     var gmPattern = gmApiNames.map(escapeRegExp).join('|');
 
     // 1. Remove top-level const/let/var GM_* = ... declarations (handles multi-line)
-    //    Uses a brace/bracket/paren counter to find the true end of the statement
     function removeVarDeclarations(s, pattern) {
       var lines = s.split('\n');
       var out = [];
@@ -327,7 +326,6 @@
           i++;
           continue;
         }
-        // Found a GM_* declaration - skip until we find the terminating semicolon at brace level 0
         var brace = 0, bracket = 0, paren = 0, inString = false, stringChar = '';
         var found = false;
         for (var j = i; j < lines.length; j++) {
@@ -371,7 +369,6 @@
           i++;
           continue;
         }
-        // Skip function declaration + body
         var brace = 0, found = false;
         for (var j = i; j < lines.length; j++) {
           var l = lines[j];
@@ -389,17 +386,15 @@
 
     src = removeFuncDeclarations(src, gmPattern);
 
-    // 3. Replace GM_* references with _sfGM_* (shim internals)
-    //    But only when GM_* is used as a value, not as a property access
+    // 3. Replace ALL GM_* references (both bare and function calls) with _sfGM_*
     gmApiNames.forEach(function(name) {
       var safeName = '_sf' + name;
-      var re = new RegExp('\\b' + escapeRegExp(name) + '\\b(?!\\s*\\()', 'g');
-      // Only replace bare references, not function calls
+      // Match GM_name as a whole word, including when followed by ( for function calls
+      var re = new RegExp('\\b' + escapeRegExp(name) + '\\b', 'g');
       src = src.replace(re, safeName);
     });
 
-    // 4. Handle GM.xmlHttpRequest -> GM_xmlhttpRequest (already covered by shim)
-    // 5. Handle GM. notation for any remaining GM.* property access
+    // 4. Handle GM. notation for any remaining GM.* property access
     src = src.replace(/\bGM\.(getValue|setValue|deleteValue|listValues|addStyle|xmlhttpRequest|addValueChangeListener|removeValueChangeListener|setClipboard|notification|openInTab|registerMenuCommand|unregisterMenuCommand|info|cookie|download|log)\b/g, function(m, method) {
       return '_sfGM_' + method;
     });
