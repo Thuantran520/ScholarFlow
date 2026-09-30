@@ -699,11 +699,6 @@ function _tabmgrUpdateGxMeter() {
       cpuStatusText.textContent = "CRUISING";
     }
   }
-  const cpuPresets = document.querySelectorAll("#tabmgr-cpu-presets .tabmgr-gx-preset-btn");
-  cpuPresets.forEach(function (btn) {
-    const v = parseInt(btn.getAttribute("data-val"), 10);
-    btn.classList.toggle("is-active", Math.abs(v - cpuLimit) < 2);
-  });
 
   // 3. GPU PANE TELEMETRY
   const gpuLoad = _tabmgrComputeGpuEstimate();
@@ -741,11 +736,6 @@ function _tabmgrUpdateGxMeter() {
       gpuStatusText.textContent = "ECO";
     }
   }
-  const gpuPresets = document.querySelectorAll("#tabmgr-gpu-presets .tabmgr-gx-preset-btn");
-  gpuPresets.forEach(function (btn) {
-    const v = parseInt(btn.getAttribute("data-val"), 10);
-    btn.classList.toggle("is-active", Math.abs(v - gpuLimit) < 2);
-  });
 
   // 4. PANES VISIBILITY & NAV BAR SYNC
   const navBtns = document.querySelectorAll(".tabmgr-gx-nav-btn");
@@ -1000,7 +990,7 @@ function _tabmgrInitGxLimiter() {
 
   const cardEl = document.getElementById("tabmgr-gx-card");
   if (cardEl) {
-    const presetBtns = cardEl.querySelectorAll(".tabmgr-gx-presets-row:not(#tabmgr-cpu-presets):not(#tabmgr-gpu-presets) .tabmgr-gx-preset-btn");
+    const presetBtns = cardEl.querySelectorAll(".tabmgr-gx-presets-row .tabmgr-gx-preset-btn");
     presetBtns.forEach(function (btn) {
       btn.addEventListener("click", function () {
         const val = parseFloat(btn.getAttribute("data-val"));
@@ -1052,19 +1042,6 @@ function _tabmgrInitGxLimiter() {
       _tabmgrCheckCpuGpuEnforcement();
     });
   }
-  const cpuPresets = document.querySelectorAll("#tabmgr-cpu-presets .tabmgr-gx-preset-btn");
-  cpuPresets.forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      const val = parseInt(btn.getAttribute("data-val"), 10);
-      if (!isNaN(val)) {
-        tabmgrCpuLimiter.limitPct = val;
-        if (cpuSlider) cpuSlider.value = String(val);
-        _tabmgrSaveGxLimiter();
-        _tabmgrUpdateGxMeter();
-        _tabmgrCheckCpuGpuEnforcement();
-      }
-    });
-  });
   const cpuHardLimit = document.getElementById("tabmgr-cpu-hard-limit");
   if (cpuHardLimit) {
     cpuHardLimit.addEventListener("change", function () {
@@ -1087,19 +1064,6 @@ function _tabmgrInitGxLimiter() {
       _tabmgrCheckCpuGpuEnforcement();
     });
   }
-  const gpuPresets = document.querySelectorAll("#tabmgr-gpu-presets .tabmgr-gx-preset-btn");
-  gpuPresets.forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      const val = parseInt(btn.getAttribute("data-val"), 10);
-      if (!isNaN(val)) {
-        tabmgrGpuLimiter.limitPct = val;
-        if (gpuSlider) gpuSlider.value = String(val);
-        _tabmgrSaveGxLimiter();
-        _tabmgrUpdateGxMeter();
-        _tabmgrCheckCpuGpuEnforcement();
-      }
-    });
-  });
   const gpuHardLimit = document.getElementById("tabmgr-gpu-hard-limit");
   if (gpuHardLimit) {
     gpuHardLimit.addEventListener("change", function () {
