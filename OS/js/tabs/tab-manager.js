@@ -529,7 +529,16 @@ function _tabmgrUpdateSliderTrack(el) {
   const max = parseFloat(el.max) || 16;
   const val = parseFloat(el.value) || 4;
   const ratio = Math.max(0, Math.min(100, ((val - min) / (max - min)) * 100));
-  el.style.background = "linear-gradient(90deg, #38bdf8 0%, #0284c7 " + ratio.toFixed(1) + "%, rgba(255, 255, 255, 0.08) " + ratio.toFixed(1) + "%, rgba(255, 255, 255, 0.08) 100%)";
+  el.style.background = "linear-gradient(90deg, #06b6d4 0%, #38bdf8 " + (ratio * 0.75).toFixed(1) + "%, #3b82f6 " + ratio.toFixed(1) + "%, rgba(255, 255, 255, 0.08) " + ratio.toFixed(1) + "%, rgba(255, 255, 255, 0.08) 100%)";
+
+  const container = document.getElementById("tabmgr-gx-card");
+  if (container) {
+    const btns = container.querySelectorAll(".tabmgr-gx-preset-btn");
+    btns.forEach(function (btn) {
+      const v = parseFloat(btn.getAttribute("data-val"));
+      btn.classList.toggle("is-active", Math.abs(v - val) < 0.1);
+    });
+  }
 }
 
 function _tabmgrSaveGxLimiter() {
@@ -548,6 +557,8 @@ function _tabmgrInitGxLimiter() {
       if (typeof navigator !== "undefined" && navigator.deviceMemory) {
         const sysMem = Math.max(4, Math.min(32, Math.round(navigator.deviceMemory * 2)));
         sliderEl.max = String(sysMem);
+        const maxBound = document.getElementById("tabmgr-gx-slider-max-bound");
+        if (maxBound) maxBound.textContent = sysMem + " GB";
       }
       sliderEl.value = tabmgrGxLimiter.limitGB;
       _tabmgrUpdateSliderTrack(sliderEl);
@@ -578,6 +589,29 @@ function _tabmgrInitGxLimiter() {
       tabmgrGxLimiter.limitGB = parseFloat(sliderEl.value);
       _tabmgrSaveGxLimiter();
       _tabmgrCheckRamEnforcement();
+    });
+  }
+
+  const cardEl = document.getElementById("tabmgr-gx-card");
+  if (cardEl) {
+    const presetBtns = cardEl.querySelectorAll(".tabmgr-gx-preset-btn");
+    presetBtns.forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        const val = parseFloat(btn.getAttribute("data-val"));
+        if (!isNaN(val)) {
+          tabmgrGxLimiter.limitGB = val;
+          const sEl = document.getElementById("tabmgr-gx-slider");
+          if (sEl) {
+            sEl.value = String(val);
+            _tabmgrUpdateSliderTrack(sEl);
+          }
+          const sValEl = document.getElementById("tabmgr-gx-slider-val");
+          if (sValEl) sValEl.textContent = val.toFixed(1) + " GB";
+          _tabmgrSaveGxLimiter();
+          _tabmgrUpdateGxMeter();
+          _tabmgrCheckRamEnforcement();
+        }
+      });
     });
   }
 

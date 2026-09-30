@@ -121,13 +121,35 @@
 
           <div class="tabmgr-gx-slider-row">
             <div class="tabmgr-gx-slider-header">
-              <span data-i18n="tabmgr_gx_limit_setting">Mức giới hạn RAM:</span>
-              <strong id="tabmgr-gx-slider-val" class="tabmgr-gx-highlight">4.0 GB</strong>
+              <div class="tabmgr-gx-slider-label-group">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 19v-3M10 19v-3M14 19v-3M18 19v-3M6 5v3M10 5v3M14 5v3M18 5v3M2 8h20v8H2z"></path></svg>
+                <span data-i18n="tabmgr_gx_limit_setting">Mức giới hạn RAM:</span>
+              </div>
+              <div class="tabmgr-gx-val-hud">
+                <span class="tabmgr-gx-val-dot"></span>
+                <strong id="tabmgr-gx-slider-val" class="tabmgr-gx-highlight">4.0 GB</strong>
+              </div>
             </div>
             <div class="tabmgr-gx-slider-track-wrap">
               <span class="tabmgr-gx-slider-bound">1 GB</span>
-              <input type="range" id="tabmgr-gx-slider" class="tabmgr-gx-range" min="1" max="16" step="0.5" value="4">
-              <span class="tabmgr-gx-slider-bound">16 GB</span>
+              <div class="tabmgr-gx-range-box">
+                <input type="range" id="tabmgr-gx-slider" class="tabmgr-gx-range" min="1" max="16" step="0.5" value="4">
+                <div class="tabmgr-gx-ticks-bar">
+                  <span class="tabmgr-gx-tick-mark" style="left: 0%;"></span>
+                  <span class="tabmgr-gx-tick-mark" style="left: 20%;"></span>
+                  <span class="tabmgr-gx-tick-mark is-mid" style="left: 46.7%;"></span>
+                  <span class="tabmgr-gx-tick-mark" style="left: 73.3%;"></span>
+                  <span class="tabmgr-gx-tick-mark is-max" style="left: 100%;"></span>
+                </div>
+              </div>
+              <span class="tabmgr-gx-slider-bound" id="tabmgr-gx-slider-max-bound">16 GB</span>
+            </div>
+            <div class="tabmgr-gx-presets-row">
+              <button type="button" class="tabmgr-gx-preset-btn" data-val="2">2 GB</button>
+              <button type="button" class="tabmgr-gx-preset-btn is-active" data-val="4">4 GB</button>
+              <button type="button" class="tabmgr-gx-preset-btn" data-val="8">8 GB</button>
+              <button type="button" class="tabmgr-gx-preset-btn" data-val="12">12 GB</button>
+              <button type="button" class="tabmgr-gx-preset-btn" data-val="16">16 GB</button>
             </div>
           </div>
 
