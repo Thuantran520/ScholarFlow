@@ -2353,26 +2353,33 @@
 .cal-weather-pill {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  background: rgba(15, 23, 42, 0.65);
-  border: 1px solid rgba(56, 189, 248, 0.3);
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.75), rgba(15, 23, 42, 0.85));
+  border: 1px solid rgba(56, 189, 248, 0.28);
   border-radius: 999px;
-  padding: 3px 8px;
   font-size: 11px;
-  font-weight: 700;
-  color: #e2e8f0;
+  font-weight: 600;
+  color: #cbd5e1;
   cursor: pointer;
-  transition: all 0.15s ease;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
   line-height: 1;
 }
 .cal-weather-pill:hover {
-  background: rgba(30, 41, 59, 0.85);
-  border-color: #38bdf8;
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.25);
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95));
+  border-color: rgba(56, 189, 248, 0.6);
+  color: #f0f9ff;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(56, 189, 248, 0.22);
 }
-.cal-weather-sep {
-  color: rgba(255, 255, 255, 0.25);
-  font-size: 10px;
+.cal-weather-sep,
+.cal-weather-dot {
+  color: rgba(148, 163, 184, 0.4);
+  font-size: 9px;
+  line-height: 1;
 }
 .cal-weather-pill.has-rain-alert {
   border-color: rgba(59, 130, 246, 0.6);

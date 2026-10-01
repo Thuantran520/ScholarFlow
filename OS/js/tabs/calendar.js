@@ -1412,6 +1412,44 @@ function calAddManualEvent() {
   calRenderCalendar();
 }
 
+function calCreateDemoMeeting() {
+  const now = new Date();
+  const todayKey = calDateKey(now);
+  const startH = calPad2(now.getHours());
+  const startM = calPad2(now.getMinutes());
+
+  const endObj = new Date(now.getTime() + 45 * 60 * 1000);
+  const endKey = calDateKey(endObj);
+  const endH = calPad2(endObj.getHours());
+  const endM = calPad2(endObj.getMinutes());
+
+  const demoEvent = {
+    uid: "demo_meet_" + Date.now(),
+    summary: "Họp nhóm nghiên cứu (Demo Live)",
+    location: "https://meet.google.com/sf-demo-meet",
+    description: "Cuộc họp trực tuyến mẫu thử nghiệm tính năng phòng họp ScholarFlow",
+    url: "https://meet.google.com/sf-demo-meet",
+    start: { key: todayKey, time: startH + ":" + startM },
+    end: { key: endKey, time: endH + ":" + endM },
+    allDay: false,
+    color: "#0284c7"
+  };
+
+  calManualFeedEnsure();
+  if (!calData["cal_manual"]) calData["cal_manual"] = [];
+  calData["cal_manual"].push(demoEvent);
+  calPersist();
+  calCloseSettingsModal();
+  calSelectedKey = todayKey;
+  calViewFocusKey = todayKey;
+  calRenderFeedList();
+  calRenderCalendar();
+  calRenderLiveMeetingBanner();
+
+  const msg = window.i18n ? window.i18n.t("cal_toast_demo_created") : "Đã tạo cuộc họp mẫu! Xem banner Vào phòng họp ngay phía trên.";
+  showToast(msg, "success");
+}
+
 function calManualInit() {
   const form = document.getElementById("cal-manual-form");
   if (!form) return;
@@ -1462,6 +1500,17 @@ function calManualInit() {
       }
     });
   }
+
+  document.querySelectorAll(".cal-preset-link-chip").forEach(function (chip) {
+    chip.addEventListener("click", function () {
+      const link = chip.getAttribute("data-link");
+      const locInput = g("cal-manual-loc");
+      if (locInput && link) {
+        locInput.value = link;
+        locInput.focus();
+      }
+    });
+  });
 
   const today = calTodayKey();
   if (!g("cal-manual-start-date").value) g("cal-manual-start-date").value = today;
@@ -1588,6 +1637,11 @@ function calInit() {
       calCloseSettingsModal();
       calOpenGoogleModal();
     });
+  }
+
+  const btnCreateDemo = document.getElementById("btn-cal-create-demo-meeting");
+  if (btnCreateDemo) {
+    btnCreateDemo.addEventListener("click", calCreateDemoMeeting);
   }
 
   // Weather Modal & Controls

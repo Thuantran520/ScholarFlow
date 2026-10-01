@@ -89,7 +89,11 @@ const ALLOWED_HOSTS = new Set([
    // Greasy Fork script pages, so "import from URL" accepts a page link and
    // resolves the real .user.js behind it.
    "greasyfork.org",
-   "translate.googleapis.com"
+   "translate.googleapis.com",
+   "meet.google.com",
+   "zoom.us",
+   "teams.microsoft.com",
+   "discord.gg"
    ]);
 
 function walk(dir, out = []) {
