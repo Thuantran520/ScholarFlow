@@ -431,6 +431,73 @@ body.is-popup .btn-open-sidebar-wrap {
   opacity: 0.55;
 }
 
+.hdrs-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 22px;
+  cursor: grab;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1;
+  user-select: none;
+  transition: color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.hdrs-drag-handle:hover {
+  color: #38bdf8;
+}
+
+.hdrs-drag-handle:active {
+  cursor: grabbing;
+}
+
+.hdrs-toggle-btn {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  color: #cbd5e1;
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.hdrs-toggle-btn:hover {
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.55);
+  background: rgba(56, 189, 248, 0.15);
+}
+
+.hdrs-toggle-btn.is-on {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.hdrs-item-row.is-dragging {
+  opacity: 0.35;
+  background: rgba(56, 189, 248, 0.08);
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+.hdrs-item-row.is-drag-over-top {
+  border-top: 2px solid #38bdf8 !important;
+}
+
+.hdrs-item-row.is-drag-over-bottom {
+  border-bottom: 2px solid #38bdf8 !important;
+}
+
 .hdrs-item-name {
   flex: 1;
   min-width: 0;

@@ -3369,31 +3369,70 @@ onReady(function () {
   const btnGroupBrowser = document.getElementById("btn-tabmgr-group-browser");
   if (btnGroupBrowser) btnGroupBrowser.addEventListener("click", tabmgrGroupInBrowser);
   // refresh active-tab display rides on tabmgrRenderList itself (no dedicated hook)
-  _tabmgrInitGxLimiter();
-  tabmgrLoadTabs();
-  tabmgrLoadSessions();
-  document.addEventListener("visibilitychange", function () { if (!document.hidden) { tabmgrLoadTabs(); tabmgrMediaRefresh(); _tabmgrCheckRamEnforcement(); } });
+  function _tabmgrIsActiveModule() {
+    return !(typeof window.sfNavIsDisabled === "function" && window.sfNavIsDisabled("tab-tabmgr"));
+  }
+
+  if (_tabmgrIsActiveModule()) {
+    _tabmgrInitGxLimiter();
+    tabmgrLoadTabs();
+    tabmgrLoadSessions();
+  }
+
+  window.addEventListener("sf:nav-changed", function (e) {
+    if (_tabmgrIsActiveModule()) {
+      _tabmgrInitGxLimiter();
+      tabmgrLoadTabs();
+      tabmgrLoadSessions();
+    } else {
+      if (typeof _tabmgrMediaPauseOthers === "function") {
+        try { _tabmgrMediaPauseOthers(); } catch (err) {}
+      }
+    }
+  });
+
+  document.addEventListener("visibilitychange", function () {
+    if (!_tabmgrIsActiveModule()) return;
+    if (!document.hidden) { tabmgrLoadTabs(); tabmgrMediaRefresh(); _tabmgrCheckRamEnforcement(); }
+  });
+
   // Debounced event refresh: onUpdated fires many times per page-load; coalesce bursts.
   let _tabmgrEvT = null;
   function _tabmgrEventRefresh() {
+    if (!_tabmgrIsActiveModule()) return;
     if (_tabmgrEvT) return;
-    _tabmgrEvT = setTimeout(function () { _tabmgrEvT = null; tabmgrLoadTabs(); _tabmgrMediaEventRefresh(); _tabmgrCheckRamEnforcement(); }, 200);
+    _tabmgrEvT = setTimeout(function () {
+      _tabmgrEvT = null;
+      if (!_tabmgrIsActiveModule()) return;
+      tabmgrLoadTabs();
+      _tabmgrMediaEventRefresh();
+      _tabmgrCheckRamEnforcement();
+    }, 200);
   }
   try {
     const api = _getTabsApi();
     if (api && api.onUpdated && api.onUpdated.addListener) api.onUpdated.addListener(_tabmgrEventRefresh);
     if (api && api.onRemoved && api.onRemoved.addListener) api.onRemoved.addListener(_tabmgrEventRefresh);
-    if (api && api.onRemoved && api.onRemoved.addListener) api.onRemoved.addListener(function (tabId) { _tabmgrMediaEvRemoved(tabId); });
+    if (api && api.onRemoved && api.onRemoved.addListener) api.onRemoved.addListener(function (tabId) {
+      if (!_tabmgrIsActiveModule()) return;
+      _tabmgrMediaEvRemoved(tabId);
+    });
     if (api && api.onCreated && api.onCreated.addListener) api.onCreated.addListener(_tabmgrEventRefresh);
     if (api && api.onActivated && api.onActivated.addListener) api.onActivated.addListener(_tabmgrEventRefresh);
     if (api && api.onHighlighted && api.onHighlighted.addListener) api.onHighlighted.addListener(_tabmgrEventRefresh);
     try {
       const winApi = (typeof chrome !== "undefined" && chrome.windows) ? chrome.windows : (typeof browser !== "undefined" && browser.windows) ? browser.windows : null;
-      if (winApi && winApi.onFocusChanged && winApi.onFocusChanged.addListener) winApi.onFocusChanged.addListener(function () { setTimeout(_tabmgrEventRefresh, 200); });
+      if (winApi && winApi.onFocusChanged && winApi.onFocusChanged.addListener) winApi.onFocusChanged.addListener(function () {
+        if (!_tabmgrIsActiveModule()) return;
+        setTimeout(_tabmgrEventRefresh, 200);
+      });
       if (winApi && winApi.onRemoved && winApi.onRemoved.addListener) winApi.onRemoved.addListener(_tabmgrEventRefresh);
     } catch (e3) {}
   } catch (e2) {}
   // Safety net: if the host window never got the event (popup closed on blur in Firefox,
-  // listener threw earlier, background throttle...), soft-poll only while this page is visible.
-  setInterval(function () { if (!document.hidden) { tabmgrLoadTabs(); _tabmgrCheckRamEnforcement(); } }, 5000);
+  // listener threw earlier, background throttle...), soft-poll only while this page is visible and module active.
+  setInterval(function () {
+    if (!_tabmgrIsActiveModule()) return;
+    if (!document.hidden) { tabmgrLoadTabs(); _tabmgrCheckRamEnforcement(); }
+  }, 5000);
 });

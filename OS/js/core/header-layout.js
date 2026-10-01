@@ -30,7 +30,10 @@
 
   var state = null;
   var navOrder = null;
+  var navDisabled = {};
   var bound = false;
+  var dragSrcNav = null;
+  var dragNavBtn = null;
 
   function cloneDefaults() {
     return JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
@@ -251,7 +254,7 @@
     return btn;
   }
 
-  // ---- Main-nav tab ordering ------------------------------------------------
+  // ---- Main-nav tab ordering & module kill-switch ---------------------------
 
   function mergeNavOrder(stored) {
     var out = [];
@@ -271,6 +274,114 @@
     return out;
   }
 
+  function mergeNavDisabled(stored) {
+    var out = {};
+    if (stored && typeof stored === 'object') {
+      DEFAULT_NAV_ORDER.forEach(function (t) {
+        if (stored[t] === true) out[t] = true;
+      });
+    }
+    return out;
+  }
+
+  function isNavDisabled(target) {
+    return !!(navDisabled && navDisabled[target]);
+  }
+
+  function countEnabledTabs() {
+    if (!navOrder) return DEFAULT_NAV_ORDER.length;
+    var count = 0;
+    navOrder.forEach(function (t) {
+      if (!isNavDisabled(t)) count++;
+    });
+    return count;
+  }
+
+  function getFirstEnabledTab() {
+    if (!navOrder) return DEFAULT_NAV_ORDER[0];
+    for (var i = 0; i < navOrder.length; i++) {
+      if (!isNavDisabled(navOrder[i])) return navOrder[i];
+    }
+    return navOrder[0];
+  }
+
+  function notifyNavChanged() {
+    try {
+      window.dispatchEvent(new CustomEvent('sf:nav-changed', {
+        detail: {
+          order: navOrder ? navOrder.slice() : [],
+          disabled: Object.assign({}, navDisabled)
+        }
+      }));
+    } catch (e) {}
+  }
+
+  function setupNavbarDragAndDrop() {
+    var wrapper = document.getElementById('nav-wrapper');
+    if (!wrapper) return;
+    var btns = wrapper.querySelectorAll('.main-nav-btn');
+    btns.forEach(function (btn) {
+      btn.draggable = true;
+      if (btn._sfDndBound) return;
+      btn._sfDndBound = true;
+
+      btn.addEventListener('dragstart', function (e) {
+        dragNavBtn = btn.dataset.target;
+        if (e.dataTransfer) {
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', btn.dataset.target || '');
+        }
+        btn.classList.add('is-nav-dragging');
+      });
+
+      btn.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+        var rect = btn.getBoundingClientRect();
+        var relX = e.clientX - rect.left;
+        if (relX < rect.width / 2) {
+          btn.classList.add('is-nav-drag-before');
+          btn.classList.remove('is-nav-drag-after');
+        } else {
+          btn.classList.add('is-nav-drag-after');
+          btn.classList.remove('is-nav-drag-before');
+        }
+      });
+
+      btn.addEventListener('dragleave', function () {
+        btn.classList.remove('is-nav-drag-before', 'is-nav-drag-after');
+      });
+
+      btn.addEventListener('drop', function (e) {
+        e.preventDefault();
+        btn.classList.remove('is-nav-drag-before', 'is-nav-drag-after');
+        var src = (e.dataTransfer && e.dataTransfer.getData('text/plain')) || dragNavBtn;
+        var dest = btn.dataset.target;
+        if (!src || !dest || src === dest || !navOrder) return;
+        var srcIdx = navOrder.indexOf(src);
+        var destIdx = navOrder.indexOf(dest);
+        if (srcIdx === -1 || destIdx === -1) return;
+
+        var rect = btn.getBoundingClientRect();
+        var insertAfter = (e.clientX - rect.left) >= (rect.width / 2);
+
+        navOrder.splice(srcIdx, 1);
+        destIdx = navOrder.indexOf(dest);
+        if (insertAfter) destIdx++;
+        navOrder.splice(destIdx, 0, src);
+
+        commitNav();
+      });
+
+      btn.addEventListener('dragend', function () {
+        dragNavBtn = null;
+        btns.forEach(function (b) {
+          b.classList.remove('is-nav-dragging', 'is-nav-drag-before', 'is-nav-drag-after');
+        });
+      });
+    });
+  }
+
   function applyNavOrder() {
     if (!navOrder) return;
     var wrapper = document.getElementById('nav-wrapper');
@@ -285,18 +396,45 @@
       if (ib === undefined) return -1;
       return ia - ib;
     });
-    btns.forEach(function (b) { wrapper.appendChild(b); });
+    btns.forEach(function (b) {
+      var target = b.dataset.target;
+      var disabled = isNavDisabled(target);
+      b.classList.toggle('is-hidden', disabled);
+      if (disabled) {
+        b.style.display = 'none';
+      } else {
+        b.style.display = '';
+      }
+      wrapper.appendChild(b);
+    });
+
+    var curActive = getActiveNavTarget();
+    if (isNavDisabled(curActive)) {
+      var nextActive = getFirstEnabledTab();
+      applyNavActive(nextActive);
+      saveNavWithActive(nextActive);
+    }
+
+    setupNavbarDragAndDrop();
   }
 
   function getActiveNavTarget() {
     var wrapper = document.getElementById('nav-wrapper');
     var btn = wrapper ? wrapper.querySelector('.main-nav-btn.active') : null;
-    return (btn && btn.dataset.target) || (navOrder ? navOrder[0] : null);
+    return (btn && btn.dataset.target) || getFirstEnabledTab();
   }
 
   function saveNavWithActive(active) {
     if (!navOrder) return;
-    var payload = { order: navOrder.slice(), active: active || getActiveNavTarget() };
+    var curActive = active || getActiveNavTarget();
+    if (isNavDisabled(curActive)) {
+      curActive = getFirstEnabledTab();
+    }
+    var payload = {
+      order: navOrder.slice(),
+      disabled: Object.assign({}, navDisabled),
+      active: curActive
+    };
     if (typeof storSet === 'function') {
       storSet((function (obj) { obj[NAV_STORE_KEY] = payload; return obj; })({}), function () {});
     } else if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
@@ -313,7 +451,9 @@
 
   function applyNavActive(target) {
     if (!navOrder) return;
-    var val = (Array.isArray(navOrder) && navOrder.indexOf(target) !== -1) ? target : navOrder[0];
+    var val = (Array.isArray(navOrder) && navOrder.indexOf(target) !== -1 && !isNavDisabled(target))
+      ? target
+      : getFirstEnabledTab();
     document.querySelectorAll('.main-nav-btn').forEach(function (b) {
       b.classList.toggle('active', b.dataset.target === val);
     });
@@ -336,6 +476,24 @@
     saveNav();
     applyNavOrder();
     renderNavRows();
+    notifyNavChanged();
+  }
+
+  function toggleNavDisabled(target) {
+    if (!navOrder || !target) return;
+    var currentlyDisabled = isNavDisabled(target);
+    if (!currentlyDisabled) {
+      if (countEnabledTabs() <= 1) {
+        if (typeof showToast === 'function') {
+          showToast('hdrs_min_one_tab', 'warning');
+        }
+        return;
+      }
+      navDisabled[target] = true;
+    } else {
+      delete navDisabled[target];
+    }
+    commitNav();
   }
 
   function moveNav(target, dir) {
@@ -356,8 +514,26 @@
 
     navOrder.forEach(function (target, idx) {
       var row = document.createElement('div');
-      row.className = 'hdrs-item-row';
+      var disabled = isNavDisabled(target);
+      row.className = 'hdrs-item-row' + (disabled ? ' is-hidden' : '');
       row.dataset.navTarget = target;
+      row.draggable = true;
+
+      var handle = document.createElement('span');
+      handle.className = 'hdrs-drag-handle';
+      handle.textContent = '\u283F';
+      handle.title = tr('hdrs_drag_handle_tip');
+      handle.setAttribute('aria-label', tr('hdrs_drag_handle_tip'));
+
+      var eye = document.createElement('button');
+      eye.type = 'button';
+      eye.className = 'hdrs-toggle-btn' + (disabled ? '' : ' is-on');
+      eye.textContent = disabled ? '\u25CB' : '\u25C9';
+      eye.title = tr(disabled ? 'hdrs_show' : 'hdrs_hide');
+      eye.addEventListener('click', function (e) {
+        e.stopPropagation();
+        toggleNavDisabled(target);
+      });
 
       var name = document.createElement('span');
       name.className = 'hdrs-item-name';
@@ -372,8 +548,69 @@
 
       grp.appendChild(up);
       grp.appendChild(down);
+
+      row.appendChild(handle);
+      row.appendChild(eye);
       row.appendChild(name);
       row.appendChild(grp);
+
+      // Drag & Drop for modal rows
+      row.addEventListener('dragstart', function (e) {
+        dragSrcNav = target;
+        if (e.dataTransfer) {
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', target);
+        }
+        row.classList.add('is-dragging');
+      });
+
+      row.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+        var rect = row.getBoundingClientRect();
+        var relY = e.clientY - rect.top;
+        if (relY < rect.height / 2) {
+          row.classList.add('is-drag-over-top');
+          row.classList.remove('is-drag-over-bottom');
+        } else {
+          row.classList.add('is-drag-over-bottom');
+          row.classList.remove('is-drag-over-top');
+        }
+      });
+
+      row.addEventListener('dragleave', function () {
+        row.classList.remove('is-drag-over-top', 'is-drag-over-bottom');
+      });
+
+      row.addEventListener('drop', function (e) {
+        e.preventDefault();
+        row.classList.remove('is-drag-over-top', 'is-drag-over-bottom');
+        var src = (e.dataTransfer && e.dataTransfer.getData('text/plain')) || dragSrcNav;
+        if (!src || src === target) return;
+        var srcIdx = navOrder.indexOf(src);
+        var destIdx = navOrder.indexOf(target);
+        if (srcIdx === -1 || destIdx === -1) return;
+
+        var rect = row.getBoundingClientRect();
+        var insertAfter = (e.clientY - rect.top) >= (rect.height / 2);
+
+        navOrder.splice(srcIdx, 1);
+        destIdx = navOrder.indexOf(target);
+        if (insertAfter) destIdx++;
+        navOrder.splice(destIdx, 0, src);
+
+        commitNav();
+      });
+
+      row.addEventListener('dragend', function () {
+        dragSrcNav = null;
+        if (list) {
+          list.querySelectorAll('.hdrs-item-row').forEach(function (r) {
+            r.classList.remove('is-dragging', 'is-drag-over-top', 'is-drag-over-bottom');
+          });
+        }
+      });
+
       list.appendChild(row);
     });
   }
@@ -382,9 +619,13 @@
     var done = function (res) {
       var stored = res && res.sf_nav_settings;
       navOrder = mergeNavOrder(stored && stored.order);
+      navDisabled = mergeNavDisabled(stored && stored.disabled);
       applyNavOrder();
-      applyNavActive(stored && stored.active);
+      var act = (stored && stored.active);
+      if (!act || isNavDisabled(act)) act = getFirstEnabledTab();
+      applyNavActive(act);
       renderNavRows();
+      notifyNavChanged();
     };
     if (typeof storGet === 'function') {
       storGet(NAV_STORE_KEY, done);
@@ -396,7 +637,7 @@
   }
 
   function rememberNavActive(target) {
-    if (target && navOrder && navOrder.indexOf(target) !== -1) {
+    if (target && !isNavDisabled(target) && navOrder && navOrder.indexOf(target) !== -1) {
       try {
         saveNavWithActive(target);
       } catch (e) {}
@@ -416,10 +657,12 @@
     resetSettings();
     if (!navOrder) return;
     navOrder = DEFAULT_NAV_ORDER.slice();
+    navDisabled = {};
     saveNavWithActive(navOrder[0]);
     applyNavOrder();
     applyNavActive(navOrder[0]);
     renderNavRows();
+    notifyNavChanged();
   }
 
   // ---- Modal + bindings -----------------------------------------------------
@@ -526,16 +769,40 @@
     saveNav();
     applyNavOrder();
     renderNavRows();
+    notifyNavChanged();
     return window.sfNavGetOrder();
   };
   window.sfNavReset = function () {
     if (!navOrder) return null;
     navOrder = DEFAULT_NAV_ORDER.slice();
+    navDisabled = {};
     saveNavWithActive(navOrder[0]);
     applyNavOrder();
     applyNavActive(navOrder[0]);
     renderNavRows();
+    notifyNavChanged();
     return window.sfNavGetOrder();
+  };
+  window.sfNavIsDisabled = function (target) {
+    return isNavDisabled(target);
+  };
+  window.sfNavGetDisabled = function () {
+    return Object.assign({}, navDisabled);
+  };
+  window.sfNavSetDisabled = function (target, disabled) {
+    if (!target) return false;
+    if (disabled) {
+      if (countEnabledTabs() <= 1 && !isNavDisabled(target)) return false;
+      navDisabled[target] = true;
+    } else {
+      delete navDisabled[target];
+    }
+    commitNav();
+    return true;
+  };
+  window.sfNavToggleDisabled = function (target) {
+    toggleNavDisabled(target);
+    return isNavDisabled(target);
   };
 
   if (document.readyState !== 'loading') {

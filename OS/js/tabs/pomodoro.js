@@ -617,4 +617,13 @@ function pmLoad() {
 window.pmIsRunning = () => pmState.running;
 window.pmCompleteSession = pmCompleteSession;
 
+window.addEventListener("sf:nav-changed", function () {
+  if (typeof window.sfNavIsDisabled === "function" && window.sfNavIsDisabled("tab-pomo")) {
+    if (pmState.running) {
+      pmStopTimer();
+      pmRenderToggle();
+    }
+  }
+});
+
 pmLoad();

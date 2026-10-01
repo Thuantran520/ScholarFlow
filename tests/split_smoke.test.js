@@ -70,7 +70,7 @@ const KEY_GLOBALS = [
   "renderAutofillList", "renderTodoList", "calRenderCalendar",
   "pomodoroFormatTime", "pomodoroDailyStats", "pomodoroPlan", "pomodoroWeekStats",
   "sfGetHeaderSettings", "sfHeaderApply", "sfHeaderReset",
-  "sfNavGetOrder", "sfNavReorder", "sfNavReset",
+  "sfNavGetOrder", "sfNavReorder", "sfNavReset", "sfNavIsDisabled", "sfNavGetDisabled", "sfNavSetDisabled", "sfNavToggleDisabled",
   "tabmgrMediaGetPref", "tabmgrMediaSetPref", "tabmgrMediaRefresh"
 ];
 
@@ -2851,6 +2851,49 @@ async function main() {
       storedNavReset.order.join() === navDefault.join() &&
       [...w.document.querySelectorAll("#nav-wrapper .main-nav-btn")].map(b => b.dataset.target).join() === navDefault.join(),
       "reset restores the default nav order in model, DOM, and storage");
+
+    // --- Main-nav Drag & Drop and Module Kill-Switch ---
+    const allNavRows = w.document.querySelectorAll("#hdrs-nav-list .hdrs-item-row");
+    const handles = w.document.querySelectorAll("#hdrs-nav-list .hdrs-drag-handle");
+    check(handles.length === 19 && allNavRows[0].draggable === true,
+      `modal nav rows provide drag handles and draggable rows (got ${handles.length} handles)`);
+    const navBtns = w.document.querySelectorAll("#nav-wrapper .main-nav-btn");
+    check(navBtns.length === 19 && navBtns[0].draggable === true,
+      "navbar buttons are draggable for direct reordering");
+
+    // Toggle module disable / kill-switch
+    const pomoRow = w.document.querySelector('#hdrs-nav-list [data-nav-target="tab-pomo"]');
+    const pomoToggle = pomoRow ? pomoRow.querySelector(".hdrs-toggle-btn") : null;
+    check(!!pomoToggle && pomoToggle.classList.contains("is-on"), "pomo toggle button is on initially");
+    pomoToggle.click();
+    await new Promise(r => setTimeout(r, 40));
+    const pomoRowAfter = w.document.querySelector('#hdrs-nav-list [data-nav-target="tab-pomo"]');
+    check(w.sfNavIsDisabled("tab-pomo") === true && pomoRowAfter && pomoRowAfter.classList.contains("is-hidden"),
+      "clicking toggle disables module and marks row is-hidden");
+    const pomoNavBtn = w.document.querySelector('#nav-wrapper .main-nav-btn[data-target="tab-pomo"]');
+    check(pomoNavBtn && pomoNavBtn.style.display === "none",
+      "disabled tab button is hidden in navbar");
+
+    // Disabling current active tab automatically switches to first enabled tab
+    w.sfNavSetDisabled("tab-cite", true);
+    await new Promise(r => setTimeout(r, 40));
+    const activeTarget = w.document.querySelector("#nav-wrapper .main-nav-btn.active");
+    check(activeTarget && activeTarget.dataset.target !== "tab-cite" && activeTarget.dataset.target !== "tab-pomo",
+      `disabling active tab switches to first enabled tab (switched to ${activeTarget && activeTarget.dataset.target})`);
+
+    // Min 1 tab guard
+    const orderNow = w.sfNavGetOrder();
+    orderNow.forEach(t => { if (t !== "tab-ai") w.sfNavSetDisabled(t, true); });
+    await new Promise(r => setTimeout(r, 40));
+    const cantDisableLast = w.sfNavSetDisabled("tab-ai", true);
+    check(cantDisableLast === false && w.sfNavIsDisabled("tab-ai") === false,
+      "cannot disable the last remaining enabled tab (min 1 tab guard)");
+
+    // Re-enable and reset
+    w.document.getElementById("btn-reset-header-settings").click();
+    await new Promise(r => setTimeout(r, 40));
+    check(w.sfNavIsDisabled("tab-pomo") === false && w.sfNavIsDisabled("tab-cite") === false,
+      "reset re-enables all tabs");
   }
 
   // 4zz2. Nav default active tab = stored active, else first tab in nav order

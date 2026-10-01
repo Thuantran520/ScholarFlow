@@ -111,3 +111,18 @@
   max-width: 100%;
   letter-spacing: -0.2px;
 }
+
+/* Nav Drag & Drop and Visibility */
+.main-nav-btn.is-nav-dragging {
+  opacity: 0.35;
+  transform: scale(0.95);
+}
+.main-nav-btn.is-nav-drag-before {
+  box-shadow: -2px 0 0 0 #38bdf8, 0 0 10px rgba(56, 189, 248, 0.4);
+}
+.main-nav-btn.is-nav-drag-after {
+  box-shadow: 2px 0 0 0 #38bdf8, 0 0 10px rgba(56, 189, 248, 0.4);
+}
+.main-nav-btn.is-hidden {
+  display: none !important;
+}
