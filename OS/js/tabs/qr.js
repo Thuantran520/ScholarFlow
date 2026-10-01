@@ -1045,7 +1045,7 @@ function initQrTab() {
   function updateView() {
     const val = (elInput ? elInput.value.trim() : "") || "ScholarFlow";
     if (elHint) {
-      elHint.textContent = val.length + " ký tự";
+      elHint.textContent = (typeof t === "function" ? t("counter_chars", [val.length]) : (val.length + " ký tự"));
     }
     updateBadgeText();
 
@@ -1312,7 +1312,7 @@ function initQrTab() {
               new ClipboardItem({ "image/png": blob })
             ]).then(() => {
               const orig = btnCopyImg.textContent;
-              btnCopyImg.textContent = "Đã sao chép ảnh ✔";
+              btnCopyImg.textContent = (typeof t === "function" ? t("qr_copied_img") : "Đã sao chép ảnh ✔");
               setTimeout(() => { btnCopyImg.textContent = orig; }, 1500);
             }).catch((err) => {
               console.warn("Clipboard write failed:", err);
@@ -1332,7 +1332,7 @@ function initQrTab() {
       if (val && navigator.clipboard) {
         navigator.clipboard.writeText(val).then(() => {
           const orig = btnCopyText.textContent;
-          btnCopyText.textContent = "Đã chép link ✔";
+          btnCopyText.textContent = (typeof t === "function" ? t("qr_copied_link") : "Đã chép link ✔");
           setTimeout(() => { btnCopyText.textContent = orig; }, 1500);
         });
       }

@@ -1122,67 +1122,12 @@ body.is-popup .ai-chat-wrapper {
   margin-bottom: 0;
 }
 
-.ai-temp-badge {
-  min-width: 38px;
-  text-align: center;
-  font-size: 11px;
-  font-weight: 800;
-  color: #c4b5fd;
-  background: rgba(124, 58, 237, 0.18);
-  border: 1px solid rgba(124, 58, 237, 0.4);
-  border-radius: 999px;
-  padding: 1px 8px;
-  font-variant-numeric: tabular-nums;
-}
-
-.ai-range {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  height: 6px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, rgba(56, 189, 248, 0.55), rgba(124, 58, 237, 0.55));
-  outline: none;
-  margin: 8px 0 4px;
-  cursor: pointer;
-}
-
-.ai-range::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #ede9fe;
-  border: 3px solid #7c3aed;
-  box-shadow: 0 1px 6px rgba(124, 58, 237, 0.55);
-  transition: transform 0.12s ease;
-}
-
-.ai-range::-webkit-slider-thumb:hover {
-  transform: scale(1.15);
-}
-
-.ai-range::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #ede9fe;
-  border: 3px solid #7c3aed;
-  box-shadow: 0 1px 6px rgba(124, 58, 237, 0.55);
-}
-
-.ai-range::-moz-range-track {
-  height: 6px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, rgba(56, 189, 248, 0.55), rgba(124, 58, 237, 0.55));
-}
-
 .ai-temp-scale {
   display: flex;
   justify-content: space-between;
   font-size: 9px;
   color: #94a3b8;
+  margin-top: 4px;
 }
 
 #ai-scope-select {

@@ -257,6 +257,13 @@ function dmRender() {
     addAll(dmState.forceSites, "✕", function (h) { delete dmState.forceSites[h]; dmSave(); }, "#94a3b8");
     if (!any) list.appendChild(_socDiv("dm-excl-empty", t("dm_excl_empty"), "#64748b"));
   }
+  document.querySelectorAll("#tab-dm input[type=\"range\"], #tab-security input[type=\"range\"]").forEach(function (sl) {
+    const min = parseFloat(sl.min) || 0;
+    const max = parseFloat(sl.max) || 100;
+    const val = parseFloat(sl.value) || 0;
+    const pct = Math.max(0, Math.min(100, ((val - min) / (max - min)) * 100));
+    sl.style.setProperty("--range-pct", pct.toFixed(1) + "%");
+  });
 }
 function dmToggleSite() {
   _dmRefreshHost(function () {

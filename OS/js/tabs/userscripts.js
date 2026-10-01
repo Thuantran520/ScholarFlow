@@ -13,6 +13,7 @@
   const SCRIPT_TEMPLATES = [
     {
       name: "Dark Mode — Tất cả trang",
+      i18nKey: "us_tpl_darkmode",
       matches: ["*://*/*"],
       excludes: [],
       runAt: "document_idle",
@@ -20,6 +21,7 @@
     },
     {
       name: "Ẩn Quảng cáo YouTube",
+      i18nKey: "us_tpl_yt_ads",
       matches: ["*://*.youtube.com/*"],
       excludes: [],
       runAt: "document_idle",
@@ -27,6 +29,7 @@
     },
     {
       name: "Return YouTube Dislike (GM_xmlhttpRequest)",
+      i18nKey: "us_tpl_yt_dislike",
       matches: ["*://*.youtube.com/*"],
       excludes: [],
       runAt: "document_idle",
@@ -35,6 +38,7 @@
     },
     {
       name: "Dịch văn bản đã chọn (Mini Translator)",
+      i18nKey: "us_tpl_translator",
       matches: ["*://*/*"],
       excludes: [],
       runAt: "document_idle",
@@ -42,6 +46,7 @@
     },
     {
       name: "Bỏ qua trang đệm chuyển hướng",
+      i18nKey: "us_tpl_bypass_redirect",
       matches: ["*://*/*"],
       excludes: [],
       runAt: "document_idle",
@@ -49,6 +54,7 @@
     },
     {
       name: "Mở khóa Copy & Chuột phải",
+      i18nKey: "us_tpl_unlock_copy",
       matches: ["*://*/*"],
       excludes: [],
       runAt: "document_start",
@@ -56,6 +62,7 @@
     },
     {
       name: "Cuộn trang mượt hơn",
+      i18nKey: "us_tpl_smooth_scroll",
       matches: ["*://*/*"],
       excludes: [],
       runAt: "document_start",
@@ -63,6 +70,7 @@
     },
     {
       name: "Hiện mật khẩu đã nhập",
+      i18nKey: "us_tpl_show_pw",
       matches: ["*://*/*"],
       excludes: [],
       runAt: "document_idle",
@@ -70,6 +78,7 @@
     },
     {
       name: "Tự động bấm nút 'Đồng ý Cookie'",
+      i18nKey: "us_tpl_auto_cookie",
       matches: ["*://*/*"],
       excludes: [],
       runAt: "document_idle",
@@ -937,7 +946,7 @@
       if (script.runCount > 0) {
         const countBadge = document.createElement('span');
         countBadge.className = 'us-badge us-badge-count';
-        countBadge.title = 'Đã chạy ' + script.runCount + ' lần' + (script.lastRun ? ' • Gần nhất: ' + new Date(script.lastRun).toLocaleTimeString() : '');
+        countBadge.title = ((typeof t === 'function' ? t('us_run_count_title', [script.runCount]) : null) || ('Đã chạy ' + script.runCount + ' lần')) + (script.lastRun ? ' • ' + new Date(script.lastRun).toLocaleTimeString() : '');
         countBadge.textContent = '×' + script.runCount;
         infoWrap.appendChild(countBadge);
       }
@@ -954,7 +963,7 @@
       const btnUp = document.createElement('button');
       btnUp.type = 'button';
       btnUp.className = 'us-btn us-btn-icon';
-      btnUp.title = 'Di chuyển lên';
+      btnUp.title = (typeof t === 'function' ? t('us_move_up') : null) || 'Di chuyển lên';
       btnUp.disabled = scriptIdx === 0;
       btnUp.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>';
         btnUp.onclick = () => {
@@ -976,7 +985,7 @@
       const btnDown = document.createElement('button');
       btnDown.type = 'button';
       btnDown.className = 'us-btn us-btn-icon';
-      btnDown.title = 'Di chuyển xuống';
+      btnDown.title = (typeof t === 'function' ? t('us_move_down') : null) || 'Di chuyển xuống';
       btnDown.disabled = scriptIdx === _scripts.length - 1;
       btnDown.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>';
         btnDown.onclick = () => {
@@ -998,16 +1007,16 @@
       const btnRun = document.createElement('button');
       btnRun.type = 'button';
       btnRun.className = 'us-btn us-btn-icon us-success';
-      btnRun.title = 'Áp dụng ngay lên trang web đang mở';
+      btnRun.title = (typeof t === 'function' ? t('us_apply_page') : null) || 'Áp dụng ngay lên trang web đang mở';
       btnRun.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 21"></polygon></svg>';
       btnRun.onclick = async () => {
         try {
           const tabs = await browserApi.tabs.query({active: true, currentWindow: true});
-          if (!tabs || !tabs[0]) return alert("Không tìm thấy trang để áp dụng!");
+          if (!tabs || !tabs[0]) return alert((typeof t === 'function' ? t('us_apply_no_page') : null) || "Không tìm thấy trang để áp dụng!");
           
           if (!script.active) {
             browserApi.tabs.reload(tabs[0].id);
-            btnRun.title = 'Đã tải lại trang!';
+            btnRun.title = (typeof t === 'function' ? t('us_page_reloaded') : null) || 'Đã tải lại trang!';
             return;
           }
 
@@ -1015,9 +1024,9 @@
             action: 'US_RUN_ONCE', tabId: tabs[0].id, script: script
           });
           if (!result || !result.ok) throw new Error((result && result.error) || 'Unable to run script on this page');
-          btnRun.title = 'Đã áp dụng thành công!';
+          btnRun.title = (typeof t === 'function' ? t('us_apply_success') : null) || 'Đã áp dụng thành công!';
         } catch (e) {
-          alert("Lỗi khi áp dụng: " + e.message);
+          alert(((typeof t === 'function' ? t('us_apply_err') : null) || "Lỗi khi áp dụng: ") + e.message);
         }
       };
 
@@ -1025,7 +1034,7 @@
       const btnEdit = document.createElement('button');
       btnEdit.type = 'button';
       btnEdit.className = 'us-btn us-btn-icon';
-      btnEdit.title = 'Chỉnh sửa script';
+      btnEdit.title = (typeof t === 'function' ? t('us_edit_script') : null) || 'Chỉnh sửa script';
       btnEdit.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>';
       // A record from an older version has no id, so pass the record itself:
       // _edit(undefined) would take the "brand new script" branch and silently
@@ -1036,7 +1045,7 @@
       const btnOpenWeb = document.createElement('button');
       btnOpenWeb.type = 'button';
       btnOpenWeb.className = 'us-btn us-btn-icon';
-      btnOpenWeb.title = 'Mở trong Userscript Studio (tab toàn màn hình)';
+      btnOpenWeb.title = (typeof t === 'function' ? t('us_open_studio_tab') : null) || 'Mở trong Userscript Studio (tab toàn màn hình)';
       btnOpenWeb.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>';
       btnOpenWeb.onclick = () => {
         const url = browserApi.runtime.getURL('OS/html/userscripts.html?id=' + encodeURIComponent(script.id));
@@ -1047,12 +1056,12 @@
       const btnDupe = document.createElement('button');
       btnDupe.type = 'button';
       btnDupe.className = 'us-btn us-btn-icon';
-      btnDupe.title = 'Nhân bản (sao chép) script';
+      btnDupe.title = (typeof t === 'function' ? t('us_dupe_script') : null) || 'Nhân bản (sao chép) script';
       btnDupe.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
       btnDupe.onclick = () => {
         const clone = Object.assign({}, script, {
           id: _newScriptId(),
-          name: script.name + ' (bản sao)',
+          name: script.name + ((typeof t === 'function' ? t('us_copy_suffix') : null) || ' (bản sao)'),
           runCount: 0,
           lastRun: null
         });
@@ -1066,10 +1075,10 @@
       const btnDel = document.createElement('button');
       btnDel.type = 'button';
       btnDel.className = 'us-btn us-btn-icon us-danger';
-      btnDel.title = 'Xóa script này';
+      btnDel.title = (typeof t === 'function' ? t('us_del_script') : null) || 'Xóa script này';
       btnDel.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>';
       btnDel.onclick = () => {
-        if (confirm("Xóa script \"" + script.name + "\"?")) {
+        if (confirm((typeof t === 'function' ? t('us_del_confirm', [script.name]) : null) || ("Xóa script \"" + script.name + "\"?"))) {
           _mutateAll((list) => {
             const at = _locate(list, script);
             if (at > -1) list.splice(at, 1);
@@ -1099,14 +1108,14 @@
       const matchText = (script.matches && script.matches.length) ? script.matches[0] : '<all_urls>';
       const extraMatches = (script.matches && script.matches.length > 1) ? ` +${script.matches.length - 1}` : '';
       matchPill.textContent = matchText + extraMatches;
-      matchPill.title = 'URL Áp dụng: ' + ((script.matches || []).join(', ') || '<all_urls>');
+      matchPill.title = ((typeof t === 'function' ? t('us_pill_matches_title') : null) || 'URL Áp dụng: ') + ((script.matches || []).join(', ') || '<all_urls>');
       bottomRow.appendChild(matchPill);
 
       // 2. RunAt & World pill
       const runWorldPill = document.createElement('span');
       runWorldPill.className = 'us-pill';
       runWorldPill.textContent = (script.runAt || 'document_idle') + ' • ' + (script.world || 'MAIN');
-      runWorldPill.title = 'Thời điểm chạy: ' + (script.runAt || 'document_idle') + ' | Execution World: ' + (script.world || 'MAIN');
+      runWorldPill.title = ((typeof t === 'function' ? t('us_pill_runat_title') : null) || 'Thời điểm chạy: ') + (script.runAt || 'document_idle') + ' | Execution World: ' + (script.world || 'MAIN');
       bottomRow.appendChild(runWorldPill);
 
       // 3. Lines & Size pill
@@ -1115,7 +1124,7 @@
       const byteSize = codeStr.length < 1024 ? (codeStr.length + ' B') : ((codeStr.length / 1024).toFixed(1) + ' KB');
       const sizePill = document.createElement('span');
       sizePill.className = 'us-pill';
-      sizePill.textContent = lineCount + ' dòng • ' + byteSize;
+      sizePill.textContent = (typeof t === 'function' ? t('us_line_count', [lineCount]) : (lineCount + ' dòng')) + ' • ' + byteSize;
       bottomRow.appendChild(sizePill);
 
       li.appendChild(bottomRow);
@@ -1132,7 +1141,7 @@
     const lines = (editCode.value.match(/\n/g) || []).length + 1;
     lineNumbers.textContent = Array.from({length: lines}, (_, i) => i + 1).join('\n');
     lineNumbers.scrollTop = editCode.scrollTop;
-    if (charCount) charCount.textContent = editCode.value.length + ' ký tự';
+    if (charCount) charCount.textContent = (typeof t === 'function' ? t('counter_chars', [editCode.value.length]) : (editCode.value.length + ' ký tự'));
   }
 
   function _updateCursorPos() {
@@ -1141,7 +1150,7 @@
     if (!editCode || !posEl) return;
     const text = editCode.value.substring(0, editCode.selectionStart);
     const lines = text.split('\n');
-    posEl.textContent = 'Dòng ' + lines.length + ', Cột ' + lines[lines.length - 1].length;
+    posEl.textContent = (typeof t === 'function' ? t('us_cursor_pos', [lines.length, lines[lines.length - 1].length]) : ('Dòng ' + lines.length + ', Cột ' + lines[lines.length - 1].length));
   }
 
   function _parseGMMetadata(code) {
@@ -1168,7 +1177,7 @@
     if (metaName) metaName.textContent = meta.name || '';
     if (metaVer) metaVer.textContent = meta.version ? 'v' + meta.version : '';
     if (metaAuthor) {
-      metaAuthor.textContent = meta.author ? ('Tác giả: ' + meta.author) : '';
+      metaAuthor.textContent = meta.author ? (((typeof t === 'function' ? t('us_meta_author_prefix') : null) || 'Tác giả: ') + meta.author) : '';
       metaAuthor.style.display = meta.author ? 'inline-flex' : 'none';
     }
     const metaMatch = document.getElementById('us-meta-match');
@@ -1301,17 +1310,20 @@
             // "foo.user.js".
             if (!fields.name) fields.name = file.name;
             // Re-importing a file we already hold updates that record instead of
-            // piling up a copy, using the same @updateURL identity as the URL flow.
             const key = String(fields.updateUrl || '');
             const dup = key ? _scripts.find((s) => s && String(s.updateUrl || '') === key) : null;
+            const targetId = (dup && dup.id) || _newScriptId();
             const ok = await _commitScript(Object.assign({}, fields, {
-              id: (dup && dup.id) || _newScriptId()
+              id: targetId,
+              code: code
             }));
             if (ok) {
               _resetFilters();
               _notify(dup
                 ? t('us_import_updated', 'Đã cập nhật script: ') + (fields.name || dup.name || '')
                 : t('us_import_done', 'Đã cài ') + 1 + t('us_import_done_suffix', ' script.'), 'success');
+              _render();
+              _edit(targetId);
             }
           };
           reader.readAsText(file);
@@ -1422,7 +1434,7 @@
             const allTabs = await browserApi.tabs.query({});
             targetTab = allTabs.find(t => t.url && (t.url.startsWith('http://') || t.url.startsWith('https://')));
           }
-          if (!targetTab) return alert("Không tìm thấy trang web (http/https) nào đang mở để chạy thử!");
+          if (!targetTab) return alert((typeof t === 'function' ? t('us_test_no_tab') : null) || "Không tìm thấy trang web (http/https) nào đang mở để chạy thử!");
 
           // Show console panel immediately
           const cp = document.getElementById('us-console-panel');
@@ -1431,7 +1443,7 @@
           const editName = document.getElementById('us-edit-name');
           const scriptName = (editName && editName.value.trim()) || 'Kịch bản';
           if (window._usLogToConsole) {
-            window._usLogToConsole('info', ['--- Bắt đầu chạy thử: ' + scriptName + ' trên ' + (targetTab.title || targetTab.url) + ' ---']);
+            window._usLogToConsole('info', ['--- ' + ((typeof t === 'function' ? t('us_btn_test_run') : null) || 'Bắt đầu chạy thử') + ': ' + scriptName + ' trên ' + (targetTab.title || targetTab.url) + ' ---']);
           }
 
           const rawCode = (document.getElementById('us-edit-code') || dom.editCode || {value: ''}).value;
@@ -1471,7 +1483,7 @@
   window.addEventListener('error', function(e) {
     if (e && e.message) {
       if (_isBenign(e.message)) return;
-      _relay('error', ['[Lỗi Uncaught]', e.message, e.filename ? '(' + e.filename + ':' + e.lineno + ')' : '']);
+      _relay('error', ['[Uncaught Error]', e.message, e.filename ? '(' + e.filename + ':' + e.lineno + ')' : '']);
     }
   });
 
@@ -1479,7 +1491,7 @@
     ${gmShim}
     ${codeToRun}
   } catch(err) {
-    _relay('error', ['[Lỗi runtime]', err.stack || err.message || String(err)]);
+    _relay('error', ['[Runtime Error]', err.stack || err.message || String(err)]);
   }
 })();`;
 
@@ -1493,15 +1505,15 @@
                 world: 'USER_SCRIPT'
               });
               if (window._usLogToConsole) {
-                window._usLogToConsole('info', ['✓ Kịch bản đã được nạp qua userScripts API thành công.']);
+                window._usLogToConsole('info', [(typeof t === 'function' ? t('us_test_success_userscripts') : null) || '✓ Kịch bản đã được nạp qua userScripts API thành công.']);
               }
               if (btnTest) {
                 const label = btnTest.querySelector('span');
-                if (label) label.textContent = 'Đã chạy!';
+                if (label) label.textContent = (typeof t === 'function' ? t('us_btn_ran') : null) || 'Đã chạy!';
                 btnTest.style.borderColor = '#10b981';
                 btnTest.style.color = '#34d399';
                 setTimeout(() => {
-                  if (label) label.textContent = 'Chạy thử';
+                  if (label) label.textContent = (typeof t === 'function' ? t('us_btn_test_run') : null) || 'Chạy thử';
                   btnTest.style.borderColor = '';
                   btnTest.style.color = '';
                 }, 2000);
@@ -1640,24 +1652,24 @@
           }
 
           if (countLogged === 0 && window._usLogToConsole) {
-            window._usLogToConsole('info', ['✓ Script đã được nạp vào trang thành công. (Không có console.log đồng bộ)']);
+            window._usLogToConsole('info', [(typeof t === 'function' ? t('us_test_success_page') : null) || '✓ Script đã được nạp vào trang thành công. (Không có console.log đồng bộ)']);
           }
 
           const label = btnTest.querySelector('span');
-          if (label) label.textContent = 'Đã chạy!';
+          if (label) label.textContent = (typeof t === 'function' ? t('us_btn_ran') : null) || 'Đã chạy!';
           btnTest.style.borderColor = '#10b981';
           btnTest.style.color = '#34d399';
           setTimeout(() => {
-            if (label) label.textContent = 'Chạy thử';
+            if (label) label.textContent = (typeof t === 'function' ? t('us_btn_test_run') : null) || 'Chạy thử';
             btnTest.style.borderColor = '';
             btnTest.style.color = '';
           }, 1500);
 
         } catch (e) {
           if (window._usLogToConsole) {
-            window._usLogToConsole('error', ['Lỗi khi chạy thử: ' + e.message]);
+            window._usLogToConsole('error', [((typeof t === 'function' ? t('us_test_err_prefix') : null) || 'Lỗi khi chạy thử: ') + e.message]);
           } else {
-            alert("Lỗi chạy thử: " + e.message);
+            alert(((typeof t === 'function' ? t('us_test_err_prefix') : null) || "Lỗi chạy thử: ") + e.message);
           }
         }
       };
@@ -1742,6 +1754,31 @@
           const ln = document.getElementById('us-line-numbers');
           if (ln) ln.scrollTop = codeArea.scrollTop;
         });
+        codeArea.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          codeArea.style.outline = '2px dashed #0284c7';
+        });
+        codeArea.addEventListener('dragleave', () => {
+          codeArea.style.outline = 'none';
+        });
+        codeArea.addEventListener('drop', (e) => {
+          e.preventDefault();
+          codeArea.style.outline = 'none';
+          const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+              const content = evt.target.result;
+              codeArea.value = content;
+              _updateLineNumbers();
+              _updateCursorPos();
+              _showMetaBar(_parseGMMetadata(content));
+              const btnParseMeta = document.getElementById('btn-us-parse-meta');
+              if (btnParseMeta) btnParseMeta.click();
+            };
+            reader.readAsText(file);
+          }
+        });
       }
     }
 
@@ -1765,7 +1802,7 @@
         _findMatches.push(idx);
         idx += q.length;
       }
-      if (findCountEl) findCountEl.textContent = _findMatches.length + ' kết quả';
+      if (findCountEl) findCountEl.textContent = (typeof t === 'function' ? t('us_find_matches_count', [_findMatches.length]) : null) || (_findMatches.length + ' kết quả');
     }
 
     function _selectMatch(i) {
@@ -1803,7 +1840,7 @@
       ta.value = ta.value.split(q).join(r);
       _updateLineNumbers();
       _findInCode();
-      if (findCountEl) findCountEl.textContent = 'Đã thay ' + count + ' lần';
+      if (findCountEl) findCountEl.textContent = (typeof t === 'function' ? t('us_replaced_count', [count]) : null) || ('Đã thay ' + count + ' lần');
     };
 
     // ── Parse Header button ────────────────────────────────────
@@ -1814,7 +1851,7 @@
         if (!ta) return;
         const metaApi = (typeof window !== 'undefined' && window.SF_US_META) || (typeof globalThis !== 'undefined' && globalThis.SF_US_META);
         const meta = metaApi ? metaApi.parse(ta.value) : _parseGMMetadata(ta.value);
-        if (!meta) { alert('Không tìm thấy ==UserScript== header trong code.'); return; }
+        if (!meta) { alert((typeof t === 'function' ? t('us_meta_not_found') : null) || 'Không tìm thấy ==UserScript== header trong code.'); return; }
         _showMetaBar(meta);
 
         // Auto-fill name
@@ -1870,7 +1907,7 @@
           ta.value = cleaned.join('\n').trim() + '\n';
           _updateLineNumbers();
           const label = btnFormat.querySelector('span');
-          if (label) label.textContent = 'Đã format!';
+          if (label) label.textContent = (typeof t === 'function' ? t('us_formatted_done') : null) || 'Đã format!';
           setTimeout(() => { if (label) label.textContent = 'Format'; }, 1500);
         } catch (e) {
           alert('Format error: ' + e.message);
@@ -1959,21 +1996,21 @@
     if (btnCheckUpdates) {
       btnCheckUpdates.onclick = async () => {
         const label = btnCheckUpdates.querySelector('span');
-        const origText = label ? label.textContent : 'Cập nhật';
+        const origText = label ? label.textContent : ((typeof t === 'function' ? t('us_btn_check_updates') : null) || 'Cập nhật');
         btnCheckUpdates.disabled = true;
-        if (label) label.textContent = 'Đang kiểm tra...';
+        if (label) label.textContent = (typeof t === 'function' ? t('verify_checking') : null) || 'Đang kiểm tra...';
         try {
           const res = await browserApi.runtime.sendMessage({ action: "CHECK_USERSCRIPT_UPDATES" });
           if (res && res.updatedCount > 0) {
-            alert(`Đã cập nhật thành công ${res.updatedCount} kịch bản!`);
+            alert((typeof t === 'function' ? t('us_update_success_count', [res.updatedCount]) : null) || `Đã cập nhật thành công ${res.updatedCount} kịch bản!`);
             _load();
           } else if (res && res.error) {
-            alert("Lỗi khi kiểm tra cập nhật: " + res.error);
+            alert(((typeof t === 'function' ? t('us_update_err_prefix') : null) || "Lỗi khi kiểm tra cập nhật: ") + res.error);
           } else {
-            alert("Tất cả các kịch bản đều đang ở phiên bản mới nhất.");
+            alert((typeof t === 'function' ? t('us_update_all_latest') : null) || "Tất cả các kịch bản đều đang ở phiên bản mới nhất.");
           }
         } catch (e) {
-          alert("Lỗi kiểm tra cập nhật: " + e.message);
+          alert(((typeof t === 'function' ? t('us_update_err_prefix') : null) || "Lỗi kiểm tra cập nhật: ") + e.message);
         } finally {
           btnCheckUpdates.disabled = false;
           if (label) label.textContent = origText;
@@ -1995,15 +2032,15 @@
     const _loadGMStorage = async () => {
       if (!storagePanel || !storageOutput) return;
       storagePanel.style.display = 'block';
-      storageOutput.textContent = 'Đang tải dữ liệu GM Storage...';
+      storageOutput.textContent = (typeof t === 'function' ? t('us_storage_loading') : null) || 'Đang tải dữ liệu GM Storage...';
       try {
         const tabs = await browserApi.tabs.query({ active: true, currentWindow: true });
         if (!tabs || !tabs[0] || !tabs[0].id) {
-          storageOutput.textContent = 'Không tìm thấy trang web đang mở.';
+          storageOutput.textContent = (typeof t === 'function' ? t('us_storage_no_tab') : null) || 'Không tìm thấy trang web đang mở.';
           return;
         }
         if (tabs[0].url && (tabs[0].url.startsWith('chrome://') || tabs[0].url.startsWith('about:') || tabs[0].url.startsWith('edge://'))) {
-          storageOutput.textContent = 'Trang hệ thống trình duyệt không hỗ trợ GM Storage.';
+          storageOutput.textContent = (typeof t === 'function' ? t('us_storage_not_supported') : null) || 'Trang hệ thống trình duyệt không hỗ trợ GM Storage.';
           return;
         }
 
@@ -2026,7 +2063,7 @@
         if (items.length === 0) {
           const empty = document.createElement('div');
           empty.style.cssText = 'color:var(--text-muted);font-style:italic;padding:8px;font-size:10px;text-align:center;';
-          empty.textContent = '(Không có dữ liệu GM_* nào trên trang này)';
+          empty.textContent = (typeof t === 'function' ? t('us_storage_empty') : null) || '(Không có dữ liệu GM_* nào trên trang này)';
           storageOutput.appendChild(empty);
           return;
         }
@@ -2062,10 +2099,10 @@
           editBtn.type = 'button';
           editBtn.className = 'us-btn us-btn-icon';
           editBtn.style.cssText = 'width:18px;height:18px;padding:2px;';
-          editBtn.title = 'Chỉnh sửa giá trị';
+          editBtn.title = (typeof t === 'function' ? t('us_storage_edit_val') : null) || 'Chỉnh sửa giá trị';
           editBtn.innerHTML = '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>';
           editBtn.onclick = async () => {
-            const newVal = prompt(`Sửa giá trị cho key "${item.key}":`, item.value);
+            const newVal = prompt((typeof t === 'function' ? t('us_storage_edit_prompt', [item.key]) : null) || `Sửa giá trị cho key "${item.key}":`, item.value);
             if (newVal === null) return;
             try {
               const activeTabs = await browserApi.tabs.query({ active: true, currentWindow: true });
@@ -2077,7 +2114,7 @@
               });
               _loadGMStorage();
             } catch (err) {
-              alert("Lỗi cập nhật: " + err.message);
+              alert(((typeof t === 'function' ? t('us_storage_err_update') : null) || "Lỗi cập nhật: ") + err.message);
             }
           };
 
@@ -2085,10 +2122,10 @@
           delBtn.type = 'button';
           delBtn.className = 'us-btn us-btn-icon us-danger';
           delBtn.style.cssText = 'width:18px;height:18px;padding:2px;';
-          delBtn.title = 'Xóa key này';
+          delBtn.title = (typeof t === 'function' ? t('us_storage_del_key') : null) || 'Xóa key này';
           delBtn.innerHTML = '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>';
           delBtn.onclick = async () => {
-            if (!confirm(`Xóa key "${item.key}" khỏi trang này?`)) return;
+            if (!confirm((typeof t === 'function' ? t('us_storage_del_confirm', [item.key]) : null) || `Xóa key "${item.key}" khỏi trang này?`)) return;
             try {
               const activeTabs = await browserApi.tabs.query({ active: true, currentWindow: true });
               if (!activeTabs || !activeTabs[0]) return;
@@ -2099,7 +2136,7 @@
               });
               _loadGMStorage();
             } catch (err) {
-              alert("Lỗi xóa: " + err.message);
+              alert(((typeof t === 'function' ? t('us_storage_err_del') : null) || "Lỗi xóa: ") + err.message);
             }
           };
 
@@ -2148,10 +2185,10 @@
         const valInp = document.getElementById('us-new-gm-val');
         const k = (keyInp ? keyInp.value : '').trim();
         const v = valInp ? valInp.value : '';
-        if (!k) return alert("Vui lòng nhập tên Key!");
+        if (!k) return alert((typeof t === 'function' ? t('us_storage_key_req') : null) || "Vui lòng nhập tên Key!");
         try {
           const tabs = await browserApi.tabs.query({ active: true, currentWindow: true });
-          if (!tabs || !tabs[0]) return alert("Không tìm thấy trang đang mở!");
+          if (!tabs || !tabs[0]) return alert((typeof t === 'function' ? t('us_storage_no_tab') : null) || "Không tìm thấy trang đang mở!");
           await browserApi.scripting.executeScript({
             target: { tabId: tabs[0].id },
             func: (kName, val) => { localStorage.setItem('GM_' + kName, val); },
@@ -2162,13 +2199,13 @@
           if (storageAddBox) storageAddBox.style.display = 'none';
           _loadGMStorage();
         } catch (err) {
-          alert("Lỗi lưu storage: " + err.message);
+          alert(((typeof t === 'function' ? t('us_storage_err_save') : null) || "Lỗi lưu storage: ") + err.message);
         }
       };
     }
     if (btnClearStorage) {
       btnClearStorage.onclick = async () => {
-        if (!confirm("Bạn có chắc chắn muốn xóa toàn bộ GM Storage của trang này không?")) return;
+        if (!confirm((typeof t === 'function' ? t('us_storage_clear_confirm') : null) || "Bạn có chắc chắn muốn xóa toàn bộ GM Storage của trang này không?")) return;
         try {
           const tabs = await browserApi.tabs.query({ active: true, currentWindow: true });
           if (!tabs || !tabs[0]) return;
@@ -2185,7 +2222,7 @@
           });
           _loadGMStorage();
         } catch (err) {
-          alert("Lỗi xóa: " + err.message);
+          alert(((typeof t === 'function' ? t('us_storage_err_clear') : null) || "Lỗi xóa: ") + err.message);
         }
       };
     }
@@ -2228,7 +2265,9 @@
         box.style.cssText = 'background:var(--bg-secondary,#1e1e2e);border:1px solid var(--border-color,#444);border-radius:8px;padding:16px;width:320px;max-height:80vh;overflow-y:auto;box-shadow:0 12px 36px rgba(0,0,0,0.85);';
         const titleEl = document.createElement('div');
         titleEl.style.cssText = 'font-size:13px;font-weight:700;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;';
-        titleEl.innerHTML = '<span style="display:flex;align-items:center;gap:6px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg> Chọn Mẫu Script</span>';
+        const titleText = (typeof t === 'function' ? t('us_templates_modal_title') : null) || 'Chọn Mẫu Script';
+        titleEl.innerHTML = '<span style="display:flex;align-items:center;gap:6px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg> <span></span></span>';
+        titleEl.querySelector('span > span').textContent = titleText;
         const closeBtn = document.createElement('button');
         closeBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
         closeBtn.style.cssText = 'background:none;border:none;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;padding:2px;';
@@ -2242,7 +2281,7 @@
           row.onmouseout = () => { row.style.background = ''; };
           const rowName = document.createElement('div');
           rowName.style.cssText = 'font-size:12px;font-weight:600;';
-          rowName.textContent = tpl.name;
+          rowName.textContent = (tpl.i18nKey && typeof t === 'function' ? t(tpl.i18nKey) : null) || tpl.name;
           const rowMeta = document.createElement('div');
           rowMeta.style.cssText = 'font-size:10px;color:var(--text-muted);margin-top:2px;';
           rowMeta.textContent = (tpl.matches || []).join(', ');
@@ -2257,7 +2296,7 @@
               const eR = document.getElementById('us-edit-runat');
               const eU = document.getElementById('us-edit-update-url');
               const eC = document.getElementById('us-edit-code');
-              if (eN) eN.value = tpl.name;
+              if (eN) eN.value = (tpl.i18nKey && typeof t === 'function' ? t(tpl.i18nKey) : null) || tpl.name;
               if (eM) eM.value = (tpl.matches || []).join('\n');
               if (eX) eX.value = (tpl.excludes || []).join('\n');
               if (eR) eR.value = tpl.runAt || 'document_idle';
@@ -2286,7 +2325,7 @@
       const drawerHeader = consolePanel.querySelector('.us-drawer-header');
       if (drawerHeader) {
         drawerHeader.style.cursor = 'pointer';
-        drawerHeader.title = 'Nhấn để thu gọn / mở rộng Console';
+        drawerHeader.title = (typeof t === 'function' ? t('tip_us_toggle_console') : null) || 'Nhấn để thu gọn / mở rộng Console';
         drawerHeader.onclick = (e) => {
           if (e.target.closest('button') || e.target.closest('.us-btn-group')) return;
           if (consoleOutput) {
@@ -2301,10 +2340,10 @@
         e.stopPropagation();
         consoleOutput.textContent = '';
         _consoleLineCount = 0;
-        if (consoleCount) consoleCount.textContent = '0 dòng';
+        if (consoleCount) consoleCount.textContent = (typeof t === 'function' ? t('us_line_count', [0]) : '0 dòng');
         const line = document.createElement('div');
         line.style.cssText = 'color:#64748b; font-style:italic; padding:2px 0; font-size:9.5px;';
-        line.textContent = '(Logs đã được xóa)';
+        line.textContent = (typeof t === 'function' ? t('us_console_cleared') : null) || '(Logs đã được xóa)';
         consoleOutput.appendChild(line);
       };
     }
@@ -2315,10 +2354,10 @@
         const co = document.getElementById('us-console-output');
         if (!co) return;
         navigator.clipboard.writeText(co.textContent).then(() => {
-          btnCopyConsole.title = 'Đã sao chép output!';
+          btnCopyConsole.title = (typeof t === 'function' ? t('us_console_copied') : null) || 'Đã sao chép output!';
           btnCopyConsole.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
           setTimeout(() => {
-            btnCopyConsole.title = 'Sao chép output';
+            btnCopyConsole.title = (typeof t === 'function' ? t('tip_us_copy_console') : null) || 'Sao chép output';
             btnCopyConsole.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
           }, 1500);
         }).catch(() => {});
@@ -2333,7 +2372,7 @@
       cp.style.display = 'block';
       co.style.display = 'block';
       _consoleLineCount++;
-      if (cc) cc.textContent = _consoleLineCount + ' dòng';
+      if (cc) cc.textContent = (typeof t === 'function' ? t('us_line_count', [_consoleLineCount]) : (_consoleLineCount + ' dòng'));
       const line = document.createElement('div');
       line.className = 'us-log-entry';
       const colors = { log: '#10b981', warn: '#f59e0b', error: '#ef4444', info: '#38bdf8' };

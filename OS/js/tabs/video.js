@@ -68,7 +68,7 @@ function cancelVideoCountdown() {
     } catch (e) {}
     recordStream = null;
   }
-  showToast("✕ Đã hủy quay video!");
+  showToast("toast_video_cancelled");
 }
 
 function loadVideoSettings() {
@@ -145,7 +145,7 @@ function videoBitrate() {
 async function startVideoRecording() {
   try {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
-      showToast("❌ Trình duyệt không hỗ trợ getDisplayMedia!");
+      showToast("toast_video_no_media", "error");
       return;
     }
 
@@ -273,7 +273,7 @@ async function startVideoRecording() {
     if (activeBar) activeBar.style.display = "block";
     if (previewBox) previewBox.style.display = "none";
     if (audioStatus) {
-      audioStatus.textContent = videoSettings.audio ? "(Có âm thanh tab)" : "(Không lưu âm thanh)";
+      audioStatus.textContent = videoSettings.audio ? (window.i18n ? window.i18n.t("video_audio_tab") : "(Có âm thanh tab)") : (window.i18n ? window.i18n.t("video_audio_none") : "(Không lưu âm thanh)");
       audioStatus.style.color = videoSettings.audio ? "#a7f3d0" : "#cbd5e1";
     }
 
@@ -285,7 +285,7 @@ async function startVideoRecording() {
       if (timerText) timerText.textContent = formatRecordDuration(elapsedSec);
     }, 500);
 
-    showToast(videoSettings.audio ? "🎥 Đang quay video (Kèm âm thanh)..." : "🎥 Đang quay video (Không âm thanh)...");
+    showToast(videoSettings.audio ? "toast_video_recording_audio" : "toast_video_recording_no_audio");
   } catch (err) {
     if (err && err.name !== "NotAllowedError") {
       console.error("Recording error:", err); showToast("err_004", "error");
@@ -359,7 +359,7 @@ function finishRecording() {
       infoText.textContent = `⏱️ ${formatRecordDuration(elapsedSec)} • 📦 ${sizeMb} MB • WebM`;
     }
 
-    showToast("✔ Đã hoàn tất và lưu video!");
+    showToast("toast_video_completed");
 
     // Auto-download video if enabled
     if (videoSettings.autoDownload) {
@@ -368,7 +368,7 @@ function finishRecording() {
       }, 300);
     }
   } else {
-    showToast("⚠️ Chưa có dữ liệu video được ghi.");
+    showToast("toast_video_no_data", "warning");
   }
 
   setTimeout(() => {
@@ -399,7 +399,7 @@ function cancelVideoRecording() {
   const startBtn = document.getElementById("btn-start-record");
   if (activeBar) activeBar.style.display = "none";
   if (startBtn) startBtn.style.display = "inline-flex";
-  showToast("✕ Đã hủy quay video!");
+  showToast("toast_video_cancelled");
 }
 
 function discardRecordedVideo() {
@@ -413,7 +413,7 @@ function discardRecordedVideo() {
   if (previewBox) previewBox.style.display = "none";
   const videoPlayer = document.getElementById("video-player");
   if (videoPlayer) videoPlayer.src = "";
-  showToast("🗑️ Đã xóa bản quay video!");
+  showToast("toast_video_deleted");
 }
 
 function downloadRecordedVideo() {

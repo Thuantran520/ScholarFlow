@@ -17,11 +17,11 @@
         </div>
         <div class="title-box">
           <h1 id="doc-title" data-i18n="privacy_doc_title">ScholarFlow – Chính Sách Quyền Riêng Tư</h1>
-          <p id="last-updated" data-i18n="privacy_last_updated">Cập nhật lần cuối: Tháng 09/2026 | Phiên bản 2.5.6</p>
+          <p id="last-updated" data-i18n="privacy_last_updated">Cập nhật lần cuối: Tháng 10/2026 | Phiên bản 2.5.6</p>
         </div>
       </div>
       <div class="lang-switcher">
-        <select id="select-privacy-lang" class="lang-select" title="Language / Ngôn ngữ">
+        <select id="select-privacy-lang" class="lang-select" title="Language / Ngôn ngữ" data-i18n-title="tip_lang_select">
           <option value="vi" id="opt-vi" data-i18n="privacy_lang_vi">🇻🇳 Tiếng Việt</option>
           <option value="en" id="opt-en" data-i18n="privacy_lang_en">🇬🇧 English</option>
           <option value="zh" id="opt-zh" data-i18n="privacy_lang_zh">🇨🇳 中文</option>
@@ -54,6 +54,9 @@
       <li id="sec1-li2" data-i18n="privacy_sec1_li2" data-i18n-html="true"><strong>Ảnh chụp màn hình &amp; Video ghi lại:</strong> Toàn bộ khung hình chụp cuộn và luồng video quay lại màn hình được mã hóa trực tiếp trong RAM máy tính và cho phép bạn tải về máy cá nhân (PNG/WebM). Không có dữ liệu nào được truyền qua mạng.</li>
       <li id="sec1-li3" data-i18n="privacy_sec1_li3" data-i18n-html="true"><strong>Che mờ bảo mật phần tử (Redaction):</strong> Hiệu ứng làm mờ (blur) hoặc che đen (blackout) được áp dụng trực tiếp lên cây DOM tại trình duyệt cá nhân nhằm hỗ trợ chụp ảnh/chia sẻ an toàn mà không lộ thông tin cá nhân.</li>
       <li id="sec1-li4" data-i18n="privacy_sec1_li4" data-i18n-html="true"><strong>Cookie Phiên Đăng Nhập (Cookie Manager — v2.3.0+):</strong> Tính năng Quản lý Cookie cho phép bạn đọc và ghi cookie của trang web hiện tại <em>theo yêu cầu chủ động từ bạn</em>. Cookie chỉ được xử lý cục bộ trong trình duyệt, <strong>không bao giờ được truyền lên máy chủ của ScholarFlow</strong>. File xuất cookie (.json hoặc chuỗi) được lưu trực tiếp về máy tính của bạn và hoàn toàn nằm trong tầm kiểm soát của bạn.</li>
+      <li id="sec1-li5" data-i18n="privacy_sec1_li5" data-i18n-html="true"><strong>Userscript Manager &amp; Studio (v2.5.0+):</strong> Các userscript do bạn cài đặt hoặc tự viết được lưu trữ và thực thi <strong>100% cục bộ</strong> trong <code>chrome.storage.local</code>. Không có script nào được tải lên hoặc chia sẻ ra ngoài thiết bị của bạn.</li>
+      <li id="sec1-li6" data-i18n="privacy_sec1_li6" data-i18n-html="true"><strong>Floating Scratchpad, Reader Mode &amp; Smart Highlighter:</strong> Ghi chú nháp, nội dung chế độ đọc được làm sạch và các đoạn văn bản được tô sáng đều lưu cục bộ trong trình duyệt. Không có nội dung trang web nào bị truyền ra bên ngoài.</li>
+      <li id="sec1-li7" data-i18n="privacy_sec1_li7" data-i18n-html="true"><strong>Social Shield &amp; Anti-Scam Protection:</strong> Tính năng bảo vệ chống lừa đảo/cờ bạc hoạt động hoàn toàn dựa trên danh sách heuristic và regex cục bộ. Không có URL hay lịch sử duyệt web nào được gửi lên máy chủ.</li>
     </ul>
 
     <h2 id="sec2-title" data-i18n="privacy_sec2_title">2. Minh Bạch Quyền Hạn Trình Duyệt (Browser Permissions)</h2>
@@ -65,6 +68,9 @@
       <li id="sec2-li4" data-i18n="privacy_sec2_li4" data-i18n-html="true"><code>clipboardWrite</code>: Cho phép sao chép nhanh trích dẫn chuẩn hoặc ảnh chụp vào khay nhớ tạm clipboard.</li>
       <li id="sec2-li5" data-i18n="privacy_sec2_li5" data-i18n-html="true"><code>sidePanel</code> (Chrome/Edge): Hiển thị giao diện thanh bên tiện lợi khi nghiên cứu tài liệu song song.</li>
       <li id="sec2-li6" data-i18n="privacy_sec2_li6" data-i18n-html="true"><code>cookies</code>: <strong>Chỉ được dùng cho tính năng Cookie Manager.</strong> Quyền này cho phép tiện ích đọc và ghi cookie của trang web hiện tại <em>theo lệnh trực tiếp của bạn</em>. Tiện ích không tự động đọc, không ghi lại lịch sử và không chia sẻ cookie với bất kỳ bên thứ ba nào.</li>
+      <li id="sec2-li7" data-i18n="privacy_sec2_li7" data-i18n-html="true"><code>declarativeNetRequest</code>: Chặn và chuyển hướng cục bộ các URL lừa đảo/cờ bạc sang trang cảnh báo nội bộ <code>gamble-block.html</code>. Không có dữ liệu mạng nào bị ghi lại hay gửi ra ngoài.</li>
+      <li id="sec2-li8" data-i18n="privacy_sec2_li8" data-i18n-html="true"><code>browsingData</code>: Cho phép tính năng <em>"Xóa dữ liệu trang hiện tại"</em> xóa cache và cookie của trang đang mở <em>theo lệnh chủ động của bạn</em>. Tiện ích không tự động xóa dữ liệu.</li>
+      <li id="sec2-li9" data-i18n="privacy_sec2_li9" data-i18n-html="true"><code>bookmarks</code> &amp; <code>contextMenus</code>: Hỗ trợ lưu bookmark nhanh và thêm mục vào menu chuột phải theo lệnh của bạn. Dữ liệu bookmark hoàn toàn nằm trong trình duyệt cục bộ.</li>
     </ul>
 
     <div class="note-box" id="cookie-note" data-i18n="privacy_cookie_note" data-i18n-html="true" style="border-left: 3px solid #f59e0b; background: rgba(245,158,11,0.08); margin-bottom: 12px;">
@@ -78,6 +84,7 @@
       <li id="sec3-li2" data-i18n="privacy_sec3_li2" data-i18n-html="true"><strong>OpenAlex API (api.openalex.org):</strong> Tra cứu thông tin bài báo trong kho dữ liệu mở 250M+ công trình toàn cầu.</li>
       <li id="sec3-li3" data-i18n="privacy_sec3_li3" data-i18n-html="true"><strong>arXiv API (export.arxiv.org):</strong> Truy xuất tác giả và năm công bố tài liệu toán học, máy tính.</li>
       <li id="sec3-li4" data-i18n="privacy_sec3_li4" data-i18n-html="true"><strong>YouTube oEmbed:</strong> Nhận diện tiêu đề và kênh chính thức khi bạn trích dẫn video giáo dục.</li>
+      <li id="sec3-li5" data-i18n="privacy_sec3_li5" data-i18n-html="true"><strong>Userscript GM_xmlhttpRequest:</strong> Nếu một userscript bạn cài đặt sử dụng <code>GM_xmlhttpRequest</code>, yêu cầu mạng đó do <em>script của bạn</em> khởi tạo — ScholarFlow không kiểm soát đích đến hay nội dung. Luôn kiểm tra nguồn gốc script trước khi cài đặt.</li>
     </ul>
     <div class="note-box" id="sec3-note" data-i18n="privacy_sec3_note" data-i18n-html="true">
       Mọi yêu cầu mạng trên đều là các truy vấn công khai, ẩn danh, <strong>không gửi kèm cookie, không gửi ID người dùng và không gửi lịch sử duyệt web</strong>.

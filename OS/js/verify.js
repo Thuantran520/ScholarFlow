@@ -848,10 +848,10 @@ function initSourceVerifier() {
         }
         handleVerifySource(text.trim());
       } else {
-        showToast("📋 Bộ nhớ tạm (Clipboard) đang trống!");
+        showToast(getVerifyI18n("verify_toast_clip_empty", "📋 Bộ nhớ tạm (Clipboard) đang trống!"));
       }
     } catch (e) {
-      showToast("💡 Hãy bấm phím Ctrl+V vào ô để dán!");
+      showToast(getVerifyI18n("verify_toast_clip_ctrlv", "💡 Hãy bấm phím Ctrl+V vào ô để dán!"));
     }
   });
 
@@ -869,7 +869,7 @@ function initSourceVerifier() {
       }
       handleVerifySource(text.trim(), currentMeta);
     } else {
-      showToast("Chưa nhận diện được tiêu đề hoặc URL trang hiện tại!");
+      showToast(getVerifyI18n("verify_toast_no_tab_info", "Chưa nhận diện được tiêu đề hoặc URL trang hiện tại!"));
     }
   });
 

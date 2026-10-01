@@ -165,6 +165,7 @@
       description: s.description || meta.description || '',
       author: s.author || meta.author || '',
       homepage: meta.homepage || '',
+      code: s.code !== undefined ? s.code : '',
       matches: matches,
       // Raw list, before the <all_urls> display default. The engine must never
       // widen a script with no @match to "every site" behind the user's back.

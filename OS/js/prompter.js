@@ -1,4 +1,4 @@
-﻿document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", () => {
   const storLocal = (typeof browser !== "undefined" && browser.storage)
     ? browser.storage.local
     : (typeof chrome !== "undefined" ? chrome.storage.local : null);
@@ -162,12 +162,20 @@
     const v = parseFloat(speedSlider.value);
     speedVal.textContent = v.toFixed(1) + "x";
     document.documentElement.style.setProperty("--prompter-speed", String(v));
+    const min = parseFloat(speedSlider.min) || 0.3;
+    const max = parseFloat(speedSlider.max) || 3;
+    const pct = Math.max(0, Math.min(100, ((v - min) / (max - min)) * 100));
+    speedSlider.style.setProperty("--range-pct", pct.toFixed(1) + "%");
   }
 
   function setFontUI() {
     const v = parseInt(fontSlider.value, 10);
     fontVal.textContent = String(v);
     document.documentElement.style.setProperty("--prompter-font", v + "px");
+    const min = parseFloat(fontSlider.min) || 12;
+    const max = parseFloat(fontSlider.max) || 44;
+    const pct = Math.max(0, Math.min(100, ((v - min) / (max - min)) * 100));
+    fontSlider.style.setProperty("--range-pct", pct.toFixed(1) + "%");
   }
 
   toggleBtn.addEventListener("click", togglePlay);

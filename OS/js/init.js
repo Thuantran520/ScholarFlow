@@ -1273,16 +1273,32 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
   });
 
   const blurSlider = document.getElementById("blur-slider");
-  blurSlider?.addEventListener("input", (e) => {
-    currentBlurPx = parseInt(e.target.value, 10);
+  function _syncBlurCapsule(val) {
+    const min = 4, max = 30;
+    const ratio = Math.max(0, Math.min(100, ((val - min) / (max - min)) * 100));
+    const fill = document.getElementById("blur-capsule-fill");
+    const thumb = document.getElementById("blur-capsule-thumb");
     const bvt = document.getElementById("blur-val-text");
-    if (bvt) bvt.textContent = `${currentBlurPx}px`;
-    sendTabMessage({
-      action: "SET_REDACT_STYLE",
-      style: currentRedactStyle,
-      blurPx: currentBlurPx
+    if (fill) fill.style.width = ratio.toFixed(1) + "%";
+    if (thumb) {
+      thumb.style.left = ratio.toFixed(1) + "%";
+      thumb.style.transform = "translate(-" + ratio.toFixed(1) + "%, -50%)";
+    }
+    if (bvt) bvt.textContent = val + "px";
+    if (blurSlider) blurSlider.style.setProperty("--range-pct", ratio.toFixed(1) + "%");
+  }
+  if (blurSlider) {
+    _syncBlurCapsule(parseInt(blurSlider.value, 10) || 12);
+    blurSlider.addEventListener("input", (e) => {
+      currentBlurPx = parseInt(e.target.value, 10);
+      _syncBlurCapsule(currentBlurPx);
+      sendTabMessage({
+        action: "SET_REDACT_STYLE",
+        style: currentRedactStyle,
+        blurPx: currentBlurPx
+      });
     });
-  });
+  }
 
   document.getElementById("btn-apply-all-style")?.addEventListener("click", () => {
     sendTabMessage({
@@ -2998,7 +3014,42 @@ renderTodoList();
 
 
 
+function initUniversalRangeSliders() {
+  function syncRange(slider) {
+    if (!slider) return;
+    const min = parseFloat(slider.min) || 0;
+    const max = parseFloat(slider.max) || 100;
+    const val = parseFloat(slider.value) || 0;
+    const pct = Math.max(0, Math.min(100, ((val - min) / (max - min)) * 100));
+    slider.style.setProperty("--range-pct", pct.toFixed(1) + "%");
+  }
+
+  function syncAll() {
+    document.querySelectorAll('input[type="range"]').forEach(syncRange);
+  }
+
+  syncAll();
+
+  document.addEventListener("input", (e) => {
+    if (e.target && e.target.type === "range") {
+      syncRange(e.target);
+    }
+  });
+
+  document.addEventListener("change", (e) => {
+    if (e.target && e.target.type === "range") {
+      syncRange(e.target);
+    }
+  });
+
+  window.addEventListener("focus", syncAll);
+  document.querySelectorAll(".main-nav-btn").forEach((btn) => {
+    btn.addEventListener("click", () => setTimeout(syncAll, 60));
+  });
+}
+
 window.addEventListener('DOMContentLoaded', () => {
+  initUniversalRangeSliders();
   const urlParams = new URLSearchParams(window.location.search);
   const targetTab = urlParams.get('tab');
   if (targetTab) {

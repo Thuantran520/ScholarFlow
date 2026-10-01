@@ -1023,7 +1023,13 @@ const CAL_WMO_WEATHER = {
 };
 
 function calGetWmoInfo(code) {
-  return CAL_WMO_WEATHER[code] || { icon: "⛅", text: "Thời tiết" };
+  const item = CAL_WMO_WEATHER[code] || { icon: "⛅", text: "Thời tiết" };
+  const key = "weather_wmo_" + code;
+  const translated = (typeof t === "function" ? t(key) : (window.i18n ? window.i18n.t(key) : null));
+  return {
+    icon: item.icon,
+    text: (translated && translated !== key) ? translated : item.text
+  };
 }
 
 function calRenderWeatherUI() {
@@ -1046,6 +1052,13 @@ function calRenderWeatherUI() {
   if (pillIcon) pillIcon.textContent = wmo.icon;
   if (pillTemp) pillTemp.textContent = tempVal + "°C";
   if (pillHumid) pillHumid.textContent = "💧 " + humidVal + "%";
+
+  const headerWeather = document.getElementById("sf-header-weather");
+  if (headerWeather) {
+    headerWeather.textContent = wmo.icon + " " + tempVal + "°C";
+    const detailText = window.i18n ? window.i18n.t("weather_click_detail") : "Bấm để xem chi tiết";
+    headerWeather.title = (wmo.text ? wmo.text + " • " : "") + tempVal + "°C • 💧 " + humidVal + "% (" + detailText + ")";
+  }
 
   if (pillBtn) {
     pillBtn.classList.toggle("has-rain-alert", isHighHumidity);
@@ -1731,6 +1744,9 @@ function calInit() {
   const citySelect = document.getElementById("cal-weather-city-select");
   const btnWeatherRefresh = document.getElementById("btn-cal-weather-refresh");
 
+  const headerWeather = document.getElementById("sf-header-weather");
+  if (headerWeather) headerWeather.addEventListener("click", calOpenWeatherModal);
+
   if (btnWeatherPill) btnWeatherPill.addEventListener("click", calOpenWeatherModal);
   if (btnOpenWeatherDetail) btnOpenWeatherDetail.addEventListener("click", calOpenWeatherModal);
   if (btnCloseWeather) btnCloseWeather.addEventListener("click", calCloseWeatherModal);
@@ -1756,9 +1772,9 @@ function calInit() {
       }
       if (res && res.sf_cal_weather_cache && res.sf_cal_weather_cache.data) {
         const cache = res.sf_cal_weather_cache;
+        calWeatherData = cache.data;
+        calRenderWeatherUI();
         if (Date.now() - cache.fetchedAt < 30 * 60 * 1000) {
-          calWeatherData = cache.data;
-          calRenderWeatherUI();
           return;
         }
       }

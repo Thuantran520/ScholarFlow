@@ -1,7 +1,7 @@
 const browserApi = (typeof browser !== 'undefined' && browser) ? browser : chrome;
 browserApi.storage.local.get("sf_social_settings", (res) => {
-  const s = res.sf_social_settings;
-  if (s && s.ytDislike !== false) {
+  const s = res && res.sf_social_settings;
+  if (s && s.ytDislike === true) {
 // ==UserScript==
 // @name         Return YouTube Dislike
 // @namespace    https://www.returnyoutubedislike.com/

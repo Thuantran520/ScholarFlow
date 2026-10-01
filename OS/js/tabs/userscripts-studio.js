@@ -69,15 +69,15 @@
     const lines = (el.code.value.match(/\n/g) || []).length + 1;
     el.lineNumbers.textContent = Array.from({ length: lines }, (_, i) => i + 1).join('\n');
     el.lineNumbers.scrollTop = el.code.scrollTop;
-    if (el.lineCount) el.lineCount.textContent = lines + ' dòng';
-    if (el.charCount) el.charCount.textContent = el.code.value.length + ' ký tự';
+    if (el.lineCount) el.lineCount.textContent = (typeof t === 'function' ? t('us_line_count', [lines]) : (lines + ' dòng'));
+    if (el.charCount) el.charCount.textContent = (typeof t === 'function' ? t('counter_chars', [el.code.value.length]) : (el.code.value.length + ' ký tự'));
   }
 
   function updateCursorPos() {
     if (!el.code || !el.cursorPos) return;
     const text = el.code.value.substring(0, el.code.selectionStart);
     const lines = text.split('\n');
-    el.cursorPos.textContent = 'Dòng ' + lines.length + ', Cột ' + lines[lines.length - 1].length;
+    el.cursorPos.textContent = (typeof t === 'function' ? t('us_cursor_pos', [lines.length, lines[lines.length - 1].length]) : ('Dòng ' + lines.length + ', Cột ' + lines[lines.length - 1].length));
   }
 
   function logToConsole(level, args) {
@@ -115,14 +115,15 @@
     _baseRev = script ? (Number(script.rev) || 0) : 0;
     _baseCode = script ? String(script.code || '') : '';
     if (el.id) el.id.value = script ? script.id : 'script_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
-    if (el.name) el.name.value = script ? (script.name || '') : 'Kịch bản mới';
+    const defaultName = (typeof t === 'function' ? t('us_new_script_default') : null) || 'Kịch bản mới';
+    if (el.name) el.name.value = script ? (script.name || '') : defaultName;
     if (el.matches) el.matches.value = script ? ((script.matches || []).join(', ')) : '*://*/*';
     if (el.excludes) el.excludes.value = script ? ((script.excludes || []).join(', ')) : '';
     if (el.runAt) el.runAt.value = (script && script.runAt) || 'document_idle';
     if (el.world) el.world.value = (script && script.world) || 'MAIN';
     if (el.updateUrl) el.updateUrl.value = (script && script.updateUrl) || '';
-    if (el.code) el.code.value = script ? String(script.code || '') : '// ==UserScript==\n// @name         Kịch bản mới\n// @match        *://*/*\n// @grant        GM_getValue\n// @grant        GM_setValue\n// ==/UserScript==\n\nconsole.log("ScholarFlow Userscript loaded!");\n';
-    document.title = (script ? (script.name || 'Script') : 'Kịch bản mới') + ' - ScholarFlow Studio';
+    if (el.code) el.code.value = script ? String(script.code || '') : ('// ==UserScript==\n// @name         ' + defaultName + '\n// @match        *://*/*\n// @grant        GM_getValue\n// @grant        GM_setValue\n// ==/UserScript==\n\nconsole.log("ScholarFlow Userscript loaded!");\n');
+    document.title = (script ? (script.name || 'Script') : defaultName) + ' - ScholarFlow Studio';
     setTimeout(updateLineNumbers, 20);
     setTimeout(updateCursorPos, 20);
   }
@@ -163,7 +164,7 @@
     try {
       const id = (el.id && el.id.value) ||
         ('script_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9));
-      const name = (el.name && el.name.value.trim()) || 'Không tên';
+      const name = (el.name && el.name.value.trim()) || ((typeof t === 'function' ? t('us_untitled_default') : null) || 'Không tên');
       let matches = el.matches ? el.matches.value.split(/[,\n]/).map((s) => s.trim()).filter((s) => s) : [];
       if (matches.length === 0) matches = ['<all_urls>'];
       const excludes = el.excludes ? el.excludes.value.split(/[,\n]/).map((s) => s.trim()).filter((s) => s) : [];
@@ -284,7 +285,7 @@
         targetTab = allTabs.find(t => t.url && (t.url.startsWith('http://') || t.url.startsWith('https://')));
       }
       if (!targetTab) {
-        alert('Không tìm thấy tab trang web nào đang mở để chạy thử!');
+        alert((typeof t === 'function' ? t('us_test_no_tab') : null) || 'Không tìm thấy tab trang web nào đang mở để chạy thử!');
         return;
       }
 
@@ -325,7 +326,7 @@
   window.addEventListener('error', function(e) {
     if (e && e.message) {
       if (_isBenign(e.message)) return;
-      _relay('error', ['[Lỗi Uncaught]', e.message, e.filename ? '(' + e.filename + ':' + e.lineno + ')' : '']);
+      _relay('error', ['[Uncaught Error]', e.message, e.filename ? '(' + e.filename + ':' + e.lineno + ')' : '']);
     }
   });
 
@@ -333,7 +334,7 @@
     ${gmShim}
     ${codeToRun}
   } catch(err) {
-    _relay('error', ['[Lỗi runtime]', err.stack || err.message || String(err)]);
+    _relay('error', ['[Runtime Error]', err.stack || err.message || String(err)]);
   }
 })();`;
 
@@ -346,14 +347,14 @@
             js: [{ code: runnerWrapper }],
             world: 'USER_SCRIPT'
           });
-          logToConsole('info', ['✓ Kịch bản đã được nạp qua userScripts API thành công.']);
+          logToConsole('info', [(typeof t === 'function' ? t('us_test_success_userscripts') : null) || '✓ Kịch bản đã được nạp qua userScripts API thành công.']);
           if (el.btnTest) {
             const label = el.btnTest.querySelector('span');
-            if (label) label.textContent = 'Đã chạy!';
+            if (label) label.textContent = (typeof t === 'function' ? t('us_btn_ran') : null) || 'Đã chạy!';
             el.btnTest.style.borderColor = '#10b981';
             el.btnTest.style.color = '#34d399';
             setTimeout(() => {
-              if (label) label.textContent = 'Chạy thử';
+              if (label) label.textContent = (typeof t === 'function' ? t('us_btn_test_run') : null) || 'Chạy thử';
               el.btnTest.style.borderColor = '';
               el.btnTest.style.color = '';
             }, 2000);
@@ -487,22 +488,22 @@
         });
       }
       if (countLogged === 0) {
-        logToConsole('info', ['✓ Kịch bản đã được nạp vào trang thành công. (Không có console.log đồng bộ)']);
+        logToConsole('info', [(typeof t === 'function' ? t('us_test_success_page') : null) || '✓ Kịch bản đã được nạp vào trang thành công. (Không có console.log đồng bộ)']);
       }
 
       if (el.btnTest) {
         const label = el.btnTest.querySelector('span');
-        if (label) label.textContent = 'Đã chạy!';
+        if (label) label.textContent = (typeof t === 'function' ? t('us_btn_ran') : null) || 'Đã chạy!';
         el.btnTest.style.borderColor = '#10b981';
         el.btnTest.style.color = '#34d399';
         setTimeout(() => {
-          if (label) label.textContent = 'Chạy thử';
+          if (label) label.textContent = (typeof t === 'function' ? t('us_btn_test_run') : null) || 'Chạy thử';
           el.btnTest.style.borderColor = '';
           el.btnTest.style.color = '';
         }, 1500);
       }
     } catch (e) {
-      logToConsole('error', ['Lỗi chạy thử:', e.message]);
+      logToConsole('error', [(typeof t === 'function' ? t('us_test_err_prefix') : null) || 'Lỗi chạy thử:', e.message]);
     }
   }
 
@@ -520,7 +521,7 @@
       _findMatches.push(idx);
       idx += q.length;
     }
-    if (el.findCount) el.findCount.textContent = _findMatches.length + ' kết quả';
+    if (el.findCount) el.findCount.textContent = (typeof t === 'function' ? t('us_find_matches_count', [_findMatches.length]) : null) || (_findMatches.length + ' kết quả');
   }
 
   function selectMatch(i) {
@@ -540,6 +541,28 @@
       el.code.addEventListener('click', updateCursorPos);
       el.code.addEventListener('scroll', () => {
         if (el.lineNumbers) el.lineNumbers.scrollTop = el.code.scrollTop;
+      });
+      el.code.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        el.code.style.outline = '2px dashed #0284c7';
+      });
+      el.code.addEventListener('dragleave', () => {
+        el.code.style.outline = 'none';
+      });
+      el.code.addEventListener('drop', (e) => {
+        e.preventDefault();
+        el.code.style.outline = 'none';
+        const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (evt) => {
+            el.code.value = evt.target.result;
+            updateLineNumbers();
+            updateCursorPos();
+            if (el.btnParse) el.btnParse.click();
+          };
+          reader.readAsText(file);
+        }
       });
       el.code.addEventListener('keydown', (e) => {
         if (e.ctrlKey && e.key === 's') { e.preventDefault(); saveScript(); }
@@ -587,7 +610,7 @@
         if (!el.code) return;
         const metaApi = (typeof window !== 'undefined' && window.SF_US_META) || (typeof globalThis !== 'undefined' && globalThis.SF_US_META);
         const meta = metaApi ? metaApi.parse(el.code.value) : parseGMMetadata(el.code.value);
-        if (!meta) { alert('Không tìm thấy header ==UserScript== trong mã!'); return; }
+        if (!meta) { alert((typeof t === 'function' ? t('us_meta_not_found') : null) || 'Không tìm thấy header ==UserScript== trong mã!'); return; }
         if (el.name && meta.name) el.name.value = meta.name;
         
         const fields = metaApi ? metaApi.fieldsOf({ code: el.code.value }) : null;
@@ -604,7 +627,7 @@
         }
         if (el.runAt && fields && fields.runAt) el.runAt.value = fields.runAt;
         if (el.updateUrl && fields && fields.updateUrl) el.updateUrl.value = fields.updateUrl;
-        alert('Đã đồng bộ thông tin từ header: ' + (meta.name || ''));
+        alert((typeof t === 'function' ? t('us_meta_synced', [meta.name || '']) : null) || ('Đã đồng bộ thông tin từ header: ' + (meta.name || '')));
       };
     }
 
@@ -656,7 +679,7 @@
         el.code.value = el.code.value.split(q).join(r);
         updateLineNumbers();
         doFind();
-        if (el.findCount) el.findCount.textContent = 'Đã thay thế ' + count + ' vị trí';
+        if (el.findCount) el.findCount.textContent = (typeof t === 'function' ? t('us_replaced_count', [count]) : null) || ('Đã thay thế ' + count + ' vị trí');
       };
     }
 
