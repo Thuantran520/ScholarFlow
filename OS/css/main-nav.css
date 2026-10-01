@@ -204,14 +204,15 @@
 
 /* Compact Nav Mode (Icon only) */
 .main-nav-bar.is-compact-nav .main-nav-btn {
-  flex: 0 0 38px;
-  min-width: 38px;
+  flex: 0 0 38px !important;
+  min-width: 38px !important;
+  max-width: 38px !important;
   padding: 7px 2px;
   gap: 0;
   border-radius: 7px;
 }
 .main-nav-bar.is-compact-nav .nav-label {
-  display: none;
+  display: none !important;
 }
 .main-nav-bar.is-compact-nav .nav-icon {
   font-size: 14px;

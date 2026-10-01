@@ -48,6 +48,7 @@ const ALLOWED_HOSTS = new Set([
   "api.crossref.org",
   "www.google.com",
   "scholar.google.com",
+  "calendar.google.com",
   "search.crossref.org",
   "generativelanguage.googleapis.com",
   "api.openai.com",

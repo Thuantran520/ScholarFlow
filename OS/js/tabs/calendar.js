@@ -296,7 +296,7 @@ function calBuildMap(startKey, endKey) {
       calOccurrencesInRange(ev, startKey, endKey).forEach(function (occ) {
         const idx = occ.feedIndex < 0 ? feedIndex : occ.feedIndex;
         if (!dayMap[occ.key]) dayMap[occ.key] = [];
-        dayMap[occ.key].push({ ev: ev, feedIndex: idx, color: color });
+        dayMap[occ.key].push({ ev: ev, feedIndex: idx, color: color, key: occ.key });
       });
     });
   });
@@ -380,6 +380,178 @@ function calEventTooltip(ev) {
   return parts.join(" | ");
 }
 
+function calExtractMeetingInfo(ev) {
+  if (!ev) return null;
+  const sources = [ev.location, ev.url, ev.description].filter(Boolean);
+  if (!sources.length) return null;
+  const text = sources.join(" ");
+
+  const patterns = [
+    { type: "meet", name: "Google Meet", regex: /https?:\/\/meet\.google\.com\/[a-z0-9\-]+/i },
+    { type: "zoom", name: "Zoom", regex: /https?:\/\/[a-zA-Z0-9.\-_]*zoom\.us\/(?:j|my)\/[a-zA-Z0-9?=_/-]+/i },
+    { type: "teams", name: "MS Teams", regex: /https?:\/\/teams\.(?:microsoft|live)\.com\/[^\s"'>]+/i },
+    { type: "discord", name: "Discord", regex: /https?:\/\/(?:discord\.gg|discord\.com\/(?:channels|invite))\/[^\s"'>]+/i },
+    { type: "skype", name: "Skype", regex: /https?:\/\/join\.skype\.com\/[a-zA-Z0-9]+/i },
+    { type: "webex", name: "Webex", regex: /https?:\/\/[a-zA-Z0-9.\-_]*webex\.com\/[^\s"'>]+/i },
+    { type: "jitsi", name: "Jitsi", regex: /https?:\/\/meet\.jit\.si\/[^\s"'>]+/i }
+  ];
+
+  for (let i = 0; i < patterns.length; i++) {
+    const p = patterns[i];
+    const m = p.regex.exec(text);
+    if (m) {
+      return {
+        type: p.type,
+        name: p.name,
+        url: m[0]
+      };
+    }
+  }
+  return null;
+}
+
+function calGetMeetingStatus(item) {
+  if (!item || !item.ev) return { status: "none", label: "" };
+  const ev = item.ev;
+  const now = new Date();
+  const todayKey = calTodayKey();
+  const dateKey = item.key || (ev.start ? ev.start.key : todayKey);
+
+  if (ev.allDay) {
+    if (dateKey === todayKey) {
+      return {
+        status: "live",
+        label: window.i18n ? window.i18n.t("cal_meeting_live") : "🟢 Đang diễn ra"
+      };
+    }
+    return {
+      status: dateKey > todayKey ? "upcoming" : "passed",
+      label: ""
+    };
+  }
+
+  const p = calParseKey(dateKey);
+  let sh = 0;
+  let sm = 0;
+  if (ev.start && ev.start.time) {
+    const tp = ev.start.time.split(":");
+    sh = parseInt(tp[0], 10) || 0;
+    sm = parseInt(tp[1], 10) || 0;
+  }
+  const startDt = new Date(p[0], p[1] - 1, p[2], sh, sm, 0);
+
+  let endDt = null;
+  if (ev.end && ev.end.time) {
+    const ep = calParseKey(ev.end.key || dateKey);
+    const etp = ev.end.time.split(":");
+    const eh = parseInt(etp[0], 10) || 0;
+    const em = parseInt(etp[1], 10) || 0;
+    endDt = new Date(ep[0], ep[1] - 1, ep[2], eh, em, 0);
+  }
+  if (!endDt || endDt.getTime() <= startDt.getTime()) {
+    endDt = new Date(startDt.getTime() + 60 * 60 * 1000);
+  }
+
+  const nowMs = now.getTime();
+  const startMs = startDt.getTime();
+  const endMs = endDt.getTime();
+
+  if (nowMs >= startMs && nowMs <= endMs) {
+    return {
+      status: "live",
+      label: window.i18n ? window.i18n.t("cal_meeting_live") : "🟢 Đang diễn ra"
+    };
+  }
+
+  const diffMins = (startMs - nowMs) / (60 * 1000);
+  if (diffMins > 0 && diffMins <= 15) {
+    return {
+      status: "soon",
+      label: window.i18n ? window.i18n.t("cal_meeting_soon") : "🔔 Sắp bắt đầu"
+    };
+  }
+
+  if (diffMins > 15) {
+    return { status: "upcoming", label: "" };
+  }
+
+  return { status: "passed", label: "" };
+}
+
+function calCreateMeetingIcon() {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("width", "11");
+  svg.setAttribute("height", "11");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "2");
+  svg.setAttribute("stroke-linecap", "round");
+  svg.setAttribute("stroke-linejoin", "round");
+  svg.style.flexShrink = "0";
+
+  const poly = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+  poly.setAttribute("points", "23 7 16 12 23 17 23 7");
+  svg.appendChild(poly);
+
+  const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  rect.setAttribute("x", "1");
+  rect.setAttribute("y", "5");
+  rect.setAttribute("width", "15");
+  rect.setAttribute("height", "14");
+  rect.setAttribute("rx", "2");
+  rect.setAttribute("ry", "2");
+  svg.appendChild(rect);
+
+  return svg;
+}
+
+function calBuildMeetingActions(item) {
+  const meeting = calExtractMeetingInfo(item.ev);
+  if (!meeting) return null;
+
+  const statusInfo = calGetMeetingStatus(item);
+  const actions = document.createElement("div");
+  actions.className = "cal-meeting-actions";
+
+  const platform = document.createElement("span");
+  platform.className = "cal-meeting-platform-badge";
+  platform.appendChild(calCreateMeetingIcon());
+  const pName = document.createElement("span");
+  pName.textContent = meeting.name;
+  platform.appendChild(pName);
+  actions.appendChild(platform);
+
+  if (statusInfo.status === "live") {
+    const badge = document.createElement("span");
+    badge.className = "cal-meeting-badge-live";
+    badge.textContent = statusInfo.label;
+    actions.appendChild(badge);
+  } else if (statusInfo.status === "soon") {
+    const badge = document.createElement("span");
+    badge.className = "cal-meeting-badge-soon";
+    badge.textContent = statusInfo.label;
+    actions.appendChild(badge);
+  }
+
+  const joinBtn = document.createElement("a");
+  joinBtn.href = meeting.url;
+  joinBtn.target = "_blank";
+  joinBtn.rel = "noreferrer";
+  joinBtn.className = "cal-btn-join-meeting" +
+    (statusInfo.status === "live" ? " is-live" : (statusInfo.status === "soon" ? " is-soon" : ""));
+
+  joinBtn.appendChild(calCreateMeetingIcon());
+  const btnTxt = document.createElement("span");
+  btnTxt.textContent = (statusInfo.status === "live" || statusInfo.status === "soon")
+    ? (window.i18n ? window.i18n.t("cal_meeting_join_now") : "Vào phòng họp ngay")
+    : (window.i18n ? window.i18n.t("cal_meeting_join") : "Vào phòng họp");
+  joinBtn.appendChild(btnTxt);
+  actions.appendChild(joinBtn);
+
+  return actions;
+}
+
 function calBuildEventRow(item, isAllDay) {
   const row = document.createElement("div");
   row.className = "cal-event-item" + (isAllDay ? " is-allday" : "");
@@ -433,6 +605,11 @@ function calBuildEventRow(item, isAllDay) {
     body.appendChild(link);
   }
 
+  const meetingActions = calBuildMeetingActions(item);
+  if (meetingActions) {
+    body.appendChild(meetingActions);
+  }
+
   row.appendChild(body);
   return row;
 }
@@ -466,12 +643,99 @@ function calFormatDayHeading(key) {
   return wArr[d.getDay()] + ", " + mArr[d.getMonth()] + " " + d.getDate() + ", " + d.getFullYear();
 }
 
+function calRenderLiveMeetingBanner() {
+  const banner = document.getElementById("cal-live-meeting-banner");
+  if (!banner) return;
+
+  const todayKey = calTodayKey();
+  const dayMap = calBuildMap(todayKey, todayKey);
+  const evs = dayMap[todayKey] || [];
+
+  const activeMeetings = [];
+  evs.forEach(function (it) {
+    const meeting = calExtractMeetingInfo(it.ev);
+    if (!meeting) return;
+    const statusInfo = calGetMeetingStatus(it);
+    if (statusInfo.status === "live" || statusInfo.status === "soon") {
+      activeMeetings.push({ item: it, meeting: meeting, statusInfo: statusInfo });
+    }
+  });
+
+  if (!activeMeetings.length) {
+    banner.style.display = "none";
+    banner.textContent = "";
+    banner.className = "cal-live-meeting-banner";
+    return;
+  }
+
+  activeMeetings.sort(function (a, b) {
+    if (a.statusInfo.status === "live" && b.statusInfo.status !== "live") return -1;
+    if (b.statusInfo.status === "live" && a.statusInfo.status !== "live") return 1;
+    return 0;
+  });
+
+  banner.textContent = "";
+  const hasLive = activeMeetings.some(function (m) { return m.statusInfo.status === "live"; });
+  banner.className = "cal-live-meeting-banner " + (hasLive ? "is-live" : "is-soon");
+
+  const header = document.createElement("div");
+  header.className = "cal-live-banner-header";
+
+  const title = document.createElement("div");
+  title.className = "cal-live-banner-title";
+  title.appendChild(calCreateMeetingIcon());
+  const titleTxt = document.createElement("span");
+  titleTxt.textContent = window.i18n ? window.i18n.t("cal_meeting_live_banner") : "Cuộc họp đang diễn ra hoặc sắp bắt đầu:";
+  title.appendChild(titleTxt);
+  header.appendChild(title);
+  banner.appendChild(header);
+
+  activeMeetings.slice(0, 3).forEach(function (entry) {
+    const mItem = document.createElement("div");
+    mItem.className = "cal-live-banner-item";
+
+    const info = document.createElement("div");
+    info.className = "cal-live-banner-info";
+
+    const name = document.createElement("div");
+    name.className = "cal-live-banner-name";
+    name.textContent = (entry.statusInfo.status === "live" ? "🟢 " : "🔔 ") + entry.item.ev.summary;
+    info.appendChild(name);
+
+    const timeRow = document.createElement("div");
+    timeRow.className = "cal-live-banner-time";
+    const timeStr = entry.item.ev.allDay
+      ? (window.i18n ? window.i18n.t("cal_all_day") : "All day")
+      : calEventTimeRange(entry.item.ev);
+    timeRow.textContent = entry.meeting.name + " • " + timeStr;
+    info.appendChild(timeRow);
+
+    mItem.appendChild(info);
+
+    const cta = document.createElement("a");
+    cta.href = entry.meeting.url;
+    cta.target = "_blank";
+    cta.rel = "noreferrer";
+    cta.className = "cal-btn-join-meeting " + (entry.statusInfo.status === "live" ? "is-live" : "is-soon");
+    cta.appendChild(calCreateMeetingIcon());
+    const ctaTxt = document.createElement("span");
+    ctaTxt.textContent = window.i18n ? window.i18n.t("cal_meeting_join_now") : "Vào phòng họp ngay";
+    cta.appendChild(ctaTxt);
+
+    mItem.appendChild(cta);
+    banner.appendChild(mItem);
+  });
+
+  banner.style.display = "flex";
+}
+
 function calRenderCalendar() {
   const grid = document.getElementById("cal-grid");
   const list = document.getElementById("cal-list");
   const label = document.getElementById("cal-month-label");
   if (!grid || !list || !label) return;
   calSyncFocusToView();
+  calRenderLiveMeetingBanner();
   if (calViewMode === "week") {
     grid.style.display = "grid";
     list.style.display = "none";
@@ -1041,6 +1305,87 @@ function calInit() {
     calFeeds.forEach(function (f) { if (f.url) calRefreshFeed(f.id, true); });
     showToast(window.i18n ? window.i18n.t("cal_toast_refreshing") : "🔄 Updating all calendars...", "success");
   });}
+
+  // Google Calendar Sync Modal handlers
+  const btnGoogleSync = document.getElementById("btn-cal-google-sync");
+  const btnCloseGoogle = document.getElementById("btn-close-cal-google");
+  const googleModal = document.getElementById("cal-google-modal");
+  const inputGoogle = document.getElementById("cal-google-input");
+  const btnGoogleSubmit = document.getElementById("btn-cal-google-submit");
+  const btnOpenGcal = document.getElementById("btn-cal-open-gcal");
+
+  const calOpenGoogleModal = function () {
+    if (googleModal) {
+      googleModal.style.display = "flex";
+      if (inputGoogle) inputGoogle.focus();
+    }
+  };
+
+  const calCloseGoogleModal = function () {
+    if (googleModal) googleModal.style.display = "none";
+  };
+
+  if (btnGoogleSync) btnGoogleSync.addEventListener("click", calOpenGoogleModal);
+  if (btnCloseGoogle) btnCloseGoogle.addEventListener("click", calCloseGoogleModal);
+  if (googleModal) {
+    googleModal.addEventListener("click", function (e) {
+      if (e.target === googleModal) calCloseGoogleModal();
+    });
+  }
+  if (btnOpenGcal) {
+    btnOpenGcal.addEventListener("click", function () {
+      window.open("https://calendar.google.com", "_blank");
+    });
+  }
+
+  const handleGoogleSubmit = function () {
+    if (!inputGoogle) return;
+    let val = (inputGoogle.value || "").trim();
+    if (!val) {
+      showToast(window.i18n ? window.i18n.t("cal_toast_invalid_url") : "⚠️ Vui lòng nhập link iCal Google Calendar", "error");
+      inputGoogle.focus();
+      return;
+    }
+    if (val.startsWith("webcal://")) {
+      val = "https://" + val.slice(9);
+    }
+    if (!/^https?:\/\//i.test(val)) {
+      showToast(window.i18n ? window.i18n.t("cal_toast_invalid_url") : "⚠️ Link không hợp lệ (cần bắt đầu bằng https://)", "error");
+      inputGoogle.focus();
+      return;
+    }
+
+    const feed = {
+      id: "cal_gcal_" + Date.now(),
+      name: "Google Calendar",
+      url: val,
+      color: "#4285F4",
+      isGoogle: true
+    };
+    calFeeds.push(feed);
+    calPersist();
+    calRefreshFeed(feed.id);
+    calRenderFeedList();
+    calCloseGoogleModal();
+    inputGoogle.value = "";
+    showToast(window.i18n ? window.i18n.t("cal_google_sync_success") : "✓ Đã kết nối Google Calendar thành công!", "success");
+  };
+
+  if (btnGoogleSubmit) btnGoogleSubmit.addEventListener("click", handleGoogleSubmit);
+  if (inputGoogle) {
+    inputGoogle.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handleGoogleSubmit();
+      }
+    });
+  }
+
+  if (!window._calMeetingInterval) {
+    window._calMeetingInterval = setInterval(function () {
+      calRenderLiveMeetingBanner();
+    }, 45000);
+  }
 
   const now = new Date();
   if (!calViewYear) { calViewYear = now.getFullYear(); calViewMonth = now.getMonth(); }

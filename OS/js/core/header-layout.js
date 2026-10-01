@@ -415,7 +415,7 @@
     }
   }
 
-  function applyNavStyle() {
+  function applyNavStyle(immediate) {
     var bar = document.querySelector('.main-nav-bar');
     if (bar) {
       bar.classList.toggle('is-compact-nav', navStyle === 'compact');
@@ -423,10 +423,11 @@
     document.querySelectorAll('#hdrs-nav-style-seg .hdrs-seg-btn').forEach(function (b) {
       b.classList.toggle('active', b.dataset.navStyle === navStyle);
     });
-    setTimeout(function () { updateNavPill(false); }, 60);
+    updateNavPill(!!immediate);
+    setTimeout(function () { updateNavPill(!!immediate); }, 30);
   }
 
-  function applyNavOrder() {
+  function applyNavOrder(activeTarget) {
     if (!navOrder) return;
     var wrapper = document.getElementById('nav-wrapper');
     if (!wrapper) return;
@@ -452,7 +453,7 @@
       wrapper.appendChild(b);
     });
 
-    var curActive = getActiveNavTarget();
+    var curActive = activeTarget || getActiveNavTarget();
     if (isNavDisabled(curActive)) {
       var nextActive = getFirstEnabledTab();
       applyNavActive(nextActive);
@@ -460,7 +461,6 @@
     }
 
     setupNavbarDragAndDrop();
-    updateNavPill(false);
   }
 
   function getActiveNavTarget() {
@@ -699,13 +699,16 @@
       navOrder = mergeNavOrder(stored && stored.order);
       navDisabled = mergeNavDisabled(stored && stored.disabled);
       navStyle = (stored && (stored.style === 'compact' || stored.style === 'full')) ? stored.style : 'full';
-      applyNavStyle();
-      applyNavOrder();
       var act = (stored && stored.active);
       if (!act || isNavDisabled(act)) act = getFirstEnabledTab();
+
+      applyNavStyle(true);
+      applyNavOrder(act);
       applyNavActive(act);
       renderNavRows();
       notifyNavChanged();
+
+      updateNavPill(true);
       setTimeout(function () { updateNavPill(true); }, 50);
     };
     if (typeof storGet === 'function') {
@@ -838,6 +841,15 @@
     bindUI();
     loadState();
     loadNavState();
+    if (typeof ResizeObserver !== 'undefined') {
+      var wrap = document.getElementById('nav-wrapper');
+      if (wrap) {
+        var ro = new ResizeObserver(function () {
+          updateNavPill(true);
+        });
+        ro.observe(wrap);
+      }
+    }
   }
 
   // Test / debugging hooks
