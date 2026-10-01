@@ -480,15 +480,17 @@ function calGetMeetingStatus(item) {
 
 function calCreateMeetingIcon() {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.setAttribute("width", "11");
-  svg.setAttribute("height", "11");
+  svg.setAttribute("width", "12");
+  svg.setAttribute("height", "12");
   svg.setAttribute("viewBox", "0 0 24 24");
   svg.setAttribute("fill", "none");
   svg.setAttribute("stroke", "currentColor");
-  svg.setAttribute("stroke-width", "2");
+  svg.setAttribute("stroke-width", "2.2");
   svg.setAttribute("stroke-linecap", "round");
   svg.setAttribute("stroke-linejoin", "round");
   svg.style.flexShrink = "0";
+  svg.style.display = "inline-block";
+  svg.style.verticalAlign = "middle";
 
   const poly = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
   poly.setAttribute("points", "23 7 16 12 23 17 23 7");
@@ -511,8 +513,12 @@ function calBuildMeetingActions(item) {
   if (!meeting) return null;
 
   const statusInfo = calGetMeetingStatus(item);
-  const actions = document.createElement("div");
-  actions.className = "cal-meeting-actions";
+  const card = document.createElement("div");
+  card.className = "cal-meeting-card" +
+    (statusInfo.status === "live" ? " is-live" : (statusInfo.status === "soon" ? " is-soon" : ""));
+
+  const left = document.createElement("div");
+  left.className = "cal-meeting-left";
 
   const platform = document.createElement("span");
   platform.className = "cal-meeting-platform-badge";
@@ -520,19 +526,31 @@ function calBuildMeetingActions(item) {
   const pName = document.createElement("span");
   pName.textContent = meeting.name;
   platform.appendChild(pName);
-  actions.appendChild(platform);
+  left.appendChild(platform);
 
   if (statusInfo.status === "live") {
     const badge = document.createElement("span");
     badge.className = "cal-meeting-badge-live";
-    badge.textContent = statusInfo.label;
-    actions.appendChild(badge);
+    const dot = document.createElement("span");
+    dot.className = "cal-meeting-pulse-dot";
+    badge.appendChild(dot);
+    const txt = document.createElement("span");
+    txt.textContent = statusInfo.label;
+    badge.appendChild(txt);
+    left.appendChild(badge);
   } else if (statusInfo.status === "soon") {
     const badge = document.createElement("span");
     badge.className = "cal-meeting-badge-soon";
-    badge.textContent = statusInfo.label;
-    actions.appendChild(badge);
+    const icon = document.createElement("span");
+    icon.textContent = "⏰ ";
+    badge.appendChild(icon);
+    const txt = document.createElement("span");
+    txt.textContent = statusInfo.label;
+    badge.appendChild(txt);
+    left.appendChild(badge);
   }
+
+  card.appendChild(left);
 
   const joinBtn = document.createElement("a");
   joinBtn.href = meeting.url;
@@ -547,9 +565,9 @@ function calBuildMeetingActions(item) {
     ? (window.i18n ? window.i18n.t("cal_meeting_join_now") : "Vào phòng họp ngay")
     : (window.i18n ? window.i18n.t("cal_meeting_join") : "Vào phòng họp");
   joinBtn.appendChild(btnTxt);
-  actions.appendChild(joinBtn);
+  card.appendChild(joinBtn);
 
-  return actions;
+  return card;
 }
 
 function calCreateClockIcon() {
@@ -617,26 +635,53 @@ function calBuildEventRow(item, isAllDay) {
   title.textContent = item.ev.summary;
   body.appendChild(title);
 
+  const meeting = calExtractMeetingInfo(item.ev);
+  const meetingUrl = meeting ? meeting.url : "";
+
   if (item.ev.location) {
-    const loc = document.createElement("div");
-    loc.className = "cal-event-meta loc";
-    loc.textContent = item.ev.location;
-    body.appendChild(loc);
+    const locStr = item.ev.location.trim();
+    const isMeetingUrl = meetingUrl && (locStr === meetingUrl || locStr.indexOf(meetingUrl) !== -1);
+    if (!isMeetingUrl) {
+      const loc = document.createElement("div");
+      loc.className = "cal-event-meta loc";
+      const isHttp = /^https?:\/\//i.test(locStr);
+      if (isHttp) {
+        const link = document.createElement("a");
+        link.className = "cal-event-link";
+        link.href = locStr;
+        link.target = "_blank";
+        link.rel = "noreferrer";
+        link.textContent = locStr;
+        loc.appendChild(link);
+      } else {
+        loc.textContent = "📍 " + locStr;
+      }
+      body.appendChild(loc);
+    }
   }
+
   if (item.ev.description) {
     const desc = document.createElement("div");
-    desc.className = "cal-event-meta";
+    desc.className = "cal-event-meta desc";
     desc.textContent = item.ev.description;
     body.appendChild(desc);
   }
+
   if (item.ev.url) {
-    const link = document.createElement("a");
-    link.className = "cal-event-meta";
-    link.href = item.ev.url;
-    link.target = "_blank";
-    link.rel = "noreferrer";
-    link.textContent = item.ev.url;
-    body.appendChild(link);
+    const urlStr = item.ev.url.trim();
+    const isMeetingUrl = meetingUrl && (urlStr === meetingUrl || urlStr.indexOf(meetingUrl) !== -1);
+    if (!isMeetingUrl) {
+      const linkDiv = document.createElement("div");
+      linkDiv.className = "cal-event-meta";
+      const link = document.createElement("a");
+      link.className = "cal-event-link";
+      link.href = urlStr;
+      link.target = "_blank";
+      link.rel = "noreferrer";
+      link.textContent = "🔗 " + urlStr;
+      linkDiv.appendChild(link);
+      body.appendChild(linkDiv);
+    }
   }
 
   const meetingActions = calBuildMeetingActions(item);
