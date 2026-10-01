@@ -49,6 +49,7 @@ const ALLOWED_HOSTS = new Set([
   "www.google.com",
   "scholar.google.com",
   "calendar.google.com",
+  "api.open-meteo.com",
   "search.crossref.org",
   "generativelanguage.googleapis.com",
   "api.openai.com",

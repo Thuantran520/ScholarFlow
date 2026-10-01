@@ -914,6 +914,252 @@ function calRenderList(box, label) {
   }
 }
 
+// ----------------------------------------------------------------------------
+// Weather & Humidity Subsystem (Open-Meteo local API)
+// ----------------------------------------------------------------------------
+let calWeatherData = null;
+
+const CAL_WMO_WEATHER = {
+  0: { icon: "☀️", text: "Trời quang" },
+  1: { icon: "🌤️", text: "Ít mây" },
+  2: { icon: "⛅", text: "Mây rải rác" },
+  3: { icon: "☁️", text: "Nhiều mây" },
+  45: { icon: "🌫️", text: "Sương mù" },
+  48: { icon: "🌫️", text: "Sương mù đọng sương" },
+  51: { icon: "🌦️", text: "Mưa phùn nhẹ" },
+  53: { icon: "🌦️", text: "Mưa phùn vừa" },
+  55: { icon: "🌧️", text: "Mưa phùn dày" },
+  61: { icon: "🌧️", text: "Mưa nhỏ" },
+  63: { icon: "🌧️", text: "Mưa vừa" },
+  65: { icon: "🌧️", text: "Mưa to" },
+  71: { icon: "🌨️", text: "Tuyết rơi nhẹ" },
+  73: { icon: "🌨️", text: "Tuyết vừa" },
+  75: { icon: "❄️", text: "Tuyết dày" },
+  80: { icon: "🌦️", text: "Mưa rào nhẹ" },
+  81: { icon: "🌧️", text: "Mưa rào vừa" },
+  82: { icon: "⛈️", text: "Mưa rào rất to" },
+  95: { icon: "⛈️", text: "Dông sét" },
+  96: { icon: "⛈️", text: "Dông kèm mưa đá" },
+  99: { icon: "⛈️", text: "Dông lớn kèm mưa đá" }
+};
+
+function calGetWmoInfo(code) {
+  return CAL_WMO_WEATHER[code] || { icon: "⛅", text: "Thời tiết" };
+}
+
+function calRenderWeatherUI() {
+  const pillIcon = document.getElementById("cal-weather-icon");
+  const pillTemp = document.getElementById("cal-weather-temp");
+  const pillHumid = document.getElementById("cal-weather-humidity");
+  const pillBtn = document.getElementById("btn-cal-weather-pill");
+  const previewTxt = document.getElementById("cal-weather-preview-text");
+  const alertBox = document.getElementById("cal-weather-alert-box");
+  const dailyList = document.getElementById("cal-weather-daily-list");
+
+  if (!calWeatherData || !calWeatherData.current) return;
+
+  const cur = calWeatherData.current;
+  const wmo = calGetWmoInfo(cur.weather_code);
+  const tempVal = Math.round(cur.temperature_2m);
+  const humidVal = Math.round(cur.relative_humidity_2m);
+  const isHighHumidity = humidVal >= 80;
+
+  if (pillIcon) pillIcon.textContent = wmo.icon;
+  if (pillTemp) pillTemp.textContent = tempVal + "°C";
+  if (pillHumid) pillHumid.textContent = "💧 " + humidVal + "%";
+
+  if (pillBtn) {
+    pillBtn.classList.toggle("has-rain-alert", isHighHumidity);
+    if (isHighHumidity) {
+      pillBtn.title = (window.i18n ? window.i18n.t("cal_weather_rain_alert") : "Độ ẩm cao (>80%) - Nguy cơ mưa cao!");
+    } else {
+      pillBtn.title = (window.i18n ? window.i18n.t("cal_weather_modal_title") : "Dự báo thời tiết & độ ẩm");
+    }
+  }
+
+  if (previewTxt) {
+    previewTxt.textContent = wmo.icon + " " + tempVal + "°C | 💧 " + humidVal + "% (" + wmo.text + ")";
+  }
+
+  // 7-day modal contents
+  if (alertBox) {
+    if (isHighHumidity) {
+      alertBox.style.display = "flex";
+      alertBox.textContent = "";
+      const alertIcon = document.createElement("span");
+      alertIcon.style.fontSize = "16px";
+      alertIcon.textContent = "🌧️";
+      alertBox.appendChild(alertIcon);
+
+      const alertTxt = document.createElement("div");
+      alertTxt.textContent = window.i18n ? window.i18n.t("cal_weather_rain_alert") : "Độ ẩm không khí rất cao (>80%). Nguy cơ mưa cao, hãy chú ý mang ô khi ra ngoài!";
+      alertBox.appendChild(alertTxt);
+    } else {
+      alertBox.style.display = "none";
+    }
+  }
+
+  if (dailyList && calWeatherData.daily && Array.isArray(calWeatherData.daily.time)) {
+    dailyList.textContent = "";
+    const daily = calWeatherData.daily;
+    const len = daily.time.length;
+    for (let i = 0; i < len; i++) {
+      const dateStr = daily.time[i];
+      const code = daily.weather_code ? daily.weather_code[i] : 0;
+      const dwmo = calGetWmoInfo(code);
+      const minT = daily.temperature_2m_min ? Math.round(daily.temperature_2m_min[i]) : "--";
+      const maxT = daily.temperature_2m_max ? Math.round(daily.temperature_2m_max[i]) : "--";
+      const prob = daily.precipitation_probability_max ? Math.round(daily.precipitation_probability_max[i]) : 0;
+
+      const row = document.createElement("div");
+      row.className = "cal-weather-day-row";
+
+      const left = document.createElement("div");
+      left.style.display = "flex";
+      left.style.alignItems = "center";
+      left.style.gap = "8px";
+
+      const iconSpan = document.createElement("span");
+      iconSpan.className = "cal-weather-day-icon";
+      iconSpan.textContent = dwmo.icon;
+      left.appendChild(iconSpan);
+
+      const dateSpan = document.createElement("span");
+      dateSpan.className = "cal-weather-day-date";
+      dateSpan.textContent = (dateStr === calTodayKey()) ? (window.i18n ? window.i18n.t("cal_btn_today") : "Hôm nay") + " (" + dateStr + ")" : dateStr;
+      left.appendChild(dateSpan);
+
+      row.appendChild(left);
+
+      const right = document.createElement("div");
+      right.style.display = "flex";
+      right.style.alignItems = "center";
+      right.style.gap = "8px";
+
+      const tempSpan = document.createElement("span");
+      tempSpan.className = "cal-weather-day-temp";
+      tempSpan.textContent = minT + "° ~ " + maxT + "°C";
+      right.appendChild(tempSpan);
+
+      const rainSpan = document.createElement("span");
+      rainSpan.className = "cal-weather-day-rain";
+      rainSpan.textContent = "💧 " + prob + "%";
+      right.appendChild(rainSpan);
+
+      row.appendChild(right);
+      dailyList.appendChild(row);
+    }
+  }
+
+  calUpdateDayWeather(calSelectedKey);
+}
+
+function calUpdateDayWeather(dateKey) {
+  const badge = document.getElementById("cal-day-weather-badge");
+  if (!badge) return;
+  if (!calWeatherData || !calWeatherData.daily || !Array.isArray(calWeatherData.daily.time)) {
+    badge.style.display = "none";
+    return;
+  }
+  const idx = calWeatherData.daily.time.indexOf(dateKey);
+  if (idx === -1) {
+    badge.style.display = "none";
+    return;
+  }
+  const daily = calWeatherData.daily;
+  const code = daily.weather_code ? daily.weather_code[idx] : 0;
+  const dwmo = calGetWmoInfo(code);
+  const minT = daily.temperature_2m_min ? Math.round(daily.temperature_2m_min[idx]) : "--";
+  const maxT = daily.temperature_2m_max ? Math.round(daily.temperature_2m_max[idx]) : "--";
+  const prob = daily.precipitation_probability_max ? Math.round(daily.precipitation_probability_max[idx]) : 0;
+
+  badge.textContent = dwmo.icon + " " + minT + "°-" + maxT + "°C • 💧" + prob + "%";
+  badge.title = dwmo.text + " - Xác suất mưa: " + prob + "%";
+  badge.style.display = "inline-flex";
+}
+
+function calFetchWeather(lat, lon, silent) {
+  const fetchFn = (typeof fetch === "function") ? fetch : (typeof window !== "undefined" && typeof window.fetch === "function" ? window.fetch : (typeof globalThis !== "undefined" && typeof globalThis.fetch === "function" ? globalThis.fetch : null));
+  if (!fetchFn) return;
+
+  const url = "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon +
+    "&current=temperature_2m,relative_humidity_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto";
+
+  const opts = {};
+  if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function") {
+    opts.signal = AbortSignal.timeout(10000);
+  }
+
+  fetchFn(url, opts)
+    .then(function (res) {
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.json();
+    })
+    .then(function (data) {
+      calWeatherData = data;
+      storSet({ sf_cal_weather_cache: { lat: lat, lon: lon, fetchedAt: Date.now(), data: data } });
+      calRenderWeatherUI();
+      if (!silent) {
+        showToast(window.i18n ? window.i18n.t("cal_toast_updated", null, { name: "Weather" }) : "✓ Đã cập nhật thời tiết", "success");
+      }
+    })
+    .catch(function (err) {
+      console.error("Open-Meteo weather fetch error:", err);
+      const previewTxt = document.getElementById("cal-weather-preview-text");
+      if (previewTxt && !calWeatherData) {
+        previewTxt.textContent = window.i18n ? window.i18n.t("cal_weather_error") : "Không thể tải thời tiết";
+      }
+    });
+}
+
+// ----------------------------------------------------------------------------
+// Modal Controllers
+// ----------------------------------------------------------------------------
+function calOpenEventModal(dateKey) {
+  const modal = document.getElementById("cal-event-modal");
+  if (!modal) return;
+  const startEl = document.getElementById("cal-manual-start-date");
+  const endEl = document.getElementById("cal-manual-end-date");
+  const titleEl = document.getElementById("cal-manual-title");
+  const locEl = document.getElementById("cal-manual-loc");
+
+  const fillDate = dateKey || calSelectedKey || calTodayKey();
+  if (startEl) startEl.value = fillDate;
+  if (endEl) endEl.value = fillDate;
+  if (titleEl) {
+    titleEl.value = "";
+    setTimeout(function () { titleEl.focus(); }, 60);
+  }
+  if (locEl) locEl.value = "";
+
+  modal.style.display = "flex";
+}
+
+function calCloseEventModal() {
+  const modal = document.getElementById("cal-event-modal");
+  if (modal) modal.style.display = "none";
+}
+
+function calOpenSettingsModal() {
+  const modal = document.getElementById("cal-settings-modal");
+  if (modal) modal.style.display = "flex";
+}
+
+function calCloseSettingsModal() {
+  const modal = document.getElementById("cal-settings-modal");
+  if (modal) modal.style.display = "none";
+}
+
+function calOpenWeatherModal() {
+  const modal = document.getElementById("cal-weather-modal");
+  if (modal) modal.style.display = "flex";
+}
+
+function calCloseWeatherModal() {
+  const modal = document.getElementById("cal-weather-modal");
+  if (modal) modal.style.display = "none";
+}
+
 function calRenderDayPanel() {
   const head = document.getElementById("cal-day-head");
   const box = document.getElementById("cal-day-events");
@@ -921,6 +1167,7 @@ function calRenderDayPanel() {
   const built = calBuildMap(calSelectedKey, calSelectedKey);
   const evs = built[calSelectedKey] || [];
   head.textContent = calFormatDayHeading(calSelectedKey) + (evs.length ? " (" + evs.length + ")" : "");
+  calUpdateDayWeather(calSelectedKey);
   box.textContent = "";
   if (!evs.length) {
     const empty = document.createElement("div");
@@ -1159,23 +1406,25 @@ function calAddManualEvent() {
   calPersist();
   g("cal-manual-title").value = "";
   g("cal-manual-loc").value = "";
+  calCloseEventModal();
   showToast(window.i18n ? window.i18n.t("cal_toast_manual_created") : "✓ Đã thêm sự kiện thủ công");
   calRenderFeedList();
   calRenderCalendar();
-  g("cal-manual-title").focus();
 }
 
 function calManualInit() {
   const form = document.getElementById("cal-manual-form");
+  if (!form) return;
   const toggle = document.getElementById("btn-cal-manual-toggle");
-  if (!form || !toggle) return;
   const g = function (id) { return document.getElementById(id); };
   calBuildColorSwatches();
-  toggle.addEventListener("click", function () {
-    const on = form.style.display !== "none";
-    form.style.display = on ? "none" : "block";
-    toggle.classList.toggle("active", !on);
-  });
+  if (toggle) {
+    toggle.addEventListener("click", function () {
+      const on = form.style.display !== "none";
+      form.style.display = on ? "none" : "block";
+      toggle.classList.toggle("active", !on);
+    });
+  }
   const syncEndInputs = function () {
     const mode = g("cal-manual-end").value;
     const hasFreq = g("cal-manual-freq").value !== "none";
@@ -1305,6 +1554,94 @@ function calInit() {
     calFeeds.forEach(function (f) { if (f.url) calRefreshFeed(f.id, true); });
     showToast(window.i18n ? window.i18n.t("cal_toast_refreshing") : "🔄 Updating all calendars...", "success");
   });}
+
+  // Event Modal handlers
+  const btnAddEventQuick = document.getElementById("btn-cal-add-event-quick");
+  const btnAddToDay = document.getElementById("btn-cal-add-to-day");
+  const btnCloseEvent = document.getElementById("btn-close-cal-event");
+  const eventModal = document.getElementById("cal-event-modal");
+
+  if (btnAddEventQuick) btnAddEventQuick.addEventListener("click", function () { calOpenEventModal(calSelectedKey); });
+  if (btnAddToDay) btnAddToDay.addEventListener("click", function () { calOpenEventModal(calSelectedKey); });
+  if (btnCloseEvent) btnCloseEvent.addEventListener("click", calCloseEventModal);
+  if (eventModal) {
+    eventModal.addEventListener("click", function (e) {
+      if (e.target === eventModal) calCloseEventModal();
+    });
+  }
+
+  // Settings Modal handlers
+  const btnSettingsOpen = document.getElementById("btn-cal-settings-open");
+  const btnCloseSettings = document.getElementById("btn-close-cal-settings");
+  const settingsModal = document.getElementById("cal-settings-modal");
+  const btnGoogleInModal = document.getElementById("btn-cal-google-sync-in-modal");
+
+  if (btnSettingsOpen) btnSettingsOpen.addEventListener("click", calOpenSettingsModal);
+  if (btnCloseSettings) btnCloseSettings.addEventListener("click", calCloseSettingsModal);
+  if (settingsModal) {
+    settingsModal.addEventListener("click", function (e) {
+      if (e.target === settingsModal) calCloseSettingsModal();
+    });
+  }
+  if (btnGoogleInModal) {
+    btnGoogleInModal.addEventListener("click", function () {
+      calCloseSettingsModal();
+      calOpenGoogleModal();
+    });
+  }
+
+  // Weather Modal & Controls
+  const btnWeatherPill = document.getElementById("btn-cal-weather-pill");
+  const btnOpenWeatherDetail = document.getElementById("btn-cal-open-weather-detail");
+  const btnCloseWeather = document.getElementById("btn-close-cal-weather");
+  const weatherModal = document.getElementById("cal-weather-modal");
+  const citySelect = document.getElementById("cal-weather-city-select");
+  const btnWeatherRefresh = document.getElementById("btn-cal-weather-refresh");
+
+  if (btnWeatherPill) btnWeatherPill.addEventListener("click", calOpenWeatherModal);
+  if (btnOpenWeatherDetail) btnOpenWeatherDetail.addEventListener("click", calOpenWeatherModal);
+  if (btnCloseWeather) btnCloseWeather.addEventListener("click", calCloseWeatherModal);
+  if (weatherModal) {
+    weatherModal.addEventListener("click", function (e) {
+      if (e.target === weatherModal) calCloseWeatherModal();
+    });
+  }
+
+  const calLoadWeatherFromCity = function (silent) {
+    if (!citySelect) return;
+    const parts = (citySelect.value || "21.0285,105.8542").split(",");
+    const lat = parseFloat(parts[0]);
+    const lon = parseFloat(parts[1]);
+    storSet({ sf_cal_weather_coords: citySelect.value });
+    calFetchWeather(lat, lon, silent);
+  };
+
+  if (citySelect) {
+    storGet(["sf_cal_weather_coords", "sf_cal_weather_cache"], function (res) {
+      if (res && res.sf_cal_weather_coords) {
+        citySelect.value = res.sf_cal_weather_coords;
+      }
+      if (res && res.sf_cal_weather_cache && res.sf_cal_weather_cache.data) {
+        const cache = res.sf_cal_weather_cache;
+        if (Date.now() - cache.fetchedAt < 30 * 60 * 1000) {
+          calWeatherData = cache.data;
+          calRenderWeatherUI();
+          return;
+        }
+      }
+      calLoadWeatherFromCity(true);
+    });
+
+    citySelect.addEventListener("change", function () {
+      calLoadWeatherFromCity(false);
+    });
+  }
+
+  if (btnWeatherRefresh) {
+    btnWeatherRefresh.addEventListener("click", function () {
+      calLoadWeatherFromCity(false);
+    });
+  }
 
   // Google Calendar Sync Modal handlers
   const btnGoogleSync = document.getElementById("btn-cal-google-sync");

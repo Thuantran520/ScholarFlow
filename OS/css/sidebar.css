@@ -2349,6 +2349,105 @@
   100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 
+/* Calendar: Weather & Humidity Widgets */
+.cal-weather-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #e2e8f0;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+.cal-weather-pill:hover {
+  background: rgba(30, 41, 59, 0.85);
+  border-color: #38bdf8;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.25);
+}
+.cal-weather-sep {
+  color: rgba(255, 255, 255, 0.25);
+  font-size: 10px;
+}
+.cal-weather-pill.has-rain-alert {
+  border-color: rgba(59, 130, 246, 0.6);
+  background: rgba(30, 58, 138, 0.35);
+  color: #93c5fd;
+  animation: calWeatherRainGlow 2.5s infinite;
+}
+@keyframes calWeatherRainGlow {
+  0%, 100% { border-color: rgba(59, 130, 246, 0.4); box-shadow: 0 0 0 rgba(59, 130, 246, 0); }
+  50% { border-color: rgba(56, 189, 248, 0.8); box-shadow: 0 0 8px rgba(56, 189, 248, 0.4); }
+}
+.cal-day-weather-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #94a3b8;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 2px 6px;
+  flex-shrink: 0;
+}
+.cal-weather-alert-box {
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.3) 0%, rgba(14, 165, 233, 0.15) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 11px;
+  color: #7dd3fc;
+  line-height: 1.4;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cal-weather-day-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 11px;
+  gap: 8px;
+}
+.cal-weather-day-date {
+  font-weight: 700;
+  color: #cbd5e1;
+  width: 75px;
+  flex-shrink: 0;
+}
+.cal-weather-day-condition {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #e2e8f0;
+  flex: 1;
+}
+.cal-weather-day-metrics {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-family: ui-monospace, Consolas, monospace;
+}
+.cal-weather-day-temp {
+  color: #38bdf8;
+  font-weight: 700;
+}
+.cal-weather-day-humidity {
+  color: #93c5fd;
+}
+
 /* ════════════ NOTES (f-notes) ════════════ */
 .notes-composer {
   position: relative;

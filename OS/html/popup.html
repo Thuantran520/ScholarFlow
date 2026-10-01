@@ -2165,91 +2165,32 @@
 
   <!-- ══════════════════════ TAB 8: CALENDAR (ICS) ══════════════════════ -->
   <div id="tab-cal" class="tab-section">
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
-      <div class="feature-title" style="margin-bottom:0;" data-i18n="cal_title">Lịch học tập</div>
-      <div style="display:flex; gap:4px; align-items:center;">
-        <button id="btn-cal-google-sync" class="cal-tool-btn cal-google-btn" title="Đồng bộ với Google Calendar & cuộc họp" data-i18n-title="tip_cal_google_sync">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4285F4" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-          <span data-i18n="cal_btn_google_sync">Google Lịch</span>
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; gap:6px; flex-wrap:wrap;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div class="feature-title" style="margin-bottom:0;" data-i18n="cal_title">Lịch học tập</div>
+        <!-- Weather pill widget -->
+        <button type="button" id="btn-cal-weather-pill" class="cal-weather-pill" title="Xem chi tiết thời tiết &amp; độ ẩm" data-i18n-title="cal_weather_modal_title">
+          <span id="cal-weather-icon">⛅</span>
+          <span id="cal-weather-temp">--°C</span>
+          <span class="cal-weather-sep">|</span>
+          <span id="cal-weather-humidity">💧 --%</span>
         </button>
-        <button id="btn-cal-refresh-all" class="cal-tool-btn" title="Cập nhật lại toàn bộ lịch đã nhập" data-i18n-title="tip_cal_refresh_all">
+      </div>
+      <div style="display:flex; gap:4px; align-items:center;">
+        <button type="button" id="btn-cal-add-event-quick" class="btn btn-primary" style="padding:4px 9px; font-size:11px; font-weight:700; height:26px; display:inline-flex; align-items:center; gap:3px;" title="Thêm sự kiện mới vào lịch" data-i18n-title="tip_cal_add_event">
+          <span data-i18n="cal_btn_add_event">＋ Sự kiện</span>
+        </button>
+        <button type="button" id="btn-cal-settings-open" class="cal-tool-btn" title="Quản lý nguồn lịch, Google Calendar &amp; thời tiết" data-i18n-title="tip_cal_settings">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          <span data-i18n="cal_btn_settings">Cài đặt lịch</span>
+        </button>
+        <button type="button" id="btn-cal-refresh-all" class="cal-tool-btn" title="Cập nhật lại toàn bộ lịch đã nhập" data-i18n-title="tip_cal_refresh_all">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
-          <span data-i18n="cal_btn_refresh_all">Cập nhật</span>
         </button>
       </div>
     </div>
 
     <div id="cal-live-meeting-banner" class="cal-live-meeting-banner" style="display:none;"></div>
-
-    <div class="feature-card" style="padding:10px 12px; margin-bottom:10px;">
-      <div style="font-size:11.5px; font-weight:700; color:var(--primary); margin-bottom:6px; display:flex; align-items:center; gap:5px;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
-        <span data-i18n="cal_add_header">Nhập link lịch (ICS / iCal)</span>
-      </div>
-      <div style="display:flex; gap:6px;">
-        <input type="url" id="cal-feed-input" class="form-control" placeholder="https://.../calendar.ics" data-i18n-placeholder="cal_add_placeholder" style="flex:1; font-size:11.5px; padding:6px 8px;">
-        <button id="btn-cal-add" class="btn btn-primary" style="padding:7px 12px; font-size:11.5px; font-weight:700; flex-shrink:0;" data-i18n="cal_btn_add">＋ Nhập</button>
-      </div>
-      <div style="display:flex; align-items:center; gap:5px; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.04em; margin-top:9px;">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-        <span data-i18n="cal_legend_header">Lịch đã nhập (bấm mắt để ẩn/hiện)</span>
-      </div>
-      <div id="cal-feed-list" style="display:flex; flex-direction:column; gap:6px; margin-top:6px;"></div>
-    </div>
-
-    <div class="feature-card" style="padding:10px 12px; margin-bottom:10px;">
-      <button type="button" id="btn-cal-manual-toggle" class="cal-manual-toggle">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-        <span data-i18n="cal_manual_toggle">Thêm sự kiện thủ công</span>
-      </button>
-      <div id="cal-manual-form" style="display:none; margin-top:10px;">
-        <div style="display:flex; gap:6px; margin-bottom:6px;">
-          <input type="text" id="cal-manual-title" class="form-control" placeholder="Tên sự kiện..." data-i18n-placeholder="cal_manual_title_ph" style="flex:1; font-size:11.5px; padding:6px 8px;">
-          <input type="text" id="cal-manual-loc" class="form-control" placeholder="Địa điểm (tùy chọn)" data-i18n-placeholder="cal_manual_loc_ph" style="width:132px; font-size:11.5px; padding:6px 8px;">
-        </div>
-        <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px; flex-wrap:wrap;">
-          <label class="cal-manual-lbl" data-i18n="cal_manual_start">Bắt đầu</label>
-          <input type="date" id="cal-manual-start-date" class="form-control" style="font-size:11px; padding:5px 6px;">
-          <input type="time" id="cal-manual-start-time" class="form-control" style="font-size:11px; padding:5px 6px;">
-          <label class="cal-manual-lbl" data-i18n="cal_manual_end">Kết thúc</label>
-          <input type="date" id="cal-manual-end-date" class="form-control" style="font-size:11px; padding:5px 6px;">
-          <input type="time" id="cal-manual-end-time" class="form-control" style="font-size:11px; padding:5px 6px;">
-        </div>
-        <div style="display:flex; align-items:center; gap:10px; margin-bottom:7px; flex-wrap:wrap;">
-          <label class="cal-switch" data-i18n-title="cal_manual_allday_tip">
-            <input type="checkbox" id="cal-manual-allday">
-            <span class="cal-switch-track" aria-hidden="true"></span>
-            <span class="cal-switch-lbl" data-i18n="cal_manual_allday">Cả ngày</span>
-          </label>
-          <label class="cal-manual-lbl" data-i18n="cal_manual_color">Màu sắc</label>
-          <div id="cal-manual-color" class="cal-color-bar"></div>
-          <label class="cal-color-custom" data-i18n-title="cal_manual_color_rgb_tip">
-            <input type="color" id="cal-manual-color-rgb" value="#38bdf8">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
-          </label>
-          <span class="cal-color-hex" id="cal-manual-hex">#38bdf8</span>
-        </div>
-        <div style="display:flex; gap:6px; margin-bottom:7px; flex-wrap:wrap; align-items:center;">
-          <label class="cal-manual-lbl" data-i18n="cal_manual_freq">Lặp lại</label>
-          <select id="cal-manual-freq" class="form-control" style="width:104px; font-size:11px; padding:5px 6px;">
-            <option value="none" data-i18n="cal_manual_freq_none">Không lặp</option>
-            <option value="daily" data-i18n="cal_manual_freq_daily">Hằng ngày</option>
-            <option value="weekly" data-i18n="cal_manual_freq_weekly">Hằng tuần</option>
-            <option value="monthly" data-i18n="cal_manual_freq_monthly">Hằng tháng</option>
-            <option value="yearly" data-i18n="cal_manual_freq_yearly">Hằng năm</option>
-          </select>
-          <label class="cal-manual-lbl" data-i18n="cal_manual_endlabel">Điểm dừng</label>
-          <select id="cal-manual-end" class="form-control" style="width:96px; font-size:11px; padding:5px 6px;">
-            <option value="never" data-i18n="cal_manual_end_never">Không (mãi mãi)</option>
-            <option value="until" data-i18n="cal_manual_end_until">Đến ngày</option>
-            <option value="count" data-i18n="cal_manual_end_count">Sau N lần</option>
-          </select>
-          <input type="date" id="cal-manual-until" class="form-control" style="display:none; font-size:11px; padding:5px 6px;">
-          <input type="number" id="cal-manual-count" class="form-control" style="display:none; font-size:11px; padding:5px 6px; width:68px;" min="1" value="5">
-        </div>
-        <button type="button" id="btn-cal-manual-save" class="btn btn-primary" style="padding:7px 14px; font-size:11.5px; font-weight:700;" data-i18n="cal_manual_save">＋ Thêm sự kiện</button>
-      </div>
-    </div>
 
     <div class="feature-card" style="padding:10px 12px; margin-bottom:10px;">
       <div class="cal-view-switch" id="cal-view-switch">
@@ -2270,7 +2211,7 @@
         <button id="btn-cal-prev" class="cal-nav-btn" data-i18n-aria="cal_btn_prev" aria-label="Tháng trước">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
         </button>
-        <div id="cal-month-label" style="font-size:14px; font-weight:800; color:#e2e8f0; letter-spacing:0.01em;">Tháng 9, 2026</div>
+        <div id="cal-month-label" style="font-size:14px; font-weight:800; color:#e2e8f0; letter-spacing:0.01em;">Tháng 10, 2026</div>
         <button id="btn-cal-next" class="cal-nav-btn" data-i18n-aria="cal_btn_next" aria-label="Tháng sau">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
         </button>
@@ -2283,8 +2224,170 @@
     </div>
 
     <div class="feature-card" style="padding:10px 12px;">
-      <div id="cal-day-head" style="font-size:12px; font-weight:700; color:#38bdf8; margin-bottom:8px;">Chọn ngày để xem lịch học</div>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; gap:8px;">
+        <div style="display:flex; align-items:center; gap:6px; min-width:0; flex:1;">
+          <div id="cal-day-head" style="font-size:12px; font-weight:700; color:#38bdf8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Chọn ngày để xem lịch học</div>
+          <span id="cal-day-weather-badge" class="cal-day-weather-badge" style="display:none;"></span>
+        </div>
+        <button type="button" id="btn-cal-add-to-day" class="btn btn-secondary" style="padding:4px 8px; font-size:10.5px; font-weight:700; flex-shrink:0; display:inline-flex; align-items:center; gap:3px;" title="Thêm sự kiện cho ngày đang chọn" data-i18n-title="tip_cal_add_event">
+          <span data-i18n="cal_btn_add_to_day">＋ Thêm sự kiện</span>
+        </button>
+      </div>
       <div id="cal-day-events" style="display:flex; flex-direction:column; gap:8px;"></div>
+    </div>
+
+    <!-- Modal: Thêm sự kiện mới -->
+    <div id="cal-event-modal" class="modal-overlay" style="display:none;">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span style="display:inline-flex; align-items:center; gap:6px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line><line x1="12" y1="14" x2="12" y2="18"></line><line x1="10" y1="16" x2="14" y2="16"></line></svg>
+            <span data-i18n="cal_event_modal_title">Thêm sự kiện mới</span>
+          </span>
+        </div>
+        <button type="button" class="btn btn-secondary" id="btn-close-cal-event" style="padding:4px 10px; font-size:12px; flex-shrink:0;" data-i18n="btn_close">✕ Đóng</button>
+      </div>
+      <div class="modal-body-scroll">
+        <div id="cal-manual-form" style="display:flex; flex-direction:column; gap:8px;">
+          <div>
+            <label class="cal-manual-lbl" data-i18n="cal_manual_title_ph" style="margin-bottom:3px; display:block;">Tên sự kiện *</label>
+            <input type="text" id="cal-manual-title" class="form-control" placeholder="Tên sự kiện..." data-i18n-placeholder="cal_manual_title_ph" style="width:100%; font-size:11.5px; padding:6px 8px;">
+          </div>
+          <div>
+            <label class="cal-manual-lbl" data-i18n="cal_manual_loc_ph" style="margin-bottom:3px; display:block;">Địa điểm hoặc Link họp</label>
+            <input type="text" id="cal-manual-loc" class="form-control" placeholder="Địa điểm (tùy chọn)" data-i18n-placeholder="cal_manual_loc_ph" style="width:100%; font-size:11.5px; padding:6px 8px;">
+          </div>
+          <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+            <div style="flex:1; min-width:130px;">
+              <label class="cal-manual-lbl" data-i18n="cal_manual_start" style="margin-bottom:3px; display:block;">Bắt đầu</label>
+              <div style="display:flex; gap:4px;">
+                <input type="date" id="cal-manual-start-date" class="form-control" style="font-size:11px; padding:5px 6px; flex:1;">
+                <input type="time" id="cal-manual-start-time" class="form-control" style="font-size:11px; padding:5px 6px; width:72px;">
+              </div>
+            </div>
+            <div style="flex:1; min-width:130px;">
+              <label class="cal-manual-lbl" data-i18n="cal_manual_end" style="margin-bottom:3px; display:block;">Kết thúc</label>
+              <div style="display:flex; gap:4px;">
+                <input type="date" id="cal-manual-end-date" class="form-control" style="font-size:11px; padding:5px 6px; flex:1;">
+                <input type="time" id="cal-manual-end-time" class="form-control" style="font-size:11px; padding:5px 6px; width:72px;">
+              </div>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px; margin-top:2px; flex-wrap:wrap;">
+            <label class="cal-switch" data-i18n-title="cal_manual_allday_tip">
+              <input type="checkbox" id="cal-manual-allday">
+              <span class="cal-switch-track" aria-hidden="true"></span>
+              <span class="cal-switch-lbl" data-i18n="cal_manual_allday">Cả ngày</span>
+            </label>
+            <label class="cal-manual-lbl" data-i18n="cal_manual_color">Màu sắc</label>
+            <div id="cal-manual-color" class="cal-color-bar"></div>
+            <label class="cal-color-custom" data-i18n-title="cal_manual_color_rgb_tip">
+              <input type="color" id="cal-manual-color-rgb" value="#38bdf8">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
+            </label>
+            <span class="cal-color-hex" id="cal-manual-hex">#38bdf8</span>
+          </div>
+          <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-top:2px;">
+            <label class="cal-manual-lbl" data-i18n="cal_manual_freq">Lặp lại</label>
+            <select id="cal-manual-freq" class="form-control" style="width:104px; font-size:11px; padding:5px 6px;">
+              <option value="none" data-i18n="cal_manual_freq_none">Không lặp</option>
+              <option value="daily" data-i18n="cal_manual_freq_daily">Hằng ngày</option>
+              <option value="weekly" data-i18n="cal_manual_freq_weekly">Hằng tuần</option>
+              <option value="monthly" data-i18n="cal_manual_freq_monthly">Hằng tháng</option>
+              <option value="yearly" data-i18n="cal_manual_freq_yearly">Hằng năm</option>
+            </select>
+            <label class="cal-manual-lbl" data-i18n="cal_manual_endlabel">Điểm dừng</label>
+            <select id="cal-manual-end" class="form-control" style="width:96px; font-size:11px; padding:5px 6px;">
+              <option value="never" data-i18n="cal_manual_end_never">Không (mãi mãi)</option>
+              <option value="until" data-i18n="cal_manual_end_until">Đến ngày</option>
+              <option value="count" data-i18n="cal_manual_end_count">Sau N lần</option>
+            </select>
+            <input type="date" id="cal-manual-until" class="form-control" style="display:none; font-size:11px; padding:5px 6px;">
+            <input type="number" id="cal-manual-count" class="form-control" style="display:none; font-size:11px; padding:5px 6px; width:68px;" min="1" value="5">
+          </div>
+          <button type="button" id="btn-cal-manual-save" class="btn btn-primary" style="padding:8px 14px; font-size:12px; font-weight:700; margin-top:6px;" data-i18n="cal_manual_save">＋ Thêm sự kiện</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Cài đặt & Quản lý lịch -->
+    <div id="cal-settings-modal" class="modal-overlay" style="display:none;">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span style="display:inline-flex; align-items:center; gap:6px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            <span data-i18n="cal_settings_modal_title">Cài đặt &amp; Quản lý lịch</span>
+          </span>
+        </div>
+        <button type="button" class="btn btn-secondary" id="btn-close-cal-settings" style="padding:4px 10px; font-size:12px; flex-shrink:0;" data-i18n="btn_close">✕ Đóng</button>
+      </div>
+      <div class="modal-body-scroll">
+        <!-- Nguồn lịch đăng ký -->
+        <div class="rule-card" style="margin-bottom:10px;">
+          <div class="rule-card-title" style="display:flex; align-items:center; justify-content:space-between;">
+            <span data-i18n="cal_section_feeds">Nguồn lịch đăng ký (iCal / Google)</span>
+            <button type="button" id="btn-cal-google-sync-in-modal" class="btn btn-secondary" style="font-size:10.5px; padding:3px 7px; color:#60a5fa; border-color:rgba(66,133,244,0.4);" data-i18n="cal_btn_google_sync">Google Lịch</button>
+          </div>
+          <div class="rule-card-body">
+            <div style="display:flex; gap:6px; margin-bottom:8px;">
+              <input type="url" id="cal-feed-input" class="form-control" placeholder="https://.../calendar.ics" data-i18n-placeholder="cal_add_placeholder" style="flex:1; font-size:11.5px; padding:6px 8px;">
+              <button id="btn-cal-add" class="btn btn-primary" style="padding:6px 12px; font-size:11.5px; font-weight:700; flex-shrink:0;" data-i18n="cal_btn_add">＋ Nhập</button>
+            </div>
+            <div style="display:flex; align-items:center; gap:5px; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px;">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+              <span data-i18n="cal_legend_header">Lịch đã nhập (bấm mắt để ẩn/hiện)</span>
+            </div>
+            <div id="cal-feed-list" style="display:flex; flex-direction:column; gap:6px;"></div>
+          </div>
+        </div>
+
+        <!-- Cài đặt thời tiết & độ ẩm -->
+        <div class="rule-card">
+          <div class="rule-card-title" data-i18n="cal_weather_title">Dự báo thời tiết &amp; Độ ẩm</div>
+          <div class="rule-card-body">
+            <div style="font-size:11px; color:#94a3b8; margin-bottom:8px; line-height:1.4;">
+              Cập nhật nhiệt độ và độ ẩm không khí theo thời gian thực để chủ động lịch trình học tập và nhắc nhở mang ô khi độ ẩm cao (>80%).
+            </div>
+            <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px;">
+              <select id="cal-weather-city-select" class="form-control" style="flex:1; font-size:11.5px; padding:5px 8px;">
+                <option value="21.0285,105.8542" data-i18n="cal_weather_city_hanoi">Hà Nội</option>
+                <option value="10.8231,106.6297" data-i18n="cal_weather_city_hcm">TP. Hồ Chí Minh</option>
+                <option value="16.0544,108.2022" data-i18n="cal_weather_city_danang">Đà Nẵng</option>
+                <option value="10.0452,105.7469" data-i18n="cal_weather_city_cantho">Cần Thơ</option>
+                <option value="20.8449,106.6881" data-i18n="cal_weather_city_haiphong">Hải Phòng</option>
+                <option value="35.6762,139.6503" data-i18n="cal_weather_city_tokyo">Tokyo</option>
+                <option value="37.5665,126.9780" data-i18n="cal_weather_city_seoul">Seoul</option>
+                <option value="1.3521,103.8198" data-i18n="cal_weather_city_singapore">Singapore</option>
+                <option value="51.5074,-0.1278" data-i18n="cal_weather_city_london">London</option>
+                <option value="40.7128,-74.0060" data-i18n="cal_weather_city_newyork">New York</option>
+                <option value="48.8566,2.3522" data-i18n="cal_weather_city_paris">Paris</option>
+              </select>
+              <button type="button" id="btn-cal-weather-refresh" class="btn btn-secondary" style="padding:5px 10px; font-size:11px;" title="Làm mới thời tiết">🔄</button>
+            </div>
+            <div id="cal-weather-settings-preview" style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:8px 10px; font-size:11px; display:flex; justify-content:space-between; align-items:center;">
+              <span id="cal-weather-preview-text" data-i18n="cal_weather_loading">Đang tải thời tiết...</span>
+              <button type="button" id="btn-cal-open-weather-detail" class="btn-text" style="color:#38bdf8; font-size:11px;" data-i18n="cal_weather_modal_title">Xem chi tiết ↗</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Chi tiết thời tiết & độ ẩm -->
+    <div id="cal-weather-modal" class="modal-overlay" style="display:none;">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span style="display:inline-flex; align-items:center; gap:6px;">
+            <span>⛅</span>
+            <span data-i18n="cal_weather_modal_title">Dự báo thời tiết &amp; độ ẩm 7 ngày</span>
+          </span>
+        </div>
+        <button type="button" class="btn btn-secondary" id="btn-close-cal-weather" style="padding:4px 10px; font-size:12px; flex-shrink:0;" data-i18n="btn_close">✕ Đóng</button>
+      </div>
+      <div class="modal-body-scroll">
+        <div id="cal-weather-alert-box" class="cal-weather-alert-box" style="display:none;"></div>
+        <div id="cal-weather-daily-list" style="display:flex; flex-direction:column; gap:6px;"></div>
+      </div>
     </div>
 
     <!-- Modal: Google Calendar Sync -->
