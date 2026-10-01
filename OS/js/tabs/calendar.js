@@ -552,17 +552,62 @@ function calBuildMeetingActions(item) {
   return actions;
 }
 
+function calCreateClockIcon() {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("width", "11");
+  svg.setAttribute("height", "11");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "2.2");
+  svg.setAttribute("stroke-linecap", "round");
+  svg.setAttribute("stroke-linejoin", "round");
+  svg.style.flexShrink = "0";
+
+  const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  circle.setAttribute("cx", "12");
+  circle.setAttribute("cy", "12");
+  circle.setAttribute("r", "10");
+  svg.appendChild(circle);
+
+  const poly = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+  poly.setAttribute("points", "12 6 12 12 16 14");
+  svg.appendChild(poly);
+
+  return svg;
+}
+
 function calBuildEventRow(item, isAllDay) {
   const row = document.createElement("div");
   row.className = "cal-event-item" + (isAllDay ? " is-allday" : "");
   row.style.borderLeftColor = item.color;
 
+  const topRow = document.createElement("div");
+  topRow.className = "cal-event-top";
+
   const time = document.createElement("div");
   time.className = "cal-event-time";
-  time.textContent = isAllDay
+  time.appendChild(calCreateClockIcon());
+  const timeTxt = document.createElement("span");
+  timeTxt.textContent = isAllDay
     ? (window.i18n ? window.i18n.t("cal_all_day") : "All day")
     : calEventTimeRange(item.ev);
-  row.appendChild(time);
+  time.appendChild(timeTxt);
+  topRow.appendChild(time);
+
+  const feed = calFeeds[item.feedIndex];
+  if (feed) {
+    const chip = document.createElement("span");
+    chip.className = "cal-event-feed";
+    chip.style.background = item.color + "26";
+    chip.style.color = item.color;
+    chip.style.borderColor = item.color + "55";
+    chip.textContent = feed.name;
+    chip.title = feed.url;
+    topRow.appendChild(chip);
+  }
+
+  row.appendChild(topRow);
 
   const body = document.createElement("div");
   body.className = "cal-event-body";
@@ -571,17 +616,6 @@ function calBuildEventRow(item, isAllDay) {
   title.className = "cal-event-title";
   title.textContent = item.ev.summary;
   body.appendChild(title);
-
-  const feed = calFeeds[item.feedIndex];
-  if (feed) {
-    const chip = document.createElement("span");
-    chip.className = "cal-event-feed";
-    chip.style.background = item.color + "33";
-    chip.style.color = item.color;
-    chip.textContent = feed.name;
-    chip.title = feed.url;
-    body.appendChild(chip);
-  }
 
   if (item.ev.location) {
     const loc = document.createElement("div");

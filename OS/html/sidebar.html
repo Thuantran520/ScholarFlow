@@ -2223,71 +2223,83 @@
         <button type="button" class="btn btn-secondary" id="btn-close-cal-event" style="padding:4px 10px; font-size:12px; flex-shrink:0;" data-i18n="btn_close">✕ Đóng</button>
       </div>
       <div class="modal-body-scroll">
-        <div id="cal-manual-form" style="display:flex; flex-direction:column; gap:8px;">
+        <div id="cal-manual-form" style="display:flex; flex-direction:column; gap:11px;">
           <div>
-            <label class="cal-manual-lbl" data-i18n="cal_manual_title_ph" style="margin-bottom:3px; display:block;">Tên sự kiện *</label>
-            <input type="text" id="cal-manual-title" class="form-control" placeholder="Tên sự kiện..." data-i18n-placeholder="cal_manual_title_ph" style="width:100%; font-size:11.5px; padding:6px 8px;">
+            <label class="cal-manual-lbl" data-i18n="cal_manual_title_ph" style="margin-bottom:4px; display:block;">Tên sự kiện *</label>
+            <input type="text" id="cal-manual-title" class="form-control" placeholder="Tên sự kiện..." data-i18n-placeholder="cal_manual_title_ph" style="width:100%; font-size:12px; padding:7px 10px; border-radius:7px;">
           </div>
           <div>
-            <label class="cal-manual-lbl" data-i18n="cal_manual_loc_ph" style="margin-bottom:3px; display:block;">Địa điểm hoặc Link họp</label>
-            <input type="text" id="cal-manual-loc" class="form-control" placeholder="Địa điểm (tùy chọn)" data-i18n-placeholder="cal_manual_loc_ph" style="width:100%; font-size:11.5px; padding:6px 8px;">
-            <div style="display:flex; align-items:center; gap:4px; margin-top:5px; flex-wrap:wrap;">
-              <span style="font-size:10px; color:#94a3b8;" data-i18n="cal_quick_links_lbl">Chèn nhanh link họp:</span>
+            <label class="cal-manual-lbl" data-i18n="cal_manual_loc_ph" style="margin-bottom:4px; display:block;">Địa điểm hoặc Link họp</label>
+            <input type="text" id="cal-manual-loc" class="form-control" placeholder="Địa điểm (tùy chọn)" data-i18n-placeholder="cal_manual_loc_ph" style="width:100%; font-size:12px; padding:7px 10px; border-radius:7px;">
+            <div style="display:flex; align-items:center; gap:5px; margin-top:5px; flex-wrap:wrap;">
+              <span style="font-size:10.5px; color:#94a3b8;" data-i18n="cal_quick_links_lbl">Chèn nhanh link họp:</span>
               <button type="button" class="btn-text-chip cal-preset-link-chip" data-link="https://meet.google.com/sf-demo-room">Google Meet</button>
               <button type="button" class="btn-text-chip cal-preset-link-chip" data-link="https://zoom.us/j/123456789">Zoom</button>
               <button type="button" class="btn-text-chip cal-preset-link-chip" data-link="https://teams.microsoft.com/l/meetup-join">MS Teams</button>
               <button type="button" class="btn-text-chip cal-preset-link-chip" data-link="https://discord.gg/studyroom">Discord</button>
             </div>
           </div>
-          <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-            <div style="flex:1; min-width:130px;">
-              <label class="cal-manual-lbl" data-i18n="cal_manual_start" style="margin-bottom:3px; display:block;">Bắt đầu</label>
-              <div style="display:flex; gap:4px;">
-                <input type="date" id="cal-manual-start-date" class="form-control" style="font-size:11px; padding:5px 6px; flex:1;">
-                <input type="time" id="cal-manual-start-time" class="form-control" style="font-size:11px; padding:5px 6px; width:72px;">
+          <div style="background:rgba(15,23,42,0.45); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:10px 12px; display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+              <div style="flex:1; min-width:130px;">
+                <label class="cal-manual-lbl" data-i18n="cal_manual_start" style="margin-bottom:4px; display:block;">Bắt đầu</label>
+                <div style="display:flex; gap:5px;">
+                  <input type="date" id="cal-manual-start-date" class="form-control" style="font-size:11.5px; padding:6px 8px; flex:1; border-radius:6px;">
+                  <input type="time" id="cal-manual-start-time" class="form-control" style="font-size:11.5px; padding:6px 6px; width:76px; border-radius:6px;">
+                </div>
+              </div>
+              <div style="flex:1; min-width:130px;">
+                <label class="cal-manual-lbl" data-i18n="cal_manual_end" style="margin-bottom:4px; display:block;">Kết thúc</label>
+                <div style="display:flex; gap:5px;">
+                  <input type="date" id="cal-manual-end-date" class="form-control" style="font-size:11.5px; padding:6px 8px; flex:1; border-radius:6px;">
+                  <input type="time" id="cal-manual-end-time" class="form-control" style="font-size:11.5px; padding:6px 6px; width:76px; border-radius:6px;">
+                </div>
               </div>
             </div>
-            <div style="flex:1; min-width:130px;">
-              <label class="cal-manual-lbl" data-i18n="cal_manual_end" style="margin-bottom:3px; display:block;">Kết thúc</label>
-              <div style="display:flex; gap:4px;">
-                <input type="date" id="cal-manual-end-date" class="form-control" style="font-size:11px; padding:5px 6px; flex:1;">
-                <input type="time" id="cal-manual-end-time" class="form-control" style="font-size:11px; padding:5px 6px; width:72px;">
-              </div>
+            <div style="display:flex; align-items:center; padding-top:2px;">
+              <label class="cal-switch" data-i18n-title="cal_manual_allday_tip">
+                <input type="checkbox" id="cal-manual-allday">
+                <span class="cal-switch-track" aria-hidden="true"></span>
+                <span class="cal-switch-lbl" data-i18n="cal_manual_allday" style="font-size:11px; font-weight:600;">Cả ngày</span>
+              </label>
             </div>
           </div>
-          <div style="display:flex; align-items:center; gap:10px; margin-top:2px; flex-wrap:wrap;">
-            <label class="cal-switch" data-i18n-title="cal_manual_allday_tip">
-              <input type="checkbox" id="cal-manual-allday">
-              <span class="cal-switch-track" aria-hidden="true"></span>
-              <span class="cal-switch-lbl" data-i18n="cal_manual_allday">Cả ngày</span>
-            </label>
-            <label class="cal-manual-lbl" data-i18n="cal_manual_color">Màu sắc</label>
+          <div>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+              <label class="cal-manual-lbl" data-i18n="cal_manual_color" style="margin-bottom:0;">Màu sắc sự kiện</label>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <label class="cal-color-custom" data-i18n-title="cal_manual_color_rgb_tip" title="Chọn màu bất kỳ">
+                  <input type="color" id="cal-manual-color-rgb" value="#38bdf8">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
+                </label>
+                <span class="cal-color-hex" id="cal-manual-hex">#38bdf8</span>
+              </div>
+            </div>
             <div id="cal-manual-color" class="cal-color-bar"></div>
-            <label class="cal-color-custom" data-i18n-title="cal_manual_color_rgb_tip">
-              <input type="color" id="cal-manual-color-rgb" value="#38bdf8">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
-            </label>
-            <span class="cal-color-hex" id="cal-manual-hex">#38bdf8</span>
           </div>
-          <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-top:2px;">
-            <label class="cal-manual-lbl" data-i18n="cal_manual_freq">Lặp lại</label>
-            <select id="cal-manual-freq" class="form-control" style="width:104px; font-size:11px; padding:5px 6px;">
-              <option value="none" data-i18n="cal_manual_freq_none">Không lặp</option>
-              <option value="daily" data-i18n="cal_manual_freq_daily">Hằng ngày</option>
-              <option value="weekly" data-i18n="cal_manual_freq_weekly">Hằng tuần</option>
-              <option value="monthly" data-i18n="cal_manual_freq_monthly">Hằng tháng</option>
-              <option value="yearly" data-i18n="cal_manual_freq_yearly">Hằng năm</option>
-            </select>
-            <label class="cal-manual-lbl" data-i18n="cal_manual_endlabel">Điểm dừng</label>
-            <select id="cal-manual-end" class="form-control" style="width:96px; font-size:11px; padding:5px 6px;">
-              <option value="never" data-i18n="cal_manual_end_never">Không (mãi mãi)</option>
-              <option value="until" data-i18n="cal_manual_end_until">Đến ngày</option>
-              <option value="count" data-i18n="cal_manual_end_count">Sau N lần</option>
-            </select>
-            <input type="date" id="cal-manual-until" class="form-control" style="display:none; font-size:11px; padding:5px 6px;">
-            <input type="number" id="cal-manual-count" class="form-control" style="display:none; font-size:11px; padding:5px 6px; width:68px;" min="1" value="5">
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:8px 10px; background:rgba(15,23,42,0.45); border:1px solid rgba(255,255,255,0.06); border-radius:8px;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <label class="cal-manual-lbl" data-i18n="cal_manual_freq" style="margin-bottom:0;">Lặp lại</label>
+              <select id="cal-manual-freq" class="form-control" style="width:106px; font-size:11.5px; padding:5px 8px; border-radius:6px;">
+                <option value="none" data-i18n="cal_manual_freq_none">Không lặp</option>
+                <option value="daily" data-i18n="cal_manual_freq_daily">Hằng ngày</option>
+                <option value="weekly" data-i18n="cal_manual_freq_weekly">Hằng tuần</option>
+                <option value="monthly" data-i18n="cal_manual_freq_monthly">Hằng tháng</option>
+                <option value="yearly" data-i18n="cal_manual_freq_yearly">Hằng năm</option>
+              </select>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <label class="cal-manual-lbl" data-i18n="cal_manual_endlabel" style="margin-bottom:0;">Điểm dừng</label>
+              <select id="cal-manual-end" class="form-control" style="width:104px; font-size:11.5px; padding:5px 8px; border-radius:6px;">
+                <option value="never" data-i18n="cal_manual_end_never">Không (mãi mãi)</option>
+                <option value="until" data-i18n="cal_manual_end_until">Đến ngày</option>
+                <option value="count" data-i18n="cal_manual_end_count">Sau N lần</option>
+              </select>
+            </div>
+            <input type="date" id="cal-manual-until" class="form-control" style="display:none; font-size:11.5px; padding:5px 8px; border-radius:6px;">
+            <input type="number" id="cal-manual-count" class="form-control" style="display:none; font-size:11.5px; padding:5px 8px; width:68px; border-radius:6px;" min="1" value="5">
           </div>
-          <button type="button" id="btn-cal-manual-save" class="btn btn-primary" style="padding:8px 14px; font-size:12px; font-weight:700; margin-top:6px;" data-i18n="cal_manual_save">＋ Thêm sự kiện</button>
+          <button type="button" id="btn-cal-manual-save" class="btn btn-primary" style="padding:10px 16px; font-size:12.5px; font-weight:700; border-radius:8px; margin-top:4px;" data-i18n="cal_manual_save">＋ Thêm sự kiện</button>
         </div>
       </div>
     </div>
