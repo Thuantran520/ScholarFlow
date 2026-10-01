@@ -2141,16 +2141,7 @@
   <!-- ══════════════════════ TAB 8: CALENDAR (ICS) ══════════════════════ -->
   <div id="tab-cal" class="tab-section">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; gap:6px; flex-wrap:wrap;">
-      <div style="display:flex; align-items:center; gap:8px;">
-        <div class="feature-title" style="margin-bottom:0;" data-i18n="cal_title">Lịch học tập</div>
-        <!-- Weather pill widget -->
-        <button type="button" id="btn-cal-weather-pill" class="cal-weather-pill" title="Xem chi tiết thời tiết &amp; độ ẩm" data-i18n-title="cal_weather_modal_title">
-          <span id="cal-weather-icon">⛅</span>
-          <span id="cal-weather-temp">--°C</span>
-          <span class="cal-weather-dot">•</span>
-          <span id="cal-weather-humidity">💧 --%</span>
-        </button>
-      </div>
+      <div class="feature-title" style="margin-bottom:0;" data-i18n="cal_title">Lịch học tập</div>
       <div style="display:flex; gap:5px; align-items:center;">
         <button type="button" id="btn-cal-add-event-quick" class="cal-tool-btn is-primary" title="Thêm sự kiện mới vào lịch" data-i18n-title="tip_cal_add_event">
           <span data-i18n="cal_btn_add_event">＋ Sự kiện</span>
@@ -2200,10 +2191,7 @@
 
     <div class="feature-card" style="padding:10px 12px;">
       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; gap:8px;">
-        <div style="display:flex; align-items:center; gap:6px; min-width:0; flex:1;">
-          <div id="cal-day-head" style="font-size:12px; font-weight:700; color:#38bdf8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Chọn ngày để xem lịch học</div>
-          <span id="cal-day-weather-badge" class="cal-day-weather-badge" style="display:none;"></span>
-        </div>
+        <div id="cal-day-head" style="font-size:12px; font-weight:700; color:#38bdf8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; min-width:0;">Chọn ngày để xem lịch học</div>
         <button type="button" id="btn-cal-add-to-day" class="btn btn-secondary" style="padding:4px 8px; font-size:10.5px; font-weight:700; flex-shrink:0; display:inline-flex; align-items:center; gap:3px;" title="Thêm sự kiện cho ngày đang chọn" data-i18n-title="tip_cal_add_event">
           <span data-i18n="cal_btn_add_to_day">＋ Thêm sự kiện</span>
         </button>

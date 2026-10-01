@@ -1965,28 +1965,70 @@
 }
 .cal-event-item {
   display: flex;
-  gap: 8px;
-  border-left: 3px solid #38bdf8;
-  background: rgba(30, 41, 59, 0.6);
-  border-radius: 8px;
-  padding: 7px 9px;
+  flex-direction: column;
+  gap: 5px;
+  border-left: 3.5px solid #38bdf8;
+  background: rgba(30, 41, 59, 0.65);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 9px;
+  padding: 8px 10px;
+  transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+.cal-event-item:hover {
+  background: rgba(30, 41, 59, 0.85);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+  transform: translateY(-1px);
+}
+.cal-event-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 .cal-event-time {
-  font-size: 10px;
-  font-family: ui-monospace, Consolas, monospace;
-  color: #7dd3fc;
-  flex-shrink: 0;
-  margin-top: 1px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  padding: 2px 7px;
+  border-radius: 6px;
+  letter-spacing: 0.02em;
+}
+.cal-event-time svg {
+  color: #38bdf8;
+}
+.cal-event-feed {
+  display: inline-flex;
+  align-items: center;
+  font-size: 9.5px;
+  font-weight: 600;
+  padding: 1.5px 6px;
+  border-radius: 4px;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .cal-event-body {
-  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   min-width: 0;
 }
 .cal-event-title {
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 700;
-  color: #e2e8f0;
+  color: #f1f5f9;
   word-break: break-word;
+  line-height: 1.4;
 }
 .cal-event-meta {
   font-size: 10.5px;
@@ -2640,40 +2682,25 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 25px;
+  height: 25px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.18);
+  border: 2px solid rgba(255, 255, 255, 0.2);
   cursor: pointer;
   padding: 0;
-  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.28), inset 0 -2px 3px rgba(0, 0, 0, 0.3);
-  transition: transform 0.13s ease, border-color 0.13s ease, box-shadow 0.13s ease;
-}
-.cal-color-swatch::after {
-  content: "✓";
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  font-weight: 900;
-  line-height: 1;
-  color: transparent;
-  transition: color 0.13s ease;
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.35), inset 0 -2px 3px rgba(0, 0, 0, 0.3);
+  transition: transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.16s ease, border-color 0.16s ease;
+  flex-shrink: 0;
 }
 .cal-color-swatch:hover {
   transform: scale(1.15);
-  border-color: rgba(255, 255, 255, 0.5);
+  border-color: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 .cal-color-swatch.active {
-  transform: scale(1.1);
-  border-color: #fff;
-  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.9), 0 0 0 4px #fff;
-}
-.cal-color-swatch.active::after {
-  color: #0f172a;
-  text-shadow: 0 0 2px rgba(255, 255, 255, 0.85);
+  transform: scale(1.18);
+  border-color: #ffffff;
+  box-shadow: 0 0 0 2.5px #0f172a, 0 0 0 5px currentColor, 0 3px 10px rgba(0, 0, 0, 0.5);
 }
 
 .cal-switch {
@@ -2730,31 +2757,32 @@
   align-items: center;
   gap: 7px;
   flex-wrap: wrap;
-  padding: 5px 7px;
-  background: rgba(148, 163, 184, 0.1);
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  border-radius: 8px;
-  flex: 1 1 auto;
-  min-width: 168px;
+  padding: 8px 10px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9px;
+  box-sizing: border-box;
 }
 .cal-color-custom {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
   cursor: pointer;
-  border: 1px dashed rgba(148, 163, 184, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.25);
   background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red);
   flex-shrink: 0;
   overflow: hidden;
-  transition: transform 0.12s ease, border-color 0.12s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: transform 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease;
 }
 .cal-color-custom:hover {
-  transform: scale(1.1);
-  border-color: rgba(255, 255, 255, 0.6);
+  transform: scale(1.12);
+  border-color: #ffffff;
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.3);
 }
 .cal-color-custom input {
   position: absolute;
