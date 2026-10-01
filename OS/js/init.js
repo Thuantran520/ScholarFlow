@@ -34,6 +34,9 @@ onReady(() => {
       if (sec) sec.classList.add("active");
       const aiModal = document.getElementById("ai-settings-modal");
       if (aiModal) aiModal.style.display = "none";
+      if (typeof window.sfNavUpdatePill === "function") {
+        window.sfNavUpdatePill(false);
+      }
       const navWrap = document.getElementById("nav-wrapper");
       if (navWrap) {
         const btnLeft = btn.offsetLeft;
