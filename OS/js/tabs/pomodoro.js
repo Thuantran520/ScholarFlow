@@ -192,6 +192,13 @@ function pmRenderToggle() {
   } else {
     btn.textContent = (pmState.running ? "⏸ " : "▶ ") + label;
   }
+  if (typeof window.sfNavSetBadge === 'function') {
+    window.sfNavSetBadge('tab-pomo', {
+      dot: true,
+      pulse: pmState.running,
+      visible: !!pmState.running
+    });
+  }
 }
 
 function pmRenderToday() {

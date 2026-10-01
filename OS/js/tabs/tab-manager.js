@@ -162,6 +162,15 @@ function tabmgrRenderList() {
     tabmgrState.tabs.forEach(function (t) { domains[_tabmgrDomain(t.url || "")] = true; });
     domainBadge.textContent = String(Object.keys(domains).length);
   }
+  if (typeof window.sfNavSetBadge === 'function') {
+    const totalTabs = (tabmgrState && tabmgrState.tabs) ? tabmgrState.tabs.length : 0;
+    const hasAudio = !!(tabmgrState && tabmgrState.tabs && tabmgrState.tabs.some(function (t) { return t.audible; }));
+    window.sfNavSetBadge('tab-tabmgr', {
+      text: totalTabs > 99 ? '99+' : totalTabs,
+      pulse: hasAudio,
+      visible: totalTabs > 0
+    });
+  }
   _tabmgrUpdateGxMeter();
   if (!list) return;
   while (list.firstChild) list.removeChild(list.firstChild);

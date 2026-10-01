@@ -2547,6 +2547,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (progressBar) {
       progressBar.style.width = `${percent}%`;
     }
+
+    const pending = savedTodos.filter(t => !t.done).length;
+    if (typeof window.sfNavSetBadge === 'function') {
+      window.sfNavSetBadge('tab-todo', {
+        text: pending,
+        visible: pending > 0
+      });
+    }
   }
 
   function renderTodoList() {

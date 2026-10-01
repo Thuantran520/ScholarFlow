@@ -770,6 +770,14 @@
     dom.list.innerHTML = '';
     _diagUpdate();
 
+    const activeCount = (_scripts || []).filter(function (s) { return s && s.active !== false; }).length;
+    if (typeof window.sfNavSetBadge === 'function') {
+      window.sfNavSetBadge('tab-userscripts', {
+        text: activeCount,
+        visible: activeCount > 0
+      });
+    }
+
     // Filter by search + status. Sanitised first so a malformed record cannot
     // throw here and blank the list that was just cleared.
     const q = _searchQuery.toLowerCase();

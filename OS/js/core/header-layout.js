@@ -31,6 +31,7 @@
   var state = null;
   var navOrder = null;
   var navDisabled = {};
+  var navStyle = 'full';
   var bound = false;
   var dragSrcNav = null;
   var dragNavBtn = null;
@@ -382,6 +383,49 @@
     });
   }
 
+  function updateNavPill(immediate) {
+    var wrapper = document.getElementById('nav-wrapper');
+    if (!wrapper) return;
+    var pill = document.getElementById('nav-active-pill');
+    if (!pill) {
+      pill = wrapper.querySelector('.nav-active-pill');
+      if (!pill) {
+        pill = document.createElement('div');
+        pill.id = 'nav-active-pill';
+        pill.className = 'nav-active-pill';
+        wrapper.insertBefore(pill, wrapper.firstChild);
+      }
+    }
+    var activeBtn = wrapper.querySelector('.main-nav-btn.active');
+    if (!activeBtn || activeBtn.style.display === 'none' || activeBtn.classList.contains('is-hidden')) {
+      pill.classList.remove('is-visible');
+      return;
+    }
+    if (immediate) {
+      pill.style.transition = 'none';
+    }
+    var left = activeBtn.offsetLeft;
+    var width = activeBtn.offsetWidth;
+    pill.style.transform = 'translateX(' + left + 'px)';
+    pill.style.width = width + 'px';
+    pill.classList.add('is-visible');
+    if (immediate) {
+      void pill.offsetWidth;
+      pill.style.transition = '';
+    }
+  }
+
+  function applyNavStyle() {
+    var bar = document.querySelector('.main-nav-bar');
+    if (bar) {
+      bar.classList.toggle('is-compact-nav', navStyle === 'compact');
+    }
+    document.querySelectorAll('#hdrs-nav-style-seg .hdrs-seg-btn').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.navStyle === navStyle);
+    });
+    setTimeout(function () { updateNavPill(false); }, 60);
+  }
+
   function applyNavOrder() {
     if (!navOrder) return;
     var wrapper = document.getElementById('nav-wrapper');
@@ -416,6 +460,7 @@
     }
 
     setupNavbarDragAndDrop();
+    updateNavPill(false);
   }
 
   function getActiveNavTarget() {
@@ -433,6 +478,7 @@
     var payload = {
       order: navOrder.slice(),
       disabled: Object.assign({}, navDisabled),
+      style: navStyle,
       active: curActive
     };
     if (typeof storSet === 'function') {
@@ -469,6 +515,7 @@
         } catch (e) {}
       }
     }
+    updateNavPill(false);
   }
 
   function commitNav() {
@@ -615,17 +662,51 @@
     });
   }
 
+  function setNavBadge(target, opts) {
+    if (!target) return;
+    var fullTarget = target.indexOf('tab-') === 0 ? target : 'tab-' + target;
+    var badge = document.getElementById('nav-badge-' + fullTarget);
+    if (!badge) {
+      var btn = document.querySelector('.main-nav-btn[data-target="' + fullTarget + '"]');
+      if (btn) badge = btn.querySelector('.nav-badge');
+    }
+    if (!badge) return;
+
+    if (!opts || opts.visible === false) {
+      badge.textContent = '';
+      badge.className = 'nav-badge';
+      return;
+    }
+
+    badge.className = 'nav-badge is-visible';
+    if (opts.dot) {
+      badge.classList.add('badge-dot');
+      badge.textContent = '';
+    } else if (opts.text !== undefined && opts.text !== null && opts.text !== '') {
+      badge.textContent = String(opts.text);
+    } else {
+      badge.textContent = '';
+    }
+
+    if (opts.pulse) {
+      badge.classList.add('badge-pulse');
+    }
+  }
+
   function loadNavState() {
     var done = function (res) {
       var stored = res && res.sf_nav_settings;
       navOrder = mergeNavOrder(stored && stored.order);
       navDisabled = mergeNavDisabled(stored && stored.disabled);
+      navStyle = (stored && (stored.style === 'compact' || stored.style === 'full')) ? stored.style : 'full';
+      applyNavStyle();
       applyNavOrder();
       var act = (stored && stored.active);
       if (!act || isNavDisabled(act)) act = getFirstEnabledTab();
       applyNavActive(act);
       renderNavRows();
       notifyNavChanged();
+      setTimeout(function () { updateNavPill(true); }, 50);
     };
     if (typeof storGet === 'function') {
       storGet(NAV_STORE_KEY, done);
@@ -643,12 +724,13 @@
       } catch (e) {}
       var wrapper = document.getElementById('nav-wrapper');
       if (wrapper) {
-        [...wrapper.querySelectorAll('.main-nav-btn')].forEach(function (b) {
+        wrapper.querySelectorAll('.main-nav-btn').forEach(function (b) {
           b.classList.toggle('active', b.dataset.target === target);
         });
         document.querySelectorAll('.tab-section').forEach(function (s) {
           s.classList.toggle('active', s.id === target);
         });
+        updateNavPill(false);
       }
     }
   }
@@ -658,6 +740,8 @@
     if (!navOrder) return;
     navOrder = DEFAULT_NAV_ORDER.slice();
     navDisabled = {};
+    navStyle = 'full';
+    applyNavStyle();
     saveNavWithActive(navOrder[0]);
     applyNavOrder();
     applyNavActive(navOrder[0]);
@@ -698,6 +782,21 @@
 
     document.querySelectorAll('#hdrs-position-seg .hdrs-seg-btn').forEach(function (b) {
       b.addEventListener('click', function () { setPosition(b.dataset.hdrsPos); });
+    });
+
+    document.querySelectorAll('#hdrs-nav-style-seg .hdrs-seg-btn').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var s = b.dataset.navStyle;
+        if (s === 'compact' || s === 'full') {
+          navStyle = s;
+          applyNavStyle();
+          saveNav();
+        }
+      });
+    });
+
+    window.addEventListener('resize', function () {
+      updateNavPill(true);
     });
 
     var navWrap = document.getElementById('nav-wrapper');
@@ -803,6 +902,23 @@
   window.sfNavToggleDisabled = function (target) {
     toggleNavDisabled(target);
     return isNavDisabled(target);
+  };
+  window.sfNavSetBadge = function (target, opts) {
+    setNavBadge(target, opts);
+  };
+  window.sfNavGetStyle = function () {
+    return navStyle;
+  };
+  window.sfNavSetStyle = function (style) {
+    if (style === 'compact' || style === 'full') {
+      navStyle = style;
+      applyNavStyle();
+      saveNav();
+    }
+    return navStyle;
+  };
+  window.sfNavUpdatePill = function (immediate) {
+    updateNavPill(immediate);
   };
 
   if (document.readyState !== 'loading') {

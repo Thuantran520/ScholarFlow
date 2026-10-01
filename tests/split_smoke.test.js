@@ -71,6 +71,7 @@ const KEY_GLOBALS = [
   "pomodoroFormatTime", "pomodoroDailyStats", "pomodoroPlan", "pomodoroWeekStats",
   "sfGetHeaderSettings", "sfHeaderApply", "sfHeaderReset",
   "sfNavGetOrder", "sfNavReorder", "sfNavReset", "sfNavIsDisabled", "sfNavGetDisabled", "sfNavSetDisabled", "sfNavToggleDisabled",
+  "sfNavSetBadge", "sfNavGetStyle", "sfNavSetStyle", "sfNavUpdatePill",
   "tabmgrMediaGetPref", "tabmgrMediaSetPref", "tabmgrMediaRefresh"
 ];
 
@@ -2894,6 +2895,53 @@ async function main() {
     await new Promise(r => setTimeout(r, 40));
     check(w.sfNavIsDisabled("tab-pomo") === false && w.sfNavIsDisabled("tab-cite") === false,
       "reset re-enables all tabs");
+
+    // --- Direction 1: Floating pill, Badges, and Compact Nav Mode ---
+    const pill = w.document.getElementById("nav-active-pill");
+    check(!!pill && pill.classList.contains("nav-active-pill"),
+      "nav active indicator pill exists inside nav-wrapper");
+
+    // Compact mode check
+    check(w.sfNavGetStyle() === "full", "default nav style is full");
+    const navBar = w.document.querySelector(".main-nav-bar");
+    check(navBar && !navBar.classList.contains("is-compact-nav"),
+      "navbar does not have is-compact-nav class by default");
+
+    const compactBtn = w.document.querySelector('#hdrs-nav-style-seg [data-nav-style="compact"]');
+    check(!!compactBtn, "compact nav button exists in settings modal");
+    if (compactBtn) {
+      compactBtn.click();
+      await new Promise(r => setTimeout(r, 40));
+      check(w.sfNavGetStyle() === "compact", "clicking compact button changes navStyle to compact");
+      check(navBar && navBar.classList.contains("is-compact-nav"),
+        "navbar receives is-compact-nav class in compact mode");
+      const storedAfterCompact = (await w.chrome.storage.local.get("sf_nav_settings")).sf_nav_settings;
+      check(storedAfterCompact && storedAfterCompact.style === "compact",
+        "compact nav style persisted to storage");
+    }
+
+    w.sfNavSetStyle("full");
+    await new Promise(r => setTimeout(r, 40));
+    check(w.sfNavGetStyle() === "full" && navBar && !navBar.classList.contains("is-compact-nav"),
+      "sfNavSetStyle('full') reverts compact mode");
+
+    // Status Badges check
+    const citeBadge = w.document.getElementById("nav-badge-tab-cite");
+    check(!!citeBadge && citeBadge.classList.contains("nav-badge"),
+      "tab-cite nav button contains nav-badge element");
+
+    w.sfNavSetBadge("tab-cite", { text: "5", visible: true });
+    check(citeBadge.classList.contains("is-visible") && citeBadge.textContent === "5",
+      "sfNavSetBadge sets text and makes badge visible");
+
+    w.sfNavSetBadge("tab-pomo", { dot: true, pulse: true, visible: true });
+    const pomoBadge = w.document.getElementById("nav-badge-tab-pomo");
+    check(pomoBadge && pomoBadge.classList.contains("badge-dot") && pomoBadge.classList.contains("badge-pulse"),
+      "sfNavSetBadge supports dot and pulse options");
+
+    w.sfNavSetBadge("tab-cite", { visible: false });
+    check(!citeBadge.classList.contains("is-visible") && citeBadge.textContent === "",
+      "sfNavSetBadge with visible=false hides badge");
   }
 
   // 4zz2. Nav default active tab = stored active, else first tab in nav order

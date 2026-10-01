@@ -3,86 +3,103 @@
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
     </button>
     <div id="nav-wrapper" class="main-nav">
+      <div id="nav-active-pill" class="nav-active-pill"></div>
       <button class="main-nav-btn active" data-target="tab-cite" title="Trích dẫn học thuật &amp; nghiên cứu" data-i18n-title="tip_tab_cite">
         <span class="nav-icon" id="icon-tab-cite"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg></span>
+        <span class="nav-badge" id="nav-badge-tab-cite"></span>
         <span class="nav-label" data-i18n="nav_cite">Trích Dẫn</span>
       </button>
       <button class="main-nav-btn" data-target="tab-ai" title="Trợ lý AI — Tóm tắt &amp; hỏi đáp trên trang" data-i18n-title="tip_tab_ai">
         <span class="nav-icon" id="icon-tab-ai"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17 5.8 21.3l2.4-7.4L2 9.4h7.6z"></path></svg></span>
+        <span class="nav-badge" id="nav-badge-tab-ai"></span>
         <span class="nav-label" data-i18n="nav_ai">AI Trợ lý</span>
       </button>
       <button class="main-nav-btn" data-target="tab-flow" title="Kết nối P2P - Chat & Gửi File" data-i18n-title="tip_tab_flow">
         <span class="nav-icon" id="icon-tab-flow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></span>
+        <span class="nav-badge" id="nav-badge-tab-flow"></span>
         <span class="nav-label" data-i18n="nav_flow">Flow</span>
       </button>
       <button class="main-nav-btn" data-target="tab-redact" title="Bảo mật thông tin, che mờ đối tượng" data-i18n-title="tip_tab_redact">
         <span class="nav-icon" id="icon-tab-redact"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></span>
+        <span class="nav-badge" id="nav-badge-tab-redact"></span>
         <span class="nav-label" data-i18n="nav_redact">Che Mờ</span>
       </button>
       <button class="main-nav-btn" data-target="tab-capture" title="Chụp ảnh đối tượng &amp; Quay video màn hình" data-i18n-title="tip_tab_capture">
         <span class="nav-icon" id="icon-tab-capture"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg></span>
+        <span class="nav-badge" id="nav-badge-tab-capture"></span>
         <span class="nav-label" data-i18n="nav_capture">Chụp &amp; Quay</span>
       </button>
       <button class="main-nav-btn" data-target="tab-cookie" title="Quản lý xuất/nhập cookie trình duyệt" data-i18n-title="tip_tab_cookie">
         <span class="nav-icon" id="icon-tab-cookie"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5z"></path></svg></span>
+        <span class="nav-badge" id="nav-badge-tab-cookie"></span>
         <span class="nav-label" data-i18n="nav_cookie">Cookie</span>
       </button>
       <button class="main-nav-btn" data-target="tab-autofill" title="Tự động điền dữ liệu mẫu" data-i18n-title="tip_tab_autofill">
         <span class="nav-icon" id="icon-tab-autofill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></span>
+        <span class="nav-badge" id="nav-badge-tab-autofill"></span>
         <span class="nav-label" data-i18n="nav_autofill">Điền Data</span>
       </button>
       <button class="main-nav-btn" data-target="tab-todo" title="Danh sách công việc hàng ngày" data-i18n-title="tip_tab_todo">
         <span class="nav-icon" id="icon-tab-todo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></span>
+        <span class="nav-badge" id="nav-badge-tab-todo"></span>
         <span class="nav-label" data-i18n="nav_todo">Todo List</span>
       </button>
       <button class="main-nav-btn" data-target="tab-pomo" title="Timer tập trung Pomodoro cho nghiên cứu" data-i18n-title="tip_tab_pomo">
         <span class="nav-icon" id="icon-tab-pomo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l2 2"></path><path d="M5 3L7 5"></path><path d="M19 3l-2 2"></path><path d="M12 1v2"></path></svg></span>
+        <span class="nav-badge" id="nav-badge-tab-pomo"></span>
         <span class="nav-label" data-i18n="nav_pomo">Pomodoro</span>
       </button>
       <button class="main-nav-btn" data-target="tab-cal" title="Lịch học tập từ link ICS" data-i18n-title="tip_tab_cal">
         <span class="nav-icon" id="icon-tab-cal"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></span>
+        <span class="nav-badge" id="nav-badge-tab-cal"></span>
         <span class="nav-label" data-i18n="nav_cal">Lịch</span>
       </button>
       <button class="main-nav-btn" data-target="tab-tabmgr" title="Quản lý tab trình duyệt" data-i18n-title="tip_tab_tabmgr">
         <span class="nav-icon" id="icon-tab-tabmgr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect></svg></span>
+        <span class="nav-badge" id="nav-badge-tab-tabmgr"></span>
         <span class="nav-label" data-i18n="nav_tabmgr">Tab Manager</span>
       </button>
       <button class="main-nav-btn" data-target="tab-testhelper" title="Test Helper chuyên sâu" data-i18n-title="tip_tab_testhelper">
         <span class="nav-icon" id="icon-tab-testhelper"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg></span>
+        <span class="nav-badge" id="nav-badge-tab-testhelper"></span>
         <span class="nav-label" data-i18n="nav_testhelper">Test Helper</span>
       </button>
       <button class="main-nav-btn" data-target="tab-security" title="Bảo mật thời gian thực" data-i18n-title="tip_tab_security">
         <span class="nav-icon" id="icon-tab-security"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg></span>
+        <span class="nav-badge" id="nav-badge-tab-security"></span>
         <span class="nav-label" data-i18n="nav_security">Security</span>
       </button>
       <button class="main-nav-btn" data-target="tab-social" title="Bảo vệ mạng xã hội: Facebook, Zalo, Instagram" data-i18n-title="tip_tab_social">
         <span class="nav-icon" id="icon-tab-social"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg></span>
+        <span class="nav-badge" id="nav-badge-tab-social"></span>
         <span class="nav-label" data-i18n="nav_social">Social</span>
       </button>
-            <button class="main-nav-btn" data-target="tab-lingua" title="Lingua Lab - hoc ngoai ngu tren moi trang web" data-i18n-title="tip_tab_lingua">
+      <button class="main-nav-btn" data-target="tab-lingua" title="Lingua Lab - hoc ngoai ngu tren moi trang web" data-i18n-title="tip_tab_lingua">
         <span class="nav-icon" id="icon-tab-lingua"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h7a5 5 0 0 1 5 5v11a4 4 0 0 0-4-4H2z"></path><path d="M22 4h-7a5 5 0 0 0-5 5v11a4 4 0 0 1 4-4h8z"></path></svg></span>
+        <span class="nav-badge" id="nav-badge-tab-lingua"></span>
         <span class="nav-label" data-i18n="nav_lingua">Lingua</span>
       </button>
-<button class="main-nav-btn" data-target="tab-dm" title="Dark Mode cho mọi trang web" data-i18n-title="tip_tab_dm">
+      <button class="main-nav-btn" data-target="tab-dm" title="Dark Mode cho mọi trang web" data-i18n-title="tip_tab_dm">
         <span class="nav-icon" id="icon-tab-dm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></span>
-<span class="nav-label" data-i18n="nav_dm">Dark</span>
+        <span class="nav-badge" id="nav-badge-tab-dm"></span>
+        <span class="nav-label" data-i18n="nav_dm">Dark</span>
       </button>
       <button class="main-nav-btn" data-target="tab-qr" title="Tạo mã QR từ liên kết hoặc văn bản" data-i18n-title="tip_tab_qr">
         <span class="nav-icon" id="icon-tab-qr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg></span>
+        <span class="nav-badge" id="nav-badge-tab-qr"></span>
         <span class="nav-label" data-i18n="nav_qr">QR</span>
       </button>
-
       <button class="main-nav-btn" data-target="tab-scratchpad" title="Sổ nháp bay & Highlight học thuật" data-i18n-title="tip_tab_scratchpad">
         <span class="nav-icon" id="icon-tab-scratchpad"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg></span>
+        <span class="nav-badge" id="nav-badge-tab-scratchpad"></span>
         <span class="nav-label" data-i18n="nav_scratchpad">Sổ Nháp</span>
       </button>
-
       <button class="main-nav-btn" data-target="tab-userscripts" title="Cài đặt & Quản lý Script" data-i18n-title="tip_tab_userscripts">
         <span class="nav-icon" id="icon-tab-userscripts"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></span>
+        <span class="nav-badge" id="nav-badge-tab-userscripts"></span>
         <span class="nav-label" data-i18n="nav_userscripts">Scripts</span>
       </button>
-
-</div>
+    </div>
     <button id="nav-scroll-right" class="nav-scroll-arrow" title="Cuộn phải" data-i18n-title="tip_scroll_right">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
     </button>

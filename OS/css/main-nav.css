@@ -46,6 +46,7 @@
 
 /* Main Navigation Tabs - Modern Segmented Controller */
 .main-nav {
+  position: relative;
   flex: 1;
   min-width: 0;
   display: flex;
@@ -65,7 +66,29 @@
   display: none;
 }
 
+/* Sliding active pill indicator */
+.nav-active-pill {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 0;
+  width: 0;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.16) 0%, rgba(56, 189, 248, 0.07) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.22), inset 0 0 6px rgba(56, 189, 248, 0.12);
+  pointer-events: none;
+  transition: transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1), width 0.26s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease;
+  opacity: 0;
+  z-index: 0;
+}
+.nav-active-pill.is-visible {
+  opacity: 1;
+}
+
 .main-nav-btn {
+  position: relative;
+  z-index: 1;
   flex: 0 0 calc(25% - 3px);
   min-width: calc(25% - 3px);
   background: transparent;
@@ -84,17 +107,17 @@
   justify-content: center;
   gap: 5px;
   user-select: none;
-  overflow: hidden;
+  overflow: visible;
 }
 .main-nav-btn:hover {
   color: #f1f5f9;
   background: rgba(255, 255, 255, 0.04);
 }
 .main-nav-btn.active {
-  background: rgba(56, 189, 248, 0.08);
+  background: rgba(56, 189, 248, 0.06);
   color: #38bdf8;
-  border-color: rgba(56, 189, 248, 0.4);
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.25), inset 0 0 4px rgba(56, 189, 248, 0.15);
+  border-color: rgba(56, 189, 248, 0.35);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.2), inset 0 0 4px rgba(56, 189, 248, 0.12);
   font-weight: 600;
 }
 .nav-icon {
@@ -102,6 +125,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  position: relative;
 }
 .nav-label {
   font-size: 10px;
@@ -110,6 +134,53 @@
   text-overflow: ellipsis;
   max-width: 100%;
   letter-spacing: -0.2px;
+}
+
+/* Tab Badges & Status Dots */
+.nav-badge {
+  position: absolute;
+  top: 3px;
+  right: calc(50% - 15px);
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 7px;
+  font-size: 8.5px;
+  font-weight: 700;
+  line-height: 12px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.95);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.7);
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+  pointer-events: none;
+  z-index: 2;
+  user-select: none;
+  letter-spacing: -0.2px;
+}
+.nav-badge.is-visible {
+  display: inline-flex;
+}
+.nav-badge.badge-dot {
+  min-width: 7px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  padding: 0;
+  top: 4px;
+  right: calc(50% - 11px);
+}
+.nav-badge.badge-pulse {
+  background: #10b981;
+  border-color: #34d399;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.85);
+  animation: navBadgePulse 2s infinite ease-in-out;
+}
+@keyframes navBadgePulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.25); opacity: 0.85; }
 }
 
 /* Nav Drag & Drop and Visibility */
@@ -125,4 +196,27 @@
 }
 .main-nav-btn.is-hidden {
   display: none !important;
+}
+
+/* Compact Nav Mode (Icon only) */
+.main-nav-bar.is-compact-nav .main-nav-btn {
+  flex: 0 0 38px;
+  min-width: 38px;
+  padding: 7px 2px;
+  gap: 0;
+  border-radius: 7px;
+}
+.main-nav-bar.is-compact-nav .nav-label {
+  display: none;
+}
+.main-nav-bar.is-compact-nav .nav-icon {
+  font-size: 14px;
+}
+.main-nav-bar.is-compact-nav .nav-badge {
+  top: 3px;
+  right: 5px;
+}
+.main-nav-bar.is-compact-nav .nav-badge.badge-dot {
+  top: 5px;
+  right: 7px;
 }
