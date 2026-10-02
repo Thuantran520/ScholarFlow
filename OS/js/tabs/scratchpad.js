@@ -733,27 +733,15 @@
         continue;
       }
 
-      // Headings
-      if (line.startsWith('# ')) {
+      // Headings (supports '# Heading' or '#Heading')
+      var headingMatch = line.match(/^(#{1,4})\s*(.*)$/);
+      if (headingMatch && headingMatch[2].trim()) {
         flushLists();
-        var h1 = document.createElement('h1');
-        renderInlineFormatted(line.substring(2), h1);
-        preview.appendChild(h1);
-      } else if (line.startsWith('## ')) {
-        flushLists();
-        var h2 = document.createElement('h2');
-        renderInlineFormatted(line.substring(3), h2);
-        preview.appendChild(h2);
-      } else if (line.startsWith('### ')) {
-        flushLists();
-        var h3 = document.createElement('h3');
-        renderInlineFormatted(line.substring(4), h3);
-        preview.appendChild(h3);
-      } else if (line.startsWith('#### ')) {
-        flushLists();
-        var h4 = document.createElement('h4');
-        renderInlineFormatted(line.substring(5), h4);
-        preview.appendChild(h4);
+        var level = headingMatch[1].length;
+        var hTag = 'h' + level;
+        var hEl = document.createElement(hTag);
+        renderInlineFormatted(headingMatch[2], hEl);
+        preview.appendChild(hEl);
       } else if (line.startsWith('> ')) {
         flushLists();
         var bq = document.createElement('blockquote');
@@ -834,6 +822,9 @@
         preview.appendChild(p);
       } else {
         flushLists();
+        var emptyLine = document.createElement('div');
+        emptyLine.className = 'scratchpad-preview-empty-line';
+        preview.appendChild(emptyLine);
       }
     }
 
