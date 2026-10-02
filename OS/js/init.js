@@ -2330,14 +2330,22 @@ document.getElementById("btn-quick-swap-tabs")?.addEventListener("click", swapDu
     if (typeof renderTodoList === "function") renderTodoList();
 
     // Notify active content script about the language update
-    const tabsApi = (typeof browser !== "undefined" && browser.tabs) ? browser.tabs : (typeof chrome !== "undefined" ? chrome.tabs : null);
-    if (tabsApi && activeTabId) {
+    if (activeTabId && typeof safeSendTabMessage === "function") {
       try {
-        const p = tabsApi.sendMessage(activeTabId, { action: "SET_LANGUAGE", lang: e.detail?.lang });
-        if (p && typeof p.catch === "function") {
-          p.catch(() => {});
-        }
-      } catch (err) {}
+        safeSendTabMessage(activeTabId, { action: "SET_LANGUAGE", lang: e.detail?.lang });
+      } catch (_) {}
+    } else {
+      const tabsApi = (typeof browser !== "undefined" && browser.tabs) ? browser.tabs : (typeof chrome !== "undefined" ? chrome.tabs : null);
+      if (tabsApi && activeTabId) {
+        try {
+          const p = tabsApi.sendMessage(activeTabId, { action: "SET_LANGUAGE", lang: e.detail?.lang }, () => {
+            if (chrome?.runtime?.lastError) {}
+          });
+          if (p && typeof p.catch === "function") {
+            p.catch(() => {});
+          }
+        } catch (err) {}
+      }
     }
 
     const toastMsg = window.i18n ? window.i18n.t("toast_lang_changed") : null;

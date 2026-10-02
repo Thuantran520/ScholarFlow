@@ -1007,7 +1007,7 @@
   }
 
   // SPA Navigation listener (YouTube, Twitter, GitHub, etc.)
-  let lastObservedUrl = window.location.href;
+  var lastObservedUrl = window.location.href;
   function handleSpaNavigation() {
     if (window.location.href !== lastObservedUrl) {
       lastObservedUrl = window.location.href;
@@ -1065,7 +1065,7 @@
   setInterval(handleSpaNavigation, 2000);
 
   // Listener for EXTRACT_PAGE_METADATA & PING
-  const _cRuntime = (typeof browser !== "undefined" && browser.runtime)
+  var _cRuntime = (typeof browser !== "undefined" && browser.runtime)
     ? browser.runtime
     : ((typeof chrome !== "undefined" && chrome.runtime) ? chrome.runtime : null);
 

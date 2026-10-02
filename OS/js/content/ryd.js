@@ -1,4 +1,4 @@
-const browserApi = (typeof browser !== 'undefined' && browser) ? browser : chrome;
+var browserApi = (typeof browser !== 'undefined' && browser) ? browser : chrome;
 browserApi.storage.local.get("sf_social_settings", (res) => {
   const s = res && res.sf_social_settings;
   if (s && s.ytDislike === true) {

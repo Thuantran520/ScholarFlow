@@ -1,6 +1,6 @@
 // Full-Page Screenshot Sticky Header Stabilizer (Fixes Duplicate Headers)
   // --------------------------------------------------------------------------
-  let temporarilyHiddenSticky = [];
+  var temporarilyHiddenSticky = [];
 
   function prepareFullPageScroll() {
     // 1. Hide scrollbars so no scrollbar thumb or track is captured in screenshot

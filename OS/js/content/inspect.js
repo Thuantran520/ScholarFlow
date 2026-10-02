@@ -79,8 +79,8 @@ var tContentShim = function(key, ...args) {
   }
 
   // 1. Tooltip Badge & Floating Highlighter Overlay
-  let tagBadge = null;
-  let highlighterBox = null;
+  var tagBadge = null;
+  var highlighterBox = null;
 
   function ensureTagBadge() {
     if (!tagBadge) {
@@ -1373,11 +1373,12 @@ var tContentShim = function(key, ...args) {
   // ════════════════════════════════════════════════════════════════════════
   // ACTIVE KEYWORD RULES + DYNAMIC LIVE REDACT OBSERVER (Infinite Scroll Guard)
   // ════════════════════════════════════════════════════════════════════════
-  const activeKeywordRules = [];
-  let liveRedactObserver = null;
-  let liveRedactBatchTimer = null;
-  const pendingMutatedNodes = [];
-  let liveScrollThrottleTimer = null;
+  var activeKeywordRules = window._sf_activeKeywordRules || [];
+  window._sf_activeKeywordRules = activeKeywordRules;
+  var liveRedactObserver = null;
+  var liveRedactBatchTimer = null;
+  var pendingMutatedNodes = [];
+  var liveScrollThrottleTimer = null;
   var sfAutoGuardEnabled = false;
 
   function sfIsSocialMediaHost(hostname) {

@@ -44,7 +44,8 @@
   function sfYtCurrentVideoId() {
     try { const m = location.href.match(/(?:v=|youtu\.be\/|shorts\/|embed\/)([\w-]{8,12})/); return m ? m[1] : ""; } catch (e) { return ""; }
   }
-  let _sfYtPRCache = { vid: "", at: 0, obj: null, missAt: 0 };
+  var _sfYtPRCache = window._sfYtPRCache || { vid: "", at: 0, obj: null, missAt: 0 };
+  window._sfYtPRCache = _sfYtPRCache;
   function sfYtReadPlayerResponse() {
     const curVid = sfYtCurrentVideoId();
     if (!curVid) return null;
@@ -74,16 +75,20 @@
     else _sfYtPRCache = { vid: curVid, at: 0, obj: null, missAt: now };
     return found;
   }
-  const _runtimeApi = (typeof browser !== "undefined" && browser.runtime) ? browser.runtime
+  var _runtimeApi = (typeof browser !== "undefined" && browser.runtime) ? browser.runtime
     : ((typeof chrome !== "undefined" && chrome.runtime) ? chrome.runtime : null);
   if (_runtimeApi && _runtimeApi.onMessage) {
     _runtimeApi.onMessage.addListener((msg, sender, sendResponse) => {
       switch (msg.action) {
         case "SET_LANGUAGE":
           if (msg.lang) {
-            currentAppLang = msg.lang;
-            if (snipGuidePillEl && isElementCaptureMode) {
-              updateSnipGuidePill(snipActiveRect ? false : null);
+            if (typeof window.setAppLanguage === "function") {
+              window.setAppLanguage(msg.lang);
+            } else {
+              window._sf_currentAppLang = msg.lang;
+            }
+            if (typeof updateSnipGuidePill === "function" && typeof isElementCaptureMode !== "undefined" && isElementCaptureMode) {
+              updateSnipGuidePill(typeof snipActiveRect !== "undefined" && snipActiveRect ? false : null);
             }
           }
           sendResponse({ success: true });
@@ -834,8 +839,8 @@ case "GET_YT_META": {
   }
 
   /* ── Smart Reading Companion (Floating In-line Explainer on selection) ── */
-  let _sfCompanionEl = null;
-  let _sfCompanionEnabled = true;
+  var _sfCompanionEl = null;
+  var _sfCompanionEnabled = true;
 
   try {
     const stor = (typeof browser !== "undefined" && browser.storage) ? browser.storage : (typeof chrome !== "undefined" ? chrome.storage : null);

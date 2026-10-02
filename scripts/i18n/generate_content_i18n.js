@@ -59,20 +59,22 @@ function generate() {
   lines.push("// Do NOT edit manually - manual edits are overwritten on regeneration.");
   lines.push("// ---------------------------------------------------------------------------");
   lines.push("");
-  lines.push("");
-  lines.push("  let currentAppLang = \"vi\";");
+  lines.push("(function () {");
+  lines.push("  let currentAppLang = (typeof window !== \"undefined\" && window._sf_currentAppLang) || \"vi\";");
   lines.push("  try {");
   lines.push("    const storageApi = (typeof browser !== \"undefined\" && browser.storage) ? browser.storage : chrome.storage;");
   lines.push("    if (storageApi && storageApi.local) {");
   lines.push("      storageApi.local.get(\"app_language\", (res) => {");
   lines.push("        if (res && res.app_language) {");
   lines.push("          currentAppLang = res.app_language;");
+  lines.push("          if (typeof window !== \"undefined\") window._sf_currentAppLang = currentAppLang;");
   lines.push("        }");
   lines.push("      });");
   lines.push("      if (storageApi.onChanged) {");
   lines.push("        storageApi.onChanged.addListener((changes, area) => {");
   lines.push("          if (area === \"local\" && changes.app_language) {");
   lines.push("            currentAppLang = changes.app_language.newValue || \"vi\";");
+  lines.push("            if (typeof window !== \"undefined\") window._sf_currentAppLang = currentAppLang;");
   lines.push("          }");
   lines.push("        });");
   lines.push("      }");
@@ -91,7 +93,8 @@ function generate() {
   lines.push("");
   lines.push("  function tContent(key, ...args) {");
   lines.push("    try {");
-  lines.push("      const dict = (CONTENT_I18N && (CONTENT_I18N[currentAppLang] || CONTENT_I18N.vi)) || {};");
+  lines.push("      const activeLang = (typeof window !== \"undefined\" && window._sf_currentAppLang) || currentAppLang || \"vi\";");
+  lines.push("      const dict = (CONTENT_I18N && (CONTENT_I18N[activeLang] || CONTENT_I18N.vi)) || {};");
   lines.push("      const val = dict[key] || (CONTENT_I18N && CONTENT_I18N.vi ? CONTENT_I18N.vi[key] : \"\") || \"\";");
   lines.push("      if (typeof val === \"function\") return val(...args);");
   lines.push("      if (typeof val !== \"string\") return String(val);");
@@ -118,9 +121,19 @@ function generate() {
   lines.push("    }");
   lines.push("  }");
   lines.push("");
+  lines.push("  function setAppLanguage(lang) {");
+  lines.push("    if (lang && typeof lang === \"string\") {");
+  lines.push("      currentAppLang = lang;");
+  lines.push("      if (typeof window !== \"undefined\") window._sf_currentAppLang = lang;");
+  lines.push("    }");
+  lines.push("  }");
+  lines.push("");
   lines.push("  window.CONTENT_I18N = CONTENT_I18N;");
   lines.push("  window.tContent = tContent;");
   lines.push("  window.notifySidebar = notifySidebar;");
+  lines.push("  window.setAppLanguage = setAppLanguage;");
+  lines.push("  window._sf_currentAppLang = currentAppLang;");
+  lines.push("})();");
   return lines.join("\n") + "\n";
 }
 

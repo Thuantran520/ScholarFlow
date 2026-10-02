@@ -5,20 +5,22 @@
 // Do NOT edit manually - manual edits are overwritten on regeneration.
 // ---------------------------------------------------------------------------
 
-
-  let currentAppLang = "vi";
+(function () {
+  let currentAppLang = (typeof window !== "undefined" && window._sf_currentAppLang) || "vi";
   try {
     const storageApi = (typeof browser !== "undefined" && browser.storage) ? browser.storage : chrome.storage;
     if (storageApi && storageApi.local) {
       storageApi.local.get("app_language", (res) => {
         if (res && res.app_language) {
           currentAppLang = res.app_language;
+          if (typeof window !== "undefined") window._sf_currentAppLang = currentAppLang;
         }
       });
       if (storageApi.onChanged) {
         storageApi.onChanged.addListener((changes, area) => {
           if (area === "local" && changes.app_language) {
             currentAppLang = changes.app_language.newValue || "vi";
+            if (typeof window !== "undefined") window._sf_currentAppLang = currentAppLang;
           }
         });
       }
@@ -360,7 +362,8 @@
 
   function tContent(key, ...args) {
     try {
-      const dict = (CONTENT_I18N && (CONTENT_I18N[currentAppLang] || CONTENT_I18N.vi)) || {};
+      const activeLang = (typeof window !== "undefined" && window._sf_currentAppLang) || currentAppLang || "vi";
+      const dict = (CONTENT_I18N && (CONTENT_I18N[activeLang] || CONTENT_I18N.vi)) || {};
       const val = dict[key] || (CONTENT_I18N && CONTENT_I18N.vi ? CONTENT_I18N.vi[key] : "") || "";
       if (typeof val === "function") return val(...args);
       if (typeof val !== "string") return String(val);
@@ -387,6 +390,16 @@
     }
   }
 
+  function setAppLanguage(lang) {
+    if (lang && typeof lang === "string") {
+      currentAppLang = lang;
+      if (typeof window !== "undefined") window._sf_currentAppLang = lang;
+    }
+  }
+
   window.CONTENT_I18N = CONTENT_I18N;
   window.tContent = tContent;
   window.notifySidebar = notifySidebar;
+  window.setAppLanguage = setAppLanguage;
+  window._sf_currentAppLang = currentAppLang;
+})();

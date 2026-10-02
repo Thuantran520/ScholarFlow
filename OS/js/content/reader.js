@@ -1,7 +1,7 @@
-let isReaderMode = false;
-let originalBodyDisplay = "";
-let originalBodyHtml = "";
-let readerContainer = null;
+var isReaderMode = false;
+var originalBodyDisplay = "";
+var originalBodyHtml = "";
+var readerContainer = null;
 
 function toggleReaderMode() {
   if (isReaderMode) {
