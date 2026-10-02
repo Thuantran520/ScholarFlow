@@ -521,6 +521,44 @@
   color: #38bdf8;
 }
 
+/* Editor View Switcher Tabs */
+.scratchpad-view-tabs {
+  display: flex;
+  gap: 4px;
+  background: rgba(15, 23, 42, 0.7);
+  padding: 3px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 6px;
+}
+
+.scratchpad-view-tab-btn {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.scratchpad-view-tab-btn:hover {
+  color: #f8fafc;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.scratchpad-view-tab-btn.active {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
 /* Editor Container & Line Numbers */
 .scratchpad-editor-wrap {
   position: relative;
@@ -528,6 +566,33 @@
   flex-direction: column;
   flex: 1;
   min-height: 260px;
+  gap: 0;
+  transition: all 0.2s ease;
+}
+
+/* Split View Mode */
+.scratchpad-editor-wrap.split-view {
+  flex-direction: row;
+  gap: 8px;
+}
+
+.scratchpad-editor-wrap.split-view .scratchpad-editor-container,
+.scratchpad-editor-wrap.split-view .scratchpad-preview-pane {
+  flex: 1 1 50%;
+  max-width: 50%;
+  min-width: 0;
+  display: flex !important;
+}
+
+@media (max-width: 520px) {
+  .scratchpad-editor-wrap.split-view {
+    flex-direction: column;
+  }
+  .scratchpad-editor-wrap.split-view .scratchpad-editor-container,
+  .scratchpad-editor-wrap.split-view .scratchpad-preview-pane {
+    max-width: 100%;
+    min-height: 180px;
+  }
 }
 
 .scratchpad-editor-container {
@@ -603,19 +668,33 @@
   font-size: 12.5px;
   line-height: 1.6;
   overflow-y: auto;
+  word-break: break-word;
 }
 
 .scratchpad-preview-pane h1,
 .scratchpad-preview-pane h2,
 .scratchpad-preview-pane h3 {
   color: #38bdf8;
-  margin: 10px 0 6px 0;
+  margin: 12px 0 6px 0;
   font-weight: 700;
 }
 
-.scratchpad-preview-pane h1 { font-size: 16px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px; }
-.scratchpad-preview-pane h2 { font-size: 14px; }
-.scratchpad-preview-pane h3 { font-size: 13px; }
+.scratchpad-preview-pane h1 {
+  font-size: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  padding-bottom: 5px;
+}
+
+.scratchpad-preview-pane h2 {
+  font-size: 14px;
+  border-left: 3px solid #38bdf8;
+  padding-left: 7px;
+}
+
+.scratchpad-preview-pane h3 {
+  font-size: 13px;
+  color: #7dd3fc;
+}
 
 .scratchpad-preview-pane p {
   margin: 6px 0;
@@ -623,38 +702,227 @@
 
 .scratchpad-preview-pane blockquote {
   margin: 8px 0;
-  padding: 4px 10px;
+  padding: 6px 12px;
   border-left: 3px solid #38bdf8;
   background: rgba(56, 189, 248, 0.08);
   color: #94a3b8;
   border-radius: 0 4px 4px 0;
 }
 
-.scratchpad-preview-pane pre {
-  margin: 8px 0;
-  padding: 10px;
-  background: rgba(2, 6, 23, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  overflow-x: auto;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 12px;
-  color: #38bdf8;
-}
-
 .scratchpad-preview-pane code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.07);
   padding: 2px 5px;
   border-radius: 4px;
   font-size: 11.5px;
   color: #f472b6;
 }
 
-.scratchpad-preview-pane pre code {
-  background: transparent;
-  padding: 0;
-  color: inherit;
+.scratchpad-preview-pane strong,
+.scratchpad-preview-pane b {
+  color: #f8fafc;
+  font-weight: 700;
+}
+
+.scratchpad-preview-pane em,
+.scratchpad-preview-pane i {
+  color: #cbd5e1;
+  font-style: italic;
+}
+
+.scratchpad-preview-pane a {
+  color: #38bdf8;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.scratchpad-preview-pane a:hover {
+  color: #7dd3fc;
+}
+
+/* Math Formula Badge */
+.scratchpad-math-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(147, 51, 234, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin: 0 2px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11.5px;
+  color: #d8b4fe;
+  vertical-align: baseline;
+}
+
+.scratchpad-math-badge .math-sym {
+  color: #c084fc;
+  font-weight: 700;
+  font-size: 10px;
+  user-select: none;
+}
+
+.scratchpad-math-badge .math-body {
+  font-style: italic;
+  font-weight: 500;
+}
+
+/* Code Container & Syntax Highlighting */
+.scratchpad-code-container {
+  margin: 10px 0;
+  background: #090d16;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 7px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.scratchpad-code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 10px;
+  background: rgba(15, 23, 42, 0.95);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 11px;
+}
+
+.scratchpad-code-header-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.scratchpad-code-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.scratchpad-code-dot.red { background: #ef4444; }
+.scratchpad-code-dot.yellow { background: #f59e0b; }
+.scratchpad-code-dot.green { background: #10b981; }
+
+.scratchpad-lang-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #38bdf8;
+  padding: 1px 6px;
+  background: rgba(56, 189, 248, 0.12);
+  border-radius: 4px;
+  text-transform: uppercase;
+  margin-left: 4px;
+}
+
+.scratchpad-copy-code-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  color: #94a3b8;
+  font-size: 10.5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.scratchpad-copy-code-btn:hover {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: #38bdf8;
+  color: #f8fafc;
+}
+
+.scratchpad-copy-code-btn.copied {
+  background: rgba(16, 185, 129, 0.25);
+  border-color: #10b981;
+  color: #34d399;
+}
+
+.scratchpad-code-pre {
+  margin: 0 !important;
+  padding: 10px 12px !important;
+  background: transparent !important;
+  border: none !important;
+  overflow-x: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  font-size: 12px !important;
+  line-height: 1.55 !important;
+  color: #e2e8f0;
+}
+
+.scratchpad-code-pre code {
+  background: transparent !important;
+  padding: 0 !important;
+  color: inherit !important;
+  font-size: inherit !important;
+  font-family: inherit !important;
+  border: none !important;
+}
+
+/* Syntax highlight token colors */
+.sf-code-keyword { color: #c084fc; font-weight: 600; }
+.sf-code-string { color: #34d399; }
+.sf-code-number { color: #fb923c; }
+.sf-code-comment { color: #64748b; font-style: italic; }
+.sf-code-builtin { color: #38bdf8; }
+.sf-code-operator { color: #f472b6; }
+
+/* Interactive Task List */
+.scratchpad-task-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 5px 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.scratchpad-task-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+  background: rgba(15, 23, 42, 0.6);
+  cursor: pointer;
+  margin-top: 3px;
+  position: relative;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.scratchpad-task-checkbox:checked {
+  background: #0284c7;
+  border-color: #38bdf8;
+}
+
+.scratchpad-task-checkbox:checked::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 3px;
+  height: 7px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.scratchpad-task-label {
+  flex: 1;
+  transition: color 0.15s ease, text-decoration 0.15s ease;
+}
+
+.scratchpad-task-label.checked {
+  color: #64748b;
+  text-decoration: line-through;
 }
 
 .scratchpad-preview-pane ul,
@@ -685,10 +953,6 @@
 
 .scratchpad-preview-pane tr:nth-child(even) {
   background: rgba(255, 255, 255, 0.02);
-}
-
-.scratchpad-preview-pane .task-checkbox {
-  margin-right: 6px;
 }
 
 /* Footer & Word Count */

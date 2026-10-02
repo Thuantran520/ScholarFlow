@@ -13,7 +13,7 @@
   var currentHost = '';
   var currentFilter = 'all';
   var searchQuery = '';
-  var isPreviewActive = false;
+  var currentViewMode = 'edit'; // 'edit' | 'preview' | 'split'
   var isMonoFont = true;
   var saveTimer = null;
   var isInternalChange = false;
@@ -79,6 +79,9 @@
     counter.textContent = template.replace('{0}', String(words)).replace('{1}', String(chars));
 
     updateLineNumbers();
+    if (currentViewMode === 'preview' || currentViewMode === 'split') {
+      renderMarkdownPreview();
+    }
   }
 
   function getLegacyStorageKey() {
@@ -139,7 +142,7 @@
     isInternalChange = false;
 
     updateCounters();
-    if (isPreviewActive) renderMarkdownPreview();
+    if (currentViewMode === 'preview' || currentViewMode === 'split') renderMarkdownPreview();
   }
 
   function updateNotesCountBadge() {
@@ -434,6 +437,132 @@
     }
   }
 
+  // Helper: Tokenize inline formatting safely without dynamic innerHTML
+  function renderInlineFormatted(text, parentElement) {
+    if (!text) return;
+    var INLINE_REGEX = /(`[^`\n]+`|\$[^\$\n]+\$|\*\*\*[^*\n]+\*\*\*|\*\*[^*\n]+\*\*|\*(?:(?!\*)[^*\n])+\*|~~[^~\n]+~~|\[[^\]\n]+\]\(https?:\/\/[^\s\)]+\))/g;
+    var lastIndex = 0;
+    var match;
+
+    while ((match = INLINE_REGEX.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        parentElement.appendChild(document.createTextNode(text.substring(lastIndex, match.index)));
+      }
+      var token = match[0];
+      if (token.startsWith('`') && token.endsWith('`')) {
+        var code = document.createElement('code');
+        code.textContent = token.slice(1, -1);
+        parentElement.appendChild(code);
+      } else if (token.startsWith('$') && token.endsWith('$')) {
+        var mathBadge = document.createElement('span');
+        mathBadge.className = 'scratchpad-math-badge';
+        var mathSym = document.createElement('span');
+        mathSym.className = 'math-sym';
+        mathSym.textContent = 'ƒ';
+        var mathBody = document.createElement('span');
+        mathBody.className = 'math-body';
+        mathBody.textContent = token.slice(1, -1);
+        mathBadge.appendChild(mathSym);
+        mathBadge.appendChild(mathBody);
+        parentElement.appendChild(mathBadge);
+      } else if (token.startsWith('***') && token.endsWith('***')) {
+        var strong = document.createElement('strong');
+        var em = document.createElement('em');
+        em.textContent = token.slice(3, -3);
+        strong.appendChild(em);
+        parentElement.appendChild(strong);
+      } else if (token.startsWith('**') && token.endsWith('**')) {
+        var strong2 = document.createElement('strong');
+        strong2.textContent = token.slice(2, -2);
+        parentElement.appendChild(strong2);
+      } else if (token.startsWith('*') && token.endsWith('*')) {
+        var em2 = document.createElement('em');
+        em2.textContent = token.slice(1, -1);
+        parentElement.appendChild(em2);
+      } else if (token.startsWith('~~') && token.endsWith('~~')) {
+        var del = document.createElement('del');
+        del.textContent = token.slice(2, -2);
+        parentElement.appendChild(del);
+      } else if (token.startsWith('[')) {
+        var linkM = token.match(/^\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)$/);
+        if (linkM) {
+          var a = document.createElement('a');
+          a.href = linkM[2];
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          a.textContent = linkM[1];
+          parentElement.appendChild(a);
+        } else {
+          parentElement.appendChild(document.createTextNode(token));
+        }
+      }
+      lastIndex = INLINE_REGEX.lastIndex;
+    }
+
+    if (lastIndex < text.length) {
+      parentElement.appendChild(document.createTextNode(text.substring(lastIndex)));
+    }
+  }
+
+  // Helper: Code syntax highlighting without external libraries
+  function highlightCodeTokens(codeText, lang, codeElement) {
+    if (!codeText) return;
+    var CODE_TOKEN_RE = /(\/\/[^\n]*|#[^\n]*|\/\*[\s\S]*?\*\/|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`|\b\d+(?:\.\d+)?\b|\b(?:def|class|return|if|elif|else|for|while|in|import|from|as|try|except|catch|finally|with|lambda|yield|pass|raise|throw|async|await|const|let|var|function|new|this|typeof|instanceof|switch|case|break|continue|default|public|private|protected|static|final|struct|void|bool|boolean|int|float|double|char|string|nullptr|null|nil|true|false|True|False|None|self|SELECT|FROM|WHERE|INSERT|INTO|UPDATE|DELETE|JOIN|ORDER|BY|GROUP|LIMIT|fn|pub|mut|impl|trait)\b|\b(?:console|print|len|range|str|list|dict|set|vector|map|std|Array|Object|String|Number|Boolean|Promise|Math|JSON|document|window)\b)/g;
+
+    var keywords = new Set([
+      'def','class','return','if','elif','else','for','while','in','import','from','as',
+      'try','except','catch','finally','with','lambda','yield','pass','raise','throw',
+      'async','await','const','let','var','function','new','this','typeof','instanceof',
+      'switch','case','break','continue','default','public','private','protected','static',
+      'final','struct','void','bool','boolean','int','float','double','char','string',
+      'nullptr','null','nil','true','false','True','False','None','self',
+      'SELECT','FROM','WHERE','INSERT','INTO','UPDATE','DELETE','JOIN','ORDER','BY','GROUP','LIMIT',
+      'fn','pub','mut','impl','trait'
+    ]);
+
+    var builtins = new Set([
+      'console','print','len','range','str','list','dict','set','vector','map','std',
+      'Array','Object','String','Number','Boolean','Promise','Math','JSON','document','window'
+    ]);
+
+    var lastIndex = 0;
+    var match;
+
+    while ((match = CODE_TOKEN_RE.exec(codeText)) !== null) {
+      if (match.index > lastIndex) {
+        codeElement.appendChild(document.createTextNode(codeText.substring(lastIndex, match.index)));
+      }
+      var tok = match[0];
+      var span = document.createElement('span');
+
+      if (tok.startsWith('//') || tok.startsWith('#') || tok.startsWith('/*')) {
+        span.className = 'sf-code-comment';
+      } else if (tok.startsWith('"') || tok.startsWith("'") || tok.startsWith('`')) {
+        span.className = 'sf-code-string';
+      } else if (/^\d/.test(tok)) {
+        span.className = 'sf-code-number';
+      } else if (keywords.has(tok)) {
+        span.className = 'sf-code-keyword';
+      } else if (builtins.has(tok)) {
+        span.className = 'sf-code-builtin';
+      } else {
+        span = null;
+      }
+
+      if (span) {
+        span.textContent = tok;
+        codeElement.appendChild(span);
+      } else {
+        codeElement.appendChild(document.createTextNode(tok));
+      }
+      lastIndex = CODE_TOKEN_RE.lastIndex;
+    }
+
+    if (lastIndex < codeText.length) {
+      codeElement.appendChild(document.createTextNode(codeText.substring(lastIndex)));
+    }
+  }
+
   // Safe Markdown Preview Renderer (No eval, strict sanitization)
   function renderMarkdownPreview() {
     var editor = document.getElementById('scratchpad-editor');
@@ -456,12 +585,14 @@
       return;
     }
 
-    // Split blocks by double newline or code blocks
     var lines = raw.split('\n');
     var inCodeBlock = false;
+    var codeLang = '';
     var codeLines = [];
     var inTable = false;
     var tableRows = [];
+    var currentUl = null;
+    var currentOl = null;
 
     function flushTable() {
       if (!tableRows.length) return;
@@ -470,14 +601,14 @@
       var tbody = document.createElement('tbody');
 
       tableRows.forEach(function (r, idx) {
-        if (r.trim().match(/^\|?[-:\s|]+\|?$/)) return; // separator
+        if (r.trim().match(/^\|?[-:\s|]+\|?$/)) return;
         var tr = document.createElement('tr');
         var cells = r.split('|').filter(function (_, cIdx, arr) {
           return cIdx > 0 && cIdx < arr.length - 1;
         });
         cells.forEach(function (cellText) {
           var cell = document.createElement(idx === 0 ? 'th' : 'td');
-          cell.textContent = cellText.trim();
+          renderInlineFormatted(cellText.trim(), cell);
           tr.appendChild(cell);
         });
         if (idx === 0) thead.appendChild(tr);
@@ -491,22 +622,87 @@
       inTable = false;
     }
 
+    function flushLists() {
+      currentUl = null;
+      currentOl = null;
+    }
+
+    function flushCodeBlock() {
+      if (!codeLines.length && !inCodeBlock) return;
+      var container = document.createElement('div');
+      container.className = 'scratchpad-code-container';
+
+      var header = document.createElement('div');
+      header.className = 'scratchpad-code-header';
+
+      var headerLeft = document.createElement('div');
+      headerLeft.className = 'scratchpad-code-header-left';
+
+      var dRed = document.createElement('span'); dRed.className = 'scratchpad-code-dot red';
+      var dYel = document.createElement('span'); dYel.className = 'scratchpad-code-dot yellow';
+      var dGrn = document.createElement('span'); dGrn.className = 'scratchpad-code-dot green';
+      headerLeft.appendChild(dRed);
+      headerLeft.appendChild(dYel);
+      headerLeft.appendChild(dGrn);
+
+      var langBadge = document.createElement('span');
+      langBadge.className = 'scratchpad-lang-badge';
+      langBadge.textContent = (codeLang || 'CODE').toUpperCase();
+      headerLeft.appendChild(langBadge);
+
+      var copyBtn = document.createElement('button');
+      copyBtn.type = 'button';
+      copyBtn.className = 'scratchpad-copy-code-btn';
+      var copyText = tText('scratchpad_copy_code') || 'Sao chép mã';
+      copyBtn.textContent = '📋 ' + copyText;
+
+      var fullCodeStr = codeLines.join('\n');
+      copyBtn.addEventListener('click', (function (codeToCopy, btn, baseText) {
+        return function (e) {
+          e.stopPropagation();
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(codeToCopy).then(function () {
+              btn.textContent = '✓ ' + (tText('scratchpad_copied') || 'Đã chép!');
+              btn.classList.add('copied');
+              setTimeout(function () {
+                btn.textContent = '📋 ' + baseText;
+                btn.classList.remove('copied');
+              }, 1500);
+            });
+          }
+        };
+      })(fullCodeStr, copyBtn, copyText));
+
+      header.appendChild(headerLeft);
+      header.appendChild(copyBtn);
+
+      var pre = document.createElement('pre');
+      pre.className = 'scratchpad-code-pre';
+      var code = document.createElement('code');
+      highlightCodeTokens(fullCodeStr, codeLang, code);
+      pre.appendChild(code);
+
+      container.appendChild(header);
+      container.appendChild(pre);
+      preview.appendChild(container);
+
+      codeLines = [];
+      codeLang = '';
+      inCodeBlock = false;
+    }
+
     for (var i = 0; i < lines.length; i++) {
       var line = lines[i];
 
       // Code block start/end
       if (line.trim().startsWith('```')) {
         if (inTable) flushTable();
+        flushLists();
         if (inCodeBlock) {
-          var pre = document.createElement('pre');
-          var code = document.createElement('code');
-          code.textContent = codeLines.join('\n');
-          pre.appendChild(code);
-          preview.appendChild(pre);
-          codeLines = [];
-          inCodeBlock = false;
+          flushCodeBlock();
         } else {
           inCodeBlock = true;
+          codeLang = line.trim().substring(3).trim();
           codeLines = [];
         }
         continue;
@@ -519,6 +715,7 @@
 
       // Markdown Tables
       if (line.trim().startsWith('|') && line.trim().endsWith('|')) {
+        flushLists();
         inTable = true;
         tableRows.push(line);
         continue;
@@ -526,73 +723,163 @@
         flushTable();
       }
 
+      // Horizontal Rule
+      if (/^(\*{3,}|-{3,}|_{3,})$/.test(line.trim())) {
+        flushLists();
+        var hr = document.createElement('hr');
+        hr.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+        hr.style.margin = '10px 0';
+        preview.appendChild(hr);
+        continue;
+      }
+
       // Headings
       if (line.startsWith('# ')) {
+        flushLists();
         var h1 = document.createElement('h1');
-        h1.textContent = line.substring(2);
+        renderInlineFormatted(line.substring(2), h1);
         preview.appendChild(h1);
       } else if (line.startsWith('## ')) {
+        flushLists();
         var h2 = document.createElement('h2');
-        h2.textContent = line.substring(3);
+        renderInlineFormatted(line.substring(3), h2);
         preview.appendChild(h2);
       } else if (line.startsWith('### ')) {
+        flushLists();
         var h3 = document.createElement('h3');
-        h3.textContent = line.substring(4);
+        renderInlineFormatted(line.substring(4), h3);
         preview.appendChild(h3);
+      } else if (line.startsWith('#### ')) {
+        flushLists();
+        var h4 = document.createElement('h4');
+        renderInlineFormatted(line.substring(5), h4);
+        preview.appendChild(h4);
       } else if (line.startsWith('> ')) {
+        flushLists();
         var bq = document.createElement('blockquote');
-        bq.textContent = line.substring(2);
+        renderInlineFormatted(line.substring(2), bq);
         preview.appendChild(bq);
-      } else if (line.trim().startsWith('- [ ] ') || line.trim().startsWith('- [x] ')) {
-        var isChecked = line.trim().startsWith('- [x] ');
-        var taskP = document.createElement('p');
+      } else if (/^[-*]\s+\[[ xX]\]\s+/.test(line.trim())) {
+        // Interactive Checklist
+        flushLists();
+        var isChecked = /^[-*]\s+\[[xX]\]\s+/.test(line.trim());
+        var taskItem = document.createElement('div');
+        taskItem.className = 'scratchpad-task-item';
+
         var chk = document.createElement('input');
         chk.type = 'checkbox';
-        chk.className = 'task-checkbox';
-        chk.disabled = true;
+        chk.className = 'scratchpad-task-checkbox';
         chk.checked = isChecked;
-        taskP.appendChild(chk);
-        var label = document.createElement('span');
-        label.textContent = line.trim().substring(6);
-        taskP.appendChild(label);
-        preview.appendChild(taskP);
-      } else if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
-        var li = document.createElement('li');
-        li.textContent = line.trim().substring(2);
-        preview.appendChild(li);
+
+        var taskLabel = document.createElement('span');
+        taskLabel.className = 'scratchpad-task-label' + (isChecked ? ' checked' : '');
+        var taskContent = line.trim().replace(/^[-*]\s+\[[ xX]\]\s+/, '');
+        renderInlineFormatted(taskContent, taskLabel);
+
+        (function (lineIdx, checkbox, label) {
+          checkbox.addEventListener('change', function (e) {
+            e.stopPropagation();
+            var checked = checkbox.checked;
+            label.classList.toggle('checked', checked);
+            var ed = document.getElementById('scratchpad-editor');
+            if (!ed) return;
+            var curLines = ed.value.split('\n');
+            if (lineIdx < curLines.length) {
+              if (checked) {
+                curLines[lineIdx] = curLines[lineIdx].replace(/^([-*]\s+\[)[ xX](\]\s+)/, '$1x$2');
+              } else {
+                curLines[lineIdx] = curLines[lineIdx].replace(/^([-*]\s+\[)[ xX](\]\s+)/, '$1 $2');
+              }
+              ed.value = curLines.join('\n');
+              var act = getActiveNote();
+              if (act) {
+                act.content = ed.value;
+                act.updatedAt = Date.now();
+                scheduleSave();
+              }
+              updateCounters();
+            }
+          });
+        })(i, chk, taskLabel);
+
+        taskItem.appendChild(chk);
+        taskItem.appendChild(taskLabel);
+        preview.appendChild(taskItem);
+      } else if (/^\s*(\d+)\.\s+(.*)$/.test(line)) {
+        // Ordered List
+        currentUl = null;
+        if (!currentOl) {
+          currentOl = document.createElement('ol');
+          preview.appendChild(currentOl);
+        }
+        var mOl = line.match(/^\s*(\d+)\.\s+(.*)$/);
+        var liOl = document.createElement('li');
+        renderInlineFormatted(mOl[2], liOl);
+        currentOl.appendChild(liOl);
+      } else if (/^\s*[-*+]\s+(.*)$/.test(line)) {
+        // Unordered List
+        currentOl = null;
+        if (!currentUl) {
+          currentUl = document.createElement('ul');
+          preview.appendChild(currentUl);
+        }
+        var mUl = line.match(/^\s*[-*+]\s+(.*)$/);
+        var liUl = document.createElement('li');
+        renderInlineFormatted(mUl[1], liUl);
+        currentUl.appendChild(liUl);
       } else if (line.trim()) {
+        flushLists();
         var p = document.createElement('p');
-        p.textContent = line;
+        renderInlineFormatted(line, p);
         preview.appendChild(p);
+      } else {
+        flushLists();
       }
     }
 
-    if (inCodeBlock && codeLines.length) {
-      var preEnd = document.createElement('pre');
-      var codeEnd = document.createElement('code');
-      codeEnd.textContent = codeLines.join('\n');
-      preEnd.appendChild(codeEnd);
-      preview.appendChild(preEnd);
-    }
+    if (inCodeBlock) flushCodeBlock();
     if (inTable) flushTable();
   }
 
-  function togglePreview() {
+  function setViewMode(mode) {
+    currentViewMode = mode;
+    var editorWrap = document.getElementById('scratchpad-editor-wrap');
     var editorContainer = document.getElementById('scratchpad-editor-container');
     var previewPane = document.getElementById('scratchpad-preview-pane');
+    var tabEdit = document.getElementById('scratchpad-tab-edit');
+    var tabPreview = document.getElementById('scratchpad-tab-preview');
+    var tabSplit = document.getElementById('scratchpad-tab-split');
     var btnPreview = document.getElementById('scratchpad-btn-preview');
-    if (!editorContainer || !previewPane) return;
 
-    isPreviewActive = !isPreviewActive;
-    if (isPreviewActive) {
-      renderMarkdownPreview();
+    if (!editorWrap || !editorContainer || !previewPane) return;
+
+    if (tabEdit) tabEdit.classList.toggle('active', mode === 'edit');
+    if (tabPreview) tabPreview.classList.toggle('active', mode === 'preview');
+    if (tabSplit) tabSplit.classList.toggle('active', mode === 'split');
+    if (btnPreview) btnPreview.classList.toggle('active', mode === 'preview' || mode === 'split');
+
+    if (mode === 'edit') {
+      editorWrap.classList.remove('split-view');
+      editorContainer.style.display = 'flex';
+      previewPane.style.display = 'none';
+    } else if (mode === 'preview') {
+      editorWrap.classList.remove('split-view');
       editorContainer.style.display = 'none';
       previewPane.style.display = 'block';
-      if (btnPreview) btnPreview.classList.add('active');
-    } else {
-      previewPane.style.display = 'none';
+      renderMarkdownPreview();
+    } else if (mode === 'split') {
+      editorWrap.classList.add('split-view');
       editorContainer.style.display = 'flex';
-      if (btnPreview) btnPreview.classList.remove('active');
+      previewPane.style.display = 'block';
+      renderMarkdownPreview();
+    }
+  }
+
+  function togglePreview() {
+    if (currentViewMode === 'edit') {
+      setViewMode('preview');
+    } else {
+      setViewMode('edit');
     }
   }
 
@@ -1081,6 +1368,20 @@
           String(d.getMinutes()).padStart(2, '0') + '] ';
         wrapSelection('', '', ts);
       });
+    }
+
+    // View Switcher Tabs (Edit / Preview / Split)
+    var tabEdit = document.getElementById('scratchpad-tab-edit');
+    var tabPreview = document.getElementById('scratchpad-tab-preview');
+    var tabSplit = document.getElementById('scratchpad-tab-split');
+    if (tabEdit) {
+      tabEdit.addEventListener('click', function () { setViewMode('edit'); });
+    }
+    if (tabPreview) {
+      tabPreview.addEventListener('click', function () { setViewMode('preview'); });
+    }
+    if (tabSplit) {
+      tabSplit.addEventListener('click', function () { setViewMode('split'); });
     }
 
     // Preview Toggle

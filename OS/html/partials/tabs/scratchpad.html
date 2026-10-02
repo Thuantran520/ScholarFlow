@@ -104,8 +104,15 @@
         </div>
       </div>
 
+      <!-- Editor View Switcher Tabs -->
+      <div class="scratchpad-view-tabs" id="scratchpad-view-tabs">
+        <button type="button" class="scratchpad-view-tab-btn active" id="scratchpad-tab-edit" data-view="edit" data-i18n="scratchpad_view_edit">Soạn thảo</button>
+        <button type="button" class="scratchpad-view-tab-btn" id="scratchpad-tab-preview" data-view="preview" data-i18n="scratchpad_view_preview">Xem định dạng</button>
+        <button type="button" class="scratchpad-view-tab-btn" id="scratchpad-tab-split" data-view="split" data-i18n="scratchpad_view_split">Chia đôi</button>
+      </div>
+
       <!-- Editor & Line Numbers & Preview -->
-      <div class="scratchpad-editor-wrap">
+      <div class="scratchpad-editor-wrap" id="scratchpad-editor-wrap">
         <div class="scratchpad-editor-container" id="scratchpad-editor-container">
           <div class="scratchpad-line-numbers" id="scratchpad-line-numbers">1</div>
           <textarea id="scratchpad-editor" class="scratchpad-textarea" placeholder="Ghi chú nhanh, trích dẫn học thuật, ý tưởng nghiên cứu... (Hỗ trợ Markdown)" data-i18n-placeholder="scratchpad_placeholder" spellcheck="false"></textarea>
