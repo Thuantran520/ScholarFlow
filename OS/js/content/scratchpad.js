@@ -40,9 +40,22 @@
     if (!textarea) return;
     var key = getStorageKey();
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-      chrome.storage.local.get([key], function (res) {
+      chrome.storage.local.get([key, 'sf_scratchpad_notes', 'sf_scratchpad_active_id'], function (res) {
         isInternalSync = true;
-        textarea.value = (res && res[key]) ? res[key] : '';
+        var loaded = '';
+        if (res && Array.isArray(res.sf_scratchpad_notes) && res.sf_scratchpad_notes.length > 0) {
+          var activeId = res.sf_scratchpad_active_id || res.sf_scratchpad_notes[0].id;
+          for (var i = 0; i < res.sf_scratchpad_notes.length; i++) {
+            if (res.sf_scratchpad_notes[i].id === activeId) {
+              loaded = res.sf_scratchpad_notes[i].content || '';
+              break;
+            }
+          }
+        }
+        if (!loaded && res && res[key]) {
+          loaded = res[key];
+        }
+        textarea.value = loaded;
         isInternalSync = false;
         updateWordCount(textarea, counterEl);
       });
@@ -54,9 +67,21 @@
     saveDebounce = setTimeout(function () {
       var key = getStorageKey();
       if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-        var obj = {};
-        obj[key] = val;
-        chrome.storage.local.set(obj);
+        chrome.storage.local.get(['sf_scratchpad_notes', 'sf_scratchpad_active_id'], function (res) {
+          var obj = {};
+          obj[key] = val;
+          if (res && Array.isArray(res.sf_scratchpad_notes) && res.sf_scratchpad_notes.length > 0) {
+            var activeId = res.sf_scratchpad_active_id || res.sf_scratchpad_notes[0].id;
+            var updated = res.sf_scratchpad_notes.map(function (n) {
+              if (n.id === activeId) {
+                return Object.assign({}, n, { content: val, updatedAt: Date.now() });
+              }
+              return n;
+            });
+            obj.sf_scratchpad_notes = updated;
+          }
+          chrome.storage.local.set(obj);
+        });
       }
     }, 300);
   }
@@ -265,14 +290,20 @@
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
       chrome.storage.onChanged.addListener(function (changes, area) {
         if (area !== 'local') return;
-        var key = getStorageKey();
-        if (changes[key] && !isInternalSync) {
-          var newVal = changes[key].newValue || '';
-          if (textarea.value !== newVal) {
-            isInternalSync = true;
-            textarea.value = newVal;
-            isInternalSync = false;
-            updateWordCount(textarea, counter);
+        if (!isInternalSync) {
+          if (changes.sf_scratchpad_notes) {
+            loadNote(textarea, counter);
+          } else {
+            var key = getStorageKey();
+            if (changes[key]) {
+              var newVal = changes[key].newValue || '';
+              if (textarea.value !== newVal) {
+                isInternalSync = true;
+                textarea.value = newVal;
+                isInternalSync = false;
+                updateWordCount(textarea, counter);
+              }
+            }
           }
         }
       });

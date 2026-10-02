@@ -1,21 +1,70 @@
     <div id="tab-scratchpad" class="tab-section scratchpad-tab">
+      <!-- Top Row: Mode & Notes Drawer Toggle & Status -->
       <div class="scratchpad-header-row">
-        <div class="scratchpad-segmented" id="scratchpad-mode-seg">
-          <button type="button" class="scratchpad-seg-btn active" data-mode="page" id="scratchpad-mode-page">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-            <span data-i18n="scratchpad_mode_page">Trang này</span>
+        <div class="scratchpad-header-left">
+          <button type="button" class="scratchpad-btn-pill" id="scratchpad-btn-notes-list" title="Danh sách ghi chú" data-i18n-title="scratchpad_notes_list">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+            <span data-i18n="scratchpad_notes_list">Danh sách ghi chú</span>
+            <span class="scratchpad-badge-count" id="scratchpad-notes-count">1</span>
           </button>
-          <button type="button" class="scratchpad-seg-btn" data-mode="global" id="scratchpad-mode-global">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
-            <span data-i18n="scratchpad_mode_global">Toàn cục</span>
+          <button type="button" class="scratchpad-btn-icon-accent" id="scratchpad-btn-new-note" title="Ghi chú mới" data-i18n-title="scratchpad_new_note">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
           </button>
+          <div class="scratchpad-segmented" id="scratchpad-mode-seg">
+            <button type="button" class="scratchpad-seg-btn active" data-mode="page" id="scratchpad-mode-page">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+              <span data-i18n="scratchpad_mode_page">Trang này</span>
+            </button>
+            <button type="button" class="scratchpad-seg-btn" data-mode="global" id="scratchpad-mode-global">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+              <span data-i18n="scratchpad_mode_global">Toàn cục</span>
+            </button>
+          </div>
         </div>
-        <div class="scratchpad-status-wrap">
-          <span class="scratchpad-status-dot" id="scratchpad-status-dot"></span>
-          <span id="scratchpad-status-text" data-i18n="scratchpad_saved">Đã lưu</span>
+        <div class="scratchpad-header-right">
+          <div class="scratchpad-status-wrap">
+            <span class="scratchpad-status-dot" id="scratchpad-status-dot"></span>
+            <span id="scratchpad-status-text" data-i18n="scratchpad_saved">Đã lưu</span>
+          </div>
+          <button type="button" class="scratchpad-tool-btn" id="btn-toggle-scratchpad" title="Mở cửa sổ nổi trên trang" data-i18n-title="scratchpad_tip_popout">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><polyline points="9 3 9 9 3 9"></polyline></svg>
+          </button>
         </div>
       </div>
 
+      <!-- Notes Drawer / Overlay Modal -->
+      <div class="scratchpad-drawer" id="scratchpad-notes-drawer" style="display: none;">
+        <div class="scratchpad-drawer-header">
+          <input type="text" id="scratchpad-search-input" class="scratchpad-search-input" placeholder="Tìm kiếm ghi chú, thẻ, từ khóa..." data-i18n-placeholder="scratchpad_search_placeholder" autocomplete="off" />
+          <button type="button" class="scratchpad-drawer-close-btn" id="scratchpad-drawer-close" title="Quay lại soạn thảo" data-i18n-title="scratchpad_btn_back">✕</button>
+        </div>
+        <div class="scratchpad-drawer-filters" id="scratchpad-drawer-filters">
+          <button type="button" class="scratchpad-filter-chip active" data-filter="all" data-i18n="scratchpad_category_all">Tất cả</button>
+          <button type="button" class="scratchpad-filter-chip" data-filter="leetcode" data-i18n="scratchpad_category_leetcode">LeetCode / Thuật toán</button>
+          <button type="button" class="scratchpad-filter-chip" data-filter="exam" data-i18n="scratchpad_category_exam">Kiểm tra / Ôn thi</button>
+          <button type="button" class="scratchpad-filter-chip" data-filter="dev" data-i18n="scratchpad_category_dev">Lập trình / Code</button>
+          <button type="button" class="scratchpad-filter-chip" data-filter="general" data-i18n="scratchpad_category_general">Chung</button>
+        </div>
+        <div class="scratchpad-notes-list-wrap" id="scratchpad-notes-items">
+          <!-- Dynamically populated note cards -->
+        </div>
+      </div>
+
+      <!-- Note Title & Category Meta Bar -->
+      <div class="scratchpad-meta-row">
+        <input type="text" id="scratchpad-note-title" class="scratchpad-title-input" placeholder="Tiêu đề ghi chú..." data-i18n-placeholder="scratchpad_title_placeholder" autocomplete="off" />
+        <select id="scratchpad-select-category" class="scratchpad-category-select">
+          <option value="general" data-i18n="scratchpad_category_general">Chung</option>
+          <option value="leetcode" data-i18n="scratchpad_category_leetcode">LeetCode / Thuật toán</option>
+          <option value="exam" data-i18n="scratchpad_category_exam">Kiểm tra / Ôn thi</option>
+          <option value="dev" data-i18n="scratchpad_category_dev">Lập trình / Code</option>
+        </select>
+        <button type="button" class="scratchpad-pin-btn" id="scratchpad-btn-pin" title="Ghim ghi chú" data-i18n-title="scratchpad_pin_note">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.89A2 2 0 0 1 15 10.77V6h1a1 1 0 0 0 0-2H8a1 1 0 0 0 0 2h1v4.77a2 2 0 0 1-1.11 1.79l-1.78.89A2 2 0 0 0 5 15.24V17z"></path></svg>
+        </button>
+      </div>
+
+      <!-- Rich Formatting & Dev Tools Toolbar -->
       <div class="scratchpad-toolbar">
         <div class="scratchpad-tool-group">
           <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-bold" title="In đậm (Ctrl+B)" data-i18n-title="scratchpad_tip_bold"><b>B</b></button>
@@ -24,17 +73,30 @@
           <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-quote" title="Khối trích dẫn" data-i18n-title="scratchpad_tip_quote">”</button>
           <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-list" title="Danh sách" data-i18n-title="scratchpad_tip_list">•</button>
           <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-task" title="Việc cần làm" data-i18n-title="scratchpad_tip_task">☑</button>
+          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-code-block" title="Chèn khối mã lệnh (Code block)" data-i18n-title="scratchpad_tip_code_block">&lt;/&gt;</button>
+          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-math" title="Chèn công thức toán / Big-O ($...$)" data-i18n-title="scratchpad_tip_math">ƒ(x)</button>
+          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-table" title="Chèn bảng Markdown" data-i18n-title="scratchpad_tip_table">▦</button>
+          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-template" title="Mẫu ghi chú LeetCode / Bài toán" data-i18n-title="scratchpad_tip_template">📋</button>
+          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-timestamp" title="Chèn dấu thời gian hiện tại" data-i18n-title="scratchpad_tip_timestamp">⏱</button>
         </div>
 
         <div class="scratchpad-tool-group">
+          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-preview" title="Chế độ xem trước Markdown" data-i18n-title="scratchpad_tip_preview">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          </button>
+          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-font" title="Kiểu chữ (Code Monospace / Sans)" data-i18n-title="scratchpad_tip_font">Aa</button>
           <button type="button" class="scratchpad-tool-btn btn-accent" id="scratchpad-btn-cite" title="Chèn trích dẫn trang hiện tại" data-i18n-title="scratchpad_tip_insert_cite">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
           </button>
+          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-export" title="Xuất ghi chú (.md, .txt, .html, JSON)" data-i18n-title="scratchpad_tip_export">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          </button>
+          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-import" title="Nhập ghi chú từ file (.md, .txt, JSON)" data-i18n-title="scratchpad_tip_import">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          </button>
+          <input type="file" id="scratchpad-file-import" accept=".md,.txt,.json" style="display:none;" />
           <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-copy" title="Sao chép toàn bộ" data-i18n-title="scratchpad_tip_copy">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-          </button>
-          <button type="button" class="scratchpad-tool-btn" id="btn-toggle-scratchpad" title="Mở cửa sổ nổi trên trang" data-i18n-title="scratchpad_tip_popout">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><polyline points="9 3 9 9 3 9"></polyline></svg>
           </button>
           <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-clear" title="Xóa sạch ghi chú" data-i18n-title="scratchpad_tip_clear">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
@@ -42,18 +104,26 @@
         </div>
       </div>
 
+      <!-- Editor & Line Numbers & Preview -->
       <div class="scratchpad-editor-wrap">
-        <textarea id="scratchpad-editor" class="scratchpad-textarea" placeholder="Ghi chú nhanh, trích dẫn học thuật, ý tưởng nghiên cứu... (Hỗ trợ Markdown)" data-i18n-placeholder="scratchpad_placeholder" spellcheck="false"></textarea>
+        <div class="scratchpad-editor-container" id="scratchpad-editor-container">
+          <div class="scratchpad-line-numbers" id="scratchpad-line-numbers">1</div>
+          <textarea id="scratchpad-editor" class="scratchpad-textarea" placeholder="Ghi chú nhanh, trích dẫn học thuật, ý tưởng nghiên cứu... (Hỗ trợ Markdown)" data-i18n-placeholder="scratchpad_placeholder" spellcheck="false"></textarea>
+        </div>
+        <div id="scratchpad-preview-pane" class="scratchpad-preview-pane" style="display: none;"></div>
       </div>
 
+      <!-- Footer Info -->
       <div class="scratchpad-footer-row">
-        <span class="scratchpad-counter" id="scratchpad-counter">0 từ • 0 ký tự</span>
+        <span class="scratchpad-counter" id="scratchpad-counter" data-i18n="scratchpad_counter_initial">0 từ • 0 ký tự</span>
+        <span class="scratchpad-lines-badge" id="scratchpad-lines-badge">1 dòng</span>
       </div>
 
+      <!-- Settings & Clipper Toggle -->
       <div class="scratchpad-card">
         <label class="scratchpad-option-row" for="chk-scratchpad-clipper">
           <span data-i18n="scratchpad_clipper_toggle">Tự động hiện nút Lưu trích dẫn khi bôi đen văn bản</span>
-          <input type="checkbox" id="chk-scratchpad-clipper" checked>
+          <input type="checkbox" id="chk-scratchpad-clipper" checked />
         </label>
       </div>
     </div>

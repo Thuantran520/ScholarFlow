@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // ScholarFlow - OS/js/content/highlighter.js
-// Academic Web Clipper & Quick Quote (Replaces destructive neon highlighter
-// with a sleek, non-destructive quote clipper directly to the Scratchpad).
+// Smart Academic & Code Web Clipper (Quotes text & extracts code snippets
+// directly into the Scratchpad notes library).
 // ---------------------------------------------------------------------------
 (function () {
   'use strict';
@@ -97,7 +97,42 @@
     }, 2400);
   }
 
-  function clipSelectedText(text) {
+  function detectCodeSnippet(text, containerEl) {
+    if (!text) return null;
+    var trimmed = text.trim();
+    var isCodeElement = false;
+    if (containerEl && containerEl.closest) {
+      if (containerEl.closest('pre, code, .code, .monaco-editor, .ace_editor, .CodeMirror, .syntaxhighlighter, [class*="highlight"], [class*="code-"]')) {
+        isCodeElement = true;
+      }
+    }
+
+    var lines = trimmed.split('\n');
+    var hasMultipleLines = lines.length >= 2;
+    var hasIndentation = lines.some(function (l) { return /^ {2,}|\t/.test(l); });
+
+    var pyKeywords = /\b(def |elif |import |from \w+ import|class \w+:|print\(|self\.)/;
+    var jsKeywords = /\b(const |let |var |function |console\.log|=>|import .* from|export default|document\.)/;
+    var cppKeywords = /\b(#include|std::|cout|cin|vector<|nullptr|int main)/;
+    var javaKeywords = /\b(public static void|System\.out\.print|ArrayList<|private String)/;
+    var sqlKeywords = /\b(SELECT .* FROM|INSERT INTO|UPDATE .* SET|DELETE FROM|GROUP BY|ORDER BY)/i;
+    var htmlKeywords = /<\/?[a-z][\s\S]*>/i;
+
+    var lang = null;
+    if (pyKeywords.test(trimmed)) lang = 'python';
+    else if (jsKeywords.test(trimmed)) lang = 'javascript';
+    else if (cppKeywords.test(trimmed)) lang = 'cpp';
+    else if (javaKeywords.test(trimmed)) lang = 'java';
+    else if (sqlKeywords.test(trimmed)) lang = 'sql';
+    else if (htmlKeywords.test(trimmed)) lang = 'html';
+
+    if (lang || isCodeElement || (hasMultipleLines && hasIndentation && /[{};()]/.test(trimmed))) {
+      return lang || 'code';
+    }
+    return null;
+  }
+
+  function clipSelectedText(text, asNewNote, detectedLang) {
     if (!text || !text.trim()) return;
 
     var cleanText = text.trim();
@@ -105,30 +140,69 @@
     var title = document.title || host;
     var url = window.location.href;
 
-    var quoteBlock = '\n\n> ' + cleanText.replace(/\n+/g, '\n> ') + '\n— *[' + title + '](' + url + ')*\n';
+    var block = '';
+    if (detectedLang) {
+      block = '\n\n```' + detectedLang + '\n' + cleanText + '\n```\n— *[' + title + '](' + url + ')*\n';
+    } else {
+      block = '\n\n> ' + cleanText.replace(/\n+/g, '\n> ') + '\n— *[' + title + '](' + url + ')*\n';
+    }
 
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
       var pageKey = 'sf_scratchpad_page_' + host;
       var globKey = 'sf_scratchpad_global';
 
-      chrome.storage.local.get([pageKey, globKey], function (res) {
+      chrome.storage.local.get(['sf_scratchpad_notes', 'sf_scratchpad_active_id', pageKey, globKey], function (res) {
         var pageContent = (res && res[pageKey]) ? res[pageKey] : '';
         var globContent = (res && res[globKey]) ? res[globKey] : '';
+        var notesList = (res && Array.isArray(res.sf_scratchpad_notes)) ? res.sf_scratchpad_notes : [];
+        var activeId = (res && res.sf_scratchpad_active_id) || null;
 
         var update = {};
-        update[pageKey] = pageContent ? (pageContent + quoteBlock) : quoteBlock.trimStart();
-        update[globKey] = globContent ? (globContent + quoteBlock) : quoteBlock.trimStart();
+        update[pageKey] = pageContent ? (pageContent + block) : block.trimStart();
+        update[globKey] = globContent ? (globContent + block) : block.trimStart();
+
+        if (asNewNote || notesList.length === 0) {
+          var newNote = {
+            id: 'note_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+            title: (detectedLang ? ('Code: ') : ('Clip: ')) + title.substring(0, 40),
+            content: block.trimStart(),
+            category: detectedLang ? 'leetcode' : 'general',
+            pinned: false,
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+          };
+          notesList.unshift(newNote);
+          update.sf_scratchpad_notes = notesList;
+          update.sf_scratchpad_active_id = newNote.id;
+        } else {
+          // Append to active note
+          var targetNote = null;
+          for (var i = 0; i < notesList.length; i++) {
+            if (notesList[i].id === activeId) {
+              targetNote = notesList[i];
+              break;
+            }
+          }
+          if (!targetNote) targetNote = notesList[0];
+          targetNote.content = targetNote.content ? (targetNote.content + block) : block.trimStart();
+          targetNote.updatedAt = Date.now();
+          update.sf_scratchpad_notes = notesList;
+        }
 
         chrome.storage.local.set(update, function () {
-          showToast(tContentSafe('clip_saved', 'Đã lưu trích dẫn vào Sổ nháp!'));
+          var toastKey = detectedLang ? 'clip_code_saved' : 'clip_saved';
+          var defaultMsg = detectedLang ? 'Đã lưu đoạn mã vào Sổ nháp!' : 'Đã lưu trích dẫn vào Sổ nháp!';
+          showToast(tContentSafe(toastKey, defaultMsg));
         });
       });
     }
   }
 
-  function showPill(rect, selText) {
+  function showPill(rect, selText, containerEl) {
     hidePill();
     if (!isClipperEnabled || !selText || selText.length < 3) return;
+
+    var detectedLang = detectCodeSnippet(selText, containerEl);
 
     var pill = document.createElement('div');
     pill.id = 'sf-clipper-pill';
@@ -138,53 +212,78 @@
       'display: inline-flex',
       'align-items: center',
       'gap: 6px',
-      'background: rgba(15, 23, 42, 0.92)',
+      'background: rgba(15, 23, 42, 0.94)',
       'border: 1px solid rgba(56, 189, 248, 0.45)',
       'border-radius: 20px',
-      'padding: 5px 12px',
-      'box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45)',
+      'padding: 4px 10px',
+      'box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5)',
       'backdrop-filter: blur(10px)',
-      'cursor: pointer',
       'user-select: none',
       'font: 600 12px/1.2 system-ui, -apple-system, sans-serif',
       'color: #f8fafc',
       'transition: transform 0.15s ease, background 0.15s ease'
     ].join(';');
 
+    // Primary action button (Append to active note)
+    var mainBtn = document.createElement('div');
+    mainBtn.style.cssText = 'display:inline-flex; align-items:center; gap:5px; cursor:pointer; padding:2px 4px;';
+
     var icon = document.createElement('span');
-    icon.textContent = '📝';
+    icon.textContent = detectedLang ? '💻' : '📝';
     icon.style.cssText = 'font-size: 13px; line-height: 1;';
 
     var label = document.createElement('span');
-    label.textContent = tContentSafe('clip_btn', 'Trích vào Sổ nháp');
+    var labelKey = detectedLang ? 'clip_btn_code' : 'clip_btn';
+    var defaultLabel = detectedLang ? 'Lưu đoạn mã' : 'Trích vào Sổ nháp';
+    label.textContent = tContentSafe(labelKey, defaultLabel);
     label.style.cssText = 'color: #38bdf8; letter-spacing: 0.2px;';
 
-    pill.appendChild(icon);
-    pill.appendChild(label);
+    mainBtn.appendChild(icon);
+    mainBtn.appendChild(label);
 
-    pill.addEventListener('mouseenter', function () {
-      pill.style.background = 'rgba(30, 41, 59, 0.98)';
-      pill.style.transform = 'scale(1.03)';
-    });
-    pill.addEventListener('mouseleave', function () {
-      pill.style.background = 'rgba(15, 23, 42, 0.92)';
-      pill.style.transform = 'scale(1)';
-    });
-
-    pill.addEventListener('mousedown', function (e) {
+    mainBtn.addEventListener('click', function (e) {
       e.preventDefault();
       e.stopPropagation();
-    });
-
-    pill.addEventListener('click', function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      clipSelectedText(selText);
+      clipSelectedText(selText, false, detectedLang);
       hidePill();
       try {
         var sel = window.getSelection();
         if (sel) sel.removeAllRanges();
       } catch (err) {}
+    });
+
+    // Secondary action button (Create as new note)
+    var divider = document.createElement('span');
+    divider.style.cssText = 'width:1px; height:12px; background:rgba(255,255,255,0.2);';
+
+    var newNoteBtn = document.createElement('span');
+    newNoteBtn.textContent = '+ ' + tContentSafe('clip_btn_new', 'Mới');
+    newNoteBtn.title = tContentSafe('clip_btn_new', 'Tạo ghi chú mới');
+    newNoteBtn.style.cssText = 'color:#94a3b8; font-size:11px; cursor:pointer; padding:2px 4px; border-radius:4px;';
+    newNoteBtn.addEventListener('mouseenter', function () {
+      newNoteBtn.style.color = '#38bdf8';
+    });
+    newNoteBtn.addEventListener('mouseleave', function () {
+      newNoteBtn.style.color = '#94a3b8';
+    });
+    newNoteBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      clipSelectedText(selText, true, detectedLang);
+      hidePill();
+      try {
+        var sel = window.getSelection();
+        if (sel) sel.removeAllRanges();
+      } catch (err) {}
+    });
+
+    pill.appendChild(mainBtn);
+    pill.appendChild(divider);
+    pill.appendChild(newNoteBtn);
+
+    pill.addEventListener('mousedown', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
     });
 
     var scrollX = window.scrollX || window.pageXOffset || document.documentElement.scrollLeft || 0;
@@ -195,9 +294,9 @@
     if (top < scrollY + 8) {
       top = rect.bottom + scrollY + 8;
     }
-    var left = rect.left + scrollX + (rect.width / 2) - 65;
+    var left = rect.left + scrollX + (rect.width / 2) - 80;
     if (left < 10) left = 10;
-    if (left + 150 > window.innerWidth) left = Math.max(10, window.innerWidth - 160);
+    if (left + 190 > window.innerWidth) left = Math.max(10, window.innerWidth - 200);
 
     pill.style.top = Math.round(top) + 'px';
     pill.style.left = Math.round(left) + 'px';
@@ -242,7 +341,10 @@
           hidePill();
           return;
         }
-        showPill(rect, str);
+        var containerEl = range.commonAncestorContainer ?
+          (range.commonAncestorContainer.nodeType === 1 ? range.commonAncestorContainer : range.commonAncestorContainer.parentElement) : null;
+
+        showPill(rect, str, containerEl);
       } catch (err) {
         hidePill();
       }
