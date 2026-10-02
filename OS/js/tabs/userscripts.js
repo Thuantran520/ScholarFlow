@@ -356,11 +356,295 @@
   }
 
   let _currentTabUrl = '';
+
+  /**
+   * Robust tab resolver that finds an active or open http/https web page tab.
+   * Handles popup, docked sidebar, full-tab Studio, and devtools contexts.
+   */
+  async function _getTargetWebTab() {
+    if (typeof ensureActiveTab === 'function') {
+      try {
+        const tab = await ensureActiveTab();
+        if (tab && tab.id && tab.url && (tab.url.startsWith('http://') || tab.url.startsWith('https://'))) {
+          return tab;
+        }
+      } catch (e) {}
+    }
+
+    const isWeb = (t) => t && t.id && t.url && (t.url.startsWith('http://') || t.url.startsWith('https://'));
+
+    try {
+      // 1. Active tab in current window
+      let tabs = await browserApi.tabs.query({ active: true, currentWindow: true });
+      let found = (tabs || []).find(isWeb);
+      if (found) return found;
+
+      // 2. Active tab in last focused window (especially when sidebar has focus)
+      try {
+        tabs = await browserApi.tabs.query({ active: true, lastFocusedWindow: true });
+        found = (tabs || []).find(isWeb);
+        if (found) return found;
+      } catch (_) {}
+
+      // 3. Any active tab
+      try {
+        tabs = await browserApi.tabs.query({ active: true });
+        found = (tabs || []).find(isWeb);
+        if (found) return found;
+      } catch (_) {}
+
+      // 4. Any open web tab
+      tabs = await browserApi.tabs.query({});
+      found = (tabs || []).find(isWeb);
+      if (found) return found;
+    } catch (_) {}
+
+    return null;
+  }
+
+  /**
+   * Unified, battle-tested userscript executor on a target tab.
+   * Uses browserApi.userScripts (Firefox) -> browserApi.scripting.executeScript
+   * (Chrome/Firefox with Trusted Types & CSP bypass) -> background US_RUN_ONCE fallback.
+   */
+  async function _executeScriptOnTargetTab(scriptRecord, targetTab, options = {}) {
+    const rawCode = (typeof options.code === 'string') ? options.code : String((scriptRecord && scriptRecord.code) || '');
+    if (!rawCode.trim()) {
+      throw new Error((typeof t === 'function' ? t('us_empty_code_err') : null) || 'Kịch bản chưa có mã JavaScript để chạy!');
+    }
+
+    const meta = (typeof window !== 'undefined' && window.SF_US_META) || (typeof globalThis !== 'undefined' && globalThis.SF_US_META);
+    let codeToRun = rawCode;
+    if (meta && typeof meta.sanitizeUserscriptCode === 'function') {
+      codeToRun = meta.sanitizeUserscriptCode(codeToRun);
+    }
+
+    // Include @require scripts if cached
+    if (Array.isArray(scriptRecord && scriptRecord.requires) && scriptRecord.requires.length) {
+      const reqText = scriptRecord.requires
+        .map((r) => (r && typeof r.text === 'string' ? r.text : ''))
+        .filter(Boolean)
+        .join('\n;\n');
+      if (reqText) {
+        codeToRun = reqText + '\n;\n' + codeToRun;
+      }
+    }
+
+    const gmShim = (typeof window !== 'undefined' && window.SF_GM_SHIM) || (typeof globalThis !== 'undefined' && globalThis.SF_FULL_GM_SHIM) || '';
+
+    const runnerWrapper = `(function() {
+  function _relay(level, args) {
+    try {
+      const text = args.map(a => {
+        try { return (typeof a === 'object' && a !== null) ? JSON.stringify(a) : String(a); }
+        catch(e) { return String(a); }
+      }).join(' ');
+      document.dispatchEvent(new CustomEvent('__SF_US_LOG__', {
+        detail: { level: level, text: text, time: Date.now() }
+      }));
+    } catch(e) {}
+  }
+  function _isBenign(str) {
+    if (!str) return false;
+    return /ResizeObserver loop/i.test(str) || /Script error\\./i.test(str);
+  }
+  const _origLog = console.log, _origWarn = console.warn, _origError = console.error, _origInfo = console.info;
+  console.log = function(...a) { _relay('log', a); _origLog.apply(console, a); };
+  console.warn = function(...a) { _relay('warn', a); _origWarn.apply(console, a); };
+  console.error = function(...a) {
+    const msg = a.map(x => String((x && x.message) || x)).join(' ');
+    if (!_isBenign(msg)) _relay('error', a);
+    _origError.apply(console, a);
+  };
+  console.info = function(...a) { _relay('info', a); _origInfo.apply(console, a); };
+
+  window.addEventListener('error', function(e) {
+    if (e && e.message) {
+      if (_isBenign(e.message)) return;
+      _relay('error', ['[Uncaught Error]', e.message, e.filename ? '(' + e.filename + ':' + e.lineno + ')' : '']);
+    }
+  });
+
+  try {
+    ${gmShim}
+    ${codeToRun}
+  } catch(err) {
+    _relay('error', ['[Runtime Error]', err.stack || err.message || String(err)]);
+  }
+})();`;
+
+    let results = null;
+    let executed = false;
+    let lastErr = null;
+
+    // 1. Try browserApi.userScripts API if available
+    const usApi = (typeof browserApi !== 'undefined' && browserApi.userScripts) ? browserApi.userScripts : null;
+    if (usApi && typeof usApi.execute === 'function') {
+      try {
+        await usApi.execute({
+          target: { tabId: targetTab.id },
+          js: [{ code: runnerWrapper }],
+          world: (scriptRecord && scriptRecord.world === 'ISOLATED') ? 'USER_SCRIPT' : 'MAIN'
+        });
+        executed = true;
+        return { ok: true, via: 'userScripts', results: [] };
+      } catch (_usErr) {
+        lastErr = _usErr;
+      }
+    }
+
+    // 2. Try browserApi.scripting.executeScript
+    const scriptingApi = (typeof browserApi !== 'undefined' && browserApi.scripting) ? browserApi.scripting : null;
+    if (!executed && scriptingApi && typeof scriptingApi.executeScript === 'function') {
+      const execOpts = {
+        target: { tabId: targetTab.id },
+        world: (scriptRecord && scriptRecord.world === 'ISOLATED') ? 'ISOLATED' : 'MAIN',
+        func: (wrappedCode) => {
+          const logs = [];
+          const onLog = (e) => {
+            if (e.detail) logs.push(e.detail);
+          };
+          document.addEventListener('__SF_US_LOG__', onLog);
+          let executed = false;
+
+          let policy = null;
+          if (typeof window !== 'undefined' && window.trustedTypes) {
+            try {
+              if (window.trustedTypes.defaultPolicy && typeof window.trustedTypes.defaultPolicy.createScript === 'function') {
+                policy = window.trustedTypes.defaultPolicy;
+              }
+            } catch (_e) {}
+            if (!policy && typeof window.trustedTypes.createPolicy === 'function') {
+              const names = ['scholarflow', 'scholarflow#us', 'default', 'userscript'];
+              for (const name of names) {
+                try {
+                  policy = window.trustedTypes.createPolicy(name, {
+                    createScript: (s) => s,
+                    createScriptURL: (s) => s
+                  });
+                  if (policy) break;
+                } catch (_pErr) {}
+              }
+            }
+          }
+          const trustedCode = (policy && typeof policy.createScript === 'function')
+            ? policy.createScript(wrappedCode)
+            : wrappedCode;
+
+          // 1. Direct evaluation via page global (bypasses script-src-elem when page CSP has 'unsafe-eval')
+          try {
+            const runner = typeof window !== 'undefined' ? window['ev' + 'al'] : null;
+            if (typeof runner === 'function') {
+              runner(trustedCode);
+              executed = true;
+            }
+          } catch (_evalErr) {}
+
+          // 2. Blob URL script tag
+          if (!executed && typeof URL !== 'undefined' && typeof Blob !== 'undefined') {
+            try {
+              const blob = new Blob([wrappedCode], { type: 'text/javascript' });
+              const blobUrl = URL.createObjectURL(blob);
+              const s = document.createElement('script');
+              const srcVal = (policy && typeof policy.createScriptURL === 'function')
+                ? policy.createScriptURL(blobUrl)
+                : blobUrl;
+              s.src = srcVal;
+              (document.documentElement || document.head).appendChild(s);
+              s.remove();
+              URL.revokeObjectURL(blobUrl);
+              executed = true;
+            } catch (_bErr) {}
+          }
+
+          // 3. Fallback inline script tag with nonce and Trusted Types
+          if (!executed) {
+            try {
+              const s = document.createElement('script');
+              const nonceEl = document.querySelector('script[nonce]');
+              const nonce = (nonceEl && (nonceEl.nonce || nonceEl.getAttribute('nonce'))) || '';
+              if (nonce) s.setAttribute('nonce', nonce);
+
+              let setOk = false;
+              try {
+                s.textContent = trustedCode;
+                setOk = true;
+              } catch (_tc) {
+                try {
+                  s.text = trustedCode;
+                  setOk = true;
+                } catch (_t) {
+                  try {
+                    s.appendChild(document.createTextNode(wrappedCode));
+                    setOk = true;
+                  } catch (_cn) {}
+                }
+              }
+
+              if (setOk) {
+                (document.documentElement || document.head).appendChild(s);
+                s.remove();
+                executed = true;
+              }
+            } catch (err) {
+              logs.push({ level: 'error', text: 'Lỗi inject: ' + err.message });
+            }
+          }
+          document.removeEventListener('__SF_US_LOG__', onLog);
+          return logs;
+        },
+        args: [runnerWrapper]
+      };
+
+      try {
+        results = await scriptingApi.executeScript(execOpts);
+        executed = true;
+      } catch (execErr) {
+        if (/world/i.test(String((execErr && execErr.message) || execErr))) {
+          delete execOpts.world;
+          try {
+            results = await scriptingApi.executeScript(execOpts);
+            executed = true;
+          } catch (retryErr) {
+            lastErr = retryErr;
+          }
+        } else {
+          lastErr = execErr;
+        }
+      }
+    }
+
+    // 3. Background US_RUN_ONCE fallback
+    if (!executed) {
+      try {
+        const bgRes = await browserApi.runtime.sendMessage({
+          action: 'US_RUN_ONCE',
+          tabId: targetTab.id,
+          script: Object.assign({}, scriptRecord, { code: codeToRun })
+        });
+        if (bgRes && bgRes.ok) {
+          executed = true;
+        } else {
+          throw new Error((bgRes && bgRes.error) || 'Failed to execute script on page');
+        }
+      } catch (bgErr) {
+        throw lastErr || bgErr;
+      }
+    }
+
+    return { ok: true, results: results, targetTab: targetTab };
+  }
+
   async function _updateCurrentTabUrl() {
     try {
-      const tabs = await browserApi.tabs.query({ active: true, currentWindow: true });
-      if (tabs && tabs[0] && tabs[0].url) {
-        _currentTabUrl = tabs[0].url;
+      const tab = await _getTargetWebTab();
+      if (tab && tab.url) {
+        _currentTabUrl = tab.url;
+      } else {
+        const tabs = await browserApi.tabs.query({ active: true, currentWindow: true });
+        if (tabs && tabs[0] && tabs[0].url) {
+          _currentTabUrl = tabs[0].url;
+        }
       }
     } catch (e) {}
   }
@@ -1010,23 +1294,60 @@
       btnRun.title = (typeof t === 'function' ? t('us_apply_page') : null) || 'Áp dụng ngay lên trang web đang mở';
       btnRun.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 21"></polygon></svg>';
       btnRun.onclick = async () => {
+        const originalTitle = btnRun.title;
+        btnRun.disabled = true;
         try {
-          const tabs = await browserApi.tabs.query({active: true, currentWindow: true});
-          if (!tabs || !tabs[0]) return alert((typeof t === 'function' ? t('us_apply_no_page') : null) || "Không tìm thấy trang để áp dụng!");
-          
-          if (!script.active) {
-            browserApi.tabs.reload(tabs[0].id);
-            btnRun.title = (typeof t === 'function' ? t('us_page_reloaded') : null) || 'Đã tải lại trang!';
+          const targetTab = await _getTargetWebTab();
+          if (!targetTab) {
+            alert((typeof t === 'function' ? t('us_test_no_tab') : null) || 'Không tìm thấy tab trang web nào đang mở để áp dụng!');
             return;
           }
 
-          const result = await browserApi.runtime.sendMessage({
-            action: 'US_RUN_ONCE', tabId: tabs[0].id, script: script
-          });
-          if (!result || !result.ok) throw new Error((result && result.error) || 'Unable to run script on this page');
+          await _executeScriptOnTargetTab(script, targetTab);
+
+          // Success visual feedback on button
+          btnRun.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+          btnRun.style.borderColor = '#10b981';
+          btnRun.style.color = '#34d399';
           btnRun.title = (typeof t === 'function' ? t('us_apply_success') : null) || 'Đã áp dụng thành công!';
+
+          // Update stats and badge dynamically
+          script.runCount = (Number(script.runCount) || 0) + 1;
+          script.lastRun = Date.now();
+          let countBadge = infoWrap.querySelector('.us-badge-count');
+          if (!countBadge) {
+            countBadge = document.createElement('span');
+            countBadge.className = 'us-badge us-badge-count';
+            infoWrap.appendChild(countBadge);
+          }
+          countBadge.title = ((typeof t === 'function' ? t('us_run_count_title', [script.runCount]) : null) || ('Đã chạy ' + script.runCount + ' lần')) + ' • ' + new Date(script.lastRun).toLocaleTimeString();
+          countBadge.textContent = '×' + script.runCount;
+          countBadge.style.display = 'inline-block';
+
+          if (browserApi && browserApi.runtime && typeof browserApi.runtime.sendMessage === 'function') {
+            browserApi.runtime.sendMessage({ action: 'US_SCRIPT_RAN', scriptId: script.id }).catch(() => {});
+          }
+
+          _notify(((typeof t === 'function' ? t('us_apply_success') : null) || 'Đã áp dụng thành công: ') + (script.name || 'Script'), 'success');
+
+          setTimeout(() => {
+            btnRun.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 21"></polygon></svg>';
+            btnRun.style.borderColor = '';
+            btnRun.style.color = '';
+            btnRun.title = originalTitle;
+          }, 1800);
         } catch (e) {
-          alert(((typeof t === 'function' ? t('us_apply_err') : null) || "Lỗi khi áp dụng: ") + e.message);
+          btnRun.style.borderColor = '#ef4444';
+          btnRun.style.color = '#f87171';
+          setTimeout(() => {
+            btnRun.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 21"></polygon></svg>';
+            btnRun.style.borderColor = '';
+            btnRun.style.color = '';
+          }, 1800);
+          _notify(((typeof t === 'function' ? t('us_apply_err') : null) || 'Lỗi khi áp dụng: ') + (e && e.message ? e.message : String(e)), 'error');
+          alert(((typeof t === 'function' ? t('us_apply_err') : null) || 'Lỗi khi áp dụng: ') + (e && e.message ? e.message : String(e)));
+        } finally {
+          btnRun.disabled = false;
         }
       };
 
@@ -1428,12 +1749,7 @@
     if (btnTest) {
       btnTest.onclick = async () => {
         try {
-          const tabs = await browserApi.tabs.query({active: true, currentWindow: true});
-          let targetTab = tabs && tabs[0];
-          if (!targetTab || !targetTab.url || targetTab.url.startsWith('chrome') || targetTab.url.startsWith('edge') || targetTab.url.startsWith('about') || targetTab.url.includes(location.host)) {
-            const allTabs = await browserApi.tabs.query({});
-            targetTab = allTabs.find(t => t.url && (t.url.startsWith('http://') || t.url.startsWith('https://')));
-          }
+          const targetTab = await _getTargetWebTab();
           if (!targetTab) return alert((typeof t === 'function' ? t('us_test_no_tab') : null) || "Không tìm thấy trang web (http/https) nào đang mở để chạy thử!");
 
           // Show console panel immediately
@@ -1447,212 +1763,33 @@
           }
 
           const rawCode = (document.getElementById('us-edit-code') || dom.editCode || {value: ''}).value;
-          const meta = (typeof window !== 'undefined' && window.SF_US_META) || (typeof globalThis !== 'undefined' && globalThis.SF_US_META);
-          let codeToRun = rawCode;
-          if (meta && typeof meta.sanitizeUserscriptCode === 'function') {
-            codeToRun = meta.sanitizeUserscriptCode(codeToRun);
-          }
-          const gmShim = (typeof window !== 'undefined' && window.SF_GM_SHIM) || (typeof globalThis !== 'undefined' && globalThis.SF_FULL_GM_SHIM) || '';
+          const editWorld = (document.getElementById('us-edit-world') || {}).value;
+          const execRes = await _executeScriptOnTargetTab(
+            { id: (document.getElementById('us-edit-id') || {}).value, name: scriptName, world: editWorld },
+            targetTab,
+            { code: rawCode }
+          );
 
-          const runnerWrapper = `(function() {
-  function _relay(level, args) {
-    try {
-      const text = args.map(a => {
-        try { return (typeof a === 'object' && a !== null) ? JSON.stringify(a) : String(a); }
-        catch(e) { return String(a); }
-      }).join(' ');
-      document.dispatchEvent(new CustomEvent('__SF_US_LOG__', {
-        detail: { level: level, text: text, time: Date.now() }
-      }));
-    } catch(e) {}
-  }
-  function _isBenign(str) {
-    if (!str) return false;
-    return /ResizeObserver loop/i.test(str) || /Script error\./i.test(str);
-  }
-  const _origLog = console.log, _origWarn = console.warn, _origError = console.error, _origInfo = console.info;
-  console.log = function(...a) { _relay('log', a); _origLog.apply(console, a); };
-  console.warn = function(...a) { _relay('warn', a); _origWarn.apply(console, a); };
-  console.error = function(...a) {
-    const msg = a.map(x => String((x && x.message) || x)).join(' ');
-    if (!_isBenign(msg)) _relay('error', a);
-    _origError.apply(console, a);
-  };
-  console.info = function(...a) { _relay('info', a); _origInfo.apply(console, a); };
-
-  window.addEventListener('error', function(e) {
-    if (e && e.message) {
-      if (_isBenign(e.message)) return;
-      _relay('error', ['[Uncaught Error]', e.message, e.filename ? '(' + e.filename + ':' + e.lineno + ')' : '']);
-    }
-  });
-
-  try {
-    ${gmShim}
-    ${codeToRun}
-  } catch(err) {
-    _relay('error', ['[Runtime Error]', err.stack || err.message || String(err)]);
-  }
-})();`;
-
-          // Prefer native userScripts API if available (bypasses all page CSP and Trusted Types)
-          const usApi = (typeof browserApi !== 'undefined' && browserApi.userScripts) ? browserApi.userScripts : null;
-          if (usApi && typeof usApi.execute === 'function') {
-            try {
-              await usApi.execute({
-                target: { tabId: targetTab.id },
-                js: [{ code: runnerWrapper }],
-                world: 'USER_SCRIPT'
+          if (execRes.via === 'userScripts') {
+            if (window._usLogToConsole) {
+              window._usLogToConsole('info', [(typeof t === 'function' ? t('us_test_success_userscripts') : null) || '✓ Kịch bản đã được nạp qua userScripts API thành công.']);
+            }
+          } else {
+            // Display captured logs
+            let countLogged = 0;
+            const results = execRes.results;
+            if (results && results[0] && results[0].result) {
+              results[0].result.forEach(entry => {
+                if (window._usLogToConsole) {
+                  window._usLogToConsole(entry.level, [entry.text]);
+                  countLogged++;
+                }
               });
-              if (window._usLogToConsole) {
-                window._usLogToConsole('info', [(typeof t === 'function' ? t('us_test_success_userscripts') : null) || '✓ Kịch bản đã được nạp qua userScripts API thành công.']);
-              }
-              if (btnTest) {
-                const label = btnTest.querySelector('span');
-                if (label) label.textContent = (typeof t === 'function' ? t('us_btn_ran') : null) || 'Đã chạy!';
-                btnTest.style.borderColor = '#10b981';
-                btnTest.style.color = '#34d399';
-                setTimeout(() => {
-                  if (label) label.textContent = (typeof t === 'function' ? t('us_btn_test_run') : null) || 'Chạy thử';
-                  btnTest.style.borderColor = '';
-                  btnTest.style.color = '';
-                }, 2000);
-              }
-              return;
-            } catch (_usErr) {
-              // Fall back to scripting.executeScript below
             }
-          }
 
-          // Inject and capture logs via synchronous DOM event dispatch
-          const execOpts = {
-            target: { tabId: targetTab.id },
-            world: 'MAIN',
-            func: (wrappedCode) => {
-              const logs = [];
-              const onLog = (e) => {
-                if (e.detail) logs.push(e.detail);
-              };
-              document.addEventListener('__SF_US_LOG__', onLog);
-              let executed = false;
-
-              // Trusted Types policy resolution to prevent sink type mismatch violations
-              let policy = null;
-              if (typeof window !== 'undefined' && window.trustedTypes) {
-                try {
-                  if (window.trustedTypes.defaultPolicy && typeof window.trustedTypes.defaultPolicy.createScript === 'function') {
-                    policy = window.trustedTypes.defaultPolicy;
-                  }
-                } catch (_e) {}
-                if (!policy && typeof window.trustedTypes.createPolicy === 'function') {
-                  const names = ['scholarflow', 'scholarflow#us', 'default', 'userscript'];
-                  for (const name of names) {
-                    try {
-                      policy = window.trustedTypes.createPolicy(name, {
-                        createScript: (s) => s,
-                        createScriptURL: (s) => s
-                      });
-                      if (policy) break;
-                    } catch (_pErr) {}
-                  }
-                }
-              }
-              const trustedCode = (policy && typeof policy.createScript === 'function')
-                ? policy.createScript(wrappedCode)
-                : wrappedCode;
-
-              // 1. Direct evaluation via page global (bypasses script-src-elem when page CSP has 'unsafe-eval')
-              try {
-                const runner = typeof window !== 'undefined' ? window['ev' + 'al'] : null;
-                if (typeof runner === 'function') {
-                  runner(trustedCode);
-                  executed = true;
-                }
-              } catch (_evalErr) {}
-
-              // 2. Blob URL script tag (external source, bypasses inline script-src-elem)
-              if (!executed && typeof URL !== 'undefined' && typeof Blob !== 'undefined') {
-                try {
-                  const blob = new Blob([wrappedCode], { type: 'text/javascript' });
-                  const blobUrl = URL.createObjectURL(blob);
-                  const s = document.createElement('script');
-                  const srcVal = (policy && typeof policy.createScriptURL === 'function')
-                    ? policy.createScriptURL(blobUrl)
-                    : blobUrl;
-                  s.src = srcVal;
-                  (document.documentElement || document.head).appendChild(s);
-                  s.remove();
-                  URL.revokeObjectURL(blobUrl);
-                  executed = true;
-                } catch (_bErr) {}
-              }
-
-              // 3. Fallback inline script tag with nonce and Trusted Types
-              if (!executed) {
-                try {
-                  const s = document.createElement('script');
-                  const nonceEl = document.querySelector('script[nonce]');
-                  const nonce = (nonceEl && (nonceEl.nonce || nonceEl.getAttribute('nonce'))) || '';
-                  if (nonce) s.setAttribute('nonce', nonce);
-
-                  let setOk = false;
-                  try {
-                    s.textContent = trustedCode;
-                    setOk = true;
-                  } catch (_tc) {
-                    try {
-                      s.text = trustedCode;
-                      setOk = true;
-                    } catch (_t) {
-                      try {
-                        s.appendChild(document.createTextNode(wrappedCode));
-                        setOk = true;
-                      } catch (_cn) {}
-                    }
-                  }
-
-                  if (setOk) {
-                    (document.documentElement || document.head).appendChild(s);
-                    s.remove();
-                    executed = true;
-                  } else {
-                    throw new Error('Trusted Types blocked script assignment');
-                  }
-                } catch (err) {
-                  logs.push({ level: 'error', text: 'Lỗi inject: ' + err.message });
-                }
-              }
-              document.removeEventListener('__SF_US_LOG__', onLog);
-              return logs;
-            },
-            args: [runnerWrapper]
-          };
-
-          let results;
-          try {
-            results = await browserApi.scripting.executeScript(execOpts);
-          } catch (execErr) {
-            if (/world/i.test(String((execErr && execErr.message) || execErr))) {
-              delete execOpts.world;
-              results = await browserApi.scripting.executeScript(execOpts);
-            } else {
-              throw execErr;
+            if (countLogged === 0 && window._usLogToConsole) {
+              window._usLogToConsole('info', [(typeof t === 'function' ? t('us_test_success_page') : null) || '✓ Script đã được nạp vào trang thành công. (Không có console.log đồng bộ)']);
             }
-          }
-
-          // Display captured logs
-          let countLogged = 0;
-          if (results && results[0] && results[0].result) {
-            results[0].result.forEach(entry => {
-              if (window._usLogToConsole) {
-                window._usLogToConsole(entry.level, [entry.text]);
-                countLogged++;
-              }
-            });
-          }
-
-          if (countLogged === 0 && window._usLogToConsole) {
-            window._usLogToConsole('info', [(typeof t === 'function' ? t('us_test_success_page') : null) || '✓ Script đã được nạp vào trang thành công. (Không có console.log đồng bộ)']);
           }
 
           const label = btnTest.querySelector('span');
