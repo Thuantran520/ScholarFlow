@@ -172,7 +172,7 @@
 
 .scratchpad-textarea:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.25);
+  box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.25);
 }
 
 .scratchpad-textarea::placeholder {

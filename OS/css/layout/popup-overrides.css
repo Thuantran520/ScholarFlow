@@ -66,12 +66,12 @@ body {
 .btn-primary {
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
   border-color: rgba(var(--primary-rgb), 0.5);
-  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.25);
+  box-shadow: 0 2px 8px rgba(var(--primary-rgb), 0.25);
 }
 
 .btn-primary:hover {
   background: linear-gradient(135deg, var(--primary-hover) 0%, var(--primary) 100%);
-  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.4);
+  box-shadow: 0 4px 14px rgba(var(--primary-rgb), 0.4);
 }
 
 /* Secondary button */

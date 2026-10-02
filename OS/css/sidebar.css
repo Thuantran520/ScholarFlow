@@ -90,7 +90,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 1px 6px rgba(2, 132, 199, 0.35);
+      box-shadow: 0 1px 6px rgba(var(--primary-rgb), 0.35);
       flex-shrink: 0;
     }
     .header-icon {
@@ -649,7 +649,7 @@
     .btn-primary:hover {
       background: var(--primary);
       color: #ffffff;
-      box-shadow: 0 0 16px rgba(14, 165, 233, 0.45);
+      box-shadow: 0 0 16px rgba(var(--primary-rgb), 0.45);
     }
     .btn-secondary {
       background: rgba(30, 41, 59, 0.6);
@@ -1296,7 +1296,7 @@
       background: linear-gradient(135deg, var(--primary-hover) 0%, var(--primary-active) 100%);
       color: #ffffff;
       border: 1px solid rgba(var(--primary-rgb), 0.4);
-      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25);
+      box-shadow: 0 2px 8px rgba(var(--primary-rgb), 0.25);
       cursor: pointer;
       transition: all 0.2s ease;
       white-space: nowrap;
@@ -1305,7 +1305,7 @@
     .btn.biblio-action-btn-primary:hover {
       background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
       border-color: rgba(var(--primary-rgb), 0.6);
-      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4);
+      box-shadow: 0 4px 14px rgba(var(--primary-rgb), 0.4);
       transform: translateY(-1px);
     }
     .btn.biblio-action-btn-primary:active {
@@ -1629,7 +1629,7 @@
 .todo-checkbox-wrap input[type="checkbox"]:checked + .todo-checkbox-box {
   border-color: var(--primary);
   background: var(--primary);
-  box-shadow: 0 0 10px rgba(14, 165, 233, 0.45);
+  box-shadow: 0 0 10px rgba(var(--primary-rgb), 0.45);
 }
 .todo-checkbox-wrap .todo-check-icon {
   display: none;
@@ -3471,7 +3471,7 @@ body.is-popup .ai-chat-wrapper { max-height:calc(600px - 140px); }
   align-items: center;
   justify-content: center;
   color: white;
-  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);
+  box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.35);
 }
 
 .flow-title-group h3 {
@@ -3673,14 +3673,14 @@ body.is-popup .ai-chat-wrapper { max-height:calc(600px - 140px); }
   align-items: center;
   gap: 6px;
   transition: all 0.2s;
-  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.3);
+  box-shadow: 0 2px 8px rgba(var(--primary-rgb), 0.3);
   white-space: nowrap;
 }
 
 .flow-btn-primary:hover {
   background: linear-gradient(135deg, var(--primary-active), var(--primary-hover));
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4);
+  box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.4);
 }
 
 .flow-btn-secondary {
@@ -3830,7 +3830,7 @@ body.is-popup .ai-chat-wrapper { max-height:calc(600px - 140px); }
   background: linear-gradient(135deg, var(--primary-hover), var(--primary-active));
   color: white;
   border-bottom-right-radius: 3px;
-  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.2);
+  box-shadow: 0 2px 8px rgba(var(--primary-rgb), 0.2);
 }
 
 .flow-bubble.remote {
@@ -4024,7 +4024,7 @@ body.is-popup .ai-chat-wrapper { max-height:calc(600px - 140px); }
   cursor: pointer;
   transition: all 0.2s;
   flex-shrink: 0;
-  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.3);
+  box-shadow: 0 2px 6px rgba(var(--primary-rgb), 0.3);
 }
 
 .flow-send-btn:hover {

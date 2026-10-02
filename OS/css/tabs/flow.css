@@ -44,7 +44,7 @@
   align-items: center;
   justify-content: center;
   color: white;
-  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);
+  box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.35);
 }
 
 .flow-title-group h3 {

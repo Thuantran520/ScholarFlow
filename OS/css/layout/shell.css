@@ -35,7 +35,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 1px 6px rgba(2, 132, 199, 0.35);
+  box-shadow: 0 1px 6px rgba(var(--primary-rgb), 0.35);
   flex-shrink: 0;
 }
 

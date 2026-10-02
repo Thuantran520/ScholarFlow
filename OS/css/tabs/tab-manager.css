@@ -1678,7 +1678,7 @@
   z-index: 60;
   transform-origin: center;
   transform: translate(calc(var(--fan) * 34px), calc(var(--fan) * -20px)) rotate(0deg) scale(1.24);
-  box-shadow: inset 0 0 0 1px rgba(125, 211, 252, 0.8), 0 6px 14px rgba(0, 0, 0, 0.65), 0 0 0 3px rgba(125, 211, 252, 0.16);
+  box-shadow: inset 0 0 0 1px var(--primary-light, rgba(var(--primary-rgb), 0.8)), 0 6px 14px rgba(0, 0, 0, 0.65), 0 0 0 3px rgba(var(--primary-rgb), 0.16);
 }
 
 /* Position pill (1/3) riding the sleeve corner indicator */
