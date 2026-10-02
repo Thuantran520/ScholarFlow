@@ -22,9 +22,9 @@
 }
 #tab-lingua .lng-subtab:hover { color: #e2e8f0; }
 #tab-lingua .lng-subtab.active {
-  color: #38bdf8;
-  background: rgba(56, 189, 248, 0.1);
-  border-color: rgba(56, 189, 248, 0.35);
+  color: var(--primary);
+  background: rgba(var(--primary-rgb), 0.1);
+  border-color: rgba(var(--primary-rgb), 0.35);
 }
 #tab-lingua .lng-subpanel { display: none; }
 #tab-lingua .lng-subpanel.active { display: block; }

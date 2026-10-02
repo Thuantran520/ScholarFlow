@@ -45,7 +45,7 @@ body {
   transition: transform 0.06s ease, filter 0.15s ease;
 }
 .gbl-btn:active { transform: translateY(1px); }
-.gbl-btn-primary { background: #2563eb; color: #fff; }
+.gbl-btn-primary { background: var(--primary); color: #0f172a; font-weight: 700; border: 1px solid rgba(var(--primary-rgb), 0.5); }
 .gbl-btn-primary:hover { filter: brightness(1.15); }
 .gbl-btn-ghost { background: rgba(148, 163, 184, 0.1); color: #94a3b8; border-color: rgba(148, 163, 184, 0.25); }
 .gbl-btn-ghost:hover { color: #cbd5e1; }

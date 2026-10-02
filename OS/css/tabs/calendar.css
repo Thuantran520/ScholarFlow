@@ -9,7 +9,7 @@
   height: 28px;
   padding: 0 10px;
   background: rgba(15, 23, 42, 0.7);
-  border: 1px solid rgba(56, 189, 248, 0.25);
+  border: 1px solid rgba(var(--primary-rgb), 0.25);
   border-radius: 7px;
   color: #94a3b8;
   font-size: 11px;
@@ -22,25 +22,25 @@
 
 .cal-tool-btn:hover {
   background: rgba(30, 41, 59, 0.9);
-  border-color: rgba(56, 189, 248, 0.45);
-  color: #38bdf8;
+  border-color: rgba(var(--primary-rgb), 0.45);
+  color: var(--primary);
   transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(56, 189, 248, 0.15);
+  box-shadow: 0 2px 6px rgba(var(--primary-rgb), 0.15);
 }
 
 .cal-tool-btn.is-primary {
-  background: linear-gradient(135deg, rgba(14, 165, 233, 0.25), rgba(56, 189, 248, 0.15));
-  border: 1px solid rgba(56, 189, 248, 0.45);
-  color: #38bdf8;
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.25), rgba(var(--primary-rgb), 0.15));
+  border: 1px solid rgba(var(--primary-rgb), 0.45);
+  color: var(--primary);
   font-weight: 700;
-  box-shadow: 0 1px 4px rgba(56, 189, 248, 0.18);
+  box-shadow: 0 1px 4px rgba(var(--primary-rgb), 0.18);
 }
 
 .cal-tool-btn.is-primary:hover {
-  background: linear-gradient(135deg, rgba(14, 165, 233, 0.38), rgba(56, 189, 248, 0.28));
-  border-color: rgba(56, 189, 248, 0.75);
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.38), rgba(var(--primary-rgb), 0.28));
+  border-color: rgba(var(--primary-rgb), 0.75);
   color: #e0f2fe;
-  box-shadow: 0 2px 10px rgba(56, 189, 248, 0.3);
+  box-shadow: 0 2px 10px rgba(var(--primary-rgb), 0.3);
 }
 
 .btn-text-chip {
@@ -51,16 +51,16 @@
   font-size: 10px;
   font-weight: 600;
   border-radius: 6px;
-  background: rgba(56, 189, 248, 0.08);
-  border: 1px solid rgba(56, 189, 248, 0.22);
-  color: #7dd3fc;
+  background: rgba(var(--primary-rgb), 0.08);
+  border: 1px solid rgba(var(--primary-rgb), 0.22);
+  color: var(--primary-light);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .btn-text-chip:hover {
-  background: rgba(56, 189, 248, 0.22);
-  border-color: rgba(56, 189, 248, 0.5);
+  background: rgba(var(--primary-rgb), 0.22);
+  border-color: rgba(var(--primary-rgb), 0.5);
   color: #ffffff;
   transform: translateY(-1px);
 }
@@ -80,16 +80,16 @@
 }
 
 .cal-nav-btn:hover {
-  background: rgba(56, 189, 248, 0.15);
-  border-color: rgba(56, 189, 248, 0.4);
-  color: #38bdf8;
+  background: rgba(var(--primary-rgb), 0.15);
+  border-color: rgba(var(--primary-rgb), 0.4);
+  color: var(--primary);
 }
 
 .cal-today-btn {
-  background: rgba(56, 189, 248, 0.12);
-  border: 1px solid rgba(56, 189, 248, 0.3);
+  background: rgba(var(--primary-rgb), 0.12);
+  border: 1px solid rgba(var(--primary-rgb), 0.3);
   border-radius: 999px;
-  color: #7dd3fc;
+  color: var(--primary, var(--primary));
   font-size: 10.5px;
   font-weight: 700;
   padding: 4px 14px;
@@ -98,8 +98,8 @@
 }
 
 .cal-today-btn:hover {
-  background: rgba(56, 189, 248, 0.22);
-  color: #e0f2fe;
+  background: rgba(var(--primary-rgb), 0.22);
+  color: #ffffff;
 }
 
 .cal-grid {
@@ -134,7 +134,7 @@
 }
 
 .cal-cell:hover {
-  border-color: rgba(56, 189, 248, 0.45);
+  border-color: rgba(var(--primary-rgb), 0.45);
   background: rgba(30, 41, 59, 0.75);
 }
 
@@ -143,13 +143,13 @@
 }
 
 .cal-cell.is-selected {
-  border-color: #38bdf8;
-  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.55) inset;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px rgba(var(--primary-rgb), 0.55) inset;
   background: rgba(30, 41, 59, 0.8);
 }
 
 .cal-cell.is-today {
-  border-color: rgba(56, 189, 248, 0.6);
+  border-color: rgba(var(--primary-rgb), 0.6);
 }
 
 .cal-day-num {
@@ -167,12 +167,12 @@
 }
 
 .cal-cell.is-today .cal-day-num {
-  background: linear-gradient(135deg, #0ea5e9, #818cf8);
+  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
   color: #ffffff;
 }
 
 .cal-cell.is-selected:not(.is-today) .cal-day-num {
-  color: #38bdf8;
+  color: var(--primary);
 }
 
 .cal-chip {
@@ -186,8 +186,8 @@
   text-overflow: ellipsis;
   min-width: 0;
   color: #e2e8f0;
-  background: #38bdf833;
-  border-left: 2px solid #38bdf8;
+  background: rgba(var(--primary-rgb), 0.2);
+  border-left: 2px solid var(--primary);
 }
 
 .cal-chip-more {
@@ -243,7 +243,7 @@
 }
 
 .cal-feed-btn:hover {
-  color: #38bdf8;
+  color: var(--primary);
 }
 
 .cal-feed-btn.cal-del:hover {
@@ -254,7 +254,7 @@
   display: flex;
   flex-direction: column;
   gap: 5px;
-  border-left: 3.5px solid #38bdf8;
+  border-left: 3.5px solid var(--primary);
   background: rgba(30, 41, 59, 0.65);
   border: 1px solid rgba(255, 255, 255, 0.07);
   border-left-width: 3.5px;
@@ -279,20 +279,21 @@
 .cal-event-time {
   display: inline-flex;
   align-items: center;
-  gap: 4.5px;
+  gap: 5px;
   font-size: 10.5px;
   font-weight: 700;
   font-family: ui-monospace, Consolas, monospace;
-  color: #7dd3fc;
-  background: rgba(56, 189, 248, 0.12);
-  border: 1px solid rgba(56, 189, 248, 0.25);
+  color: var(--primary-light);
+  background: rgba(var(--primary-rgb), 0.14);
+  border: 1px solid rgba(var(--primary-rgb), 0.35);
   border-radius: 6px;
-  padding: 2px 7px;
+  padding: 2.5px 8px;
   line-height: 1.25;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .cal-event-time svg {
-  color: #38bdf8;
+  color: var(--primary);
 }
 
 .cal-event-body {
@@ -355,14 +356,14 @@
 }
 
 .cal-view-btn:hover {
-  color: #7dd3fc;
-  background: rgba(56, 189, 248, 0.1);
+  color: var(--primary-light);
+  background: rgba(var(--primary-rgb), 0.1);
 }
 
 .cal-view-btn.active {
-  background: linear-gradient(135deg, rgba(14, 165, 233, 0.25), rgba(129, 140, 248, 0.25));
-  border: 1px solid rgba(56, 189, 248, 0.4);
-  color: #e0f2fe;
+  background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.25), rgba(var(--primary-rgb), 0.12));
+  border: 1px solid rgba(var(--primary-rgb), 0.5);
+  color: var(--text, #ffffff);
 }
 
 /* Calendar: Week View */
@@ -380,11 +381,11 @@
 }
 
 .cal-week-head:hover {
-  border-color: rgba(56, 189, 248, 0.45);
+  border-color: rgba(var(--primary-rgb), 0.45);
 }
 
 .cal-week-head.is-today .cal-week-head-date {
-  background: linear-gradient(135deg, #0ea5e9, #818cf8);
+  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
   color: #fff;
 }
 
@@ -424,17 +425,17 @@
 }
 
 .cal-wcell:hover {
-  border-color: rgba(56, 189, 248, 0.45);
+  border-color: rgba(var(--primary-rgb), 0.45);
   background: rgba(30, 41, 59, 0.75);
 }
 
 .cal-wcell.is-today {
-  border-color: rgba(56, 189, 248, 0.6);
+  border-color: rgba(var(--primary-rgb), 0.6);
 }
 
 .cal-wcell.is-selected {
-  border-color: #38bdf8;
-  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.55) inset;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px rgba(var(--primary-rgb), 0.55) inset;
   background: rgba(30, 41, 59, 0.8);
 }
 
@@ -470,12 +471,12 @@
 }
 
 .cal-list-day-head.is-today {
-  color: #38bdf8;
+  color: var(--primary);
 }
 
 .cal-list-day-head.is-today::after {
   content: "\00B7";
-  color: #38bdf8;
+  color: var(--primary);
 }
 
 /* Calendar: Feed Legend Row (Hidden State) */
@@ -492,7 +493,7 @@
 }
 
 .cal-feed-btn.cal-eye:hover {
-  color: #7dd3fc;
+  color: var(--primary-light);
 }
 
 .cal-feed-btn.cal-eye.is-off:hover {
@@ -517,7 +518,7 @@
 }
 
 .cal-event-item.is-allday {
-  background: rgba(56, 189, 248, 0.08);
+  background: rgba(var(--primary-rgb), 0.08);
 }
 
 .cal-event-item.is-allday .cal-event-title {
@@ -540,10 +541,10 @@
   gap: 6px;
   width: 100%;
   padding: 7px 10px;
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.16), rgba(129, 140, 248, 0.16));
-  border: 1px dashed rgba(56, 189, 248, 0.4);
+  background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.16), rgba(129, 140, 248, 0.16));
+  border: 1px dashed rgba(var(--primary-rgb), 0.4);
   border-radius: 8px;
-  color: #7dd3fc;
+  color: var(--primary-light);
   font-size: 11.5px;
   font-weight: 700;
   cursor: pointer;
@@ -552,15 +553,15 @@
 }
 
 .cal-manual-toggle:hover {
-  border-color: rgba(56, 189, 248, 0.7);
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.24), rgba(129, 140, 248, 0.24));
+  border-color: rgba(var(--primary-rgb), 0.7);
+  background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.24), rgba(129, 140, 248, 0.24));
   color: #e0f2fe;
 }
 
 .cal-manual-toggle.active {
   border-style: solid;
-  border-color: rgba(56, 189, 248, 0.55);
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(129, 140, 248, 0.2));
+  border-color: rgba(var(--primary-rgb), 0.55);
+  background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.2), rgba(129, 140, 248, 0.2));
   color: #e0f2fe;
 }
 
@@ -638,8 +639,8 @@
 }
 
 .cal-switch input:checked + .cal-switch-track {
-  background: linear-gradient(135deg, #38bdf8, #818cf8);
-  border-color: rgba(56, 189, 248, 0.6);
+  background: linear-gradient(135deg, var(--primary), #818cf8);
+  border-color: rgba(var(--primary-rgb), 0.6);
 }
 
 .cal-switch input:checked + .cal-switch-track::after {
@@ -648,7 +649,7 @@
 }
 
 .cal-switch input:focus-visible + .cal-switch-track {
-  outline: 2px solid rgba(56, 189, 248, 0.5);
+  outline: 2px solid rgba(var(--primary-rgb), 0.5);
   outline-offset: 1px;
 }
 
@@ -704,7 +705,7 @@
 .cal-color-hex {
   font-size: 10.5px;
   font-weight: 700;
-  color: #7dd3fc;
+  color: var(--primary-light);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.03em;
 }
@@ -812,8 +813,8 @@
   margin-top: 8px;
   padding: 8px 10px;
   background: linear-gradient(135deg, rgba(15, 23, 42, 0.75), rgba(30, 41, 59, 0.6));
-  border: 1px solid rgba(56, 189, 248, 0.28);
-  border-left: 3.5px solid #38bdf8;
+  border: 1px solid rgba(var(--primary-rgb), 0.28);
+  border-left: 3.5px solid var(--primary);
   border-radius: 8px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
   box-sizing: border-box;
@@ -856,7 +857,7 @@
 }
 
 .cal-meeting-platform-badge svg {
-  color: #38bdf8;
+  color: var(--primary);
 }
 
 .cal-meeting-badge-live {
@@ -913,20 +914,17 @@
   font-weight: 700;
   text-decoration: none !important;
   cursor: pointer;
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(14, 165, 233, 0.3));
+  background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.2), rgba(14, 165, 233, 0.3));
   color: #e0f2fe;
-  border: 1px solid rgba(56, 189, 248, 0.5);
+  border: 1px solid rgba(var(--primary-rgb), 0.5);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
   transition: all 0.16s ease;
   white-space: nowrap;
 }
 
 .cal-btn-join-meeting:hover {
-  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
-  border-color: #38bdf8;
-  color: #ffffff;
-  box-shadow: 0 3px 10px rgba(56, 189, 248, 0.35);
-  transform: translateY(-1px);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+  color: #0f172a;
 }
 
 .cal-btn-join-meeting.is-live {
@@ -963,7 +961,7 @@
 }
 
 .cal-event-link {
-  color: #38bdf8;
+  color: var(--primary);
   text-decoration: none;
   font-size: 11px;
   word-break: break-all;
@@ -974,5 +972,273 @@
 
 .cal-event-link:hover {
   text-decoration: underline;
-  color: #7dd3fc;
+  color: var(--primary-light);
 }
+
+/* ── Weather & Humidity Forecast Styles (Calendar Tab) ── */
+.cal-weather-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.75), rgba(15, 23, 42, 0.85));
+  border: 1px solid rgba(var(--primary-rgb), 0.28);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #cbd5e1;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  line-height: 1;
+}
+
+.cal-weather-pill:hover {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95));
+  border-color: rgba(var(--primary-rgb), 0.6);
+  color: #f0f9ff;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(var(--primary-rgb), 0.22);
+}
+
+.cal-weather-pill.has-rain-alert {
+  border-color: rgba(var(--primary-rgb), 0.8);
+  background: rgba(var(--primary-rgb), 0.18);
+  color: var(--primary-light);
+  animation: calWeatherRainGlow 2.5s infinite;
+}
+
+@keyframes calWeatherRainGlow {
+  0%, 100% { border-color: rgba(var(--primary-rgb), 0.4); box-shadow: 0 0 0 rgba(var(--primary-rgb), 0); }
+  50% { border-color: rgba(var(--primary-rgb), 0.9); box-shadow: 0 0 8px rgba(var(--primary-rgb), 0.4); }
+}
+
+.cal-day-weather-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #94a3b8;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 2px 6px;
+  flex-shrink: 0;
+}
+
+.cal-weather-hero {
+  background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.16) 0%, rgba(30, 41, 59, 0.72) 100%);
+  border: 1px solid rgba(var(--primary-rgb), 0.35);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 0 12px rgba(var(--primary-rgb), 0.15);
+  backdrop-filter: blur(8px);
+}
+
+.cal-weather-hero-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cal-weather-hero-icon {
+  font-size: 34px;
+  line-height: 1;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.3));
+}
+
+.cal-weather-hero-temp {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--text, #ffffff);
+  line-height: 1.1;
+  letter-spacing: -0.5px;
+}
+
+.cal-weather-hero-desc {
+  font-size: 11px;
+  color: var(--primary-light, #7dd3fc);
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.cal-weather-hero-metrics {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  font-size: 11px;
+  color: #cbd5e1;
+}
+
+.cal-weather-metric-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-weight: 600;
+  font-size: 10.5px;
+  color: #e2e8f0;
+}
+
+.cal-weather-metric-pill.alert {
+  border-color: rgba(245, 158, 11, 0.5);
+  color: #fde68a;
+  background: rgba(245, 158, 11, 0.15);
+}
+
+.cal-weather-alert-box {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(var(--primary-rgb), 0.12) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 11px;
+  color: #fde68a;
+  line-height: 1.45;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cal-weather-day-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(30, 41, 59, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 11.5px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
+}
+
+.cal-weather-day-card:hover {
+  background: rgba(30, 41, 59, 0.8);
+  border-color: rgba(var(--primary-rgb), 0.35);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+}
+
+.cal-weather-day-card.is-today {
+  border-color: rgba(var(--primary-rgb), 0.45);
+  background: rgba(var(--primary-rgb), 0.08);
+  box-shadow: 0 0 10px rgba(var(--primary-rgb), 0.15);
+}
+
+.cal-weather-day-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.cal-weather-day-icon {
+  font-size: 20px;
+  line-height: 1;
+  width: 24px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.cal-weather-day-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.cal-weather-day-date {
+  font-weight: 700;
+  color: #f1f5f9;
+  font-size: 11.5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cal-weather-day-tag {
+  font-size: 9px;
+  font-weight: 700;
+  background: var(--primary);
+  color: #0f172a;
+  padding: 1px 5px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.cal-weather-day-cond {
+  font-size: 10px;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cal-weather-day-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.cal-weather-temp-range {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #cbd5e1;
+}
+
+.cal-weather-temp-min {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.cal-weather-temp-bar {
+  width: 28px;
+  height: 4px;
+  background: linear-gradient(90deg, #38bdf8 0%, #f59e0b 100%);
+  border-radius: 2px;
+  opacity: 0.8;
+}
+
+.cal-weather-temp-max {
+  color: #f1f5f9;
+  font-weight: 700;
+}
+
+.cal-weather-rain-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  color: var(--primary-light, #7dd3fc);
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 6px;
+  min-width: 48px;
+  justify-content: center;
+}
+
+.cal-weather-rain-pill.high {
+  background: rgba(244, 63, 94, 0.15);
+  border-color: rgba(244, 63, 94, 0.4);
+  color: #fecdd3;
+}
+

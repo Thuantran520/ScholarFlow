@@ -11,7 +11,7 @@ body {
   background: rgba(15, 23, 42, 0.75);
   padding: 3px;
   border-radius: 8px;
-  border: 1px solid rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(var(--primary-rgb), 0.15);
 }
 
 /* Sub-tab buttons */
@@ -31,8 +31,8 @@ body {
 
 .sub-tab-btn.active {
   background: linear-gradient(180deg, #1e293b 0%, #172033 100%);
-  color: #38bdf8;
-  border-color: rgba(56, 189, 248, 0.4);
+  color: var(--primary);
+  border-color: rgba(var(--primary-rgb), 0.4);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
   font-weight: 700;
 }
@@ -40,7 +40,7 @@ body {
 /* Citation Box */
 .citation-box {
   background: linear-gradient(180deg, #1e293b 0%, #151e2e 100%);
-  border: 1px solid rgba(56, 189, 248, 0.25);
+  border: 1px solid rgba(var(--primary-rgb), 0.25);
   border-radius: 8px;
   padding: 10px 12px;
   margin-bottom: 10px;
@@ -64,13 +64,13 @@ body {
 
 /* Primary button */
 .btn-primary {
-  background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
-  border-color: rgba(56, 189, 248, 0.5);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+  border-color: rgba(var(--primary-rgb), 0.5);
   box-shadow: 0 2px 8px rgba(14, 165, 233, 0.25);
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  background: linear-gradient(135deg, var(--primary-hover) 0%, var(--primary) 100%);
   box-shadow: 0 4px 14px rgba(14, 165, 233, 0.4);
 }
 
@@ -154,14 +154,14 @@ body {
 
 .switch-row:hover {
   background: rgba(30, 41, 59, 0.75);
-  border-color: rgba(56, 189, 248, 0.35);
+  border-color: rgba(var(--primary-rgb), 0.35);
 }
 
 /* Custom switch checked state */
 .custom-switch input:checked + .switch-slider {
-  background: linear-gradient(135deg, #0ea5e9, #0284c7);
-  border-color: #38bdf8;
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+  background: linear-gradient(135deg, var(--primary-hover), var(--primary));
+  border-color: var(--primary);
+  box-shadow: 0 0 8px rgba(var(--primary-rgb), 0.4);
 }
 
 /* Redacted item cards */
@@ -175,7 +175,7 @@ body {
 
 .redacted-item-card:hover {
   background: linear-gradient(180deg, #243247 0%, #1e293b 100%);
-  border-color: rgba(56, 189, 248, 0.5);
+  border-color: rgba(var(--primary-rgb), 0.5);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   transform: translateY(-1px);
 }
@@ -190,7 +190,7 @@ body {
 /* Dual-tabs bar */
 .dual-tabs-bar {
   background: linear-gradient(180deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.85) 100%);
-  border: 1px solid rgba(56, 189, 248, 0.25);
+  border: 1px solid rgba(var(--primary-rgb), 0.25);
   border-radius: 9px;
   padding: 8px 10px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
@@ -198,7 +198,7 @@ body {
 
 /* Cookie textarea focus */
 .cookie-textarea:focus {
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2), 0 0 0 2px rgba(56, 189, 248, 0.15);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2), 0 0 0 2px rgba(var(--primary-rgb), 0.15);
 }
 
 /* AI Chat history scrollbar */
@@ -233,7 +233,7 @@ body {
   width: 14px;
   height: 14px;
   cursor: pointer;
-  accent-color: #38bdf8;
+  accent-color: var(--primary);
 }
 
 .todo-text {
@@ -291,8 +291,8 @@ body.is-popup .ai-provider-pill {
 }
 
 body.is-popup .ai-provider-pill.active {
-  background: rgba(56, 189, 248, 0.16);
-  color: #7dd3fc;
+  background: rgba(var(--primary-rgb), 0.16);
+  color: var(--primary-light);
 }
 
 body.is-popup .ai-current-page {
@@ -326,17 +326,17 @@ body.is-popup .ai-msg-assistant .ai-bubble {
   border-radius: 14px 14px 14px 4px;
 }
 
-body.is-popup .ai-quick-chips {
-  padding: 5px 8px 7px;
-  scrollbar-color: rgba(139, 92, 246, 0.55) transparent;
+body.is-popup .ai-quick-chips,
+body.is-popup .ai-pages-list {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
-body.is-popup .ai-quick-chips::-webkit-scrollbar-thumb {
-  background: rgba(139, 92, 246, 0.45);
-}
-
-body.is-popup .ai-quick-chips::-webkit-scrollbar-thumb:hover {
-  background: rgba(139, 92, 246, 0.7);
+body.is-popup .ai-quick-chips::-webkit-scrollbar,
+body.is-popup .ai-pages-list::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 body.is-popup .ai-chip {
@@ -368,7 +368,7 @@ body.is-popup .ai-send-btn {
   height: 30px;
   padding: 0 14px;
   border-radius: 9px;
-  background: linear-gradient(135deg, #7c3aed, #0ea5e9);
+  background: linear-gradient(135deg, #7c3aed, var(--primary));
 }
 
 body.is-popup .ai-disclaimer-row {

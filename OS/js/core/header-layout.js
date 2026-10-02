@@ -9,6 +9,26 @@
 
   var HEADER_STORE_KEY = 'sf_header_settings';
   var NAV_STORE_KEY = 'sf_nav_settings';
+  var THEME_STORE_KEY = 'sf_theme_settings';
+  var VALID_ACCENTS = ['cyan', 'amber', 'emerald', 'violet', 'rose', 'mono'];
+  var themeState = { accent: 'cyan', motion: 'smooth' };
+
+  // Immediate pre-render theme & motion application to prevent flash of default styling
+  try {
+    var rawTheme = localStorage.getItem(THEME_STORE_KEY);
+    if (rawTheme) {
+      var pTheme = JSON.parse(rawTheme);
+      if (pTheme && VALID_ACCENTS.indexOf(pTheme.accent) !== -1) {
+        themeState.accent = pTheme.accent;
+      }
+      if (pTheme && (pTheme.motion === 'smooth' || pTheme.motion === 'instant')) {
+        themeState.motion = pTheme.motion;
+      }
+    }
+    document.documentElement.setAttribute('data-theme', themeState.accent);
+    document.documentElement.setAttribute('data-motion', themeState.motion);
+  } catch (e) {}
+
   var HEADER_ITEMS = ['brand', 'lang', 'trust', 'badge'];
   var HEADER_LABEL_KEYS = {
     brand: 'hdrs_item_brand',
@@ -709,6 +729,12 @@
       notifyNavChanged();
 
       updateNavPill(true);
+    try {
+      if (typeof calBuildMonth === 'function' && typeof calRender === 'function') {
+        calBuildMonth();
+        calRender();
+      }
+    } catch (e) {}
       setTimeout(function () { updateNavPill(true); }, 50);
     };
     if (typeof storGet === 'function') {
@@ -738,8 +764,73 @@
     }
   }
 
+  function applyThemeSettings() {
+    if (VALID_ACCENTS.indexOf(themeState.accent) === -1) themeState.accent = 'cyan';
+    if (themeState.motion !== 'smooth' && themeState.motion !== 'instant') themeState.motion = 'smooth';
+
+    document.documentElement.setAttribute('data-theme', themeState.accent);
+    document.documentElement.setAttribute('data-motion', themeState.motion);
+    if (document.body) {
+      document.body.setAttribute('data-theme', themeState.accent);
+      document.body.setAttribute('data-motion', themeState.motion);
+    }
+
+    document.querySelectorAll('.hdrs-theme-chip').forEach(function (chip) {
+      var val = chip.getAttribute('data-theme-val') || chip.getAttribute('data-theme-accent') || chip.dataset.themeVal || chip.dataset.themeAccent;
+      chip.classList.toggle('active', val === themeState.accent);
+    });
+
+    document.querySelectorAll('#hdrs-motion-seg .hdrs-seg-btn').forEach(function (btn) {
+      var val = btn.getAttribute('data-motion-val') || btn.getAttribute('data-hdrs-motion') || btn.dataset.motionVal || btn.dataset.hdrsMotion;
+      btn.classList.toggle('active', val === themeState.motion);
+    });
+
+    updateNavPill(true);
+  }
+
+  function saveThemeSettings(cb) {
+    var after = cb || function () {};
+    try {
+      localStorage.setItem(THEME_STORE_KEY, JSON.stringify(themeState));
+    } catch (e) {}
+
+    if (typeof storSet === 'function') {
+      storSet((function (obj) { obj[THEME_STORE_KEY] = themeState; return obj; })({}), after);
+    } else if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      var p = chrome.storage.local.set((function (obj) { obj[THEME_STORE_KEY] = themeState; return obj; })({}));
+      if (p && typeof p.then === 'function') p.then(after).catch(function () { after(); });
+      else after();
+    } else {
+      after();
+    }
+  }
+
+  function loadThemeSettings() {
+    var done = function (res) {
+      var stored = res && res[THEME_STORE_KEY];
+      if (stored && typeof stored === 'object') {
+        if (VALID_ACCENTS.indexOf(stored.accent) !== -1) themeState.accent = stored.accent;
+        if (stored.motion === 'smooth' || stored.motion === 'instant') themeState.motion = stored.motion;
+      }
+      applyThemeSettings();
+    };
+
+    if (typeof storGet === 'function') {
+      storGet(THEME_STORE_KEY, done);
+    } else if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.get(THEME_STORE_KEY, function (res) { done(res || {}); });
+    } else {
+      done({});
+    }
+  }
+
   function resetAll() {
     resetSettings();
+    themeState.accent = 'cyan';
+    themeState.motion = 'smooth';
+    applyThemeSettings();
+    saveThemeSettings();
+
     if (!navOrder) return;
     navOrder = DEFAULT_NAV_ORDER.slice();
     navDisabled = {};
@@ -781,6 +872,28 @@
     var modal = document.getElementById('header-settings-modal');
     if (modal) modal.addEventListener('click', function (e) {
       if (e.target === modal) closeModal();
+    });
+
+    document.querySelectorAll('.hdrs-theme-chip').forEach(function (chip) {
+      chip.addEventListener('click', function () {
+        var acc = chip.getAttribute('data-theme-val') || chip.getAttribute('data-theme-accent') || chip.dataset.themeVal || chip.dataset.themeAccent;
+        if (VALID_ACCENTS.indexOf(acc) !== -1) {
+          themeState.accent = acc;
+          applyThemeSettings();
+          saveThemeSettings();
+        }
+      });
+    });
+
+    document.querySelectorAll('#hdrs-motion-seg .hdrs-seg-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var m = btn.getAttribute('data-motion-val') || btn.getAttribute('data-hdrs-motion') || btn.dataset.motionVal || btn.dataset.hdrsMotion;
+        if (m === 'smooth' || m === 'instant') {
+          themeState.motion = m;
+          applyThemeSettings();
+          saveThemeSettings();
+        }
+      });
     });
 
     document.querySelectorAll('#hdrs-position-seg .hdrs-seg-btn').forEach(function (b) {
@@ -841,6 +954,19 @@
     bindUI();
     loadState();
     loadNavState();
+    loadThemeSettings();
+
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
+      chrome.storage.onChanged.addListener(function (changes, area) {
+        if (area === 'local' && changes[THEME_STORE_KEY] && changes[THEME_STORE_KEY].newValue) {
+          var nv = changes[THEME_STORE_KEY].newValue;
+          if (VALID_ACCENTS.indexOf(nv.accent) !== -1) themeState.accent = nv.accent;
+          if (nv.motion === 'smooth' || nv.motion === 'instant') themeState.motion = nv.motion;
+          applyThemeSettings();
+        }
+      });
+    }
+
     if (typeof ResizeObserver !== 'undefined') {
       var wrap = document.getElementById('nav-wrapper');
       if (wrap) {
@@ -931,6 +1057,16 @@
   };
   window.sfNavUpdatePill = function (immediate) {
     updateNavPill(immediate);
+  };
+  window.sfGetThemeSettings = function () {
+    return JSON.parse(JSON.stringify(themeState));
+  };
+  window.sfApplyTheme = function (accent, motion) {
+    if (VALID_ACCENTS.indexOf(accent) !== -1) themeState.accent = accent;
+    if (motion === 'smooth' || motion === 'instant') themeState.motion = motion;
+    applyThemeSettings();
+    saveThemeSettings();
+    return window.sfGetThemeSettings();
   };
 
   if (document.readyState !== 'loading') {

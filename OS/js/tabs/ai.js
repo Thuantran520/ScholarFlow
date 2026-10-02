@@ -45,6 +45,8 @@ let aiFetchedModels = [];
 let aiPrompts = { ...AI_DEFAULT_PROMPTS };
 function aiDefaultPrompts(){ const d={}; ["summary","qa","explain","translate","outline","timeline","flashcard","cite","answer","tabs","papers"].forEach(k=>{ let v=""; try{ v=(typeof getI18nText==="function")?getI18nText("ai_prompt_"+k,""): ""; }catch(e){} if(!v||v==="ai_prompt_"+k) v=AI_DEFAULT_PROMPTS[k]||""; d[k]=v; }); return d; }
 let aiIsSending = false;
+const AI_MAX_ATTACHED_IMAGES = 10;
+let aiAttachedImages = [];
 let aiAttachedImage = null;
 let aiAttachedSelection = "";
 let aiFavState = { url: null, src: null };
@@ -1359,7 +1361,7 @@ function aiRenderFormattedText(bubble, text){
     if(trimmed.startsWith("---")||trimmed.startsWith("***")){ sugMode=false; if(trimmed.length<5){ const hr=document.createElement("hr"); hr.style.border="none"; hr.style.borderTop="1px solid rgba(255,255,255,0.08)"; hr.style.margin="8px 0"; bubble.appendChild(hr); return; } }
     const indent=raw.match(/^(\s*)/)[1].length, t=raw.trimStart();
     const numM=t.match(/^([0-9]{1,2})[.)]\s+(.+)/);
-    if(numM){ if(sugMode&&numM[2]){ const chip=document.createElement("button"); chip.type="button"; chip.className="ai-suggest"; const cText=numM[2].replace(/[*`]/g,"").trim(); chip.textContent="✦ "+cText.slice(0,160); chip.addEventListener("click",()=>{ const inp=document.getElementById("ai-input"); if(inp){ inp.value=cText.slice(0,800); inp.focus(); aiGrowInput(inp); } }); bubble.appendChild(chip); return; } const row=document.createElement("div"); row.style.display="flex"; row.style.gap="6px"; row.style.marginLeft=indent>=2?"16px":"0"; row.style.marginTop="2px"; const nb=document.createElement("span"); nb.textContent=numM[1]+"."; nb.style.color="#38bdf8"; nb.style.fontWeight="700"; nb.style.flexShrink="0"; row.appendChild(nb); const sp=document.createElement("span"); sp.style.flex="1"; sp.appendChild(aiFormatInline(numM[2])); row.appendChild(sp); bubble.appendChild(row); return; }
+    if(numM){ if(sugMode&&numM[2]){ const chip=document.createElement("button"); chip.type="button"; chip.className="ai-suggest"; const cText=numM[2].replace(/[*`]/g,"").trim(); chip.textContent="✦ "+cText.slice(0,160); chip.addEventListener("click",()=>{ const inp=document.getElementById("ai-input"); if(inp){ inp.value=cText.slice(0,800); inp.focus(); aiGrowInput(inp); } }); bubble.appendChild(chip); return; } const row=document.createElement("div"); row.style.display="flex"; row.style.gap="6px"; row.style.marginLeft=indent>=2?"16px":"0"; row.style.marginTop="2px"; const nb=document.createElement("span"); nb.textContent=numM[1]+"."; nb.style.color="var(--primary)"; nb.style.fontWeight="700"; nb.style.flexShrink="0"; row.appendChild(nb); const sp=document.createElement("span"); sp.style.flex="1"; sp.appendChild(aiFormatInline(numM[2])); row.appendChild(sp); bubble.appendChild(row); return; }
     if(t.startsWith("- ")||t.startsWith("* ")||t.startsWith("• ")){
       const itemText=t.slice(2).replace(/[*`]/g,"").trim();
       if(sugMode&&itemText){
@@ -1402,7 +1404,7 @@ function aiRenderFormattedText(bubble, text){
       h.style.fontWeight="700";
       h.style.margin=(hashes===1?"12px 0 6px":(hashes===2?"10px 0 4px":"8px 0 3px"));
       if(hashes===1){
-        h.style.fontSize="14px"; h.style.color="#38bdf8"; h.style.borderBottom="1px solid rgba(56,189,248,0.2)"; h.style.paddingBottom="3px";
+        h.style.fontSize="14px"; h.style.color="var(--primary)"; h.style.borderBottom="1px solid rgba(var(--primary-rgb),0.2)"; h.style.paddingBottom="3px";
       } else if(hashes===2){
         h.style.fontSize="12.5px"; h.style.color="#7dd3fc";
       } else {
@@ -1412,7 +1414,7 @@ function aiRenderFormattedText(bubble, text){
       bubble.appendChild(h);
       return;
     }
-    const div=document.createElement("div"); div.style.margin="2px 0"; if(trimmed.startsWith("💡")){ div.style.background="rgba(56,189,248,0.08)"; div.style.border="1px solid rgba(56,189,248,0.15)"; div.style.borderRadius="6px"; div.style.padding="6px 8px"; } div.appendChild(aiFormatInline(raw)); bubble.appendChild(div);
+    const div=document.createElement("div"); div.style.margin="2px 0"; if(trimmed.startsWith("💡")){ div.style.background="rgba(var(--primary-rgb),0.08)"; div.style.border="1px solid rgba(var(--primary-rgb),0.15)"; div.style.borderRadius="6px"; div.style.padding="6px 8px"; } div.appendChild(aiFormatInline(raw)); bubble.appendChild(div);
   });
   if(pendingCardQ){ const dq=document.createElement("div"); dq.style.margin="2px 0"; dq.appendChild(aiFormatInline(pendingCardQ)); bubble.appendChild(dq); }
   flushTable(); flush();
@@ -1420,7 +1422,27 @@ function aiRenderFormattedText(bubble, text){
 function aiBuildMsgRow(msg){
   const row=document.createElement("div"); row.className="ai-msg ai-msg-"+(msg.role==="user"?"user":"assistant");
   const bubble=document.createElement("div"); bubble.className="ai-bubble"; aiRenderFormattedText(bubble, msg.content);
-  if(msg.image&&AI_SAFE_IMG_RE.test(msg.image)){ const img=document.createElement("img"); img.src=msg.image; img.style.maxWidth="160px"; img.style.maxHeight="120px"; img.style.borderRadius="8px"; img.style.marginTop="6px"; img.style.border="1px solid rgba(255,255,255,0.08)"; bubble.appendChild(img); }
+  const msgImgs = (Array.isArray(msg.images) && msg.images.length)
+    ? msg.images.filter(x => typeof x === "string" && AI_SAFE_IMG_RE.test(x))
+    : ((msg.image && AI_SAFE_IMG_RE.test(msg.image)) ? [msg.image] : []);
+  if(msgImgs.length){
+    const imgWrap=document.createElement("div");
+    imgWrap.style.cssText="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; max-width:100%;";
+    msgImgs.forEach(src=>{
+      const img=document.createElement("img");
+      img.src=src;
+      img.style.maxWidth=msgImgs.length===1?"160px":"80px";
+      img.style.maxHeight=msgImgs.length===1?"120px":"60px";
+      img.style.objectFit="cover";
+      img.style.borderRadius="6px";
+      img.style.border="1px solid rgba(255,255,255,0.12)";
+      img.style.cursor="pointer";
+      img.title=aiT("ai_click_zoom_image",null,"Bấm để phóng to ảnh");
+      img.addEventListener("click",()=>{ try{ window.open(src,"_blank"); }catch(e){} });
+      imgWrap.appendChild(img);
+    });
+    bubble.appendChild(imgWrap);
+  }
   const foot=document.createElement("div"); foot.style.display="flex"; foot.style.alignItems="center"; foot.style.gap="6px"; foot.style.marginTop="4px";
   const meta=document.createElement("div"); meta.className="ai-msg-meta"; meta.style.flex="1"; let who=msg.role==="user"?aiT("ai_you",null,"Bạn"):aiGetProviderConfig(msg.provider||aiProvider).label; const tsN=Number(msg.ts)||0; if(tsN){ try{ who+=" · "+new Date(tsN).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}); }catch(e){} } meta.textContent=who; foot.appendChild(meta);
   const copyBtn=document.createElement("button"); copyBtn.type="button"; copyBtn.textContent="⎘"; copyBtn.title=aiT("ai_copy_this",null,"Sao chép đoạn này"); copyBtn.style.cssText="width:22px; height:22px; border-radius:6px; border:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.04); color:#94a3b8; cursor:pointer; font-size:11px;"; copyBtn.addEventListener("click",()=>{ navigator.clipboard.writeText(msg.content||"").then(()=>{ copyBtn.textContent="✓"; setTimeout(()=>copyBtn.textContent="⎘",1200); if(typeof showToast==="function") showToast("toast_copied","success"); }); }); foot.appendChild(copyBtn);
@@ -1513,7 +1535,19 @@ function aiRenderHistory(){
 let aiSaveHistTimer=null;
 function aiSaveHistorySoon(){ if(aiSaveHistTimer) clearTimeout(aiSaveHistTimer); aiSaveHistTimer=setTimeout(()=>{ aiSaveHistTimer=null; aiSaveHistory(); },500); }
 function aiAppendMessage(role, content, provider, image){
-  const e={role:String(role)==="user"?"user":"assistant",content:String(content==null?"":content).slice(0,16000),provider:AI_PROVIDERS[provider]?provider:aiProvider,ts:Date.now()}; if(image&&AI_SAFE_IMG_RE.test(image)) e.image=image; aiHistory.push(e); aiSaveHistorySoon();
+  const e={role:String(role)==="user"?"user":"assistant",content:String(content==null?"":content).slice(0,16000),provider:AI_PROVIDERS[provider]?provider:aiProvider,ts:Date.now()};
+  if(Array.isArray(image)){
+    const valid=image.filter(img=>typeof img==="string"&&AI_SAFE_IMG_RE.test(img));
+    if(valid.length){
+      e.images=valid;
+      e.image=valid[0];
+    }
+  } else if(image&&AI_SAFE_IMG_RE.test(image)){
+    e.image=image;
+    e.images=[image];
+  }
+  aiHistory.push(e);
+  aiSaveHistorySoon();
   const c=document.getElementById("ai-chat-history");
   if(c){ const em=c.querySelector(".ai-empty"); if(em) c.removeChild(em); c.appendChild(aiBuildMsgRow(e)); c.scrollTop=c.scrollHeight; }
   else aiRenderHistory();
@@ -2033,13 +2067,101 @@ function aiUseWebBridge(prompt, provider){
   const hint=(typeof getI18nText==="function")?getI18nText("ai_toast_web_hint"):"Đã copy prompt + nội dung trang — dán (Ctrl+V) vào "+cfg.label+" Web để hỏi (miễn phí, không cần API key).";
   return hint+"\n\n---\n"+prompt.slice(0,3000)+(prompt.length>3000?"...":"")+"\n\n("+aiLocalFallback(prompt,"")+")";
 }
-function aiAttachImageFile(f){
-  if(!f||typeof f.type!=="string"||!f.type.startsWith("image/")){ if(typeof showToast==="function") showToast("ai_toast_image_only","warning"); return false; }
-  if(f.size>4*1024*1024){ if(typeof showToast==="function") showToast("ai_toast_image_large","warning"); return false; }
-  const r=new FileReader();
-  r.onload=e=>{ const b64=String(e.target.result||""); const c=b64.indexOf(","); const d=c!==-1?b64.slice(c+1):b64; aiAttachedImage={data:d,mimeType:f.type||"image/jpeg",name:f.name||"clipboard.png",preview:b64}; const thumb=document.getElementById("ai-image-thumb"); const nameEl=document.getElementById("ai-image-name"); const preview=document.getElementById("ai-image-preview"); if(thumb) thumb.src=b64; if(nameEl) nameEl.textContent=(f.name||"clipboard.png")+" ("+Math.round((f.size||0)/1024)+" KB)"; if(preview) preview.style.display="flex"; };
-  r.readAsDataURL(f);
+function aiRenderAttachedImages(){
+  const preview=document.getElementById("ai-image-preview");
+  const list=document.getElementById("ai-image-preview-list");
+  const countEl=document.getElementById("ai-image-count-label");
+  const thumb=document.getElementById("ai-image-thumb");
+  const nameEl=document.getElementById("ai-image-name");
+  if(!preview) return;
+  if(!aiAttachedImages.length){
+    preview.style.display="none";
+    if(list) list.textContent="";
+    if(thumb) thumb.src="";
+    if(nameEl) nameEl.textContent="";
+    aiAttachedImage=null;
+    return;
+  }
+  aiAttachedImage=aiAttachedImages[0]||null;
+  preview.style.display="flex";
+  if(countEl){
+    countEl.textContent=(typeof getI18nText==="function")
+      ? getI18nText("ai_attached_images_count",[aiAttachedImages.length, AI_MAX_ATTACHED_IMAGES])
+      : ("Ảnh đã đính kèm ("+aiAttachedImages.length+"/"+AI_MAX_ATTACHED_IMAGES+")");
+  }
+  if(list){
+    list.textContent="";
+    aiAttachedImages.forEach((img, idx)=>{
+      const card=document.createElement("div");
+      card.className="ai-image-item";
+      card.title=(img.name||"image")+" ("+Math.round((img.size||0)/1024)+" KB)";
+      const imgEl=document.createElement("img");
+      imgEl.src=img.preview;
+      imgEl.alt=img.name||"attachment";
+      card.appendChild(imgEl);
+      const delBtn=document.createElement("button");
+      delBtn.type="button";
+      delBtn.className="ai-image-del-btn";
+      delBtn.textContent="✕";
+      delBtn.title=(typeof getI18nText==="function")?getI18nText("ai_btn_remove_this_image"):"Xóa ảnh này";
+      delBtn.addEventListener("click",(ev)=>{
+        ev.stopPropagation();
+        aiAttachedImages.splice(idx, 1);
+        aiRenderAttachedImages();
+      });
+      card.appendChild(delBtn);
+      list.appendChild(card);
+    });
+  }
+  if(thumb&&aiAttachedImages[0]) thumb.src=aiAttachedImages[0].preview;
+  if(nameEl&&aiAttachedImages[0]){
+    nameEl.textContent=(aiAttachedImages.length===1)
+      ? (aiAttachedImages[0].name+" ("+Math.round(aiAttachedImages[0].size/1024)+" KB)")
+      : (aiAttachedImages.length+" ảnh đã chọn");
+  }
+}
+function aiAttachImageFiles(files){
+  const list=Array.from(files||[]).filter(f=>f&&typeof f.type==="string"&&f.type.startsWith("image/"));
+  if(!list.length){
+    if(typeof showToast==="function") showToast("ai_toast_image_only","warning");
+    return false;
+  }
+  const currentCount=aiAttachedImages.length;
+  const slots=AI_MAX_ATTACHED_IMAGES - currentCount;
+  if(slots<=0){
+    if(typeof showToast==="function") showToast("ai_toast_image_max","warning",[AI_MAX_ATTACHED_IMAGES]);
+    return false;
+  }
+  if(list.length>slots){
+    if(typeof showToast==="function") showToast("ai_toast_image_max","warning",[AI_MAX_ATTACHED_IMAGES]);
+  }
+  const toAdd=list.slice(0, slots);
+  toAdd.forEach(f=>{
+    if(f.size>4*1024*1024){
+      if(typeof showToast==="function") showToast("ai_toast_image_large","warning");
+      return;
+    }
+    const r=new FileReader();
+    r.onload=e=>{
+      if(aiAttachedImages.length>=AI_MAX_ATTACHED_IMAGES) return;
+      const b64=String(e.target.result||"");
+      const c=b64.indexOf(",");
+      const d=c!==-1?b64.slice(c+1):b64;
+      aiAttachedImages.push({
+        data: d,
+        mimeType: f.type||"image/jpeg",
+        name: f.name||"clipboard.png",
+        size: f.size||0,
+        preview: b64
+      });
+      aiRenderAttachedImages();
+    };
+    r.readAsDataURL(f);
+  });
   return true;
+}
+function aiAttachImageFile(f){
+  return aiAttachImageFiles(f?[f]:[]);
 }
 async function aiSendCurrent(){
   if(aiIsSending){ aiQuickCtx=null; return; }
@@ -2081,12 +2203,16 @@ async function aiSendCurrent(){
      Wikipedia scraper is gone. The 🔎 button forces grounding on for this one turn via groundOverride. */
   const forceGround = aiForceGround; aiForceGround = false;
   const provider=aiProvider; const key=aiKeys[provider]||"";
-  const imageToSend=aiAttachedImage; const imagePreview=imageToSend?imageToSend.preview:null;
-  aiAppendMessage("user", raw, provider, imagePreview);
+  const imagesToSend=aiAttachedImages.slice();
+  const imagePreviews=imagesToSend.map(im=>im.preview);
+  aiAppendMessage("user", raw, provider, imagePreviews);
   if(input){ input.value=""; input.style.height=""; }
-  const _imgInput=document.getElementById("ai-image-input"); const _preview=document.getElementById("ai-image-preview");
-  if(_imgInput) _imgInput.value=""; if(_preview) _preview.style.display="none";
-  const _imageForApi=imageToSend; aiAttachedImage=null;
+  const _imgInput=document.getElementById("ai-image-input");
+  if(_imgInput) _imgInput.value="";
+  const _imagesForApi=imagesToSend;
+  aiAttachedImages=[];
+  aiAttachedImage=null;
+  aiRenderAttachedImages();
   aiIsSending=true; aiUserStopped=false; aiAbort=new AbortController();
   const sendBtn=document.getElementById("ai-btn-send");
   if(sendBtn){ sendBtn.classList.add("is-stop"); sendBtn.textContent="⏹"; sendBtn.disabled=false; sendBtn.title=aiT("ai_btn_stop",null,"Dừng tạo câu trả lời"); }
@@ -2165,7 +2291,7 @@ async function aiSendCurrent(){
     }
   }catch(e){}
   let pageImages=[];
-  if(isPageQuery && !_imageForApi && aiSettings.includeImages && provider!=="custom" && pageText){ try{ pageImages=await aiGetPageImages(); }catch(e){} }
+  if(isPageQuery && (!_imagesForApi || !_imagesForApi.length) && aiSettings.includeImages && provider!=="custom" && pageText){ try{ pageImages=await aiGetPageImages(); }catch(e){} }
   if(isPageQuery && aiSettings.includeSource){ try{ const srcRaw=await aiGetPageSourceText(); if(srcRaw){ const winSrc=aiSelectRelevantWindow(srcRaw, cleanQuery, 1600); pageText = pageText ? pageText+"\n\n[Raw page source + scripts - relevant excerpt]\n"+winSrc : winSrc; } }catch(e){} }
   /* ── Add multi-page context from pinned pages (aiPages) ──
      Building a "pinnedNote" that ALWAYS reaches the model (regardless of page-intent):
@@ -2184,8 +2310,8 @@ async function aiSendCurrent(){
       else pinnedNote = multiPageCtx;
     }
   }
-  const apiImages=_imageForApi?[{data:_imageForApi.data,mimeType:_imageForApi.mimeType||"image/jpeg"}]:pageImages;
-  const imageNote=apiImages.length?("[Attached images: "+apiImages.length+" taken from the current page. If the question needs visual info (counting objects, reading text in the image), answer from these images.]"):null;
+  const apiImages=(_imagesForApi && _imagesForApi.length)?_imagesForApi.map(im=>({data:im.data,mimeType:im.mimeType||"image/jpeg"})):pageImages;
+  const imageNote=apiImages.length?("[Attached images: "+apiImages.length+". If the question needs visual info (counting objects, reading text in the image, comparing images), answer from these images.]"):null;
   const webSearchEnabled=((aiSettings.webSearch!==false)&&aiSettings.scope!=="only")||forceGround;
   let multiWebNote="";
   let multiWebSources=[];
@@ -2469,11 +2595,16 @@ function aiInitEvents(){
   const copyPageBtn=document.getElementById("ai-btn-copy-page"); if(copyPageBtn) copyPageBtn.addEventListener("click",()=>{ const u=document.getElementById("ai-page-url"); const t=u?u.textContent:""; if(t&&t!=="—") navigator.clipboard.writeText(t).then(()=>{ if(typeof showToast==="function") showToast("toast_copied","success"); }); });
   const addPageBtn=document.getElementById("ai-btn-add-page"); if(addPageBtn) addPageBtn.addEventListener("click",async()=>{ const info=aiGetCurrentPageInfo(); if(!info.url){ if(typeof showToast==="function") showToast("ai_toast_no_page","warning"); return; } if(aiPages.some(p=>p.url===info.url)){ if(typeof showToast==="function") showToast("ai_toast_page_added","success",[info.title||info.url]); return; } let pgText=""; try{ pgText=await aiGetPageContextText(""); }catch(e){} aiAddPage({ url:info.url, title:info.title, favicon:info.favicon, text:pgText }); if(typeof showToast==="function") showToast("ai_toast_page_added","success",[info.title||info.url]); });
   const clearPagesBtn=document.getElementById("ai-btn-clear-pages"); if(clearPagesBtn) clearPagesBtn.addEventListener("click",()=>{ aiPages=[]; aiRenderPages(); });
-  const attachBtn=document.getElementById("ai-btn-attach-image"); const imgInput=document.getElementById("ai-image-input"); const preview=document.getElementById("ai-image-preview"); const thumb=document.getElementById("ai-image-thumb"); const nameEl=document.getElementById("ai-image-name"); const removeBtn=document.getElementById("ai-btn-remove-image");
-  if(attachBtn&&imgInput){ attachBtn.addEventListener("click",()=>imgInput.click()); imgInput.addEventListener("change",()=>{ const f=imgInput.files&&imgInput.files[0]; if(!f) return; aiAttachImageFile(f); }); }
-  const pasteHandler=(e)=>{ const cd=e.clipboardData||null; if(!cd||!cd.items) return; let img=null; for(const it of cd.items){ try{ if(it.kind==="file"&&it.type&&it.type.startsWith("image/")){ img=it.getAsFile(); if(img) break; } }catch(e2){} } if(img){ if(e.preventDefault) e.preventDefault(); aiAttachImageFile(img); } };
+  const attachBtn=document.getElementById("ai-btn-attach-image"); const imgInput=document.getElementById("ai-image-input"); const removeBtn=document.getElementById("ai-btn-remove-image");
+  if(attachBtn&&imgInput){ attachBtn.addEventListener("click",()=>imgInput.click()); imgInput.addEventListener("change",()=>{ if(imgInput.files&&imgInput.files.length) aiAttachImageFiles(imgInput.files); imgInput.value=""; }); }
+  const pasteHandler=(e)=>{ const cd=e.clipboardData||null; if(!cd||!cd.items) return; const imgs=[]; for(const it of cd.items){ try{ if(it.kind==="file"&&it.type&&it.type.startsWith("image/")){ const img=it.getAsFile(); if(img) imgs.push(img); } }catch(e2){} } if(imgs.length){ if(e.preventDefault) e.preventDefault(); aiAttachImageFiles(imgs); } };
   const aiInputEl=document.getElementById("ai-input"); if(aiInputEl) aiInputEl.addEventListener("paste",pasteHandler); if(chatHist) chatHist.addEventListener("paste",pasteHandler);
-  if(removeBtn) removeBtn.addEventListener("click",()=>{ aiAttachedImage=null; if(imgInput) imgInput.value=""; const p=document.getElementById("ai-image-preview"); if(p) p.style.display="none"; });
+  const dropHandler=(e)=>{ const dt=e.dataTransfer; if(!dt||!dt.files||!dt.files.length) return; const imgs=Array.from(dt.files).filter(f=>f&&f.type&&f.type.startsWith("image/")); if(imgs.length){ if(e.preventDefault) e.preventDefault(); aiAttachImageFiles(imgs); } };
+  if(aiInputEl){ aiInputEl.addEventListener("dragover",(e)=>{ if(e.dataTransfer&&Array.from(e.dataTransfer.types||[]).includes("Files")) e.preventDefault(); }); aiInputEl.addEventListener("drop",dropHandler); }
+  if(chatHist){ chatHist.addEventListener("dragover",(e)=>{ if(e.dataTransfer&&Array.from(e.dataTransfer.types||[]).includes("Files")) e.preventDefault(); }); chatHist.addEventListener("drop",dropHandler); }
+  if(removeBtn) removeBtn.addEventListener("click",()=>{ aiAttachedImages=[]; aiAttachedImage=null; if(imgInput) imgInput.value=""; aiRenderAttachedImages(); });
+  const setupHScroll=(selector)=>{ document.querySelectorAll(selector).forEach(el=>{ el.addEventListener("wheel",(e)=>{ if(e.deltaY!==0 && el.scrollWidth>el.clientWidth){ el.scrollLeft+=e.deltaY; e.preventDefault(); } },{passive:false}); }); };
+  setupHScroll(".ai-quick-chips"); setupHScroll(".ai-pages-list");
 }
 async function initAI(){
   await aiLoadSettings(); aiUpdateProviderUI();
@@ -2493,6 +2624,6 @@ if(typeof window!=="undefined"){
   window.AI_SKILLS=AI_SKILLS; window.aiDetectSkill=aiDetectSkill;
   window.AI_PIPELINES=AI_PIPELINES; window.aiResolvePipeline=aiResolvePipeline; window.aiUpdateTypingStatus=aiUpdateTypingStatus;
   window.aiExtractViaScripting=aiExtractViaScripting; window.aiExtractViaBackgroundFetch=aiExtractViaBackgroundFetch;
-  window.AI_PROVIDERS=AI_PROVIDERS; window.aiValidateCustomUrl=aiValidateCustomUrl; window.aiSanitizeExternal=aiSanitizeExternal; window.aiSanitizeHistory=aiSanitizeHistory; window.aiRateLimitOk=aiRateLimitOk; window.aiSelectRelevantWindow=aiSelectRelevantWindow; window.aiIsYouTubeUrl=aiIsYouTubeUrl; window.aiHistoryToGeminiContents=aiHistoryToGeminiContents; window.aiHistoryToOpenAIMessages=aiHistoryToOpenAIMessages; window.aiHistoryToClaudeMessages=aiHistoryToClaudeMessages; window.aiCollectTabsContext=aiCollectTabsContext; window.aiScholarSearch=aiScholarSearch; window.aiAttachImageFile=aiAttachImageFile; window.aiExtractYouTubeId=aiExtractYouTubeId; window.aiYtMetaViaFetch=aiYtMetaViaFetch; window.aiYtBalancedJson=aiYtBalancedJson; window.aiCallGeminiLite=aiCallGeminiLite; window.aiSig=aiSig; window.aiRegenerate=aiRegenerate; window.aiSelectRelevantWindows=aiSelectRelevantWindows; window.aiSessionsSearch=aiSessionsSearch; window.aiMemKey=aiMemKey; window.aiMemFor=aiMemFor; window.aiRenderSessions=aiRenderSessions; window.aiShowSessions=aiShowSessions; window.aiHideSessions=aiHideSessions; window.aiGetProviderConfig=aiGetProviderConfig; window.aiGetModel=aiGetModel; window.aiSetModel=aiSetModel; window.aiFetchGeminiModels=aiFetchGeminiModels; window.aiHasKey=aiHasKey; window.aiBuildPrompt=aiBuildPrompt; window.aiAddPage=aiAddPage; window.aiRemovePage=aiRemovePage; window.aiRenderPages=aiRenderPages; window.aiGetCurrentPageInfo=aiGetCurrentPageInfo; window.aiLocalFallback=aiLocalFallback; window.aiUseWebBridge=aiUseWebBridge; window.aiContextCovers=aiContextCovers; window.aiCallProvider=aiCallProvider; window.aiLoadSettings=aiLoadSettings; window.aiSaveHistory=aiSaveHistory; window.aiRenderHistory=aiRenderHistory; window.aiScrollToBottom=aiScrollToBottom; window.aiDetectPageIntent=aiDetectPageIntent; window.aiGroundingSources=aiGroundingSources; window.aiSourcesLabel=aiSourcesLabel; window.aiGeminiSupportsGrounding=aiGeminiSupportsGrounding; window.aiGeminiSupportsVideo=aiGeminiSupportsVideo; window.aiGeminiSupportsAgentic=aiGeminiSupportsAgentic; window.aiPickVideoModel=aiPickVideoModel; window.aiVideoContents=aiVideoContents; window.aiCallGeminiVideo=aiCallGeminiVideo; window.aiIsTranscriptRequest=aiIsTranscriptRequest; window.aiQueryRefersToVideo=aiQueryRefersToVideo; window.aiIsContinueRequest=aiIsContinueRequest; window.aiLastTimestampSec=aiLastTimestampSec; window.aiConversationMarkdown=aiConversationMarkdown; window.aiUpdateLatestBtn=aiUpdateLatestBtn; window.aiAppendMessage=aiAppendMessage; window.aiClearHistory=aiClearHistory; window.aiUpdateProviderUI=aiUpdateProviderUI; window.aiPopulateModelSelect=aiPopulateModelSelect; window.aiSendCurrent=aiSendCurrent; window.aiQuickPrompt=aiQuickPrompt; window.initAI=initAI; window.aiProvider=aiProvider; window.aiSettings=aiSettings; window.aiModels=aiModels; window.aiCustomServers=aiCustomServers; window.aiSetCompanionEnabled=aiSetCompanionEnabled; window.aiUpdateCompanionUI=aiUpdateCompanionUI; window.aiOnModelChange=aiOnModelChange; window.aiRenderCustomServers=aiRenderCustomServers; window.aiAddCustomServer=aiAddCustomServer; window.aiUpdateCurrentPageDisplay=aiUpdateCurrentPageDisplay; window.aiGroundingQueries=aiGroundingQueries; window.aiSearchQueriesLabel=aiSearchQueriesLabel; window.aiBuildSystemInstruction=aiBuildSystemInstruction; window.aiSearchMultiSources=aiSearchMultiSources; window.aiDecodeHtmlEntities=aiDecodeHtmlEntities; window.aiExportMarkdown=aiExportMarkdown; window.aiExportAnki=aiExportAnki; window.aiParseTimestampSec=aiParseTimestampSec; window.aiCheckYtLive=aiCheckYtLive;
+  window.AI_PROVIDERS=AI_PROVIDERS; window.aiValidateCustomUrl=aiValidateCustomUrl; window.aiSanitizeExternal=aiSanitizeExternal; window.aiSanitizeHistory=aiSanitizeHistory; window.aiRateLimitOk=aiRateLimitOk; window.aiSelectRelevantWindow=aiSelectRelevantWindow; window.aiIsYouTubeUrl=aiIsYouTubeUrl; window.aiHistoryToGeminiContents=aiHistoryToGeminiContents; window.aiHistoryToOpenAIMessages=aiHistoryToOpenAIMessages; window.aiHistoryToClaudeMessages=aiHistoryToClaudeMessages; window.aiCollectTabsContext=aiCollectTabsContext; window.aiScholarSearch=aiScholarSearch; window.aiAttachImageFile=aiAttachImageFile; window.aiAttachImageFiles=aiAttachImageFiles; window.aiRenderAttachedImages=aiRenderAttachedImages; window.aiExtractYouTubeId=aiExtractYouTubeId; window.aiYtMetaViaFetch=aiYtMetaViaFetch; window.aiYtBalancedJson=aiYtBalancedJson; window.aiCallGeminiLite=aiCallGeminiLite; window.aiSig=aiSig; window.aiRegenerate=aiRegenerate; window.aiSelectRelevantWindows=aiSelectRelevantWindows; window.aiSessionsSearch=aiSessionsSearch; window.aiMemKey=aiMemKey; window.aiMemFor=aiMemFor; window.aiRenderSessions=aiRenderSessions; window.aiShowSessions=aiShowSessions; window.aiHideSessions=aiHideSessions; window.aiGetProviderConfig=aiGetProviderConfig; window.aiGetModel=aiGetModel; window.aiSetModel=aiSetModel; window.aiFetchGeminiModels=aiFetchGeminiModels; window.aiHasKey=aiHasKey; window.aiBuildPrompt=aiBuildPrompt; window.aiAddPage=aiAddPage; window.aiRemovePage=aiRemovePage; window.aiRenderPages=aiRenderPages; window.aiGetCurrentPageInfo=aiGetCurrentPageInfo; window.aiLocalFallback=aiLocalFallback; window.aiUseWebBridge=aiUseWebBridge; window.aiContextCovers=aiContextCovers; window.aiCallProvider=aiCallProvider; window.aiLoadSettings=aiLoadSettings; window.aiSaveHistory=aiSaveHistory; window.aiRenderHistory=aiRenderHistory; window.aiScrollToBottom=aiScrollToBottom; window.aiDetectPageIntent=aiDetectPageIntent; window.aiGroundingSources=aiGroundingSources; window.aiSourcesLabel=aiSourcesLabel; window.aiGeminiSupportsGrounding=aiGeminiSupportsGrounding; window.aiGeminiSupportsVideo=aiGeminiSupportsVideo; window.aiGeminiSupportsAgentic=aiGeminiSupportsAgentic; window.aiPickVideoModel=aiPickVideoModel; window.aiVideoContents=aiVideoContents; window.aiCallGeminiVideo=aiCallGeminiVideo; window.aiIsTranscriptRequest=aiIsTranscriptRequest; window.aiQueryRefersToVideo=aiQueryRefersToVideo; window.aiIsContinueRequest=aiIsContinueRequest; window.aiLastTimestampSec=aiLastTimestampSec; window.aiConversationMarkdown=aiConversationMarkdown; window.aiUpdateLatestBtn=aiUpdateLatestBtn; window.aiAppendMessage=aiAppendMessage; window.aiClearHistory=aiClearHistory; window.aiUpdateProviderUI=aiUpdateProviderUI; window.aiPopulateModelSelect=aiPopulateModelSelect; window.aiSendCurrent=aiSendCurrent; window.aiQuickPrompt=aiQuickPrompt; window.initAI=initAI; window.aiProvider=aiProvider; window.aiSettings=aiSettings; window.aiModels=aiModels; window.aiCustomServers=aiCustomServers; window.aiSetCompanionEnabled=aiSetCompanionEnabled; window.aiUpdateCompanionUI=aiUpdateCompanionUI; window.aiOnModelChange=aiOnModelChange; window.aiRenderCustomServers=aiRenderCustomServers; window.aiAddCustomServer=aiAddCustomServer; window.aiUpdateCurrentPageDisplay=aiUpdateCurrentPageDisplay; window.aiGroundingQueries=aiGroundingQueries; window.aiSearchQueriesLabel=aiSearchQueriesLabel; window.aiBuildSystemInstruction=aiBuildSystemInstruction; window.aiSearchMultiSources=aiSearchMultiSources; window.aiDecodeHtmlEntities=aiDecodeHtmlEntities; window.aiExportMarkdown=aiExportMarkdown; window.aiExportAnki=aiExportAnki; window.aiParseTimestampSec=aiParseTimestampSec; window.aiCheckYtLive=aiCheckYtLive;
 }
 if(document.readyState!=="loading") initAI(); else document.addEventListener("DOMContentLoaded",initAI);

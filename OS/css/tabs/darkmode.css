@@ -62,10 +62,10 @@
   flex: 0 0 auto; min-width: 44px; text-align: center;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 9.5px; font-weight: 800;
-  color: #38bdf8;
-  background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25);
+  color: var(--primary);
+  background: rgba(var(--primary-rgb), 0.08); border: 1px solid rgba(var(--primary-rgb), 0.25);
   border-radius: 999px; padding: 1px 6px;
-  box-shadow: 0 0 6px rgba(56, 189, 248, 0.15);
+  box-shadow: 0 0 6px rgba(var(--primary-rgb), 0.15);
 }
 
 /* ── Per-site panel ── */

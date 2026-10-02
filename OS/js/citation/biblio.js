@@ -67,7 +67,7 @@ function saveCitationSettings() {
     const statusEl = document.getElementById("cite-settings-status");
     if (statusEl) {
       statusEl.textContent = getI18nText("pref_saved") || "✓ Đã lưu!";
-      statusEl.style.color = "#38bdf8";
+      statusEl.style.color = "var(--primary)";
       setTimeout(() => {
         statusEl.textContent = getI18nText("pref_autosave") || "💾 Tự động lưu";
         statusEl.style.color = "#10b981";
@@ -172,7 +172,7 @@ function openSourceFromLibId(libId) {
   if (card) {
     if (card.scrollIntoView) card.scrollIntoView({ behavior: "smooth", block: "center" });
     const prevShadow = card.style.boxShadow;
-    card.style.boxShadow = "0 0 0 2px #38bdf8";
+    card.style.boxShadow = "0 0 0 2px var(--primary)";
     setTimeout(() => { card.style.boxShadow = prevShadow; }, 1600);
   }
 }

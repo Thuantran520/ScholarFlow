@@ -343,7 +343,14 @@ function onBoxEstablished() {
         if (snipTagBadgeEl) {
           const tag = resolved.tagName.toLowerCase();
           const id = resolved.id ? `#${resolved.id}` : "";
-          snipTagBadgeEl.textContent = `<${tag}${id}> (${Math.round(hWidth)}×${Math.round(hHeight)}px) • ${tContentShim("snip_click_to_pick")}`;
+          snipTagBadgeEl.textContent = "";
+          const tagStrong = document.createElement("strong");
+          tagStrong.textContent = `<${tag}${id}> (${Math.round(hWidth)}×${Math.round(hHeight)}px)`;
+          snipTagBadgeEl.appendChild(tagStrong);
+          snipTagBadgeEl.appendChild(document.createTextNode(" • "));
+          const pickSpan = document.createElement("span");
+          pickSpan.textContent = `🎯 ${tContentShim("snip_click_to_pick")}`;
+          snipTagBadgeEl.appendChild(pickSpan);
           snipTagBadgeEl.style.display = "block";
           snipTagBadgeEl.style.left = `${Math.min(e.clientX + 14, window.innerWidth - 270)}px`;
           snipTagBadgeEl.style.top = `${Math.min(e.clientY + 18, window.innerHeight - 40)}px`;
@@ -530,7 +537,10 @@ function onBoxEstablished() {
 
     const btnConfirm = document.createElement("button");
     btnConfirm.className = "super-snip-btn super-snip-btn-confirm";
-    btnConfirm.replaceChildren(...new DOMParser().parseFromString(`${tContentShim("snip_btn_capture")} <kbd style="background:rgba(255,255,255,0.2);padding:1px 5px;border-radius:4px;font-size:10px;">Enter</kbd>`, "text/html").body.childNodes);
+    btnConfirm.appendChild(document.createTextNode(tContentShim("snip_btn_capture") + " "));
+    const kbdConfirm = document.createElement("kbd");
+    kbdConfirm.textContent = "Enter";
+    btnConfirm.appendChild(kbdConfirm);
     btnConfirm.addEventListener("click", (e) => {
       e.stopPropagation();
       confirmSnipCapture();
@@ -539,7 +549,10 @@ function onBoxEstablished() {
 
     const btnCancel = document.createElement("button");
     btnCancel.className = "super-snip-btn super-snip-btn-cancel";
-    btnCancel.replaceChildren(...new DOMParser().parseFromString(`${tContentShim("snip_btn_cancel")} <kbd style="background:rgba(255,255,255,0.2);padding:1px 5px;border-radius:4px;font-size:10px;">Esc</kbd>`, "text/html").body.childNodes);
+    btnCancel.appendChild(document.createTextNode(tContentShim("snip_btn_cancel") + " "));
+    const kbdCancel = document.createElement("kbd");
+    kbdCancel.textContent = "Esc";
+    btnCancel.appendChild(kbdCancel);
     btnCancel.addEventListener("click", (e) => {
       e.stopPropagation();
       cancelSnipCapture();

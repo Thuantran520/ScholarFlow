@@ -151,17 +151,17 @@ function renderRedactedList(list) {
   }
 
   const styleMap = {
-    blur: (px) => `Mờ ${px || 12}px`,
-    blackout: () => "Hộp đen",
-    pixelate: () => "Điểm ảnh",
-    hide: () => "Ẩn"
+    blur: (px) => (window.i18n ? window.i18n.t("opt_style_blur_val", [px || 12]) : `Mờ ${px || 12}px`),
+    blackout: () => (window.i18n ? window.i18n.t("opt_style_black") : "Hộp đen"),
+    pixelate: () => (window.i18n ? window.i18n.t("opt_style_pixel") : "Điểm ảnh"),
+    hide: () => (window.i18n ? window.i18n.t("opt_style_hide") : "Ẩn")
   };
 
   list.forEach((item, index) => {
     const card = document.createElement("div");
     card.className = "redacted-item-card";
     card.dataset.id = item.id;
-    card.title = window.i18n ? window.i18n.t("Rê chuột để soi vị trí trên trang web, click để cuộn tới") : "Rê chuột để soi vị trí trên trang web, click để cuộn tới";
+    card.title = window.i18n ? window.i18n.t("tip_redact_hover") : "Rê chuột để soi vị trí trên trang web, click để cuộn tới";
 
     const left = document.createElement("div");
     left.className = "redacted-item-left";
@@ -172,7 +172,7 @@ function renderRedactedList(list) {
 
     const tagPill = document.createElement("span");
     tagPill.className = "redacted-tag-pill";
-    tagPill.textContent = item.kind === "region" ? "Vùng" : `<${item.tagName}>`;
+    tagPill.textContent = item.kind === "region" ? (window.i18n ? window.i18n.t("lbl_region") : "Vùng") : `<${item.tagName}>`;
 
     const stylePill = document.createElement("span");
     stylePill.className = "redacted-style-pill";
@@ -181,7 +181,7 @@ function renderRedactedList(list) {
 
     const snippet = document.createElement("span");
     snippet.className = "redacted-snippet-text";
-    snippet.textContent = item.snippet || "Phần tử trang";
+    snippet.textContent = item.snippet || (window.i18n ? window.i18n.t("lbl_redact_element") : "Phần tử trang");
 
     left.appendChild(indexBadge);
     left.appendChild(tagPill);
@@ -191,7 +191,7 @@ function renderRedactedList(list) {
     const btnRemove = document.createElement("button");
     btnRemove.className = "btn-remove-item";
     btnRemove.dataset.id = item.id;
-    btnRemove.title = window.i18n ? window.i18n.t("Gỡ bỏ che phần tử này") : "Gỡ bỏ che phần tử này";
+    btnRemove.title = window.i18n ? window.i18n.t("tip_redact_remove") : "Gỡ bỏ che phần tử này";
     btnRemove.textContent = "✕";
 
     card.appendChild(left);
@@ -217,10 +217,55 @@ function renderRedactedList(list) {
           const rc = document.getElementById("redact-count");
         if (rc) rc.textContent = res.count || 0;
           renderRedactedList(res.list || []);
-          showToast("✓ Đã gỡ bỏ che phần tử!");
+          showToast(window.i18n ? window.i18n.t("toast_redact_removed") : "✓ Đã gỡ bỏ che phần tử!");
         }
       });
     });
   });
 }
+
+var currentAutoGuardState = false;
+var currentIsSocialSite = false;
+
+function updateAutoGuardUI(enabled, isSocialSite) {
+  if (typeof enabled === "boolean") {
+    currentAutoGuardState = enabled;
+  }
+  if (typeof isSocialSite === "boolean") {
+    currentIsSocialSite = isSocialSite;
+  }
+
+  const toggle = document.getElementById("redact-auto-guard-toggle");
+  const dot = document.getElementById("redact-auto-guard-dot");
+  const statusText = document.getElementById("redact-auto-guard-status-text");
+  const mxhBadge = document.getElementById("redact-mxh-badge");
+
+  if (toggle) {
+    toggle.checked = !!currentAutoGuardState;
+  }
+  if (dot) {
+    dot.style.background = currentAutoGuardState ? "#10b981" : "#94a3b8";
+    dot.style.boxShadow = currentAutoGuardState ? "0 0 8px rgba(16,185,129,0.6)" : "none";
+  }
+  if (statusText) {
+    statusText.textContent = currentAutoGuardState
+      ? (window.i18n ? window.i18n.t("redact_auto_guard_status_active") : "Đang bật tự động bảo vệ khi tải lại")
+      : (window.i18n ? window.i18n.t("redact_auto_guard_status_inactive") : "Đang tắt tự động che khi tải lại");
+    statusText.style.color = currentAutoGuardState ? "#10b981" : "var(--text-muted)";
+  }
+  if (mxhBadge) {
+    mxhBadge.style.display = currentIsSocialSite ? "inline-flex" : "none";
+  }
+}
+
+window.addEventListener("app-language-changed", () => {
+  updateInspectButtonsUI();
+  updateRedactionVisibilityUI();
+  updateAutoGuardUI(currentAutoGuardState, currentIsSocialSite);
+  if (typeof currentRedactedList !== "undefined" && currentRedactedList) {
+    renderRedactedList(currentRedactedList);
+  }
+});
+
+window.updateAutoGuardUI = updateAutoGuardUI;
 

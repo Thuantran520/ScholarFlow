@@ -603,13 +603,13 @@ async function handleVerifySource(forcedText = null, tabMeta = null) {
 
   if (statusTitle) {
     statusTitle.textContent = getVerifyI18n("verify_loading_title", "Đang tra cứu trên mạng lưới học thuật quốc tế...");
-    statusTitle.style.color = "#38bdf8";
+    statusTitle.style.color = "var(--primary)";
   }
   if (confBadge) {
     confBadge.textContent = getVerifyI18n("verify_loading_badge", "Đang đối soát");
-    confBadge.style.color = "#38bdf8";
-    confBadge.style.borderColor = "rgba(56, 189, 248, 0.4)";
-    confBadge.style.background = "rgba(56, 189, 248, 0.1)";
+    confBadge.style.color = "var(--primary)";
+    confBadge.style.borderColor = "rgba(var(--primary-rgb), 0.4)";
+    confBadge.style.background = "rgba(var(--primary-rgb), 0.1)";
   }
   if (statusDesc) {
     statusDesc.textContent = getVerifyI18n("verify_loading_desc", "Đang đối soát thông tin qua Crossref (150M+ tài liệu), DOI Foundation và OpenAlex...");

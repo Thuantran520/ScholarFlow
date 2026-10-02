@@ -44,7 +44,22 @@ function calPad2(n) { return n < 10 ? "0" + n : "" + n; }
 function calDateKey(d) { return d.getFullYear() + "-" + calPad2(d.getMonth() + 1) + "-" + calPad2(d.getDate()); }
 function calParseKey(k) { const p = k.split("-"); return [parseInt(p[0], 10), parseInt(p[1], 10), parseInt(p[2], 10)]; }
 function calTodayKey() { return calDateKey(new Date()); }
-function calFeedColor(i) { return CAL_PALETTE[i % CAL_PALETTE.length]; }
+function calFeedColor(i) {
+  if (i === 0) {
+    try {
+      var p = (getComputedStyle(document.documentElement).getPropertyValue('--primary') || '').trim();
+      if (p && p.startsWith('#')) return p;
+      var rgb = (getComputedStyle(document.documentElement).getPropertyValue('--primary-rgb') || '').trim();
+      if (rgb) {
+        var parts = rgb.split(',').map(function (n) { return parseInt(n.trim(), 10); });
+        if (parts.length === 3 && !isNaN(parts[0])) {
+          return '#' + parts.map(function (x) { return x.toString(16).padStart(2, '0'); }).join('');
+        }
+      }
+    } catch (e) {}
+  }
+  return CAL_PALETTE[i % CAL_PALETTE.length];
+}
 function calMonthArr(lang) { return CAL_MONTHS[lang] || CAL_MONTHS.en; }
 function calDowArr(lang) { return CAL_WEEKDAY_DOW[lang] || CAL_WEEKDAY_DOW.en; }
 function calDowFullArr(lang) { return CAL_WEEKDAY_FULL[lang] || CAL_WEEKDAY_FULL.en; }
@@ -1073,6 +1088,59 @@ function calRenderWeatherUI() {
     previewTxt.textContent = wmo.icon + " " + tempVal + "°C | 💧 " + humidVal + "% (" + wmo.text + ")";
   }
 
+  // 7-day modal contents: Current Weather Hero Card
+  const modalScroll = document.querySelector("#cal-weather-modal .modal-body-scroll");
+  if (modalScroll) {
+    let hero = modalScroll.querySelector(".cal-weather-hero");
+    if (!hero) {
+      hero = document.createElement("div");
+      hero.className = "cal-weather-hero";
+      modalScroll.insertBefore(hero, modalScroll.firstChild);
+    }
+    hero.textContent = "";
+
+    const mainCol = document.createElement("div");
+    mainCol.className = "cal-weather-hero-main";
+
+    const heroIcon = document.createElement("span");
+    heroIcon.className = "cal-weather-hero-icon";
+    heroIcon.textContent = wmo.icon;
+    mainCol.appendChild(heroIcon);
+
+    const titleCol = document.createElement("div");
+    const heroTemp = document.createElement("div");
+    heroTemp.className = "cal-weather-hero-temp";
+    heroTemp.textContent = tempVal + "°C";
+    titleCol.appendChild(heroTemp);
+
+    const heroDesc = document.createElement("div");
+    heroDesc.className = "cal-weather-hero-desc";
+    heroDesc.textContent = wmo.text || "";
+    titleCol.appendChild(heroDesc);
+
+    mainCol.appendChild(titleCol);
+    hero.appendChild(mainCol);
+
+    const metricsCol = document.createElement("div");
+    metricsCol.className = "cal-weather-hero-metrics";
+
+    const humidPill = document.createElement("span");
+    humidPill.className = "cal-weather-metric-pill" + (isHighHumidity ? " alert" : "");
+    humidPill.textContent = "💧 " + humidVal + "%" + (isHighHumidity ? " (Mưa cao)" : "");
+    metricsCol.appendChild(humidPill);
+
+    const rangePill = document.createElement("span");
+    rangePill.className = "cal-weather-metric-pill";
+    if (calWeatherData.daily && calWeatherData.daily.temperature_2m_min && calWeatherData.daily.temperature_2m_max) {
+      rangePill.textContent = "🌡️ " + Math.round(calWeatherData.daily.temperature_2m_min[0]) + "° ~ " + Math.round(calWeatherData.daily.temperature_2m_max[0]) + "°C";
+    } else {
+      rangePill.textContent = "🌡️ " + tempVal + "°C";
+    }
+    metricsCol.appendChild(rangePill);
+
+    hero.appendChild(metricsCol);
+  }
+
   // 7-day modal contents
   if (alertBox) {
     if (isHighHumidity) {
@@ -1103,43 +1171,84 @@ function calRenderWeatherUI() {
       const maxT = daily.temperature_2m_max ? Math.round(daily.temperature_2m_max[i]) : "--";
       const prob = daily.precipitation_probability_max ? Math.round(daily.precipitation_probability_max[i]) : 0;
 
-      const row = document.createElement("div");
-      row.className = "cal-weather-day-row";
+      const isToday = (dateStr === calTodayKey());
+      const card = document.createElement("div");
+      card.className = "cal-weather-day-card" + (isToday ? " is-today" : "");
 
+      // Left column: Icon + Date & condition
       const left = document.createElement("div");
-      left.style.display = "flex";
-      left.style.alignItems = "center";
-      left.style.gap = "8px";
+      left.className = "cal-weather-day-left";
 
       const iconSpan = document.createElement("span");
       iconSpan.className = "cal-weather-day-icon";
       iconSpan.textContent = dwmo.icon;
       left.appendChild(iconSpan);
 
-      const dateSpan = document.createElement("span");
+      const info = document.createElement("div");
+      info.className = "cal-weather-day-info";
+
+      const dateSpan = document.createElement("div");
       dateSpan.className = "cal-weather-day-date";
-      dateSpan.textContent = (dateStr === calTodayKey()) ? (window.i18n ? window.i18n.t("cal_btn_today") : "Hôm nay") + " (" + dateStr + ")" : dateStr;
-      left.appendChild(dateSpan);
+      
+      let formattedDate = dateStr;
+      try {
+        const parts = dateStr.split("-");
+        if (parts.length === 3) {
+          const dObj = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+          const dowNames = (window.i18n && typeof calDowArr === "function") ? calDowArr(window.i18n.getLanguage ? window.i18n.getLanguage() : "vi") : ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
+          const dow = dowNames[(dObj.getDay() + 6) % 7];
+          formattedDate = dow + ", " + parts[2] + "/" + parts[1];
+        }
+      } catch (_) {}
 
-      row.appendChild(left);
+      dateSpan.textContent = formattedDate;
 
+      if (isToday) {
+        const todayTag = document.createElement("span");
+        todayTag.className = "cal-weather-day-tag";
+        todayTag.textContent = window.i18n ? window.i18n.t("cal_btn_today") : "Hôm nay";
+        dateSpan.appendChild(todayTag);
+      }
+      info.appendChild(dateSpan);
+
+      const condSpan = document.createElement("div");
+      condSpan.className = "cal-weather-day-cond";
+      condSpan.textContent = dwmo.text || "";
+      info.appendChild(condSpan);
+
+      left.appendChild(info);
+      card.appendChild(left);
+
+      // Right column: Temp range + Rain prob
       const right = document.createElement("div");
-      right.style.display = "flex";
-      right.style.alignItems = "center";
-      right.style.gap = "8px";
+      right.className = "cal-weather-day-right";
 
-      const tempSpan = document.createElement("span");
-      tempSpan.className = "cal-weather-day-temp";
-      tempSpan.textContent = minT + "° ~ " + maxT + "°C";
-      right.appendChild(tempSpan);
+      const tempRange = document.createElement("div");
+      tempRange.className = "cal-weather-temp-range";
 
-      const rainSpan = document.createElement("span");
-      rainSpan.className = "cal-weather-day-rain";
-      rainSpan.textContent = "💧 " + prob + "%";
-      right.appendChild(rainSpan);
+      const minSpan = document.createElement("span");
+      minSpan.className = "cal-weather-temp-min";
+      minSpan.textContent = minT + "°";
+      tempRange.appendChild(minSpan);
 
-      row.appendChild(right);
-      dailyList.appendChild(row);
+      const barSpan = document.createElement("span");
+      barSpan.className = "cal-weather-temp-bar";
+      tempRange.appendChild(barSpan);
+
+      const maxSpan = document.createElement("span");
+      maxSpan.className = "cal-weather-temp-max";
+      maxSpan.textContent = maxT + "°C";
+      tempRange.appendChild(maxSpan);
+
+      right.appendChild(tempRange);
+
+      const rainPill = document.createElement("span");
+      rainPill.className = "cal-weather-rain-pill" + (prob >= 70 ? " high" : "");
+      rainPill.textContent = "💧 " + prob + "%";
+      right.appendChild(rainPill);
+
+      card.appendChild(right);
+      dailyList.appendChild(card);
     }
   }
 
@@ -1890,4 +1999,12 @@ function calInit() {
 
 onReady(function () {
   calInit();
+});
+
+window.addEventListener("app-language-changed", function () {
+  calRenderFeedList();
+  calRenderCalendar();
+  if (typeof calRenderLiveMeetingBanner === "function") {
+    calRenderLiveMeetingBanner();
+  }
 });

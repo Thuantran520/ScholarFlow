@@ -30,7 +30,7 @@ function _socWzRender() {
     wrap.className = "soc-wz-links";
     links.forEach(function (l) {
       wrap.appendChild(_socBtn("soc-wz-link-btn", t(l.label), function () { _socOpen(l.url); },
-        "background:rgba(56,189,248,0.08); border-color:rgba(56,189,248,0.25); color:#38bdf8;"));
+        "background:rgba(var(--primary-rgb),0.08); border-color:rgba(var(--primary-rgb),0.25); color:var(--primary);"));
     });
     card.appendChild(wrap);
   }

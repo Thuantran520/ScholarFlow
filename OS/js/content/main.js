@@ -214,7 +214,41 @@
             count: currentList.length,
             list: currentList,
             style: currentRedactStyle,
-            blurPx: currentBlurPx
+            blurPx: currentBlurPx,
+            autoGuardEnabled: typeof sfAutoGuardEnabled !== "undefined" ? sfAutoGuardEnabled : false,
+            isSocialSite: typeof sfIsSocialMediaHost === "function" ? sfIsSocialMediaHost() : false
+          });
+          break;
+
+        case "SET_REDACT_AUTO_GUARD":
+          if (typeof sfSetAutoGuardState === "function") {
+            sfSetAutoGuardState(!!msg.enabled);
+          } else {
+            sfAutoGuardEnabled = !!msg.enabled;
+            if (sfAutoGuardEnabled && typeof runAutoGuardCheck === "function") {
+              runAutoGuardCheck();
+            }
+          }
+          sendResponse({
+            success: true,
+            enabled: typeof sfAutoGuardEnabled !== "undefined" ? sfAutoGuardEnabled : !!msg.enabled,
+            count: redactedElementsList.length,
+            list: getRedactedItemsForSidebar(),
+            isSocialSite: typeof sfIsSocialMediaHost === "function" ? sfIsSocialMediaHost() : false
+          });
+          break;
+
+        case "RUN_AUTO_GUARD_NOW":
+          let addedCount = 0;
+          if (typeof runAutoGuardCheck === "function") {
+            addedCount = runAutoGuardCheck();
+          }
+          sendResponse({
+            success: true,
+            count: redactedElementsList.length,
+            newCount: addedCount,
+            list: getRedactedItemsForSidebar(),
+            isSocialSite: typeof sfIsSocialMediaHost === "function" ? sfIsSocialMediaHost() : false
           });
           break;
 

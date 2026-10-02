@@ -80,7 +80,7 @@
   font-size: 11px;
   border-radius: 6px;
   cursor: pointer;
-  color: #93c5fd;
+  color: var(--primary-light);
   background: rgba(147, 197, 253, 0.1);
   border: 1px solid rgba(147, 197, 253, 0.3);
 }

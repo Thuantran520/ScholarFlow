@@ -3,10 +3,12 @@
 <head>
   <meta charset="utf-8">
   <title data-i18n="perm_page_title">ScholarFlow - Permission</title>
-  <link rel="stylesheet" href="../css/sidebar.css">
+  <link rel="stylesheet" href="../css/base/variables.css">
+  <link rel="stylesheet" href="../css/components/buttons.css">
+  <link rel="stylesheet" href="../css/base/base.css">
   <style>
-    body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: var(--surface-1); color: var(--text); padding: 20px; text-align: center;}
-    .perm-card { background: var(--surface-2); padding: 30px; border-radius: 12px; max-width: 400px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); border: 1px solid var(--border); }
+    body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: var(--bg, #0f172a); color: var(--text, #f8fafc); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 20px; text-align: center;}
+    .perm-card { background: var(--card-bg, #1e293b); padding: 30px; border-radius: 12px; max-width: 400px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); border: 1px solid var(--card-border, #334155); }
     svg { margin-bottom: 20px; color: var(--primary); }
   </style>
 </head>
@@ -18,7 +20,7 @@
       <span data-i18n="perm_cam_mic_desc1">Trình duyệt Edge/Chrome không hiển thị bảng hỏi quyền truy cập trong thanh bên (Sidebar).</span><br><br>
       <span data-i18n="perm_cam_mic_desc2">Vui lòng bấm nút bên dưới để cấp quyền cho phép tiện ích sử dụng Camera và Micro cho cuộc gọi WebRTC, sau đó bạn có thể quay lại Sidebar.</span>
     </p>
-    <button id="btn-grant" class="modern-btn primary" style="width: 100%; padding: 12px; font-size: 15px;" data-i18n="perm_cam_mic_btn">Cấp quyền ngay</button>
+    <button id="btn-grant" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 15px;" data-i18n="perm_cam_mic_btn">Cấp quyền ngay</button>
     <p id="perm-status" style="margin-top: 16px; font-size: 14px; font-weight: bold;"></p>
   </div>
   <script src="../locales/vi.js"></script>

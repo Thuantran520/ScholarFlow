@@ -2375,7 +2375,7 @@
       if (cc) cc.textContent = (typeof t === 'function' ? t('us_line_count', [_consoleLineCount]) : (_consoleLineCount + ' dòng'));
       const line = document.createElement('div');
       line.className = 'us-log-entry';
-      const colors = { log: '#10b981', warn: '#f59e0b', error: '#ef4444', info: '#38bdf8' };
+      const colors = { log: '#10b981', warn: '#f59e0b', error: '#ef4444', info: 'var(--primary)' };
       line.style.cssText = 'color:' + (colors[level] || '#10b981') + ';border-bottom:1px solid rgba(255,255,255,0.05);padding:2px 0;word-break:break-all;font-family:"JetBrains Mono", Consolas, monospace;font-size:10px;line-height:1.4;';
       const tag = document.createElement('span');
       tag.className = 'us-log-level';

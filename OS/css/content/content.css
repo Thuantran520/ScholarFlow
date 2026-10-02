@@ -1,3 +1,72 @@
+/* 0. ScholarFlow Theme & Typography Tokens for In-Page Elements */
+:root {
+  --sf-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --sf-font-mono: ui-monospace, "Cascadia Code", "Segoe UI Mono", Consolas, "Courier New", monospace;
+
+  /* Default theme: Cyan */
+  --primary: #38bdf8;
+  --primary-rgb: 56, 189, 248;
+  --primary-hover: #0ea5e9;
+  --primary-active: #0284c7;
+  --accent: #818cf8;
+  --primary-light: #7dd3fc;
+  --super-blur-val: 12px;
+}
+
+:root[data-sf-theme="cyan"], html[data-theme="cyan"], [data-sf-theme="cyan"] {
+  --primary: #38bdf8;
+  --primary-rgb: 56, 189, 248;
+  --primary-hover: #0ea5e9;
+  --primary-active: #0284c7;
+  --accent: #818cf8;
+  --primary-light: #7dd3fc;
+}
+
+:root[data-sf-theme="amber"], html[data-theme="amber"], [data-sf-theme="amber"] {
+  --primary: #f59e0b;
+  --primary-rgb: 245, 158, 11;
+  --primary-hover: #d97706;
+  --primary-active: #b45309;
+  --accent: #fbbf24;
+  --primary-light: #fde68a;
+}
+
+:root[data-sf-theme="emerald"], html[data-theme="emerald"], [data-sf-theme="emerald"] {
+  --primary: #10b981;
+  --primary-rgb: 16, 185, 129;
+  --primary-hover: #059669;
+  --primary-active: #047857;
+  --accent: #34d399;
+  --primary-light: #a7f3d0;
+}
+
+:root[data-sf-theme="violet"], html[data-theme="violet"], [data-sf-theme="violet"] {
+  --primary: #a855f7;
+  --primary-rgb: 168, 85, 247;
+  --primary-hover: #9333ea;
+  --primary-active: #7e22ce;
+  --accent: #c084fc;
+  --primary-light: #ddd6fe;
+}
+
+:root[data-sf-theme="rose"], html[data-theme="rose"], [data-sf-theme="rose"] {
+  --primary: #f43f5e;
+  --primary-rgb: 244, 63, 94;
+  --primary-hover: #e11d48;
+  --primary-active: #be123c;
+  --accent: #fb7185;
+  --primary-light: #fecdd3;
+}
+
+:root[data-sf-theme="mono"], html[data-theme="mono"], [data-sf-theme="mono"] {
+  --primary: #e2e8f0;
+  --primary-rgb: 226, 232, 240;
+  --primary-hover: #ffffff;
+  --primary-active: #cbd5e1;
+  --accent: #94a3b8;
+  --primary-light: #f8fafc;
+}
+
 /* Web Super Assistant - In-Page Styles */
 
 /* 1. Global inspect and snip cursor when active */
@@ -21,9 +90,9 @@ html.super-snip-active body {
 }
 
 #super-inspect-highlighter-box.mode-redact {
-  border: 3px solid #f43f5e !important;
-  background-color: rgba(244, 63, 94, 0.18) !important;
-  box-shadow: 0 0 16px rgba(244, 63, 94, 0.8), inset 0 0 10px rgba(244, 63, 94, 0.25) !important;
+  border: 2.5px solid var(--primary) !important;
+  background-color: rgba(var(--primary-rgb), 0.16) !important;
+  box-shadow: 0 0 16px rgba(var(--primary-rgb), 0.8), inset 0 0 10px rgba(var(--primary-rgb), 0.25) !important;
 }
 
 #super-inspect-highlighter-box.mode-remove {
@@ -39,9 +108,9 @@ html.super-snip-active body {
 }
 
 #super-inspect-highlighter-box.mode-capture {
-  border: 3px solid #0ea5e9 !important;
-  background-color: rgba(14, 165, 233, 0.22) !important;
-  box-shadow: 0 0 18px rgba(14, 165, 233, 0.9), inset 0 0 10px rgba(14, 165, 233, 0.3) !important;
+  border: 2.5px solid var(--primary) !important;
+  background-color: rgba(var(--primary-rgb), 0.18) !important;
+  box-shadow: 0 0 18px rgba(var(--primary-rgb), 0.85), inset 0 0 10px rgba(var(--primary-rgb), 0.3) !important;
 }
 
 :root {
@@ -60,15 +129,15 @@ html.super-snip-active body {
 
 /* Pulse highlight when hovering an item in the sidebar list */
 .super-element-highlight-pulse {
-  outline: 3px solid #38bdf8 !important;
+  outline: 3px solid var(--primary) !important;
   outline-offset: 2px !important;
-  box-shadow: 0 0 20px rgba(56, 189, 248, 0.9) !important;
+  box-shadow: 0 0 20px rgba(var(--primary-rgb), 0.9) !important;
   animation: superPulse 1s infinite alternate !important;
 }
 
 @keyframes superPulse {
-  from { outline-color: #38bdf8; box-shadow: 0 0 10px rgba(56, 189, 248, 0.5); }
-  to { outline-color: #0284c7; box-shadow: 0 0 24px rgba(56, 189, 248, 1); }
+  from { outline-color: var(--primary); box-shadow: 0 0 10px rgba(var(--primary-rgb), 0.5); }
+  to { outline-color: #0284c7; box-shadow: 0 0 24px rgba(var(--primary-rgb), 1); }
 }
 
 /* Removal confirmation flash */
@@ -87,24 +156,31 @@ html.super-snip-active body {
   position: fixed !important;
   z-index: 2147483647 !important;
   background: #0f172a !important;
-  border: 1px solid #38bdf8 !important;
+  border: 1px solid var(--primary) !important;
   color: #f8fafc !important;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
-  font-size: 11px !important;
+  font-family: var(--sf-font-sans) !important;
+  font-size: 11.5px !important;
+  font-weight: 500 !important;
   padding: 5px 10px !important;
   border-radius: 6px !important;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6) !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6), 0 0 10px rgba(var(--primary-rgb), 0.2) !important;
   pointer-events: none !important;
   display: none;
   white-space: nowrap !important;
+  line-height: 1.4 !important;
+  -webkit-font-smoothing: antialiased !important;
 }
 
 #super-element-tag-badge strong {
-  color: #38bdf8 !important;
+  color: var(--primary) !important;
+  font-family: var(--sf-font-mono) !important;
+  font-weight: 700 !important;
 }
 
 #super-element-tag-badge b {
-  color: #f43f5e !important;
+  color: var(--primary-light, #7dd3fc) !important;
+  font-family: var(--sf-font-sans) !important;
+  font-weight: 600 !important;
 }
 
 #super-element-tag-badge.is-remove-badge {
@@ -116,7 +192,7 @@ html.super-snip-active body {
 
 #super-element-tag-badge.is-capture-badge {
   background: rgba(15, 23, 42, 0.96) !important;
-  border-color: #38bdf8 !important;
+  border-color: var(--primary) !important;
   color: #ffffff !important;
   box-shadow: 0 6px 20px rgba(14, 165, 233, 0.5) !important;
 }
@@ -287,10 +363,10 @@ html.super-redactions-paused .sf-redact-avatar {
   transform: translate(-50%, -50%) !important;
   z-index: 2147483647 !important;
   background: rgba(15, 23, 42, 0.95) !important;
-  border: 3px solid #38bdf8 !important;
+  border: 3px solid var(--primary) !important;
   border-radius: 18px !important;
   padding: 22px 34px !important;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.85), 0 0 30px rgba(56, 189, 248, 0.6) !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.85), 0 0 30px rgba(var(--primary-rgb), 0.6) !important;
   text-align: center !important;
   pointer-events: none !important;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
@@ -309,9 +385,9 @@ html.super-redactions-paused .sf-redact-avatar {
 #super-inpage-countdown-hud .hud-number {
   font-size: 64px !important;
   font-weight: 900 !important;
-  color: #38bdf8 !important;
+  color: var(--primary) !important;
   line-height: 1 !important;
-  text-shadow: 0 0 20px rgba(56, 189, 248, 0.9) !important;
+  text-shadow: 0 0 20px rgba(var(--primary-rgb), 0.9) !important;
   font-family: ui-monospace, SFMono-Regular, monospace !important;
 }
 
@@ -362,7 +438,7 @@ html.super-inspecting-active .super-redact-region {
 }
 
 html.super-inspecting-active [data-super-redact-region="1"].super-element-highlight-pulse {
-  outline: 3px solid #38bdf8 !important;
+  outline: 3px solid var(--primary) !important;
   outline-offset: 2px !important;
 }
 
@@ -391,8 +467,8 @@ html.super-inspecting-active [data-super-redact-region="1"].super-element-highli
 
 #super-snip-box {
   position: fixed !important;
-  border: 2px solid #38bdf8 !important;
-  box-shadow: 0 0 0 99999px rgba(15, 23, 42, 0.45), 0 0 18px rgba(56, 189, 248, 0.7) !important;
+  border: 2px solid var(--primary) !important;
+  box-shadow: 0 0 0 99999px rgba(15, 23, 42, 0.45), 0 0 18px rgba(var(--primary-rgb), 0.75) !important;
   border-radius: 4px !important;
   pointer-events: auto !important;
   cursor: move !important;
@@ -408,9 +484,9 @@ html.super-inspecting-active [data-super-redact-region="1"].super-element-highli
 
 #super-snip-hover-box {
   position: fixed !important;
-  border: 2px dashed #06b6d4 !important;
-  background: rgba(6, 182, 212, 0.14) !important;
-  box-shadow: 0 0 14px rgba(6, 182, 212, 0.45) !important;
+  border: 2px dashed var(--primary) !important;
+  background: rgba(var(--primary-rgb), 0.14) !important;
+  box-shadow: 0 0 14px rgba(var(--primary-rgb), 0.5) !important;
   pointer-events: none !important;
   border-radius: 4px !important;
   transition: all 0.04s ease-out !important;
@@ -424,23 +500,31 @@ html.super-inspecting-active [data-super-redact-region="1"].super-element-highli
   z-index: 2147483646 !important;
   pointer-events: none !important;
   background: rgba(15, 23, 42, 0.95) !important;
-  border: 1px solid #38bdf8 !important;
+  border: 1px solid var(--primary) !important;
   border-radius: 6px !important;
-  padding: 3px 9px !important;
+  padding: 4px 10px !important;
   color: #f8fafc !important;
   font-size: 11.5px !important;
-  font-weight: 600 !important;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6) !important;
+  font-weight: 500 !important;
+  font-family: var(--sf-font-sans) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6), 0 0 10px rgba(var(--primary-rgb), 0.2) !important;
   display: none;
   white-space: nowrap !important;
+  line-height: 1.4 !important;
+  -webkit-font-smoothing: antialiased !important;
+}
+
+#super-snip-tag-badge strong {
+  font-family: var(--sf-font-mono) !important;
+  color: var(--primary) !important;
+  font-weight: 700 !important;
 }
 
 .super-snip-handle {
   position: absolute !important;
   width: 10px !important;
   height: 10px !important;
-  background: #38bdf8 !important;
+  background: var(--primary) !important;
   border: 2px solid #ffffff !important;
   border-radius: 50% !important;
   box-sizing: border-box !important;
@@ -465,13 +549,14 @@ html.super-inspecting-active [data-super-redact-region="1"].super-element-highli
   align-items: center !important;
   gap: 6px !important;
   background: #0f172a !important;
-  border: 1.5px solid #38bdf8 !important;
+  border: 1.5px solid var(--primary) !important;
   border-radius: 8px !important;
   padding: 5px 9px !important;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.75) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.75), 0 0 12px rgba(var(--primary-rgb), 0.25) !important;
   z-index: 2147483645 !important;
   white-space: nowrap !important;
   pointer-events: auto !important;
+  font-family: var(--sf-font-sans) !important;
 }
 
 #super-snip-toolbar.toolbar-top {
@@ -480,11 +565,13 @@ html.super-inspecting-active [data-super-redact-region="1"].super-element-highli
 }
 
 .super-snip-size-badge {
-  font-family: ui-monospace, SFMono-Regular, monospace !important;
-  font-size: 11px !important;
-  color: #38bdf8 !important;
+  font-family: var(--sf-font-mono) !important;
+  font-size: 11.5px !important;
+  color: var(--primary-light, var(--primary)) !important;
   font-weight: 700 !important;
-  padding: 2px 4px !important;
+  padding: 2px 6px !important;
+  letter-spacing: 0.2px !important;
+  -webkit-font-smoothing: antialiased !important;
 }
 
 .super-snip-btn {
@@ -492,13 +579,25 @@ html.super-inspecting-active [data-super-redact-region="1"].super-element-highli
   border-radius: 5px !important;
   padding: 4px 10px !important;
   font-size: 11.5px !important;
-  font-weight: 700 !important;
+  font-weight: 600 !important;
   cursor: pointer !important;
   display: inline-flex !important;
   align-items: center !important;
-  gap: 4px !important;
+  gap: 5px !important;
   transition: all 0.15s ease !important;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-family: var(--sf-font-sans) !important;
+  -webkit-font-smoothing: antialiased !important;
+}
+
+.super-snip-btn kbd {
+  font-family: var(--sf-font-mono) !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+  background: rgba(255, 255, 255, 0.2) !important;
+  padding: 1px 5px !important;
+  border-radius: 4px !important;
+  border: none !important;
 }
 
 .super-snip-btn-confirm {
@@ -527,19 +626,20 @@ html.super-inspecting-active [data-super-redact-region="1"].super-element-highli
   left: 50% !important;
   transform: translateX(-50%) !important;
   background: rgba(15, 23, 42, 0.95) !important;
-  border: 1.5px solid #38bdf8 !important;
+  border: 1.5px solid var(--primary) !important;
   border-radius: 20px !important;
   padding: 7px 18px !important;
   color: #f8fafc !important;
   font-size: 12px !important;
   font-weight: 600 !important;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7), 0 0 16px rgba(56, 189, 248, 0.3) !important;
+  font-family: var(--sf-font-sans) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7), 0 0 16px rgba(var(--primary-rgb), 0.3) !important;
   pointer-events: none !important;
   z-index: 2147483647 !important;
   display: flex !important;
   align-items: center !important;
   gap: 8px !important;
+  -webkit-font-smoothing: antialiased !important;
 }
 
 /* ── Smart Reading Companion Floating Toolbar ── */

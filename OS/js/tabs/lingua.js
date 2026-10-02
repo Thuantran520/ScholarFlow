@@ -185,7 +185,7 @@ async function lngCreateCard() {
   if (out) {
     out.textContent = "";
     const h = document.createElement("div");
-    h.style.cssText = "font-weight:700;color:#38bdf8;margin-bottom:2px;";
+    h.style.cssText = "font-weight:700;color:var(--primary);margin-bottom:2px;";
     h.textContent = lngPending.term;
     out.appendChild(h);
     const d = document.createElement("div"); d.textContent = lngPending.def; out.appendChild(d);
@@ -242,7 +242,7 @@ function lngRenderReview() {
   }
 
   const speak = document.createElement("button");
-  speak.type = "button"; speak.className = "btn-text-small"; speak.textContent = "\ud83d\udd0a Listen";
+  speak.type = "button"; speak.className = "btn-text-small"; speak.textContent = "\ud83d\udd0a " + (t("lng_btn_listen") || "Listen");
   speak.style.marginRight = "6px";
   speak.addEventListener("click", function () { lngSpeak((card.term || "") + ". " + ((card.ex && card.ex[0]) || card.q || "")); });
   area.appendChild(speak);
@@ -552,7 +552,7 @@ async function lngLinkJoin() {
     const row = document.createElement("div");
     row.style.cssText = "border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:6px 8px;margin-bottom:6px;font-size:11px;";
     const chip = document.createElement("span");
-    chip.style.cssText = "background:rgba(56,189,248,0.12);color:#38bdf8;border-radius:99px;padding:1px 8px;font-weight:700;margin-right:6px;";
+    chip.style.cssText = "background:rgba(var(--primary-rgb),0.12);color:var(--primary);border-radius:99px;padding:1px 8px;font-weight:700;margin-right:6px;";
     chip.textContent = String(o.w || "").slice(0, 30);
     row.appendChild(chip);
     const body = document.createElement("span");
@@ -661,4 +661,9 @@ onReady(function () {
   if (linkBtn) linkBtn.addEventListener("click", function () { lngLinkJoin(); });
   lngStartWriteBridge();
   lngLoad();
+});
+
+window.addEventListener("app-language-changed", function () {
+  lngRenderStats();
+  lngRenderReview();
 });

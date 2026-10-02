@@ -72,7 +72,9 @@ function initFlowTab() {
 
   function renderHistory() {
     if (!elMessages) return;
-    elMessages.innerHTML = "";
+    while (elMessages.firstChild) {
+      elMessages.removeChild(elMessages.firstChild);
+    }
     chatHistory.forEach((msg) => {
       appendMessageHTML(msg);
     });
@@ -85,8 +87,15 @@ function initFlowTab() {
     }, 50);
   }
 
-  function appendSystemMessage(text) {
-    const msg = { type: "system", text: text, time: Date.now() };
+  function t(k, args) {
+    if (window.i18n && typeof window.i18n.t === "function") {
+      return window.i18n.t(k, args);
+    }
+    return "";
+  }
+
+  function appendSystemMessage(text, key, args) {
+    const msg = { type: "system", text: text, key: key, args: args, time: Date.now() };
     chatHistory.push(msg);
     saveHistory();
     appendMessageHTML(msg);
@@ -135,22 +144,22 @@ function initFlowTab() {
   function renderDriveCard(driveInfo) {
     const card = document.createElement("div");
     card.className = "flow-drive-card";
-    card.style.cssText = "background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 10px; padding: 10px; margin-top: 6px; display: flex; flex-direction: column; gap: 6px;";
+    card.style.cssText = "background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(var(--primary-rgb), 0.3); border-radius: 10px; padding: 10px; margin-top: 6px; display: flex; flex-direction: column; gap: 6px;";
 
     const header = document.createElement("div");
-    header.style.cssText = "display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 700; color: #38bdf8;";
+    header.style.cssText = "display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 700; color:var(--primary);";
     const icon = document.createElement("span");
     icon.textContent = "☁️";
     header.appendChild(icon);
     const title = document.createElement("span");
-    title.textContent = " GOOGLE DRIVE (LƯU TRỮ TRUNG GIAN)";
+    title.textContent = " " + (t("flow_drive_storage_title") || "GOOGLE DRIVE (LƯU TRỮ TRUNG GIAN)");
     header.appendChild(title);
     card.appendChild(header);
 
     if (driveInfo.type === "file") {
       const desc = document.createElement("div");
       desc.style.cssText = "font-size: 11px; color: #94a3b8; word-break: break-all;";
-      desc.textContent = "Mã tệp: " + driveInfo.fileId;
+      desc.textContent = (t("flow_file_id_lbl") || "Mã tệp: ") + driveInfo.fileId;
       card.appendChild(desc);
 
       const btnRow = document.createElement("div");
@@ -162,7 +171,7 @@ function initFlowTab() {
       directBtn.download = "";
       directBtn.className = "flow-btn-primary";
       directBtn.style.cssText = "font-size: 11.5px; padding: 6px 12px; text-decoration: none; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;";
-      directBtn.textContent = "⬇️ Tải trực tiếp về máy";
+      directBtn.textContent = "⬇️ " + (t("flow_btn_direct_dl") || "Tải trực tiếp về máy");
       btnRow.appendChild(directBtn);
 
       const viewBtn = document.createElement("a");
@@ -170,14 +179,14 @@ function initFlowTab() {
       viewBtn.target = "_blank";
       viewBtn.className = "flow-btn-secondary";
       viewBtn.style.cssText = "font-size: 11px; padding: 6px 10px; text-decoration: none; border-radius: 6px;";
-      viewBtn.textContent = "↗️ Mở Drive";
+      viewBtn.textContent = "↗️ " + (t("flow_btn_open_drive") || "Mở Drive");
       btnRow.appendChild(viewBtn);
 
       card.appendChild(btnRow);
     } else if (driveInfo.type === "folder") {
       const desc = document.createElement("div");
       desc.style.cssText = "font-size: 11px; color: #94a3b8;";
-      desc.textContent = "Thư mục lưu trữ chia sẻ chung";
+      desc.textContent = t("flow_drive_folder_desc") || "Thư mục lưu trữ chia sẻ chung";
       card.appendChild(desc);
 
       const btnRow = document.createElement("div");
@@ -188,7 +197,7 @@ function initFlowTab() {
       viewBtn.target = "_blank";
       viewBtn.className = "flow-btn-primary";
       viewBtn.style.cssText = "font-size: 11.5px; padding: 6px 12px; text-decoration: none; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;";
-      viewBtn.textContent = "↗️ Mở Thư mục trên Drive";
+      viewBtn.textContent = "↗️ " + (t("flow_btn_open_drive_folder") || "Mở Thư mục trên Drive");
       btnRow.appendChild(viewBtn);
 
       card.appendChild(btnRow);
@@ -201,12 +210,12 @@ function initFlowTab() {
     const div = document.createElement("div");
     if (msg.type === "system") {
       div.className = "flow-system-badge";
-      div.textContent = msg.text;
+      div.textContent = (msg.key ? t(msg.key, msg.args) : "") || msg.text;
     } else if (msg.type === "chat") {
       div.className = msg.isMe ? "flow-bubble me" : "flow-bubble remote";
       const sender = document.createElement("div");
       sender.className = "flow-bubble-sender";
-      sender.textContent = msg.isMe ? "Tôi" : msg.sender;
+      sender.textContent = msg.isMe ? (t("flow_me") || "Tôi") : msg.sender;
       div.appendChild(sender);
 
       const span = document.createElement("span");
@@ -224,7 +233,7 @@ function initFlowTab() {
             a.href = part;
             a.target = "_blank";
             a.textContent = part;
-            a.style.color = msg.isMe ? "#fff" : "#38bdf8";
+            a.style.color = msg.isMe ? "#fff" : "var(--primary)";
             a.style.textDecoration = "underline";
             span.appendChild(a);
           } else {
@@ -243,7 +252,7 @@ function initFlowTab() {
       div.className = msg.isMe ? "flow-bubble me" : "flow-bubble remote";
       const sender = document.createElement("div");
       sender.className = "flow-bubble-sender";
-      sender.textContent = msg.isMe ? "Tôi" : msg.sender;
+      sender.textContent = msg.isMe ? (t("flow_me") || "Tôi") : msg.sender;
       div.appendChild(sender);
 
       const card = document.createElement("div");
@@ -267,7 +276,7 @@ function initFlowTab() {
       const size = document.createElement("div");
       size.className = "flow-file-size";
       const sizeKB = Math.round(msg.fileSize / 1024);
-      size.textContent = (sizeKB > 1024 ? (sizeKB / 1024).toFixed(1) + " MB" : sizeKB + " KB") + " • Đã gửi thành công";
+      size.textContent = (sizeKB > 1024 ? (sizeKB / 1024).toFixed(1) + " MB" : sizeKB + " KB") + " • " + (t("flow_file_sent") || "Đã gửi thành công");
       meta.appendChild(size);
 
       info.appendChild(meta);
@@ -284,7 +293,7 @@ function initFlowTab() {
 
     const sender = document.createElement("div");
     sender.className = "flow-bubble-sender";
-    sender.textContent = isMe ? "Tôi" : senderName;
+    sender.textContent = isMe ? (t("flow_me") || "Tôi") : senderName;
     div.appendChild(sender);
 
     const card = document.createElement("div");
@@ -311,7 +320,7 @@ function initFlowTab() {
     size.className = "flow-file-size";
     size.id = "file-status-" + fileId;
     const sizeKB = Math.round(fileSize / 1024);
-    size.textContent = (sizeKB > 1024 ? (sizeKB / 1024).toFixed(1) + " MB" : sizeKB + " KB") + " • Đang truyền...";
+    size.textContent = (sizeKB > 1024 ? (sizeKB / 1024).toFixed(1) + " MB" : sizeKB + " KB") + " • " + (t("flow_file_sending") || "Đang truyền...");
     meta.appendChild(size);
 
     info.appendChild(meta);
@@ -358,7 +367,7 @@ function initFlowTab() {
     }
 
     let initTimeout = setTimeout(() => {
-      if (elMyId && elMyId.textContent === "Đang khởi tạo...") {
+      if (elMyId && (elMyId.textContent === "Đang khởi tạo..." || elMyId.textContent === t("flow_id_init"))) {
         console.warn("PeerJS timeout, creating fresh ID...");
         safeStorage.remove("flow_peer_id");
         try { peer.destroy(); } catch (e) {}
@@ -369,7 +378,10 @@ function initFlowTab() {
     peer.on("open", (id) => {
       clearTimeout(initTimeout);
       myId = id;
-      if (elMyId) elMyId.textContent = id;
+      if (elMyId) {
+        elMyId.textContent = id;
+        elMyId.dataset.initialized = "true";
+      }
       safeStorage.set("flow_peer_id", id);
     });
 
@@ -383,7 +395,8 @@ function initFlowTab() {
       c.on("close", () => {
         if (activeConn === c) {
           activeConn = null;
-          appendSystemMessage(`${remoteName} đã ngắt kết nối.`);
+          const msgText = t("flow_peer_disconnected", [remoteName]) || `${remoteName} đã ngắt kết nối.`;
+          appendSystemMessage(msgText, "flow_peer_disconnected", [remoteName]);
           updateUIState();
         }
       });
@@ -406,11 +419,12 @@ function initFlowTab() {
   function handleData(data, c) {
     const senderName = c.metadata?.senderName || c.peer;
     if (data.type === "handshake_accept") {
-      appendSystemMessage(`${senderName} đã chấp nhận kết nối.`);
+      const msgText = t("flow_peer_accepted", [senderName]) || `${senderName} đã chấp nhận kết nối.`;
+      appendSystemMessage(msgText, "flow_peer_accepted", [senderName]);
       activeConn = c;
       updateUIState();
     } else if (data.type === "handshake_reject") {
-      alert(`${senderName} đã từ chối kết nối.`);
+      alert(t("flow_peer_rejected", [senderName]) || `${senderName} đã từ chối kết nối.`);
       c.close();
       activeConn = null;
       updateUIState();
@@ -422,7 +436,8 @@ function initFlowTab() {
         elPinnedDriveLink.href = data.url;
         elPinnedDriveLink.textContent = "🔗 " + data.url;
       }
-      appendSystemMessage(`${senderName} đã ghim link Google Drive.`);
+      const msgText = t("flow_peer_pinned_drive", [senderName]) || `${senderName} đã ghim link Google Drive.`;
+      appendSystemMessage(msgText, "flow_peer_pinned_drive", [senderName]);
     } else if (data.type === "file_start") {
       receivingFiles[data.fileId] = {
         name: data.fileName,
@@ -448,7 +463,7 @@ function initFlowTab() {
 
         const statusEl = document.getElementById("file-status-" + data.fileId);
         if (statusEl) {
-          statusEl.textContent = "Đã nhận xong • Sẵn sàng tải";
+          statusEl.textContent = t("flow_file_received_ready") || "Đã nhận xong • Sẵn sàng tải";
         }
 
         const cardEl = document.getElementById("file-msg-" + data.fileId);
@@ -456,7 +471,7 @@ function initFlowTab() {
           const dlBtn = document.createElement("button");
           dlBtn.className = "flow-btn-primary";
           dlBtn.style.cssText = "margin-top: 8px; font-size: 11.5px; padding: 5px 12px; cursor: pointer; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px; width: fit-content;";
-          dlBtn.textContent = "⬇️ Tải về";
+          dlBtn.textContent = "⬇️ " + (t("flow_btn_download") || "Tải về");
           dlBtn.onclick = () => {
             const a = document.createElement("a");
             a.href = url;
@@ -468,7 +483,8 @@ function initFlowTab() {
           cardEl.appendChild(dlBtn);
         }
 
-        appendSystemMessage(`Tệp tin "${rf.name}" đã sẵn sàng để tải về.`);
+        const readyMsg = t("flow_file_ready_toast", [rf.name]) || `Tệp tin "${rf.name}" đã sẵn sàng để tải về.`;
+        appendSystemMessage(readyMsg, "flow_file_ready_toast", [rf.name]);
         delete receivingFiles[data.fileId];
       } else {
         c.send({ type: "chunk_ack", fileId: data.fileId });
@@ -489,7 +505,9 @@ function initFlowTab() {
         pendingConnection.send({ type: "handshake_accept" });
         activeConn = pendingConnection;
         if (elIncomingModal) elIncomingModal.style.display = "none";
-        appendSystemMessage(`Bạn đã kết nối trực tiếp với ${pendingConnection.metadata?.senderName || pendingConnection.peer}`);
+        const partnerName = pendingConnection.metadata?.senderName || pendingConnection.peer;
+        const connMsg = t("flow_connected_with", [partnerName]) || `Bạn đã kết nối trực tiếp với ${partnerName}`;
+        appendSystemMessage(connMsg, "flow_connected_with", [partnerName]);
         updateUIState();
 
         if (elDriveInput && elDriveInput.value) {
@@ -522,14 +540,15 @@ function initFlowTab() {
       const partnerId = elPartnerInput ? elPartnerInput.value.trim() : "";
       if (!partnerId) return;
       if (partnerId === myId) {
-        alert("Không thể tự kết nối với chính mình.");
+        alert(t("flow_err_self_connect") || "Không thể tự kết nối với chính mình.");
         return;
       }
 
       if (elNameInput) elNameInput.disabled = true;
 
       const c = peer.connect(partnerId, { metadata: { senderName: myName } });
-      appendSystemMessage(`Đang yêu cầu kết nối tới ${partnerId}... (Chờ đối phương chấp nhận)`);
+      const reqMsg = t("flow_requesting_connect", [partnerId]) || `Đang yêu cầu kết nối tới ${partnerId}... (Chờ đối phương chấp nhận)`;
+      appendSystemMessage(reqMsg, "flow_requesting_connect", [partnerId]);
 
       c.on("data", (data) => handleData(data, c));
       c.on("close", () => {
@@ -539,7 +558,7 @@ function initFlowTab() {
         }
       });
       c.on("error", (err) => {
-        alert("Lỗi kết nối: " + (err.message || err));
+        alert((t("flow_err_connect") || "Lỗi kết nối: ") + (err.message || err));
       });
     });
   }
@@ -552,7 +571,7 @@ function initFlowTab() {
         activeConn = null;
       }
       updateUIState();
-      appendSystemMessage("Đã ngắt kết nối trò chuyện.");
+      appendSystemMessage(t("flow_msg_disconnected") || "Đã ngắt kết nối trò chuyện.", "flow_msg_disconnected");
     });
   }
 
@@ -571,7 +590,7 @@ function initFlowTab() {
 
   function sendMessage() {
     if (!activeConn || !activeConn.open) {
-      alert("Chưa có kết nối nào đang mở!");
+      alert(t("flow_err_no_connection") || "Chưa có kết nối nào đang mở!");
       return;
     }
 
@@ -613,7 +632,7 @@ function initFlowTab() {
         delete c.sendingFile;
         const statusEl = document.getElementById("file-status-" + fileId);
         if (statusEl) {
-          statusEl.textContent = "Đã gửi thành công ✔";
+          statusEl.textContent = (t("flow_file_sent") || "Đã gửi thành công") + " ✔";
         }
       }
     });
@@ -633,7 +652,7 @@ function initFlowTab() {
         if (activeConn && activeConn.open) {
           activeConn.send({ type: "drive_link", url: link });
         }
-        appendSystemMessage("Đã ghim link Google Drive vào phòng chat.");
+        appendSystemMessage(t("flow_msg_drive_pinned") || "Đã ghim link Google Drive vào phòng chat.", "flow_msg_drive_pinned");
       }
     });
   }
@@ -716,12 +735,19 @@ function initFlowTab() {
   const btnExport = document.getElementById("btn-flow-export");
   if (btnExport) {
     btnExport.addEventListener("click", () => {
+      const meLbl = t("flow_me") || "Tôi";
+      const sentFileLbl = t("flow_msg_sent_file") || "gửi file:";
       let txt = "ScholarFlow Chat History (1-to-1 P2P)\n\n";
       chatHistory.forEach((m) => {
         let time = new Date(m.time).toLocaleString();
-        if (m.type === "system") txt += `[${time}] SYSTEM: ${m.text}\n`;
-        else if (m.type === "chat") txt += `[${time}] ${m.isMe ? "Tôi" : m.sender}: ${m.text}\n`;
-        else if (m.type === "file") txt += `[${time}] ${m.isMe ? "Tôi" : m.sender} gửi file: ${m.fileName}\n`;
+        if (m.type === "system") {
+          const sysText = (m.key ? t(m.key, m.args) : "") || m.text;
+          txt += `[${time}] SYSTEM: ${sysText}\n`;
+        } else if (m.type === "chat") {
+          txt += `[${time}] ${m.isMe ? meLbl : m.sender}: ${m.text}\n`;
+        } else if (m.type === "file") {
+          txt += `[${time}] ${m.isMe ? meLbl : m.sender} ${sentFileLbl} ${m.fileName}\n`;
+        }
       });
       const blob = new Blob([txt], { type: "text/plain" });
       const url = URL.createObjectURL(blob);
@@ -731,6 +757,15 @@ function initFlowTab() {
       a.click();
     });
   }
+
+  // React to dynamic language changes
+  window.addEventListener("app-language-changed", () => {
+    if (elMyId && elMyId.dataset.initialized !== "true") {
+      elMyId.textContent = t("flow_id_init") || "Đang khởi tạo...";
+    }
+    renderHistory();
+    updateUIState();
+  });
 
   // Start initialization
   renderHistory();

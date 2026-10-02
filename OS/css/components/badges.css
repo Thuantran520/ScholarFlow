@@ -2,9 +2,9 @@
   font-size: 10.5px;
   padding: 2.5px 8px;
   border-radius: 9999px;
-  background: rgba(56, 189, 248, 0.1);
-  color: #38bdf8;
-  border: 1px solid rgba(56, 189, 248, 0.3);
+  background: rgba(var(--primary-rgb), 0.1);
+  color: var(--primary);
+  border: 1px solid rgba(var(--primary-rgb), 0.3);
   font-weight: 600;
   display: inline-flex;
   align-items: center;
@@ -16,7 +16,7 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 .badge.is-detected {
-  color: #38bdf8;
-  border-color: rgba(56, 189, 248, 0.45);
-  background: rgba(56, 189, 248, 0.15);
+  color: var(--primary);
+  border-color: rgba(var(--primary-rgb), 0.45);
+  background: rgba(var(--primary-rgb), 0.15);
 }

@@ -267,8 +267,8 @@ onReady(() => {
   if (citeBox) {
     citeBox.addEventListener("dragover", (e) => {
       e.preventDefault();
-      citeBox.style.borderColor = "#38bdf8";
-      citeBox.style.background = "rgba(56, 189, 248, 0.08)";
+      citeBox.style.borderColor = "var(--primary)";
+      citeBox.style.background = "rgba(var(--primary-rgb), 0.08)";
     });
     citeBox.addEventListener("dragleave", () => {
       citeBox.style.borderColor = "";
@@ -1341,6 +1341,51 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
     if (Array.isArray(list)) renderRedactedList(list);
   }
 
+  // Auto-Guard toggle & instant check trigger
+  const autoGuardToggle = document.getElementById("redact-auto-guard-toggle");
+  if (autoGuardToggle) {
+    storGet("sf_redact_auto_guard", (res) => {
+      const isEnabled = !!(res && res.sf_redact_auto_guard);
+      if (typeof updateAutoGuardUI === "function") {
+        updateAutoGuardUI(isEnabled, typeof currentIsSocialSite !== "undefined" ? currentIsSocialSite : false);
+      }
+    });
+
+    autoGuardToggle.addEventListener("change", (e) => {
+      const enabled = e.target.checked;
+      storSet({ sf_redact_auto_guard: enabled });
+      if (typeof updateAutoGuardUI === "function") {
+        updateAutoGuardUI(enabled, typeof currentIsSocialSite !== "undefined" ? currentIsSocialSite : false);
+      }
+      sendTabMessage({ action: "SET_REDACT_AUTO_GUARD", enabled }, (res) => {
+        if (res) {
+          if (typeof updateAutoGuardUI === "function") {
+            updateAutoGuardUI(enabled, !!res.isSocialSite);
+          }
+          if (res.list) sfSyncRedactionList(res.list);
+        }
+      });
+      showToast(enabled
+        ? (window.i18n ? window.i18n.t("toast_auto_guard_enabled") : "✓ Đã bật tự động kiểm tra & che mờ khi tải lại trang!")
+        : (window.i18n ? window.i18n.t("toast_auto_guard_disabled") : "Đã tắt tự động che mờ khi tải lại trang."));
+    });
+  }
+
+  document.getElementById("btn-auto-guard-now")?.addEventListener("click", () => {
+    sendTabMessage({ action: "RUN_AUTO_GUARD_NOW" }, (res) => {
+      if (res) {
+        if (res.list) sfSyncRedactionList(res.list);
+        if (typeof updateAutoGuardUI === "function") {
+          updateAutoGuardUI(typeof currentAutoGuardState !== "undefined" ? currentAutoGuardState : true, !!res.isSocialSite);
+        }
+        const count = res.newCount || 0;
+        showToast(window.i18n
+          ? window.i18n.t("toast_auto_guard_scan_done", [count])
+          : `✓ Đã kiểm tra & che mờ ${count} phần tử trên trang!`);
+      }
+    });
+  });
+
   document.getElementById("btn-detect-sensitive")?.addEventListener("click", () => {
     sendTabMessage({
       action: "AUTO_DETECT_SENSITIVE",
@@ -1349,8 +1394,8 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
     }, (res) => {
       if (res && res.list) sfSyncRedactionList(res.list);
       showToast(res && res.count > 0
-        ? `🔍 Đã che ${res.count} phần tử nhạy cảm!`
-        : "✓ Không phát hiện dữ liệu nhạy cảm.");
+        ? (window.i18n ? window.i18n.t("toast_redact_sensitive_found", [res.count]) : `🔍 Đã che ${res.count} phần tử nhạy cảm!`)
+        : (window.i18n ? window.i18n.t("toast_redact_sensitive_none") : "✓ Không phát hiện dữ liệu nhạy cảm."));
     });
   });
 
@@ -1385,7 +1430,7 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
           if (res) {
             sfRenderKeywordRules(res.rules || []);
             if (res.list) sfSyncRedactionList(res.list);
-            showToast(`✓ Đã xóa "${r.keyword}"`);
+            showToast(window.i18n ? window.i18n.t("toast_redact_kw_removed", [r.keyword]) : `✓ Đã xóa "${r.keyword}"`);
           }
         });
       });
@@ -1401,7 +1446,7 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
     const kwInput = document.getElementById("redact-keyword-input");
     const kw = ((kwInput && kwInput.value) || "").trim();
     if (!kw) {
-      showToast("⚠️ Nhập từ khóa cần che!");
+      showToast(window.i18n ? window.i18n.t("toast_redact_kw_empty") : "⚠️ Nhập từ khóa cần che!");
       return;
     }
     sendTabMessage({
@@ -1413,8 +1458,8 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
       if (res && res.rules) sfRenderKeywordRules(res.rules);
       if (res && res.list) sfSyncRedactionList(res.list);
       showToast(res && res.count > 0
-        ? `✓ Đang tự động che "${kw}" (${res.count} vị trí)!`
-        : `✓ Đã thêm quy tắc "${kw}" (tự che khi lướt feed)!`);
+        ? (window.i18n ? window.i18n.t("toast_redact_kw_added_active", [kw, res.count]) : `✓ Đang tự động che "${kw}" (${res.count} vị trí)!`)
+        : (window.i18n ? window.i18n.t("toast_redact_kw_added_feed", [kw]) : `✓ Đã thêm quy tắc "${kw}" (tự che khi lướt feed)!`));
       if (kwInput) kwInput.value = "";
     });
   }
@@ -1492,7 +1537,9 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
       const st = document.getElementById("redact-pin-state");
       if (!st) return;
       const locked = !!(rec && rec.enabled && rec.hash);
-      st.textContent = locked ? "🔒 Đã bật khoá PIN." : "Chưa đặt mã PIN.";
+      st.textContent = locked
+        ? (window.i18n ? window.i18n.t("redact_pin_is_set") : "🔒 Đã bật khoá PIN.")
+        : (window.i18n ? window.i18n.t("redact_pin_not_set") : "Chưa đặt mã PIN.");
       st.style.color = locked ? "#fbbf24" : "#cbd5e1";
     });
   }
@@ -1501,7 +1548,7 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
     const input = document.getElementById("redact-pin-input");
     const val = ((input && input.value) || "").trim();
     if (!/^\d{4,6}$/.test(val)) {
-      showToast("⚠️ Mã PIN phải gồm 4-6 ký số!");
+      showToast(window.i18n ? window.i18n.t("redact_pin_invalid") : "⚠️ Mã PIN phải gồm 4-6 ký số!");
       return;
     }
     const salt = sfRandomSalt();
@@ -1509,14 +1556,14 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
     storSet({ sf_redact_pin: { enabled: true, salt, hash } }, () => {
       if (input) input.value = "";
       sfUpdatePinStateUI();
-      showToast("🔒 Đã bật khoá PIN cho nút Xem bản gốc!");
+      showToast(window.i18n ? window.i18n.t("redact_pin_enabled_toast") : "🔒 Đã bật khoá PIN cho nút Xem bản gốc!");
     });
   });
 
   document.getElementById("btn-clear-redact-pin")?.addEventListener("click", () => {
     storRemove("sf_redact_pin", () => {
       sfUpdatePinStateUI();
-      showToast("🔓 Đã xoá mã PIN.");
+      showToast(window.i18n ? window.i18n.t("redact_pin_cleared_toast") : "🔓 Đã xoá mã PIN.");
     });
   });
 
@@ -1553,7 +1600,7 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
           if (await sfPinMatches(input.value, rec)) {
             finish(true);
           } else {
-            showToast("✕ Sai mã PIN!");
+            showToast(window.i18n ? window.i18n.t("redact_pin_wrong") : "✕ Sai mã PIN!");
             input.value = "";
             try { input.focus({ preventScroll: true }); } catch (e) {}
           }
@@ -1581,6 +1628,7 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
   window.sfGetPinRecord = sfGetPinRecord;
   window.sfRandomSalt = sfRandomSalt;
   sfUpdatePinStateUI();
+  window.addEventListener("app-language-changed", () => { sfUpdatePinStateUI(); });
 
   // ESC key to cancel inspect mode or element capture when focused in sidebar
   window.addEventListener("keydown", (e) => {
@@ -2216,6 +2264,9 @@ document.getElementById("btn-quick-swap-tabs")?.addEventListener("click", swapDu
       isRedactionsPaused = status.isRedactionsPaused || false;
       updateInspectButtonsUI();
       updateRedactionVisibilityUI();
+      if (typeof updateAutoGuardUI === "function") {
+        updateAutoGuardUI(status.autoGuardEnabled, status.isSocialSite);
+      }
       renderRedactedList(status.list || []);
     }
 

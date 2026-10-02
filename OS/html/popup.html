@@ -410,7 +410,7 @@
     </div>
 
     <!-- ════════ CARD 2: SOURCE VERIFICATION & FACT CHECKING ════════ -->
-    <div class="feature-card" style="border: 1px solid rgba(56, 189, 248, 0.3); background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.8) 100%); margin-bottom: 10px; padding: 10px;">
+    <div class="feature-card" style="border: 1px solid rgba(var(--primary-rgb), 0.3); background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.8) 100%); margin-bottom: 10px; padding: 10px;">
       <div class="feature-title" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
         <span style="display:flex; align-items:center; gap:6px;">
           <span data-i18n="verify_heading">Xác minh Tính xác thực của Nguồn</span>
@@ -435,7 +435,7 @@
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
           <span data-i18n="btn_use_current_page">Trang hiện tại</span>
         </button>
-        <button class="btn btn-primary" id="btn-run-verify" style="flex:1.4; padding:6px 8px; font-size:11px; background:linear-gradient(135deg, #0284c7 0%, #0369a1 100%);">
+        <button class="btn btn-primary" id="btn-run-verify" style="flex:1.4; padding:6px 8px; font-size:11px; ">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
           <span data-i18n="btn_verify">Kiểm tra đối soát</span>
         </button>
@@ -450,8 +450,8 @@
 
         <div id="verify-status-desc" style="font-size:11px; color:#cbd5e1; margin-bottom:8px; line-height:1.4;"></div>
 
-        <div id="verify-matched-details" style="display:none; background:rgba(30,41,59,0.7); border:1px solid rgba(56,189,248,0.2); border-radius:6px; padding:8px; margin-bottom:8px; font-size:11px;">
-          <div style="font-weight:700; color:#38bdf8; margin-bottom:4px; font-size:11.5px; word-break:break-word;" id="verify-matched-title">---</div>
+        <div id="verify-matched-details" style="display:none; background:rgba(30,41,59,0.7); border:1px solid rgba(var(--primary-rgb),0.2); border-radius:6px; padding:8px; margin-bottom:8px; font-size:11px;">
+          <div style="font-weight:700; color:var(--primary); margin-bottom:4px; font-size:11.5px; word-break:break-word;" id="verify-matched-title">---</div>
           <div style="color:#cbd5e1; margin-bottom:3px;" id="verify-matched-authors">Tác giả: ---</div>
           <div style="color:#cbd5e1; margin-bottom:3px;" id="verify-matched-venue">Nơi XB: ---</div>
           <div style="color:#cbd5e1; margin-bottom:3px; word-break:break-all;" id="verify-matched-doi">DOI: ---</div>
@@ -461,7 +461,7 @@
           <button class="btn btn-primary" id="btn-open-real-source" style="width:100%; padding:7px; font-size:11px; display:none; background:linear-gradient(135deg, #10b981 0%, #059669 100%); border-color:rgba(16,185,129,0.4);" title="Mở trang bài báo chính thức (DOI / Publisher Link)" data-i18n-title="tip_verify_real">
             <span data-i18n="btn_open_real_source">Mở trực tiếp bài báo gốc ↗</span>
           </button>
-          <button class="btn btn-secondary" id="btn-open-oa-pdf" style="width:100%; padding:6px; font-size:11px; display:none; color:#38bdf8;" title="Mở bản PDF toàn văn miễn phí" data-i18n-title="tip_verify_pdf">
+          <button class="btn btn-secondary" id="btn-open-oa-pdf" style="width:100%; padding:6px; font-size:11px; display:none; color:var(--primary);" title="Mở bản PDF toàn văn miễn phí" data-i18n-title="tip_verify_pdf">
             <span data-i18n="btn_open_oa_pdf">Đọc bản PDF toàn văn (Open Access) ↗</span>
           </button>
           <div style="display:flex; gap:4px;">
@@ -635,14 +635,17 @@
         <button type="button" class="ai-chip" data-ai-quick="papers" data-i18n="ai_quick_papers">Tài liệu</button>
         <button type="button" class="ai-chip" data-ai-quick="tabs" data-i18n="ai_quick_tabs">Tab</button>
       </div>
-      <div id="ai-image-preview" style="display:none; padding:6px; margin:6px 0; background:rgba(15,23,42,0.65); border:1px solid rgba(56,189,248,0.2); border-radius:8px; align-items:center; gap:8px; flex-shrink:0;">
-        <img id="ai-image-thumb" src="" alt="" style="width:48px; height:48px; object-fit:cover; border-radius:6px; border:1px solid rgba(255,255,255,0.08);">
-        <span id="ai-image-name" style="flex:1; min-width:0; font-size:11px; color:#cbd5e1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
-        <button type="button" class="btn btn-secondary" id="ai-btn-remove-image" style="padding:4px 8px; font-size:11px;">✕</button>
+      <div id="ai-image-preview" class="ai-image-preview" style="display:none; padding:6px 8px; margin:6px 0; background:rgba(15,23,42,0.65); border:1px solid rgba(var(--primary-rgb),0.2); border-radius:8px; flex-direction:column; gap:6px; flex-shrink:0;">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; font-size:11px;">
+          <span id="ai-image-count-label" style="color:#94a3b8; font-weight:600;" data-i18n="ai_attached_images_count">Ảnh đã đính kèm (0/10)</span>
+          <button type="button" class="btn btn-secondary" id="ai-btn-remove-image" style="padding:2px 8px; font-size:10.5px;" data-i18n="ai_btn_remove_all_images" title="Xóa tất cả ảnh" data-i18n-title="ai_btn_remove_all_images">✕ Xóa tất cả</button>
+        </div>
+        <div id="ai-image-preview-list" class="ai-image-preview-list"></div>
+        <div style="display:none;"><img id="ai-image-thumb" src="" alt=""><span id="ai-image-name"></span></div>
       </div>
       <div class="ai-input-row">
         <button type="button" class="btn btn-secondary" id="ai-btn-attach-image" data-i18n="ai_btn_attach_label" title="Đính kèm" data-i18n-title="ai_btn_attach_image">Ảnh</button>
-        <input type="file" id="ai-image-input" accept="image/*" style="display:none;">
+        <input type="file" id="ai-image-input" accept="image/*" multiple style="display:none;">
         <div class="ai-input-wrap">
           <textarea id="ai-input" class="ai-input" rows="1"></textarea>
         </div>
@@ -696,7 +699,7 @@
           <div class="ai-field-label" data-i18n="ai_custom_servers_title">Máy chủ tùy biến (Custom / Local AI)</div>
           <div id="ai-custom-servers-list" class="ai-custom-servers-list"></div>
           <div class="ai-custom-server-form" style="margin-top:8px; padding:8px; background:rgba(2,6,23,0.45); border:1px solid rgba(255,255,255,0.08); border-radius:8px;">
-            <div style="font-size:11px; font-weight:700; color:#38bdf8; margin-bottom:6px;" data-i18n="ai_custom_add_server_head">Thêm máy chủ mới (Ollama, LM Studio, vLLM, OpenRouter)</div>
+            <div style="font-size:11px; font-weight:700; color:var(--primary); margin-bottom:6px;" data-i18n="ai_custom_add_server_head">Thêm máy chủ mới (Ollama, LM Studio, vLLM, OpenRouter)</div>
             <label class="ai-field-sub" data-i18n="ai_custom_server_name_label">Tên máy chủ</label>
             <input type="text" id="ai-cs-name" class="form-control" placeholder="VD: Ollama Local" style="font-size:11px; margin-bottom:6px;">
             <label class="ai-field-sub" data-i18n="ai_custom_server_url_label">Endpoint URL</label>
@@ -819,7 +822,7 @@
             <div class="flow-title-group">
               <h3>
                 <span>Scholar Flow</span>
-                <span class="flow-status-dot" title="Sẵn sàng kết nối"></span>
+                <span class="flow-status-dot" title="Sẵn sàng kết nối" data-i18n-title="flow_status_ready"></span>
               </h3>
               <div class="flow-subtitle">P2P Mesh Network & Cloud Hub</div>
             </div>
@@ -851,7 +854,7 @@
             
             <div class="flow-id-badge-wrap">
               <span style="font-size: 11px; color: #94a3b8;" data-i18n="flow_my_id">Mã của tôi:</span>
-              <strong id="flow-my-id" class="flow-my-id-text">Đang khởi tạo...</strong>
+              <strong id="flow-my-id" class="flow-my-id-text" data-i18n="flow_id_init">Đang khởi tạo...</strong>
               <button id="btn-flow-copy" class="flow-copy-btn" title="Copy ID" data-i18n-title="tip_copy">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                 <span>Copy</span>
@@ -871,19 +874,19 @@
               <span data-i18n="flow_partner_id">Kết nối thiết bị bạn bè:</span>
             </div>
             <div class="flow-input-group">
-              <input type="text" id="flow-partner-input" class="flow-text-field" placeholder="Nhập ID máy bên kia...">
-              <button id="btn-flow-connect" class="flow-btn-primary" data-i18n="flow_connect">
+              <input type="text" id="flow-partner-input" class="flow-text-field" placeholder="Nhập ID máy bên kia..." data-i18n-placeholder="flow_partner_placeholder">
+              <button id="btn-flow-connect" class="flow-btn-primary">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
-                <span>Kết nối</span>
+                <span data-i18n="flow_connect">Kết nối</span>
               </button>
             </div>
-            <div class="flow-hint-text">Nhập Peer ID của bạn bè để gửi yêu cầu tham gia trò chuyện trực tiếp P2P.</div>
+            <div class="flow-hint-text" data-i18n="flow_connect_hint">Nhập Peer ID của bạn bè để gửi yêu cầu tham gia trò chuyện trực tiếp P2P.</div>
           </div>
 
           <!-- Cloud Drive Card -->
           <div class="flow-card">
             <div class="flow-card-header">
-              <span class="flow-card-icon" style="color: #60a5fa;">
+              <span class="flow-card-icon" style="color: var(--primary);">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>
               </span>
               <span data-i18n="flow_drive_link">Thư mục Google Drive chung:</span>
@@ -892,7 +895,7 @@
               <input type="text" id="flow-drive-input" class="flow-text-field" placeholder="drive.google.com/..." data-i18n-placeholder="flow_drive_placeholder">
               <button id="btn-flow-set-drive" class="flow-btn-secondary" data-i18n="flow_set_drive">Ghim</button>
             </div>
-            <div class="flow-hint-text">Ghim link thư mục Google Drive để các thành viên tự tải & chia sẻ các tệp tin dung lượng lớn mà không lo nghẽn mạng.</div>
+            <div class="flow-hint-text" data-i18n="flow_drive_hint">Ghim link thư mục Google Drive để các thành viên tự tải & chia sẻ các tệp tin dung lượng lớn mà không lo nghẽn mạng.</div>
           </div>
         </div>
 
@@ -915,7 +918,7 @@
           <div id="flow-pinned-drive" class="flow-pinned-banner" style="display:none;">
             <a id="flow-pinned-drive-link" class="flow-pinned-link" href="#" target="_blank">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
-              <span>Thư mục chung</span>
+              <span data-i18n="flow_shared_folder">Thư mục chung</span>
             </a>
           </div>
 
@@ -928,7 +931,7 @@
               <div class="flow-file-tag">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
                 <span id="flow-file-name">filename.ext</span>
-                <span id="flow-file-clear" class="flow-file-tag-close" title="Hủy bỏ">✖</span>
+                <span id="flow-file-clear" class="flow-file-tag-close" title="Hủy bỏ" data-i18n-title="flow_btn_cancel">✖</span>
               </div>
             </div>
             <div class="flow-input-row">
@@ -937,7 +940,7 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
               </label>
               <textarea id="flow-text-input" class="flow-msg-input" rows="1" placeholder="Nhập tin nhắn..." data-i18n-placeholder="flow_msg_placeholder"></textarea>
-              <button id="btn-flow-send" class="flow-send-btn" title="Gửi tin nhắn">
+              <button id="btn-flow-send" class="flow-send-btn" title="Gửi tin nhắn" data-i18n-title="flow_btn_send_tip">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
               </button>
       </div>
@@ -962,8 +965,8 @@
         <div style="color:#cbd5e1; font-size:11px; margin-top:4px; border-top:1px dashed var(--card-border); padding-top:4px;" data-i18n="redact_shortcut_hint_html" data-i18n-html="true">
           Phím tắt: Nhấn <b>[ESC]</b> trên bàn phím hoặc nút <b>Dừng chọn</b> để thoát bất kỳ lúc nào.
         </div>
-        <div style="color:#94a3b8; font-size:11px; margin-top:4px; border-top:1px dashed var(--card-border); padding-top:4px;">
-          Để che <b>chính xác 1 vùng / đoạn văn bản</b>: giữ chuột trái và <b>kéo thành khung</b> ngay trên trang trong lúc đang ở chế độ chọn che.
+        <div style="color:#94a3b8; font-size:11px; margin-top:4px; border-top:1px dashed var(--card-border); padding-top:4px;" data-i18n="redact_guide_region_html" data-i18n-html="true">
+          💡 Để che <b>chính xác 1 vùng / đoạn văn bản</b>: giữ chuột trái và <b>kéo thành khung</b> ngay trên trang trong lúc đang ở chế độ chọn che.
         </div>
       </div>
 
@@ -1056,15 +1059,45 @@
       </button>
     </div>
 
+    <!-- Auto-Check & Auto-Blur on Reload / Feeds (Auto-Guard) -->
+    <div class="feature-card" style="border-left: 3px solid var(--primary);">
+      <label class="switch-row" for="redact-auto-guard-toggle" style="margin-bottom:6px;">
+        <div class="switch-row-left">
+          <span class="switch-row-title" style="display:flex; align-items:center; gap:6px; font-weight:700;" data-i18n="redact_auto_guard_title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            <span>Luôn tự kiểm tra &amp; che mờ (Auto-Guard MXH)</span>
+          </span>
+          <span class="switch-row-desc" style="font-size:10.5px; line-height:1.4;" data-i18n="redact_auto_guard_desc">
+            Tự động quét &amp; che mờ lại khi F5/tải lại trang, chuyển trang SPA và lướt bảng tin MXH (Facebook, X, TikTok, YouTube...).
+          </span>
+        </div>
+        <span class="custom-switch">
+          <input type="checkbox" id="redact-auto-guard-toggle">
+          <span class="switch-slider"></span>
+        </span>
+      </label>
+      <div id="redact-auto-guard-status-bar" style="display:flex; align-items:center; justify-content:space-between; gap:6px; padding-top:6px; border-top:1px dashed var(--card-border); font-size:11px;">
+        <div style="display:flex; align-items:center; gap:5px;">
+          <span id="redact-auto-guard-dot" style="display:inline-block; width:7px; height:7px; border-radius:50%; background:#94a3b8; transition:background 0.3s ease;"></span>
+          <span id="redact-auto-guard-status-text" style="color:var(--text-muted); font-size:10.5px;" data-i18n="redact_auto_guard_status_inactive">Đang tắt tự động che khi tải lại</span>
+        </div>
+        <span id="redact-mxh-badge" class="badge" style="display:none; font-size:9.5px; padding:2px 6px; background:rgba(var(--primary-rgb), 0.15); color:var(--primary); border:1px solid rgba(var(--primary-rgb), 0.35);" data-i18n="redact_auto_guard_mxh_badge">Trang MXH (Bảo vệ feed)</span>
+      </div>
+      <button class="btn btn-secondary" id="btn-auto-guard-now" style="width:100%; padding:7px; font-size:11.5px; margin-top:8px; display:flex; align-items:center; justify-content:center; gap:6px;" data-i18n="redact_btn_check_now">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+        <span>Kiểm tra &amp; che mờ ngay</span>
+      </button>
+    </div>
+
     <!-- Auto-detect sensitive data + keyword masking (Group B) -->
     <div class="feature-card">
       <div class="feature-title" style="font-size:12px; display:flex; align-items:center; gap:6px;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-        <span>Tự động quét & che dữ liệu nhạy cảm</span>
+        <span data-i18n="redact_auto_detect_title">🛡️ Tự động quét & che dữ liệu nhạy cảm</span>
       </div>
-      <button class="btn btn-primary" id="btn-detect-sensitive" style="width:100%; padding:8px; font-size:11.5px; margin-bottom:8px; display:flex; align-items:center; justify-content:center; gap:6px;">
+      <button class="btn btn-primary" id="btn-detect-sensitive" style="width:100%; padding:8px; font-size:11.5px; margin-bottom:8px; display:flex; align-items:center; justify-content:center; gap:6px;" data-i18n="redact_btn_detect_sensitive">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        <span>Quét & che dữ liệu nhạy cảm (Email, SĐT, CCCD...)</span>
+        <span>🔍 Quét & che dữ liệu nhạy cảm (Email, SĐT, CCCD...)</span>
       </button>
       <div style="display:flex; gap:6px; align-items:center;">
         <input type="text" id="redact-keyword-input" class="form-control" style="flex:1; font-size:11px; padding:6px;" placeholder="Từ khóa cần che, VD: tên riêng" autocomplete="off" data-i18n-placeholder="ph_redact_keyword">
@@ -1081,14 +1114,14 @@
     <div class="feature-card">
       <div class="feature-title" style="font-size:12px; display:flex; align-items:center; gap:6px;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-        <span>Bảo vệ nút "Xem bản gốc" bằng mã PIN</span>
+        <span data-i18n="redact_pin_title">🔒 Bảo vệ nút "Xem bản gốc" bằng mã PIN</span>
       </div>
       <div style="display:flex; gap:6px; align-items:center; margin-bottom:8px;">
-        <input type="password" id="redact-pin-input" class="form-control" style="flex:1; font-size:11px; padding:6px;" placeholder="Nhập mã PIN 4-6 ký số" maxlength="6" autocomplete="off" inputmode="numeric">
-        <button class="btn btn-primary" id="btn-set-redact-pin" style="padding:6px 10px; font-size:11px;">Đặt mã</button>
-        <button class="btn btn-secondary" id="btn-clear-redact-pin" style="padding:6px 10px; font-size:11px;">Xoá</button>
+        <input type="password" id="redact-pin-input" class="form-control" style="flex:1; font-size:11px; padding:6px;" placeholder="Nhập mã PIN 4-6 ký số" maxlength="6" autocomplete="off" inputmode="numeric" data-i18n-placeholder="redact_pin_placeholder">
+        <button class="btn btn-primary" id="btn-set-redact-pin" style="padding:6px 10px; font-size:11px;" data-i18n="redact_btn_set_pin">Đặt mã</button>
+        <button class="btn btn-secondary" id="btn-clear-redact-pin" style="padding:6px 10px; font-size:11px;" data-i18n="redact_btn_clear_pin">Xoá</button>
       </div>
-      <div style="font-size:10.5px; color:#cbd5e1;" id="redact-pin-state">Chưa đặt mã PIN.</div>
+      <div style="font-size:10.5px; color:#cbd5e1;" id="redact-pin-state" data-i18n="redact_pin_not_set">Chưa đặt mã PIN.</div>
     </div>
   </div>
 
@@ -1097,13 +1130,13 @@
     <div style="background:#0f172a; border:1px solid rgba(255,255,255,0.14); border-radius:12px; padding:18px; width:300px; max-width:90%; box-shadow:0 12px 40px rgba(0,0,0,0.85);">
       <div style="font-size:13px; font-weight:700; color:var(--text-primary, #f1f5f9); margin-bottom:4px; display:flex; align-items:center; gap:6px;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-        <span>Nhập mã PIN để xem bản gốc</span>
+        <span data-i18n="redact_pin_modal_title">🔒 Nhập mã PIN để xem bản gốc</span>
       </div>
-      <div style="font-size:10.5px; color:#94a3b8; margin-bottom:12px;">Trang đang được bảo vệ bằng mã PIN — nhập đúng mã để tạm hiện nội dung gốc.</div>
+      <div style="font-size:10.5px; color:#94a3b8; margin-bottom:12px;" data-i18n="redact_pin_modal_desc">Trang đang được bảo vệ bằng mã PIN — nhập đúng mã để tạm hiện nội dung gốc.</div>
       <input type="password" id="redact-pin-modal-input" class="form-control" style="font-size:14px; padding:9px; margin-bottom:12px; letter-spacing:4px; text-align:center;" placeholder="••••" maxlength="6" autocomplete="off" inputmode="numeric">
       <div style="display:flex; gap:8px;">
-        <button class="btn btn-primary" id="btn-redact-pin-confirm" style="flex:1; padding:8px; font-weight:700;">Mở khoá</button>
-        <button class="btn btn-secondary" id="btn-redact-pin-cancel" style="flex:1; padding:8px;">Huỷ</button>
+        <button class="btn btn-primary" id="btn-redact-pin-confirm" style="flex:1; padding:8px; font-weight:700;" data-i18n="redact_pin_btn_unlock">Mở khoá</button>
+        <button class="btn btn-secondary" id="btn-redact-pin-cancel" style="flex:1; padding:8px;" data-i18n="redact_pin_btn_cancel">Huỷ</button>
       </div>
     </div>
   </div>
@@ -1560,7 +1593,7 @@
     <div class="modal-header">
       <div class="modal-title">
         <span style="display:inline-flex; align-items:center; gap:6px; min-width:0;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
           <span data-i18n="trust_modal_title" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Trung Tâm Uy Tín &amp; Chuẩn Học Thuật</span>
         </span>
       </div>
@@ -1582,8 +1615,8 @@
       </div>
 
       <!-- Card 2: International Academic Standards -->
-      <div class="rule-card" style="border-color:rgba(56,189,248,0.35); background:rgba(56,189,248,0.06);">
-        <div class="rule-card-title" style="color:#38bdf8;" data-i18n="trust_card2_title">🎓 2. Tuân Thủ 6 Chuẩn Trích Dẫn Quốc Tế</div>
+      <div class="rule-card" style="border-color:rgba(var(--primary-rgb),0.35); background:rgba(var(--primary-rgb),0.06);">
+        <div class="rule-card-title" style="color:var(--primary);" data-i18n="trust_card2_title">🎓 2. Tuân Thủ 6 Chuẩn Trích Dẫn Quốc Tế</div>
         <div class="rule-card-body" data-i18n="trust_card2_body_html" data-i18n-html="true">
           • <b>IEEE Standard 2026:</b> Viện Kỹ nghệ Điện &amp; Điện tử (CNTT, phần mềm, kỹ thuật).<br>
           • <b>APA 7th Edition:</b> Hiệp hội Tâm lý học Hoa Kỳ (khoa học xã hội, giáo dục, tâm lý).<br>
@@ -1612,7 +1645,7 @@
           • <b>Phiên bản:</b> ScholarFlow v2.5.6 (Stable Release)<br>
           • <b>Kiến trúc:</b> Manifest V3 (Chromium 114+ &amp; Firefox 109+ Native Gecko)<br>
           • <b>Bản quyền:</b> Bản quyền phần mềm thuộc về Minh Thuận<br>
-          • <b>Chính sách bảo mật:</b> <a href="privacy.html" target="_blank" style="color:#38bdf8; text-decoration:underline;">Xem toàn văn Chính Sách Quyền Riêng Tư (Privacy Policy)</a>
+          • <b>Chính sách bảo mật:</b> <a href="privacy.html" target="_blank" style="color:var(--primary); text-decoration:underline;">Xem toàn văn Chính Sách Quyền Riêng Tư (Privacy Policy)</a>
         </div>
       </div>
 
@@ -1625,7 +1658,7 @@
     <div class="modal-header">
       <div class="modal-title">
         <span style="display:inline-flex; align-items:center; gap:6px; min-width:0;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
           <span data-i18n="hdrs_modal_title" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Tùy Chỉnh Giao Diện Ứng Dụng</span>
         </span>
       </div>
@@ -1633,9 +1666,34 @@
     </div>
 
     <div class="modal-body-scroll">
+      <!-- Card: Chủ đề màu sắc & Chuyển động (Theme Accent & Motion) -->
+      <div class="rule-card" style="border-color:rgba(var(--primary-rgb),0.35); background:rgba(15,23,42,0.45); margin-bottom:8px;">
+        <div class="rule-card-title" data-i18n="hdrs_theme_motion_title" style="color:var(--text);">Chủ Đề &amp; Chuyển Động</div>
+        <div class="rule-card-body">
+          <div style="margin-bottom:8px;">
+            <div style="font-size:11px; font-weight:600; color:#94a3b8; margin-bottom:6px;" data-i18n="hdrs_accent_lbl">Màu nhấn chủ đạo:</div>
+            <div class="hdrs-theme-grid" id="hdrs-theme-grid">
+              <button type="button" class="hdrs-theme-chip active" data-theme-val="cyan" data-i18n="theme_cyan">CYAN</button>
+              <button type="button" class="hdrs-theme-chip" data-theme-val="amber" data-i18n="theme_amber">AMBER</button>
+              <button type="button" class="hdrs-theme-chip" data-theme-val="emerald" data-i18n="theme_emerald">EMERALD</button>
+              <button type="button" class="hdrs-theme-chip" data-theme-val="violet" data-i18n="theme_violet">VIOLET</button>
+              <button type="button" class="hdrs-theme-chip" data-theme-val="rose" data-i18n="theme_rose">ROSE</button>
+              <button type="button" class="hdrs-theme-chip" data-theme-val="mono" data-i18n="theme_mono">MONO</button>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:11px; font-weight:600; color:#94a3b8; margin-bottom:6px;" data-i18n="hdrs_motion_lbl">Hiệu ứng chuyển tab:</div>
+            <div class="hdrs-seg" id="hdrs-motion-seg">
+              <button type="button" class="hdrs-seg-btn active" data-motion-val="smooth" data-i18n="motion_smooth">Mượt mà</button>
+              <button type="button" class="hdrs-seg-btn" data-motion-val="instant" data-i18n="motion_instant">Tức thì</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Card 1: Header Position (top / bottom) -->
-      <div class="rule-card" style="border-color:rgba(56,189,248,0.35); background:rgba(56,189,248,0.06);">
-        <div class="rule-card-title" style="color:#38bdf8;" data-i18n="hdrs_pos_title">Vị Trí Thanh Tiêu Đề</div>
+      <div class="rule-card" style="border-color:rgba(var(--primary-rgb),0.35); background:rgba(var(--primary-rgb),0.06);">
+        <div class="rule-card-title" style="color:var(--primary);" data-i18n="hdrs_pos_title">Vị Trí Thanh Tiêu Đề</div>
         <div class="rule-card-body">
           <div class="hdrs-seg" id="hdrs-position-seg">
             <button type="button" class="hdrs-seg-btn" data-hdrs-pos="top" data-i18n="hdrs_pos_top">Đầu trang</button>
@@ -1678,7 +1736,7 @@
       <div class="modal-header">
         <div class="modal-title">
           <span style="display:inline-flex; align-items:center; gap:6px; min-width:0;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>
             <span data-i18n="tabmgr_media_settings_title" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Cài đặt trình phát media</span>
           </span>
         </div>
@@ -1687,8 +1745,8 @@
 
       <div class="modal-body-scroll">
         <!-- Card 1: Poster Display Mode -->
-        <div class="rule-card" style="border-color:rgba(56,189,248,0.35); background:rgba(56,189,248,0.06);">
-          <div class="rule-card-title" style="color:#38bdf8;" data-i18n="tabmgr_media_poster_mode">Kiểu hiển thị bìa / đĩa</div>
+        <div class="rule-card" style="border-color:rgba(var(--primary-rgb),0.35); background:rgba(var(--primary-rgb),0.06);">
+          <div class="rule-card-title" style="color:var(--primary);" data-i18n="tabmgr_media_poster_mode">Kiểu hiển thị bìa / đĩa</div>
           <div class="rule-card-body">
             <div class="tabmgr-mode-grid" id="media-mode-grid">
               <button type="button" class="tabmgr-mode-btn" data-mode="vinyl">
@@ -1727,7 +1785,7 @@
               <input type="color" id="media-vpb-color-picker" value="#ef4444" style="cursor:pointer; width:36px; height:32px; border:1px solid rgba(255,255,255,0.2); border-radius:6px; background:none; padding:2px;">
               <div class="tabmgr-color-swatches" id="media-vpb-swatches">
                 <span class="tabmgr-color-dot" data-color="#ef4444" style="background:#ef4444;"></span>
-                <span class="tabmgr-color-dot" data-color="#38bdf8" style="background:#38bdf8;"></span>
+                <span class="tabmgr-color-dot" data-color="#38bdf8" style="background:var(--primary);"></span>
                 <span class="tabmgr-color-dot" data-color="#10b981" style="background:#10b981;"></span>
                 <span class="tabmgr-color-dot" data-color="#a855f7" style="background:#a855f7;"></span>
                 <span class="tabmgr-color-dot" data-color="#f59e0b" style="background:#f59e0b;"></span>
@@ -1812,7 +1870,7 @@
     <div class="modal-header">
       <div class="modal-title">
         <span style="display:inline-flex; align-items:center; gap:6px; min-width:0;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
           <span data-i18n="perm_modal_title" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Chào Mừng &amp; Minh Bạch Quyền Hạn</span>
         </span>
       </div>
@@ -1821,8 +1879,8 @@
 
     <div class="modal-body-scroll">
       <!-- Intro Card: 100% Client-side Privacy by Design -->
-      <div class="rule-card" style="border-color:rgba(56,189,248,0.4); background:rgba(56,189,248,0.08); margin-bottom:10px;">
-        <div class="rule-card-title" style="color:#38bdf8; font-size:11.5px;" data-i18n="perm_intro_title">🛡️ Cam Kết 100% Cục Bộ — Bảo Mật Theo Thiết Kế</div>
+      <div class="rule-card" style="border-color:rgba(var(--primary-rgb),0.4); background:rgba(var(--primary-rgb),0.08); margin-bottom:10px;">
+        <div class="rule-card-title" style="color:var(--primary); font-size:11.5px;" data-i18n="perm_intro_title">🛡️ Cam Kết 100% Cục Bộ — Bảo Mật Theo Thiết Kế</div>
         <div class="rule-card-body" style="font-size:11px; line-height:1.5;" data-i18n="perm_intro_desc">ScholarFlow hoạt động hoàn toàn cục bộ trên trình duyệt của bạn (Zero Telemetry). Tiện ích không thu thập, không theo dõi và không gửi dữ liệu ra máy chủ bên ngoài. Dưới đây là giải trình minh bạch về lý do ScholarFlow cần các quyền trên trình duyệt:</div>
       </div>
 
@@ -1860,10 +1918,10 @@
       </div>
 
       <!-- Permission 4: Storage (storage) -->
-      <div class="rule-card" style="border-color:rgba(56,189,248,0.35); background:rgba(56,189,248,0.06);">
-        <div class="rule-card-title" style="color:#38bdf8;">
+      <div class="rule-card" style="border-color:rgba(var(--primary-rgb),0.35); background:rgba(var(--primary-rgb),0.06);">
+        <div class="rule-card-title" style="color:var(--primary);">
           <span data-i18n="perm_card_storage_title">💾 4. Quyền Lưu Trữ Cục Bộ (storage)</span>
-          <span data-i18n="perm_card_storage_tag" style="font-size:9px; background:rgba(56,189,248,0.2); color:#38bdf8; padding:2px 6px; border-radius:4px; font-weight:600; white-space:nowrap;">DỮ LIỆU CÁ NHÂN OFFLINE</span>
+          <span data-i18n="perm_card_storage_tag" style="font-size:9px; background:rgba(var(--primary-rgb),0.2); color:var(--primary); padding:2px 6px; border-radius:4px; font-weight:600; white-space:nowrap;">DỮ LIỆU CÁ NHÂN OFFLINE</span>
         </div>
         <div class="rule-card-body" data-i18n="perm_card_storage_body_html" data-i18n-html="true">
           • <b>Mục đích:</b> Lưu trữ an toàn danh mục trích dẫn đã lưu, lịch sử hội thoại AI, ghi chú nghiên cứu và cấu hình cá nhân trên chính trình duyệt của bạn.<br>• <b>Cam kết:</b> Dữ liệu hoàn toàn do bạn làm chủ, không bao giờ gửi lên đám mây và được xóa sạch khi bạn gỡ cài đặt tiện ích.
@@ -1887,7 +1945,7 @@
       <!-- Footer Note -->
       <div style="text-align:center; margin-top:8px; margin-bottom:4px; font-size:11px; color:#94a3b8; line-height:1.4;">
         <span data-i18n="perm_footer_note">Bạn có thể xem lại thông tin minh bạch này bất kỳ lúc nào tại Trung Tâm Uy Tín hoặc</span>
-        <a href="privacy.html" target="_blank" style="color:#38bdf8; text-decoration:underline;" data-i18n="perm_link_privacy">Chính Sách Quyền Riêng Tư</a>
+        <a href="privacy.html" target="_blank" style="color:var(--primary); text-decoration:underline;" data-i18n="perm_link_privacy">Chính Sách Quyền Riêng Tư</a>
       </div>
     </div>
   </div>
@@ -2238,7 +2296,7 @@
 
     <div class="feature-card" style="padding:10px 12px;">
       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; gap:8px;">
-        <div id="cal-day-head" style="font-size:12px; font-weight:700; color:#38bdf8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; min-width:0;" data-i18n="cal_select_date_hint">Chọn ngày để xem lịch học</div>
+        <div id="cal-day-head" style="font-size:12px; font-weight:700; color:var(--primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; min-width:0;" data-i18n="cal_select_date_hint">Chọn ngày để xem lịch học</div>
         <button type="button" id="btn-cal-add-to-day" class="btn btn-secondary" style="padding:4px 8px; font-size:10.5px; font-weight:700; flex-shrink:0; display:inline-flex; align-items:center; gap:3px;" title="Thêm sự kiện cho ngày đang chọn" data-i18n-title="tip_cal_add_event">
           <span data-i18n="cal_btn_add_to_day">＋ Thêm sự kiện</span>
         </button>
@@ -2355,7 +2413,7 @@
         <div class="rule-card" style="margin-bottom:10px;">
           <div class="rule-card-title" style="display:flex; align-items:center; justify-content:space-between;">
             <span data-i18n="cal_section_feeds">Nguồn lịch đăng ký (iCal / Google)</span>
-            <button type="button" id="btn-cal-google-sync-in-modal" class="btn btn-secondary" style="font-size:10.5px; padding:3px 7px; color:#60a5fa; border-color:rgba(66,133,244,0.4);" data-i18n="cal_btn_google_sync">Google Lịch</button>
+            <button type="button" id="btn-cal-google-sync-in-modal" class="btn btn-secondary" style="font-size:10.5px; padding:3px 7px; color:var(--primary); border-color:rgba(66,133,244,0.4);" data-i18n="cal_btn_google_sync">Google Lịch</button>
           </div>
           <div class="rule-card-body">
             <div style="display:flex; gap:6px; margin-bottom:8px;">
@@ -2391,7 +2449,7 @@
         <div class="rule-card">
           <div class="rule-card-title" data-i18n="cal_weather_title">Dự báo thời tiết &amp; Độ ẩm</div>
           <div class="rule-card-body">
-            <div style="font-size:11px; color:#94a3b8; margin-bottom:8px; line-height:1.4;">
+            <div style="font-size:11px; color:#94a3b8; margin-bottom:8px; line-height:1.4;" data-i18n="cal_weather_modal_desc">
               Cập nhật nhiệt độ và độ ẩm không khí theo thời gian thực để chủ động lịch trình học tập và nhắc nhở mang ô khi độ ẩm cao (>80%).
             </div>
             <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px;">
@@ -2412,7 +2470,7 @@
             </div>
             <div id="cal-weather-settings-preview" style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:8px 10px; font-size:11px; display:flex; justify-content:space-between; align-items:center;">
               <span id="cal-weather-preview-text" data-i18n="cal_weather_loading">Đang tải thời tiết...</span>
-              <button type="button" id="btn-cal-open-weather-detail" class="btn-text" style="color:#38bdf8; font-size:11px;" data-i18n="cal_weather_modal_title">Xem chi tiết ↗</button>
+              <button type="button" id="btn-cal-open-weather-detail" class="btn-text" style="color:var(--primary); font-size:11px;" data-i18n="cal_weather_modal_title">Xem chi tiết ↗</button>
             </div>
           </div>
         </div>
@@ -2449,13 +2507,13 @@
       </div>
       <div class="modal-body-scroll">
         <div class="rule-card" style="border-color:rgba(66,133,244,0.35); background:rgba(66,133,244,0.06);">
-          <div class="rule-card-title" style="color:#60a5fa;" data-i18n="cal_google_modal_title">Google Calendar</div>
+          <div class="rule-card-title" style="color: var(--primary);" data-i18n="cal_google_modal_title">Google Calendar</div>
           <div class="rule-card-body">
             <p style="font-size:11.5px; color:#cbd5e1; line-height:1.5; margin-bottom:10px;" data-i18n="cal_google_desc">Tự động đồng bộ lịch học tập, cuộc họp và link Google Meet / Zoom về ScholarFlow.</p>
             <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px 12px; margin-bottom:12px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <span style="font-size:11px; font-weight:700; color:#38bdf8;" data-i18n="cal_google_modal_title">Hướng dẫn</span>
-                <button type="button" id="btn-cal-open-gcal" class="btn-text" style="font-size:11px; color:#60a5fa; text-decoration:none; background:none; border:none; cursor:pointer; padding:0; display:inline-flex; align-items:center; gap:2px;">
+                <span style="font-size:11px; font-weight:700; color:var(--primary);" data-i18n="cal_google_instructions">Hướng dẫn</span>
+                <button type="button" id="btn-cal-open-gcal" class="btn-text" style="font-size:11px; color:var(--primary); text-decoration:none; background:none; border:none; cursor:pointer; padding:0; display:inline-flex; align-items:center; gap:2px;">
                   <span data-i18n="cal_google_open_gcal">Mở Google Calendar</span> ↗
                 </button>
               </div>
@@ -2540,7 +2598,7 @@
                 <svg class="tabmgr-modern-gauge-svg" viewBox="0 0 200 110">
                   <defs>
                     <linearGradient id="tabmgrModernGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stop-color="#38bdf8" />
+                      <stop offset="0%" stop-color="var(--primary)" />
                       <stop offset="50%" stop-color="#818cf8" />
                       <stop offset="100%" stop-color="#c084fc" />
                     </linearGradient>
@@ -2704,7 +2762,7 @@
                 <svg class="tabmgr-modern-gauge-svg" viewBox="0 0 200 110">
                   <defs>
                     <linearGradient id="tabmgrGpuGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stop-color="#38bdf8" />
+                      <stop offset="0%" stop-color="var(--primary)" />
                       <stop offset="50%" stop-color="#818cf8" />
                       <stop offset="100%" stop-color="#c084fc" />
                     </linearGradient>
@@ -3109,7 +3167,7 @@
         <div id="soc-pin-state" style="margin-top:5px; font-size:10px; color:#94a3b8;"></div>
       </div>
 
-      <div class="feature-card" style="padding:10px 12px; border-left:3px solid rgba(56,189,248,0.55);">
+      <div class="feature-card" style="padding:10px 12px; border-left:3px solid rgba(var(--primary-rgb),0.55);">
         <label class="switch-row" for="soc-inj-shield">
           <div class="switch-row-left">
             <span class="switch-row-title" data-i18n="soc_inj_title">Protect against content script injection</span>
@@ -3380,12 +3438,12 @@
       <div class="feature-card" style="padding:10px 12px;">
         <div style="display:flex; justify-content:space-between; gap:6px; margin-bottom:6px;">
           <span id="lng-stats-line" style="font-size:10.5px; color:var(--text-muted);"></span>
-          <span id="lng-today" style="font-size:10.5px; color:#38bdf8; font-weight:700;"></span>
+          <span id="lng-today" style="font-size:10.5px; color:var(--primary); font-weight:700;"></span>
         </div>
         <div id="lng-review-area"></div>
         <div style="margin-top:10px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.08);">
           <div style="display:flex; gap:6px; margin-bottom:4px;">
-            <button type="button" class="btn-text-small" id="btn-lng-dict" style="background:rgba(56,189,248,0.1); border-color:rgba(56,189,248,0.35); color:#38bdf8; font-weight:700;" data-i18n="lng_btn_dict">Chep chinh ta (nghe)</button>
+            <button type="button" class="btn-text-small" id="btn-lng-dict" style="background:rgba(var(--primary-rgb),0.1); border-color:rgba(var(--primary-rgb),0.35); color:var(--primary); font-weight:700;" data-i18n="lng_btn_dict">Chep chinh ta (nghe)</button>
             <button type="button" class="btn-text-small" id="btn-lng-dict-slow" data-i18n="lng_btn_dict_slow">Tuoc cham</button>
           </div>
           <div id="lng-dict-area"></div>
@@ -3398,7 +3456,7 @@
         <textarea class="form-control" id="lng-mine-input" rows="3" style="font-size:11px; padding:6px 8px; margin-bottom:6px;" placeholder="Du an tu / cau / doan van ban..." data-i18n-placeholder="lng_mine_ph"></textarea>
         <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:6px;">
           <button type="button" class="btn-text-small" id="btn-lng-grab" data-i18n="lng_btn_grab">Lay doan boi den tren trang</button>
-          <button type="button" class="btn-text-small" id="btn-lng-create" style="background:rgba(56,189,248,0.12); border-color:rgba(56,189,248,0.4); color:#38bdf8; font-weight:700;" data-i18n="lng_btn_ai">AI tao the hoc</button>
+          <button type="button" class="btn-text-small" id="btn-lng-create" style="background:rgba(var(--primary-rgb),0.12); border-color:rgba(var(--primary-rgb),0.4); color:var(--primary); font-weight:700;" data-i18n="lng_btn_ai">AI tao the hoc</button>
         </div>
         <div id="lng-mine-preview" style="font-size:11px; color:#cbd5e1;"></div>
       </div>
@@ -3784,15 +3842,15 @@
 
       <!-- Action Buttons -->
       <div class="qr-actions-row">
-        <button id="btn-qr-download" class="qr-btn-primary" data-i18n="qr_btn_download">
+        <button id="btn-qr-download" class="qr-btn-primary">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
           <span data-i18n="qr_btn_download">Tải ảnh PNG</span>
         </button>
-        <button id="btn-qr-copy-img" class="qr-btn-secondary" data-i18n="qr_btn_copy_img">
+        <button id="btn-qr-copy-img" class="qr-btn-secondary">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
           <span data-i18n="qr_btn_copy_img">Chép ảnh</span>
         </button>
-        <button id="btn-qr-copy-text" class="qr-btn-secondary" data-i18n="qr_btn_copy_text">
+        <button id="btn-qr-copy-text" class="qr-btn-secondary">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="10" y1="14" x2="21" y2="3"></line><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>
           <span data-i18n="qr_btn_copy_text">Chép link</span>
         </button>
@@ -3959,12 +4017,12 @@
           <div id="us-meta-bar" class="us-meta-inspector" style="display:none;">
             <div class="us-meta-title-row">
               <div style="display:flex; align-items:center; gap:6px; min-width:0;">
-                <span class="us-icon" style="color:#38bdf8;">
+                <span class="us-icon" style="color:var(--primary);">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
                 </span>
                 <span id="us-meta-name" style="font-weight:700; color:#f1f5f9; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
               </div>
-              <span id="us-meta-version" class="us-pill" style="color:#38bdf8; border-color:rgba(56,189,248,0.3);"></span>
+              <span id="us-meta-version" class="us-pill" style="color:var(--primary); border-color:rgba(var(--primary-rgb),0.3);"></span>
             </div>
             <div id="us-meta-desc" class="us-meta-desc"></div>
             <div class="us-meta-details-row">
@@ -4177,10 +4235,10 @@
           </div>
 
           <!-- ── Snippet Picker Modal ── -->
-          <div id="us-snippets-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:90%; max-width:390px; max-height:80vh; background:#0f172a; border:1px solid rgba(56,189,248,0.4); border-radius:8px; box-shadow:0 12px 36px rgba(0,0,0,0.85); z-index:99999; flex-direction:column; overflow:hidden;">
+          <div id="us-snippets-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:90%; max-width:390px; max-height:80vh; background:#0f172a; border:1px solid rgba(var(--primary-rgb),0.4); border-radius:8px; box-shadow:0 12px 36px rgba(0,0,0,0.85); z-index:99999; flex-direction:column; overflow:hidden;">
             <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:#1e293b; border-bottom:1px solid #334155;">
               <div style="display:flex; align-items:center; gap:6px;">
-                <span class="us-icon" style="color:#38bdf8;">
+                <span class="us-icon" style="color:var(--primary);">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
                 </span>
                 <span style="font-size:12px; font-weight:700; color:#f1f5f9;" data-i18n="us_snippets_modal_title">Thư viện Mẫu GM_*</span>

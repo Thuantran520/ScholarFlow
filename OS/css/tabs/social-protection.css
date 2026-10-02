@@ -17,9 +17,9 @@
   font-weight: 700;
   padding: 7px 14px;
   border-radius: 8px;
-  background: rgba(56, 189, 248, 0.12);
-  border: 1px solid rgba(56, 189, 248, 0.35);
-  color: #7dd3fc;
+  background: rgba(var(--primary-rgb), 0.12);
+  border: 1px solid rgba(var(--primary-rgb), 0.35);
+  color: var(--primary-light);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.06);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -27,7 +27,7 @@
 #tab-social .btn-text-small:hover {
   transform: translateY(-1px);
   filter: brightness(1.15);
-  box-shadow: 0 4px 12px rgba(56, 189, 248, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 #tab-social .soc-result-row {
@@ -133,8 +133,8 @@
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: rgba(56, 189, 248, 0.15);
-  color: #38bdf8;
+  background: rgba(var(--primary-rgb), 0.15);
+  color: var(--primary);
   font-size: 10px;
   font-weight: 700;
   display: flex;
@@ -261,7 +261,7 @@
   transform: scale(1.35);
 }
 
-#tab-social .soc-subtab[data-soc-sub="protect"]   { --soc-dot: #38bdf8; }
+#tab-social .soc-subtab[data-soc-sub="protect"]   { --soc-dot: var(--primary); }
 #tab-social .soc-subtab[data-soc-sub="recover"]   { --soc-dot: #fbbf24; }
 #tab-social .soc-subtab[data-soc-sub="vault"]     { --soc-dot: #a78bfa; }
 #tab-social .soc-subtab[data-soc-sub="checklist"] { --soc-dot: #34d399; }
@@ -406,7 +406,7 @@
 }
 
 #tab-social .soc-result-row {
-  border-left: 3px solid rgba(56, 189, 248, 0.35);
+  border-left: 3px solid rgba(var(--primary-rgb), 0.35);
 }
 
 /* Responsive adjustments */
@@ -439,8 +439,8 @@
 }
 
 #tab-social .soc-tr-row:hover {
-  border-color: rgba(56, 189, 248, 0.3);
-  background: rgba(56, 189, 248, 0.04);
+  border-color: rgba(var(--primary-rgb), 0.3);
+  background: rgba(var(--primary-rgb), 0.04);
 }
 
 #tab-social .soc-tr-host {
@@ -482,9 +482,9 @@
 }
 
 #tab-social .soc-tr-row input[type="checkbox"]:checked {
-  background: linear-gradient(180deg, #38bdf8, #0284c7);
-  border-color: rgba(56, 189, 248, 0.85);
-  box-shadow: 0 0 9px rgba(56, 189, 248, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  background: linear-gradient(180deg, var(--primary), var(--primary-hover));
+  border-color: rgba(var(--primary-rgb), 0.85);
+  box-shadow: 0 0 9px rgba(var(--primary-rgb), 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 #tab-social .soc-ck-row input[type="checkbox"]:checked::after,
@@ -506,7 +506,7 @@
 
 #tab-social .soc-ck-row input[type="checkbox"]:focus-visible,
 #tab-social .soc-tr-row input[type="checkbox"]:focus-visible {
-  outline: 2px solid rgba(56, 189, 248, 0.55);
+  outline: 2px solid rgba(var(--primary-rgb), 0.55);
   outline-offset: 2px;
 }
 
@@ -531,8 +531,8 @@
 }
 
 #tab-social .form-control:focus {
-  border-color: rgba(56, 189, 248, 0.6);
-  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.18), 0 2px 8px rgba(0, 0, 0, 0.2);
+  border-color: rgba(var(--primary-rgb), 0.6);
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.18), 0 2px 8px rgba(0, 0, 0, 0.2);
   background: rgba(15, 23, 42, 0.85);
   outline: none;
 }

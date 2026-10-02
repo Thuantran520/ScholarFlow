@@ -130,5 +130,5 @@
 
 @keyframes countdownZoom {
   0% { transform: scale(0.92); opacity: 0.88; }
-  100% { transform: scale(1.08); opacity: 1; filter: drop-shadow(0 0 16px rgba(56, 189, 248, 0.9)); }
+  100% { transform: scale(1.08); opacity: 1; filter: drop-shadow(0 0 16px rgba(var(--primary-rgb), 0.9)); }
 }

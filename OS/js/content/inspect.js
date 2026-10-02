@@ -1,3 +1,40 @@
+
+  // Live theme synchronization across all content script instances
+  (function sfInitContentThemeSync() {
+    function applyTheme(theme) {
+      const valid = ["cyan", "amber", "emerald", "violet", "rose", "mono"];
+      const accent = (theme && valid.indexOf(theme.accent) !== -1) ? theme.accent : "cyan";
+      if (document.documentElement) {
+        document.documentElement.setAttribute("data-sf-theme", accent);
+      }
+    }
+
+    const storageApi = (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local)
+      ? chrome.storage.local
+      : ((typeof browser !== "undefined" && browser.storage && browser.storage.local) ? browser.storage.local : null);
+
+    if (storageApi && typeof storageApi.get === "function") {
+      try {
+        storageApi.get("sf_theme_settings", function(res) {
+          if (res && res.sf_theme_settings) applyTheme(res.sf_theme_settings);
+        });
+      } catch (_) {}
+    }
+
+    const onChangedApi = (typeof chrome !== "undefined" && chrome.storage && chrome.storage.onChanged)
+      ? chrome.storage.onChanged
+      : ((typeof browser !== "undefined" && browser.storage && browser.storage.onChanged) ? browser.storage.onChanged : null);
+
+    if (onChangedApi && typeof onChangedApi.addListener === "function") {
+      try {
+        onChangedApi.addListener(function(changes, area) {
+          if ((area === "local" || !area) && changes.sf_theme_settings) {
+            applyTheme(changes.sf_theme_settings.newValue);
+          }
+        });
+      } catch (_) {}
+    }
+  })();
 var isInspectMode = typeof window._sf_isInspectMode !== "undefined" ? window._sf_isInspectMode : false;
 var isElementCaptureMode = typeof window._sf_isElementCaptureMode !== "undefined" ? window._sf_isElementCaptureMode : false;
 var isRedactionsPaused = typeof window._sf_isRedactionsPaused !== "undefined" ? window._sf_isRedactionsPaused : false;
@@ -1341,9 +1378,62 @@ var tContentShim = function(key, ...args) {
   let liveRedactBatchTimer = null;
   const pendingMutatedNodes = [];
   let liveScrollThrottleTimer = null;
+  var sfAutoGuardEnabled = false;
+
+  function sfIsSocialMediaHost(hostname) {
+    const host = (hostname || (typeof location !== "undefined" ? location.hostname : "") || "").toLowerCase();
+    const socialDomains = [
+      "facebook.com", "m.facebook.com", "messenger.com",
+      "instagram.com", "twitter.com", "x.com", "tiktok.com",
+      "youtube.com", "reddit.com", "threads.net", "zalo.me",
+      "chat.zalo.me", "discord.com", "web.telegram.org",
+      "telegram.org", "linkedin.com", "weibo.com", "bilibili.com"
+    ];
+    return socialDomains.some(d => host === d || host.endsWith("." + d));
+  }
+
+  function scanSubtreeForSensitive(root) {
+    if (!root || !root.isConnected || isRedactionsPaused) return 0;
+    const patterns = redactSensitivePatterns();
+    const toMask = [];
+    const seen = new Set();
+    try {
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+      let n;
+      while ((n = walker.nextNode())) {
+        const text = n.nodeValue || "";
+        if (!text.trim()) continue;
+        let matched = false;
+        for (const p of patterns) {
+          p.re.lastIndex = 0;
+          if (p.re.test(text)) { matched = true; break; }
+        }
+        if (!matched) continue;
+        const el = redactSensitiveElementFor(n);
+        if (!el || el.hasAttribute("data-super-redact-id") || seen.has(el)) continue;
+        seen.add(el);
+        toMask.push(el);
+      }
+    } catch (e) {}
+
+    let count = 0;
+    for (const el of toMask) {
+      const item = maskElementInternal(el, currentRedactStyle, currentBlurPx);
+      if (item) count++;
+    }
+    if (count > 0) {
+      redactPersist();
+      notifySidebarShim({
+        type: "REDACTION_UPDATED",
+        count: redactedElementsList.length,
+        list: getRedactedItemsForSidebar()
+      });
+    }
+    return count;
+  }
 
   function ensureLiveRedactObserver() {
-    if (activeKeywordRules.length === 0) {
+    if (activeKeywordRules.length === 0 && !sfAutoGuardEnabled) {
       if (liveRedactObserver) {
         liveRedactObserver.disconnect();
         liveRedactObserver = null;
@@ -1365,7 +1455,7 @@ var tContentShim = function(key, ...args) {
   }
 
   function onLiveRedactMutations(mutations) {
-    if (activeKeywordRules.length === 0) return;
+    if (activeKeywordRules.length === 0 && !sfAutoGuardEnabled) return;
     for (let i = 0; i < mutations.length; i++) {
       const m = mutations[i];
       for (let j = 0; j < m.addedNodes.length; j++) {
@@ -1386,20 +1476,43 @@ var tContentShim = function(key, ...args) {
         const batch = pendingMutatedNodes.splice(0, pendingMutatedNodes.length);
         for (const el of batch) {
           if (el.isConnected) {
-            applyAllKeywordRulesToSubtree(el);
+            if (activeKeywordRules.length > 0) {
+              applyAllKeywordRulesToSubtree(el);
+            }
+            if (sfAutoGuardEnabled) {
+              scanSubtreeForSensitive(el);
+            }
           }
         }
-      }, 40);
+      }, 60);
     }
   }
 
   function onLiveRedactScrollThrottled() {
-    if (activeKeywordRules.length === 0) return;
+    if (activeKeywordRules.length === 0 && !sfAutoGuardEnabled) return;
     if (liveScrollThrottleTimer) return;
     liveScrollThrottleTimer = setTimeout(() => {
       liveScrollThrottleTimer = null;
-      scanVisibleViewportForKeywords();
+      if (activeKeywordRules.length > 0) {
+        scanVisibleViewportForKeywords();
+      }
+      if (sfAutoGuardEnabled) {
+        scanVisibleViewportForSensitive();
+      }
     }, 120);
+  }
+
+  function scanVisibleViewportForSensitive() {
+    if (!sfAutoGuardEnabled || isRedactionsPaused) return;
+    const candidates = document.querySelectorAll(
+      '[role="feed"] > div, [role="article"], .userContentWrapper, div[data-pagelet*="FeedUnit"], .tweet, ytd-rich-item-renderer, [data-testid*="tweet"]'
+    );
+    candidates.forEach(unit => {
+      if (!unit.dataset.sfSensScanned) {
+        unit.dataset.sfSensScanned = "1";
+        scanSubtreeForSensitive(unit);
+      }
+    });
   }
 
   function scanVisibleViewportForKeywords() {
@@ -1681,6 +1794,11 @@ var tContentShim = function(key, ...args) {
       const originKey = redactOrigin();
       if (!originKey) return;
       sessionStorage.setItem("sf_kw_rules_" + originKey, JSON.stringify(activeKeywordRules));
+      redactStoreGet("sf_redact_keyword_rules").then((res) => {
+        const all = (res && res.sf_redact_keyword_rules && typeof res.sf_redact_keyword_rules === "object") ? res.sf_redact_keyword_rules : {};
+        all[originKey] = activeKeywordRules;
+        redactStoreSet({ sf_redact_keyword_rules: all });
+      });
     } catch (e) {}
   }
 
@@ -1689,17 +1807,113 @@ var tContentShim = function(key, ...args) {
       const originKey = redactOrigin();
       if (!originKey) return;
       const raw = sessionStorage.getItem("sf_kw_rules_" + originKey);
-      if (!raw) return;
-      const saved = JSON.parse(raw);
-      if (Array.isArray(saved) && saved.length > 0) {
-        for (const r of saved) {
-          if (r && r.keyword) {
-            addKeywordRule(r.keyword, r.style || "blur", r.blurPx || 12);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        if (Array.isArray(saved) && saved.length > 0) {
+          for (const r of saved) {
+            if (r && r.keyword) {
+              addKeywordRule(r.keyword, r.style || "blur", r.blurPx || 12);
+            }
           }
+          return;
         }
       }
+      redactStoreGet("sf_redact_keyword_rules").then((res) => {
+        const all = (res && res.sf_redact_keyword_rules && typeof res.sf_redact_keyword_rules === "object") ? res.sf_redact_keyword_rules : {};
+        const savedList = all[originKey];
+        if (Array.isArray(savedList) && savedList.length > 0) {
+          for (const r of savedList) {
+            if (r && r.keyword) {
+              addKeywordRule(r.keyword, r.style || "blur", r.blurPx || 12);
+            }
+          }
+        }
+      });
     } catch (e) {}
   }
+
+  function runAutoGuardCheck() {
+    if (!sfAutoGuardEnabled || isRedactionsPaused) return 0;
+    loadAndReapplyRedactions();
+    if (typeof loadAndReapplyKeywordRules === "function") {
+      loadAndReapplyKeywordRules();
+    }
+    const sensCount = detectSensitiveElements(currentRedactStyle, currentBlurPx);
+    ensureLiveRedactObserver();
+    return sensCount;
+  }
+
+  function sfSetAutoGuardState(enabled) {
+    sfAutoGuardEnabled = !!enabled;
+    if (sfAutoGuardEnabled) {
+      runAutoGuardCheck();
+      if (sfIsSocialMediaHost()) {
+        setTimeout(runAutoGuardCheck, 600);
+        setTimeout(runAutoGuardCheck, 1800);
+      }
+    } else {
+      ensureLiveRedactObserver();
+    }
+  }
+
+  function sfInitAutoGuardSync() {
+    redactStoreGet("sf_redact_auto_guard").then((res) => {
+      sfAutoGuardEnabled = !!(res && res.sf_redact_auto_guard);
+      if (sfAutoGuardEnabled) {
+        runAutoGuardCheck();
+        if (sfIsSocialMediaHost()) {
+          setTimeout(runAutoGuardCheck, 600);
+          setTimeout(runAutoGuardCheck, 1800);
+        }
+      }
+    });
+
+    const onChangedApi = (typeof chrome !== "undefined" && chrome.storage && chrome.storage.onChanged)
+      ? chrome.storage.onChanged
+      : ((typeof browser !== "undefined" && browser.storage && browser.storage.onChanged) ? browser.storage.onChanged : null);
+
+    if (onChangedApi && typeof onChangedApi.addListener === "function") {
+      try {
+        onChangedApi.addListener(function(changes, area) {
+          if ((area === "local" || !area) && changes.sf_redact_auto_guard) {
+            sfSetAutoGuardState(!!changes.sf_redact_auto_guard.newValue);
+          }
+        });
+      } catch (_) {}
+    }
+  }
+
+  // Hook SPA route navigation (Facebook, Twitter/X, YouTube, TikTok, Reddit...)
+  (function initSpaNavigationGuard() {
+    try {
+      if (typeof window === "undefined" || !window.history) return;
+      const wrapHistoryMethod = (method) => {
+        const orig = window.history[method];
+        if (typeof orig !== "function") return;
+        window.history[method] = function() {
+          const res = orig.apply(this, arguments);
+          try {
+            window.dispatchEvent(new Event("sf:locationchange"));
+          } catch (_) {}
+          return res;
+        };
+      };
+      wrapHistoryMethod("pushState");
+      wrapHistoryMethod("replaceState");
+      window.addEventListener("popstate", () => {
+        try { window.dispatchEvent(new Event("sf:locationchange")); } catch (_) {}
+      });
+      window.addEventListener("hashchange", () => {
+        try { window.dispatchEvent(new Event("sf:locationchange")); } catch (_) {}
+      });
+      window.addEventListener("sf:locationchange", () => {
+        if (sfAutoGuardEnabled) {
+          setTimeout(runAutoGuardCheck, 350);
+          setTimeout(runAutoGuardCheck, 1200);
+        }
+      });
+    } catch (_) {}
+  })();
 
   function maskByKeyword(keyword, style, blurPx) {
     const res = addKeywordRule(keyword, style, blurPx);
@@ -1732,12 +1946,18 @@ var tContentShim = function(key, ...args) {
   window.getKeywordRules = getKeywordRules;
   window.clearAllKeywordRules = clearAllKeywordRules;
   window.redactSensitivePatterns = redactSensitivePatterns;
+  window.sfAutoGuardEnabled = sfAutoGuardEnabled;
+  window.sfIsSocialMediaHost = sfIsSocialMediaHost;
+  window.runAutoGuardCheck = runAutoGuardCheck;
+  window.sfSetAutoGuardState = sfSetAutoGuardState;
 
   // Auto re-apply any persisted redactions for this origin after page load.
   if (document.readyState === "complete" || document.readyState === "interactive") {
     setTimeout(redactScheduleReapply, 200);
+    setTimeout(sfInitAutoGuardSync, 300);
   } else {
     window.addEventListener("DOMContentLoaded", () => {
       setTimeout(redactScheduleReapply, 200);
+      setTimeout(sfInitAutoGuardSync, 300);
     });
   }

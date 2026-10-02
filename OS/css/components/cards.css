@@ -35,7 +35,7 @@
 }
 .radio-card:hover {
   background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(56, 189, 248, 0.2);
+  border-color: rgba(var(--primary-rgb), 0.2);
 }
 .radio-card input {
   cursor: pointer;

@@ -205,7 +205,7 @@ function pmRenderToday() {
   const el = document.getElementById("pm-today-stats");
   if (!el) return;
   const st = pomodoroDailyStats(pmData.sessions, Date.now());
-  el.textContent = getI18nText("pm_today") + " " + st.count + " · " + st.minutes + "′";
+  el.textContent = getI18nText("pm_today_stat", [String(st.count), String(st.minutes)]) || (getI18nText("pm_today") + " " + st.count + " · " + st.minutes + "′");
 }
 
 function pmRenderSessionDots() {
@@ -630,6 +630,25 @@ window.addEventListener("sf:nav-changed", function () {
       pmStopTimer();
       pmRenderToggle();
     }
+  }
+});
+
+window.addEventListener("app-language-changed", function () {
+  pmRenderToday();
+  pmRenderModeLabel();
+  pmRenderToggle();
+  pmRenderSessionDots();
+  pmRenderWeek();
+  if (pmPlan) {
+    const sumEl = document.getElementById("pm-plan-summary");
+    if (sumEl) {
+      sumEl.textContent = getI18nText("pm_plan_summary", [pmPlan.blocks, pmPlan.focusLength, pmPlan.shortBreaks, pmPlan.longBreaks, pmPlan.totalMinutes]);
+    }
+    const leftEl = document.getElementById("pm-plan-leftover");
+    if (leftEl) {
+      leftEl.textContent = pmPlan.leftover > 0 ? (getI18nText("pm_plan_leftover", [String(pmPlan.leftover)]) || "") : "";
+    }
+    pmBuildTimeline(pmPlan);
   }
 });
 

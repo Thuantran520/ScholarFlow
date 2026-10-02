@@ -111,7 +111,7 @@ function saveVideoSettings() {
     const statusEl = document.getElementById("video-settings-status");
     if (statusEl) {
       statusEl.textContent = window.i18n ? window.i18n.t("toast_settings_saved") : "✓ Đã lưu cài đặt!";
-      statusEl.style.color = "#38bdf8";
+      statusEl.style.color = "var(--primary)";
       setTimeout(() => {
         statusEl.textContent = window.i18n ? window.i18n.t("toast_autosave") : "💾 Tự động lưu";
         statusEl.style.color = "#10b981";

@@ -72,6 +72,7 @@ const KEY_GLOBALS = [
   "sfGetHeaderSettings", "sfHeaderApply", "sfHeaderReset",
   "sfNavGetOrder", "sfNavReorder", "sfNavReset", "sfNavIsDisabled", "sfNavGetDisabled", "sfNavSetDisabled", "sfNavToggleDisabled",
   "sfNavSetBadge", "sfNavGetStyle", "sfNavSetStyle", "sfNavUpdatePill",
+  "sfGetThemeSettings", "sfApplyTheme",
   "tabmgrMediaGetPref", "tabmgrMediaSetPref", "tabmgrMediaRefresh"
 ];
 
@@ -2942,6 +2943,44 @@ async function main() {
     w.sfNavSetBadge("tab-cite", { visible: false });
     check(!citeBadge.classList.contains("is-visible") && citeBadge.textContent === "",
       "sfNavSetBadge with visible=false hides badge");
+
+    // Theme Accent & Motion Engine check
+    const thSettings = w.sfGetThemeSettings();
+    check(!!thSettings && thSettings.accent === "cyan" && thSettings.motion === "smooth",
+      "default theme settings is cyan and smooth motion");
+    check(w.document.documentElement.getAttribute("data-theme") === "cyan",
+      "document data-theme attribute defaults to cyan");
+    check(w.document.documentElement.getAttribute("data-motion") === "smooth",
+      "document data-motion attribute defaults to smooth");
+
+    const amberChip = w.document.querySelector('.hdrs-theme-chip[data-theme-val="amber"]');
+    check(!!amberChip, "amber theme chip exists");
+    if (amberChip) {
+      amberChip.click();
+      await new Promise(r => setTimeout(r, 40));
+      check(w.sfGetThemeSettings().accent === "amber",
+        "clicking amber chip updates themeState.accent to amber");
+      check(w.document.documentElement.getAttribute("data-theme") === "amber",
+        "clicking amber chip updates data-theme attribute to amber");
+      check(amberChip.classList.contains("active"),
+        "amber chip receives active class");
+      const storedTheme = (await w.chrome.storage.local.get("sf_theme_settings")).sf_theme_settings;
+      check(storedTheme && storedTheme.accent === "amber",
+        "theme selection persisted to sf_theme_settings in storage");
+    }
+
+    const instantMotionBtn = w.document.querySelector('#hdrs-motion-seg [data-motion-val="instant"]');
+    check(!!instantMotionBtn, "instant motion button exists");
+    if (instantMotionBtn) {
+      instantMotionBtn.click();
+      await new Promise(r => setTimeout(r, 40));
+      check(w.sfGetThemeSettings().motion === "instant",
+        "clicking instant motion button updates themeState.motion to instant");
+      check(w.document.documentElement.getAttribute("data-motion") === "instant",
+        "clicking instant motion updates data-motion attribute to instant");
+      check(instantMotionBtn.classList.contains("active"),
+        "instant button receives active class");
+    }
   }
 
   // 4zz2. Nav default active tab = stored active, else first tab in nav order

@@ -84,7 +84,7 @@
     if (!el.consoleDrawer || !el.consoleLogs) return;
     el.consoleDrawer.style.display = 'flex';
     const row = document.createElement('div');
-    const colors = { log: '#10b981', warn: '#f59e0b', error: '#ef4444', info: '#38bdf8' };
+    const colors = { log: '#10b981', warn: '#f59e0b', error: '#ef4444', info: 'var(--primary)' };
     row.style.cssText = 'color:' + (colors[level] || '#10b981') + '; padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.05);';
     const tag = document.createElement('span');
     tag.style.cssText = 'opacity: 0.5; margin-right: 6px; font-size: 10px;';
