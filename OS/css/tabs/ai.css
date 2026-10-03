@@ -803,6 +803,27 @@ body.is-popup .ai-chat-wrapper {
   min-width: 0;
 }
 
+
+.ai-loading-thinking-wrap {
+  display: flex;
+  align-items: center;
+  padding: 2px 0;
+}
+.ai-loading-thinking-anim {
+  height: 28px;
+  width: auto;
+  max-width: 80px;
+  object-fit: contain;
+  display: block;
+}
+.ai-thinking-icon {
+  height: 15px;
+  width: auto;
+  object-fit: contain;
+  display: inline-block;
+  vertical-align: middle;
+}
+
 .ai-dots {
   display: flex;
   gap: 6px;

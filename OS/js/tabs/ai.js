@@ -464,14 +464,14 @@ function aiShowTyping(statusText){
   row.className="ai-msg ai-msg-assistant ai-typing-row";
   const b=document.createElement("div");
   b.className="ai-bubble ai-typing";
-  const dots=document.createElement("div");
-  dots.className="ai-dots";
-  for(let i=0;i<3;i++){
-    const d=document.createElement("span");
-    d.className="ai-dot";
-    dots.appendChild(d);
-  }
-  b.appendChild(dots);
+  const animWrap=document.createElement("div");
+  animWrap.className="ai-loading-thinking-wrap";
+  const anim=document.createElement("img");
+  anim.src="../assest/ai-loading-thinking.gif";
+  anim.alt="AI Thinking...";
+  anim.className="ai-loading-thinking-anim";
+  animWrap.appendChild(anim);
+  b.appendChild(animWrap);
   if(statusText){
     const st=document.createElement("span");
     st.className="ai-pipeline-status";
@@ -1388,7 +1388,14 @@ function aiRenderFormattedText(bubble, text){
       thBox.className = "ai-thinking-box";
       const thHead = document.createElement("div");
       thHead.className = "ai-thinking-head";
-      thHead.textContent = "💭 " + aiT("ai_thinking_title", null, "Quá trình suy luận sâu (Reasoning)");
+      const thIcon = document.createElement("img");
+      thIcon.src = "../assest/ai-loading-thinking.gif";
+      thIcon.alt = "Thinking";
+      thIcon.className = "ai-thinking-icon";
+      thHead.appendChild(thIcon);
+      const thTitle = document.createElement("span");
+      thTitle.textContent = aiT("ai_thinking_title", null, "Quá trình suy luận sâu (Reasoning)");
+      thHead.appendChild(thTitle);
       thBox.appendChild(thHead);
       const thBody = document.createElement("div");
       const cleanContent = trimmed.replace(/^(?:>\s*)?(?:💭\s*)?(?:\*\*(?:Suy luận|Thinking|Reasoning)[:：]\*\*\s*|\[(?:Suy luận|Thinking|Reasoning)\][:：]?\s*)?/i, "");

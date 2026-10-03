@@ -3195,7 +3195,10 @@ body.is-popup .ai-disclaimer-row { border-radius:10px; }
 /* AI modern touches */
 .ai-msg { animation:aiFade .18s ease-out; }
 @keyframes aiFade { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
-.ai-typing-row .ai-typing { display:flex; gap:5px; align-items:center; padding:11px 14px; }
+.ai-typing-row .ai-typing { display:flex; flex-direction:column; gap:8px; align-items:flex-start; padding:10px 14px; }
+.ai-loading-thinking-wrap { display:flex; align-items:center; padding:2px 0; }
+.ai-loading-thinking-anim { height:28px; width:auto; max-width:80px; object-fit:contain; display:block; }
+.ai-thinking-icon { height:15px; width:auto; object-fit:contain; display:inline-block; vertical-align:middle; }
 .ai-dot { width:6px; height:6px; border-radius:50%; background:#a78bfa; animation:aiBlink 1.2s infinite; }
 .ai-dot:nth-child(2) { animation-delay:.18s; }
 .ai-dot:nth-child(3) { animation-delay:.36s; }
