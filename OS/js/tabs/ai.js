@@ -33,7 +33,7 @@ const AI_DEFAULT_CUSTOM_SERVERS = [
 ];
 let aiCustomServers = [...AI_DEFAULT_CUSTOM_SERVERS];
 let aiActiveCustomServerId = "ollama";
-const AI_STORAGE_KEYS = { provider: "sf_ai_provider", keys: "sf_ai_keys", history: "sf_ai_history", settings: "sf_ai_settings", models: "sf_ai_models", prompts: "sf_ai_prompts", sessions: "sf_ai_sessions", mem: "sf_ai_mem", customServers: "sf_ai_custom_servers", activeCustomServer: "sf_ai_active_custom_server" };
+const AI_STORAGE_KEYS = { provider: "sf_ai_provider", keys: "sf_ai_keys", history: "sf_ai_history", settings: "sf_ai_settings", models: "sf_ai_models", customModels: "sf_ai_custom_models", prompts: "sf_ai_prompts", sessions: "sf_ai_sessions", mem: "sf_ai_mem", customServers: "sf_ai_custom_servers", activeCustomServer: "sf_ai_active_custom_server" };
 const AI_DEFAULT_SETTINGS = { includePage: true, includeSelection: true, includeNotes: false, includeImages: true, includeSource: false, stream: true, webSearch: true, autoVideo: true, readingCompanion: true, scope: "auto", maxChars: 16000, temperature: 0.7 };
 const AI_DEFAULT_PROMPTS = { summary: "Tóm tắt trang này thành 5 bullet + 1 đoạn 100 chữ bằng tiếng Việt.", qa: "Trả lời câu hỏi dựa trên nội dung trang đang đứng, trích dẫn nguồn nếu có.", explain: "Giải thích đoạn bôi đen bằng tiếng Việt đơn giản.", translate: "Dịch nội dung chính của trang sang tiếng Việt tự nhiên.", outline: "Tạo outline 3 cấp (I, 1, a) cho bài viết này.", timeline: "Tạo danh sách các mốc thời gian (timeline/chương) quan trọng của video hoặc bài viết theo định dạng:\n- [mm:ss] Tiêu đề chương: tóm tắt ngắn nội dung chính.", flashcard: "Tạo 5 thẻ flashcard ôn tập kiến thức cốt lõi từ nội dung trang theo định dạng:\nQ: [Câu hỏi ôn tập]\nA: [Câu trả lời giải thích chi tiết]", cite: "Gợi ý 3 câu hỏi nghiên cứu + 5 từ khóa học thuật từ trang này.", answer: "Giải các câu trắc nghiệm trong nội dung trang: mỗi câu nêu đáp án đúng (A/B/C/D hoặc giá trị) kèm giải thích 1 dòng bằng tiếng Việt. Nếu dữ liệu đáp án nằm trong mã nguồn/script của trang, hãy dựa vào đó để khẳng định.", tabs: "Tóm tắt TỪNG tab đang mở (mỗi tab 2 gạch đầu dòng bằng tiếng Việt), sau đó lập bảng so sánh các tab theo: chủ đề, luận điểm chính, độ tin cậy nguồn.", papers: "Dựa vào danh sách tài liệu tìm được từ Crossref/OpenAlex ở phần ngữ cảnh: chọn và xếp hạng 5 công trình liên quan nhất tới chủ đề trang, mỗi cái nêu lý do 1 dòng và định dạng trích dẫn APA." };
 let aiProvider = "gemini";
@@ -41,6 +41,7 @@ let aiKeys = {};
 let aiHistory = [];
 let aiSettings = { ...AI_DEFAULT_SETTINGS };
 let aiModels = {};
+let aiCustomModels = {};
 let aiFetchedModels = [];
 let aiPrompts = { ...AI_DEFAULT_PROMPTS };
 function aiDefaultPrompts(){ const d={}; ["summary","qa","explain","translate","outline","timeline","flashcard","cite","answer","tabs","papers"].forEach(k=>{ let v=""; try{ v=(typeof getI18nText==="function")?getI18nText("ai_prompt_"+k,""): ""; }catch(e){} if(!v||v==="ai_prompt_"+k) v=AI_DEFAULT_PROMPTS[k]||""; d[k]=v; }); return d; }
@@ -110,9 +111,16 @@ function aiGetCurrentPageInfo() {
   try { var img = document.getElementById("ai-page-favicon"); if (img && img.src && img.style.display !== "none") favicon = img.src; } catch(e) {}
   return { url: url, title: title, favicon: favicon };
 }
+function aiGetProviderModels(prov){
+  if(prov === "custom") return [];
+  if(aiCustomModels && Array.isArray(aiCustomModels[prov]) && aiCustomModels[prov].length > 0){
+    return aiCustomModels[prov];
+  }
+  return [...(AI_PROVIDERS[prov]?.models || [])];
+}
 function aiGetProviderConfig(id){ return AI_PROVIDERS[id] || AI_PROVIDERS.gemini; }
-function aiGetModel(p){ const c=aiGetProviderConfig(p); const all=[...(c.models||[]),...aiFetchedModels]; return (aiModels[p] && all.includes(aiModels[p])) ? aiModels[p] : (c.defaultModel||""); }
-function aiSetModel(p,m){ const all=[...(AI_PROVIDERS[p]?.models||[]),...aiFetchedModels]; if(all.includes(m)||p==="custom"){ aiModels[p]=m; storSet({[AI_STORAGE_KEYS.models]:aiModels}); } }
+function aiGetModel(p){ const c=aiGetProviderConfig(p); const all=[...aiGetProviderModels(p),...(p==="gemini"?aiFetchedModels:[])]; if(aiModels[p] && all.includes(aiModels[p])) return aiModels[p]; if(c.defaultModel && all.includes(c.defaultModel)) return c.defaultModel; return all[0]||c.defaultModel||""; }
+function aiSetModel(p,m){ const all=[...aiGetProviderModels(p),...(p==="gemini"?aiFetchedModels:[])]; if(all.includes(m)||p==="custom"){ aiModels[p]=m; storSet({[AI_STORAGE_KEYS.models]:aiModels}); } }
 /* ── Security core ────────────────────────────────────────────────────── */
 const AI_STOPWORDS = new Set(["hay","và","cho","tôi","của","với","được","là","câu","hỏi","bạn","hãy","giúp","nào","bao","nhiêu","this","the","and","for","tell","me","page","about","what","many","please","can","you"]);
 const AI_SAFE_IMG_RE = /^data:image\/(png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+/=]{8,600000}$/;
@@ -697,7 +705,7 @@ function aiUpdateCurrentPageDisplay(){
 }
 function aiLoadSettings(){
   return new Promise(res=>{
-    storGet([AI_STORAGE_KEYS.provider,AI_STORAGE_KEYS.keys,AI_STORAGE_KEYS.history,AI_STORAGE_KEYS.settings,AI_STORAGE_KEYS.models,AI_STORAGE_KEYS.prompts,AI_STORAGE_KEYS.sessions,AI_STORAGE_KEYS.mem,AI_STORAGE_KEYS.customServers,AI_STORAGE_KEYS.activeCustomServer],r=>{
+    storGet([AI_STORAGE_KEYS.provider,AI_STORAGE_KEYS.keys,AI_STORAGE_KEYS.history,AI_STORAGE_KEYS.settings,AI_STORAGE_KEYS.models,AI_STORAGE_KEYS.customModels,AI_STORAGE_KEYS.prompts,AI_STORAGE_KEYS.sessions,AI_STORAGE_KEYS.mem,AI_STORAGE_KEYS.customServers,AI_STORAGE_KEYS.activeCustomServer],r=>{
       aiPrompts=aiDefaultPrompts();
       try{ aiSessions=aiSessionsLoad(r[AI_STORAGE_KEYS.sessions]); }catch(e){ aiSessions=[]; }
       try{ if(r[AI_STORAGE_KEYS.mem]&&typeof r[AI_STORAGE_KEYS.mem]==="object") aiMem=r[AI_STORAGE_KEYS.mem]; }catch(e){}
@@ -706,6 +714,7 @@ function aiLoadSettings(){
       if(Array.isArray(r[AI_STORAGE_KEYS.history])) aiHistory=aiSanitizeHistory(r[AI_STORAGE_KEYS.history]);
       if(r[AI_STORAGE_KEYS.settings]&&typeof r[AI_STORAGE_KEYS.settings]==="object"){ aiSettings={...AI_DEFAULT_SETTINGS,...r[AI_STORAGE_KEYS.settings]}; aiSettings.maxChars=Math.max(1000,Math.min(32000,Number(aiSettings.maxChars)||20000)); const tv=Number(aiSettings.temperature); aiSettings.temperature=isFinite(tv)?Math.max(0,Math.min(2,tv)):0.7; }
       if(r[AI_STORAGE_KEYS.models]&&typeof r[AI_STORAGE_KEYS.models]==="object") aiModels=r[AI_STORAGE_KEYS.models];
+      if(r[AI_STORAGE_KEYS.customModels]&&typeof r[AI_STORAGE_KEYS.customModels]==="object") aiCustomModels=r[AI_STORAGE_KEYS.customModels];
       if(r[AI_STORAGE_KEYS.prompts]&&typeof r[AI_STORAGE_KEYS.prompts]==="object") aiPrompts={...aiDefaultPrompts(),...r[AI_STORAGE_KEYS.prompts]};
       if(Array.isArray(r[AI_STORAGE_KEYS.customServers])&&r[AI_STORAGE_KEYS.customServers].length) aiCustomServers=r[AI_STORAGE_KEYS.customServers];
       if(r[AI_STORAGE_KEYS.activeCustomServer]) aiActiveCustomServerId=String(r[AI_STORAGE_KEYS.activeCustomServer]);
@@ -1384,24 +1393,6 @@ function aiRenderFormattedText(bubble, text){
     sugMode=false;
     if(trimmed.startsWith("> 💭") || trimmed.startsWith("💭") || /^(?:>\s*)?\[(?:Suy luận|Thinking|Reasoning)\]/i.test(trimmed) || /^(?:>\s*)?\*\*(?:Suy luận|Thinking|Reasoning)[:：]\*\*/i.test(trimmed)){
       sugMode = false;
-      const thBox = document.createElement("div");
-      thBox.className = "ai-thinking-box";
-      const thHead = document.createElement("div");
-      thHead.className = "ai-thinking-head";
-      const thIcon = document.createElement("img");
-      thIcon.src = "../assest/ai-loading-thinking.gif";
-      thIcon.alt = "Thinking";
-      thIcon.className = "ai-thinking-icon";
-      thHead.appendChild(thIcon);
-      const thTitle = document.createElement("span");
-      thTitle.textContent = aiT("ai_thinking_title", null, "Quá trình suy luận sâu (Reasoning)");
-      thHead.appendChild(thTitle);
-      thBox.appendChild(thHead);
-      const thBody = document.createElement("div");
-      const cleanContent = trimmed.replace(/^(?:>\s*)?(?:💭\s*)?(?:\*\*(?:Suy luận|Thinking|Reasoning)[:：]\*\*\s*|\[(?:Suy luận|Thinking|Reasoning)\][:：]?\s*)?/i, "");
-      thBody.appendChild(aiFormatInline(cleanContent));
-      thBox.appendChild(thBody);
-      bubble.appendChild(thBox);
       return;
     }
     if(trimmed.startsWith(">")){ sugMode=false; const bq=document.createElement("div"); bq.className="ai-quote"; bq.style.borderLeft="3px solid rgba(124,58,237,0.55)"; bq.style.background="rgba(124,58,237,0.08)"; bq.style.padding="5px 10px"; bq.style.margin="3px 0"; bq.style.borderRadius="0 8px 8px 0"; bq.style.color="#c4b5fd"; bq.appendChild(aiFormatInline(trimmed.replace(/^>\s?/,""))); bubble.appendChild(bq); return; }
@@ -1560,7 +1551,97 @@ function aiAppendMessage(role, content, provider, image){
   else aiRenderHistory();
 }
 function aiClearHistory(){ aiHistory=[]; aiActiveVideoId=""; aiVideoResumeAt=0; aiSaveHistory(); aiRenderHistory(); if(typeof showToast==="function") showToast("ai_toast_cleared","success"); }
+
+function aiAddCustomModel(prov, modelName){
+  if(!prov || !AI_PROVIDERS[prov] || prov === "custom") return;
+  const m = String(modelName || "").trim();
+  if(!m) return;
+  let list = aiGetProviderModels(prov).slice();
+  if(list.includes(m)){
+    if(typeof showToast === "function") showToast("ai_toast_model_added", "info", [m]);
+    return;
+  }
+  list.push(m);
+  aiCustomModels[prov] = list;
+  storSet({ [AI_STORAGE_KEYS.customModels]: aiCustomModels });
+  aiPopulateModelSelect();
+  aiRenderModelsManager();
+  if(typeof showToast === "function") showToast("ai_toast_model_added", "success", [m]);
+}
+
+function aiDeleteCustomModel(prov, modelName){
+  if(!prov || !AI_PROVIDERS[prov] || prov === "custom") return;
+  let list = aiGetProviderModels(prov).slice();
+  list = list.filter(x => x !== modelName);
+  if(list.length === 0){
+    list = [...(AI_PROVIDERS[prov]?.models || [])];
+  }
+  aiCustomModels[prov] = list;
+  storSet({ [AI_STORAGE_KEYS.customModels]: aiCustomModels });
+  const cur = aiGetModel(prov);
+  if(cur === modelName){
+    aiSetModel(prov, list[0] || "");
+  }
+  aiPopulateModelSelect();
+  aiRenderModelsManager();
+  aiUpdateModelLine();
+  if(typeof showToast === "function") showToast("ai_toast_model_deleted", "info", [modelName]);
+}
+
+function aiResetCustomModels(prov){
+  if(!prov || !AI_PROVIDERS[prov] || prov === "custom") return;
+  delete aiCustomModels[prov];
+  storSet({ [AI_STORAGE_KEYS.customModels]: aiCustomModels });
+  const defaultList = [...(AI_PROVIDERS[prov]?.models || [])];
+  aiSetModel(prov, defaultList[0] || "");
+  aiPopulateModelSelect();
+  aiRenderModelsManager();
+  aiUpdateModelLine();
+  if(typeof showToast === "function") showToast("ai_toast_models_reset", "success");
+}
+
+function aiRenderModelsManager(){
+  const sel = document.getElementById("ai-manage-provider-select");
+  const listEl = document.getElementById("ai-models-list");
+  if(!listEl) return;
+  const prov = sel ? sel.value : "gemini";
+  const models = aiGetProviderModels(prov);
+  listEl.textContent = "";
+  models.forEach(m => {
+    const tag = document.createElement("span");
+    tag.className = "ai-model-tag";
+    const nameSpan = document.createElement("span");
+    nameSpan.textContent = AI_MODEL_LABELS[m] || m;
+    tag.appendChild(nameSpan);
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "ai-model-tag-del";
+    delBtn.textContent = "✕";
+    delBtn.title = aiT("ai_sessions_delete", null, "Xóa");
+    delBtn.addEventListener("click", () => aiDeleteCustomModel(prov, m));
+    tag.appendChild(delBtn);
+    listEl.appendChild(tag);
+  });
+}
+
 function aiPopulateModelSelect(explicitVal){
+  const hasGeminiKey = aiHasKey("gemini");
+  const hasOpenaiKey = aiHasKey("openai");
+  const hasClaudeKey = aiHasKey("claude");
+  const hasCustomServers = aiCustomServers && aiCustomServers.length > 0;
+  const noKeysEntered = !hasGeminiKey && !hasOpenaiKey && !hasClaudeKey;
+
+  // Auto-switch to an active keyed provider if current provider doesn't have a key
+  if(!noKeysEntered && aiProvider !== "custom"){
+    if(!aiHasKey(aiProvider)){
+      if(hasGeminiKey) aiProvider = "gemini";
+      else if(hasOpenaiKey) aiProvider = "openai";
+      else if(hasClaudeKey) aiProvider = "claude";
+      else if(hasCustomServers) aiProvider = "custom";
+      storSet({ [AI_STORAGE_KEYS.provider]: aiProvider });
+    }
+  }
+
   const currentProvider = aiProvider;
   const currentModel = aiGetModel(currentProvider);
   const targetVal = explicitVal || (currentProvider === "custom" ? ("custom:" + aiActiveCustomServerId) : (currentProvider + ":" + currentModel));
@@ -1570,34 +1651,40 @@ function aiPopulateModelSelect(explicitVal){
     if(!sel) return;
     sel.textContent = "";
 
-    // Gemini
-    const geminiModels = [...(AI_PROVIDERS.gemini?.models || []), ...aiFetchedModels];
-    [...new Set(geminiModels)].forEach(m => {
-      const o = document.createElement("option");
-      o.value = "gemini:" + m;
-      o.textContent = "Google Gemini - " + (AI_MODEL_LABELS[m] || m);
-      if(aiFetchedModels.includes(m)) o.style.color = "#059669";
-      sel.appendChild(o);
-    });
+    // Gemini: show if Gemini key is present OR if NO keys entered anywhere (default provided models)
+    if(hasGeminiKey || noKeysEntered){
+      const geminiModels = [...aiGetProviderModels("gemini"), ...aiFetchedModels];
+      [...new Set(geminiModels)].forEach(m => {
+        const o = document.createElement("option");
+        o.value = "gemini:" + m;
+        o.textContent = "Google Gemini - " + (AI_MODEL_LABELS[m] || m);
+        if(aiFetchedModels.includes(m)) o.style.color = "#059669";
+        sel.appendChild(o);
+      });
+    }
 
-    // OpenAI
-    (AI_PROVIDERS.openai?.models || []).forEach(m => {
-      const o = document.createElement("option");
-      o.value = "openai:" + m;
-      o.textContent = "OpenAI - " + (AI_MODEL_LABELS[m] || m);
-      sel.appendChild(o);
-    });
+    // OpenAI: only if OpenAI key entered
+    if(hasOpenaiKey){
+      aiGetProviderModels("openai").forEach(m => {
+        const o = document.createElement("option");
+        o.value = "openai:" + m;
+        o.textContent = "OpenAI - " + (AI_MODEL_LABELS[m] || m);
+        sel.appendChild(o);
+      });
+    }
 
-    // Claude
-    (AI_PROVIDERS.claude?.models || []).forEach(m => {
-      const o = document.createElement("option");
-      o.value = "claude:" + m;
-      o.textContent = "Anthropic - " + (AI_MODEL_LABELS[m] || m);
-      sel.appendChild(o);
-    });
+    // Claude: only if Claude key entered
+    if(hasClaudeKey){
+      aiGetProviderModels("claude").forEach(m => {
+        const o = document.createElement("option");
+        o.value = "claude:" + m;
+        o.textContent = "Anthropic - " + (AI_MODEL_LABELS[m] || m);
+        sel.appendChild(o);
+      });
+    }
 
     // Custom
-    if(aiCustomServers && aiCustomServers.length){
+    if(hasCustomServers){
       aiCustomServers.forEach(srv => {
         const o = document.createElement("option");
         o.value = "custom:" + srv.id;
@@ -1610,6 +1697,21 @@ function aiPopulateModelSelect(explicitVal){
     sel.value = targetVal;
     if(!sel.value && sel.options.length > 0){
       sel.selectedIndex = 0;
+      const firstVal = sel.value;
+      if(firstVal){
+        const colonIdx = firstVal.indexOf(":");
+        if(colonIdx !== -1){
+          const prov = firstVal.slice(0, colonIdx);
+          const mId = firstVal.slice(colonIdx + 1);
+          if(prov === "custom"){
+            aiProvider = "custom";
+            aiActiveCustomServerId = mId;
+          } else if(AI_PROVIDERS[prov]){
+            aiProvider = prov;
+            aiSetModel(prov, mId);
+          }
+        }
+      }
     }
   });
 }
@@ -1785,12 +1887,12 @@ function aiBuildSystemInstruction(isPageQuery, skill, pipeline){
   }
   if(sysBody.indexOf("{0}")!==-1) sysBody=sysBody.split("{0}").join(langName);
   const factRule="\n\nQUY TẮC SỰ THẬT (GOOGLE SEARCH & ĐA NGUỒN): Khi câu hỏi hỏi về nhân vật, sự kiện, dữ liệu thực tế hoặc học thuật: hãy kết hợp cả công cụ Google Search (grounding) và khối dữ liệu đối chiếu đa nguồn từ web thực tế. Tìm điểm trùng khớp và sự đồng thuận cao nhất giữa các nguồn uy tín để khẳng định thông tin chính xác 100%. Phân biệt rõ ràng từng đối tượng, không nhầm lẫn hay ghép nối sai lệch. Trình bày nội dung trực tiếp, tự nhiên; TUYỆT ĐỐI KHÔNG chèn nhãn [Nguồn:...] hay link URL vào câu trả lời.";
-  const thinkingRule="\n\nQUY TẮC SUY LUẬN SÂU (DEEP THINKING / CHAIN-OF-THOUGHT): Với các câu hỏi phức tạp, học thuật, lập trình hoặc suy luận logic, hãy bắt đầu câu trả lời bằng 1-2 câu suy luận ngắn gọn đặt trong định dạng:\n> 💭 **Suy luận:** <tóm lược hướng tiếp cận hoặc tiền đề cốt lõi>\nSau đó xuống dòng và trình bày câu trả lời chi tiết, mạch lạc.";
+  
   let skillRule="";
   if(skill&&skill.instruction) skillRule=skill.instruction;
   let pipelineRule="";
   if(pipeline&&pipeline.systemDirective) pipelineRule=pipeline.systemDirective;
-  return sysBody+factRule+thinkingRule+skillRule+pipelineRule;
+  return sysBody+factRule+skillRule+pipelineRule;
 }
 function aiBuildPrompt(userText, pageText, selectionText, imageNote, pinnedNote, pageLink, memNote, webNote, isPageQuery, pipeline){
   const b=[]; aiPromptFlagged=false;
@@ -1824,8 +1926,8 @@ function aiBuildPrompt(userText, pageText, selectionText, imageNote, pinnedNote,
   if(sysBody.indexOf("{0}")!==-1) sysBody=sysBody.split("{0}").join(langName);
   const FACT_RULE="\n\nQUY TẮC SỰ THẬT: Khi câu hỏi hỏi về nhân vật, tác giả, sự kiện thực tế hoặc dữ liệu thời gian: hãy kết hợp sử dụng Google Search (grounding) và dữ liệu web thực tế để lấy thông tin chính xác nhất từ nguồn uy tín (người dùng không cần trích dẫn URL nguồn, chỉ cần thông tin chính xác 100%). Phân biệt rõ ràng từng cá nhân, sự kiện, không nhầm lẫn hay chắp vá. TUYỆT ĐỐI KHÔNG chèn nhãn [Nguồn:...] hay link URL vào nội dung câu trả lời.";
   const COMPLETENESS_RULE="\n\nQUY TẮC NỘI DUNG ĐẦY ĐỦ: Khi người dùng yêu cầu nội dung đầy đủ/chi tiết/toàn bộ (lời bài hát, thơ, tài liệu, thuật toán, code, bài giải...): (1) Bắt buộc tìm kiếm hoặc trích xuất bản đầy đủ chính xác nhất — không cắt xén, không dùng dấu '...' hay tóm tắt sơ sài. (2) Trình bày TOÀN BỘ nội dung liền mạch theo đúng trật tự. (3) Nếu nội dung quá dài, trình bày tối đa phần hoàn chỉnh và hướng dẫn tiếp tục liền mạch.";
-  const THINKING_RULE="\n\nQUY TẮC SUY LUẬN SÂU (DEEP THINKING): Với câu hỏi phân tích, lập trình, học thuật hoặc suy luận logic, hãy mở đầu bằng 1 dòng suy luận ngắn đặt trong định dạng:\n> 💭 **Suy luận:** <hướng tiếp cận cốt lõi>\nSau đó xuống dòng và trả lời đầy đủ, trực diện.";
-  const sys=sysBody+FACT_RULE+COMPLETENESS_RULE+THINKING_RULE+"\n\n";
+  
+  const sys=sysBody+FACT_RULE+COMPLETENESS_RULE+"\n\n";
   let scopeNote="";
   if(isPageQuery) {
     scopeNote="[PHẠM VI] HỎI VỀ TRANG: Người dùng đang hỏi về nội dung trang/video. Ưu tiên ngữ cảnh trang; khi thiếu dữ liệu dùng kiến thức và web search. Nói rõ nguồn trích dẫn.";
@@ -2170,6 +2272,105 @@ function aiAttachImageFiles(files){
 function aiAttachImageFile(f){
   return aiAttachImageFiles(f?[f]:[]);
 }
+
+function aiCheckLocalAssistantQuery(rawQuery){
+  if(!rawQuery || typeof rawQuery !== "string") return null;
+  const q = rawQuery.trim().toLowerCase().replace(/[?!.,;~…]+$/, "").trim();
+  if(!q || q.length > 100) return null;
+
+  const lang = (typeof currentAppLanguage !== "undefined" && currentAppLanguage) || "vi";
+  const now = new Date();
+
+  // 1. Date & Day of week
+  const isDateQuery = /^(hôm nay( là)? thứ mấy|hôm nay ngày bao nhiêu|hôm nay ngày mấy|hôm nay ngày gì|ngày hôm nay( là ngày mấy)?|thứ mấy rồi|hôm nay là ngày nào|what day is today|what('s| is) today('s)? (date|day)|today('s)? date|今日は何曜日|今日の日付|今天星期几|今天是几号|какой сегодня день|какое сегодня число)$/i.test(q);
+  if(isDateQuery){
+    const daysVi = ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
+    const daysEn = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const daysZh = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
+    const daysJa = ["日曜日", "月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日"];
+    const daysRu = ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"];
+
+    const d = now.getDate().toString().padStart(2, "0");
+    const m = (now.getMonth() + 1).toString().padStart(2, "0");
+    const y = now.getFullYear();
+    const dayIdx = now.getDay();
+    const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+    if(lang === "en"){
+      return "📅 **Today is " + daysEn[dayIdx] + ", " + now.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) + "**.\n⏰ **Current time:** " + timeStr + ".\n\nWishing you a productive and wonderful day! ☀️";
+    } else if(lang === "zh"){
+      return "📅 **今天是 " + y + "年" + m + "月" + d + "日，" + daysZh[dayIdx] + "**。\n⏰ **当前时间：** " + timeStr + "。\n\n祝你拥有充实高效的一天！☀️";
+    } else if(lang === "ja"){
+      return "📅 **今日は " + y + "年" + m + "月" + d + "日（" + daysJa[dayIdx] + "）です**。\n⏰ **現在時刻：** " + timeStr + "。\n\n実りある素晴らしい一日をお過ごしください！☀️";
+    } else if(lang === "ru"){
+      return "📅 **Сегодня " + daysRu[dayIdx] + ", " + d + "." + m + "." + y + "**.\n⏰ **Текущее время:** " + timeStr + ".\n\nЖелаю вам продуктивного и отличного дня! ☀️";
+    } else {
+      return "📅 **Hôm nay là " + daysVi[dayIdx] + ", ngày " + d + "/" + m + "/" + y + "**.\n⏰ **Thời gian hiện tại:** " + timeStr + ".\n\nChúc bạn một ngày làm việc và học tập thật hiệu quả, tràn đầy năng lượng! ☀️";
+    }
+  }
+
+  // 2. Current Time
+  const isTimeQuery = /^(bây giờ là mấy giờ|mấy giờ rồi|bây giờ mấy giờ|thời gian hiện tại|mấy giờ thế|what time is it|what('s| is) the time|current time|今何時|现在几点|сколько сейчас времени|который час)$/i.test(q);
+  if(isTimeQuery){
+    const timeFull = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    if(lang === "en") return "⏰ **The current time is " + timeFull + "**.";
+    if(lang === "zh") return "⏰ **现在时间是 " + timeFull + "**。";
+    if(lang === "ja") return "⏰ **現在の時刻は " + timeFull + " です**。";
+    if(lang === "ru") return "⏰ **Текущее время: " + timeFull + "**.";
+    return "⏰ **Bây giờ là " + timeFull + "**.";
+  }
+
+  // 3. Greetings
+  const isGreeting = /^(xin chào|chào bạn|chào|hello|hi|alo|chào trợ lý|chào scholarflow|good morning|good afternoon|good evening|hey|chào buổi sáng|chào buổi tối|chào nha|hi bạn|chào cậu|你好|こんにちは|привет|здравствуйте)$/i.test(q);
+  if(isGreeting){
+    if(lang === "en"){
+      return "👋 **Hello!** I am **ScholarFlow AI** — your academic and digital research assistant.\n\nHow can I help you today? You can:\n- 📖 Analyze and summarize web pages\n- 🎥 Extract key chapters from YouTube videos\n- 💻 Assist with coding, exam solving, or translation\n- 📝 Clip notes and code directly to your Scratchpad\n\nAsk me anything to get started!";
+    } else if(lang === "zh"){
+      return "👋 **你好！** 我是 **ScholarFlow AI** — 你的学术与智能研究助手。\n\n今天有什么可以帮你的？你可以：\n- 📖 分析并总结网页或学术文章\n- 🎥 提取 YouTube 视频重要节点与时间戳\n- 💻 协助编写代码、解题或学术翻译\n- 📝 一键将摘要与代码片段摘录至暂存便签\n\n随时提出问题开始吧！";
+    } else if(lang === "ja"){
+      return "👋 **こんにちは！** **ScholarFlow AI** です — あなたの学術研究とWebリサーチを支援するスマートアシスタントです。\n\nどのようなお手伝いが必要ですか？\n- 📖 ウェブページや論文の要約・分析\n- 🎥 YouTube動画の重要タイムライン抽出\n- 💻 プログラミング、課題解説、翻訳\n- 📝 スクラッチパッドへの迅速なメモ・コード保存\n\nお気軽に質問を入力してください！";
+    } else if(lang === "ru"){
+      return "👋 **Здравствуйте!** Я **ScholarFlow AI** — ваш академический и исследовательский ассистент.\n\nЧем я могу вам помочь сегодня? Вы можете:\n- 📖 Анализировать и резюмировать веб-страницы\n- 🎥 Извлекать таймкоды и суть из видео YouTube\n- 💻 Помогать с кодингом, задачами и переводом\n- 📝 Сохранять заметки в блокнот в один клик\n\nЗадайте вопрос, чтобы начать!";
+    } else {
+      return "👋 **Xin chào bạn!** Tôi là **ScholarFlow AI** — trợ lý học thuật và nghiên cứu đồng hành cùng bạn.\n\nHôm nay tôi có thể hỗ trợ gì cho bạn? Bạn có thể:\n- 📖 Phân tích, tóm tắt và đọc hiểu trang web/bài báo đang xem\n- 🎥 Bóc tách mốc thời gian và tóm tắt video YouTube\n- 💻 Viết code, giải đề thi, dịch thuật học thuật\n- 📝 Trích dẫn nội dung trực tiếp vào Sổ nháp chỉ với 1 click\n\nHãy nhập câu hỏi hoặc bấm vào các nút gợi ý bên dưới để bắt đầu nhé!";
+    }
+  }
+
+  // 4. Who are you / Identity
+  const isIdentity = /^(bạn là ai|bạn tên gì|ngươi là ai|who are you|bạn là gì|tên bạn là gì|mày là ai|bạn là ai thế|你是谁|あなたは誰|кто ты)$/i.test(q);
+  if(isIdentity){
+    if(lang === "en"){
+      return "🤖 I am **ScholarFlow AI**, an intelligent academic and research assistant built directly into your browser. I help you accelerate reading, analyze complex pages, summarize videos, generate citations, and take instant research notes.";
+    } else if(lang === "zh"){
+      return "🤖 我是 **ScholarFlow AI**，内置于浏览器中的全能学术与研究智能助手。我致力于帮助你高效阅读文献、分析复杂网页、提炼视频核心内容、生成学术引用并快速摘录笔记。";
+    } else if(lang === "ja"){
+      return "🤖 私はブラウザに統合された学術・研究アシスタント **ScholarFlow AI** です。ドキュメントの速読、Webページの深層理解、動画の要約、学術引用の生成、素早いメモ作成を強力にサポートします。";
+    } else if(lang === "ru"){
+      return "🤖 Я **ScholarFlow AI** — интеллектуальный исследовательский ассистент, встроенный прямо в ваш браузер. Я помогаю быстрее читать документы, анализировать страницы, резюмировать видео и организовывать заметки.";
+    } else {
+      return "🤖 Tôi là **ScholarFlow AI** — trợ lý học thuật và tri thức số thông minh được tích hợp trực tiếp ngay trong trình duyệt của bạn.\n\nTôi được thiết kế để giúp bạn tăng tốc độ đọc hiểu tài liệu, nghiên cứu khoa học, bóc tách video YouTube, tạo trích dẫn chuẩn và ghi chú học tập nhanh chóng.";
+    }
+  }
+
+  // 5. Capabilities / Feature guide
+  const isCapabilities = /^(bạn làm được gì|hướng dẫn( sử dụng)?|chức năng|tính năng|bạn có thể làm gì|scholarflow có gì|help|hướng dẫn trợ lý|có tính năng gì|hướng dẫn dùng|giúp gì được|你能做什么|何ができますか|что ты умеешь)$/i.test(q);
+  if(isCapabilities){
+    if(lang === "en"){
+      return "✨ **Key Capabilities of ScholarFlow AI:**\n\n1. 📖 **Web Context & Deep Q&A:** Summarize articles, explain complex terms, analyze code, and solve exercises directly from the active tab.\n2. 🎥 **YouTube Breakdown:** Extract key chapters, summarize transcripts, and jump directly to timestamps.\n3. 📚 **Academic Citations:** Generate APA, MLA, Chicago, Harvard, BibTeX citations instantly.\n4. 📝 **Instant Scratchpad:** Clip quotes, tables, and code snippets into your persistent local notebook.\n5. 🛡️ **Privacy & Security:** Sensitive data redaction, Phishing detection, and Safe Link Guard.\n\n💡 *Tip: Simply type your question or click the quick action chips below to get started!*";
+    } else if(lang === "zh"){
+      return "✨ **ScholarFlow AI 核心功能：**\n\n1. 📖 **网页深度理解与问答：** 一键提炼要点、学术翻译、代码分析、解答页面练习题。\n2. 🎥 **YouTube 视频解析：** 智能时间轴分段、核心内容提炼、点击跳转播放。\n3. 📚 **标准学术引用：** 快速生成 APA, MLA, Chicago, Harvard, BibTeX 等规范引用格式。\n4. 📝 **随身便签（Scratchpad）：** 随时摘录网页高价值段落与代码。\n5. 🛡️ **隐私与安全保护：** 敏感数据脱敏、防钓鱼钓网与 Link Guard 安全过渡。\n\n💡 *提示：直接输入问题或点击下方的快捷提示按钮即可开始！*";
+    } else if(lang === "ja"){
+      return "✨ **ScholarFlow AI の主な機能：**\n\n1. 📖 **Webページの深層理解とQ&A：** 記事の要約、学術翻訳、コード解説、ページ内の問題演習の回答。\n2. 🎥 **YouTube動画の構造化：** チャプター別の要約、タイムスタンプへのワンクリックジャンプ。\n3. 📚 **学術文献引用（Citation）：** APA, MLA, Chicago, Harvard, BibTeX などの標準引用を自動生成。\n4. 📝 **スクラッチパッド：** 重要な引用文やコードスニペットを素早くローカル保存。\n5. 🛡️ **セキュリティ＆プライバシー：** 機密情報のマスキング、フィッシング検知、Link Guard 保護。\n\n💡 *ヒント：質問を入力するか、下のクイックチップをクリックして始めましょう！*";
+    } else if(lang === "ru"){
+      return "✨ **Возможности ScholarFlow AI:**\n\n1. 📖 **Глубокий анализ страниц:** Быстрое резюме, перевод, объяснение кода и решение задач по содержимому текущей вкладки.\n2. 🎥 **Разбор видео YouTube:** Выделение ключевых глав, тезисы и мгновенный переход по таймкодам.\n3. 📚 **Академическое цитирование:** Автогенерация цитат в стандартах APA, MLA, Chicago, BibTeX.\n4. 📝 **Блокнот (Scratchpad):** Быстрое сохранение цитат и сниппетов кода в один клик.\n5. 🛡️ **Безопасность:** Маскирование чувствительных данных, защита от фишинга и Link Guard.\n\n💡 *Совет: введите любой вопрос или используйте быстрые кнопки ниже!*";
+    } else {
+      return "✨ **Các tính năng nổi bật của ScholarFlow & AI Trợ lý:**\n\n1. 📖 **Đọc hiểu & Tóm tắt trang web:** Tự động trích xuất ý chính, dịch thuật chuyên sâu, giải đề trắc nghiệm và phân tích mã nguồn ngay trên tab đang xem.\n2. 🎥 **Bóc tách Video YouTube:** Tóm tắt video theo mốc thời gian (timeline), bấm vào mốc thời gian để nhảy trực tiếp đến video.\n3. 📚 **Trích dẫn chuẩn học thuật:** Tạo nhanh trích dẫn APA, MLA, Chicago, Harvard, IEEE, BibTeX từ DOI/URL.\n4. 📝 **Sổ nháp & Trích xuất mã:** Lưu trích dẫn, ảnh, ghi chú nhanh vào Sổ nháp chỉ với 1 click.\n5. 🛡️ **Bảo mật & Tiện ích:** Che mờ thông tin nhạy cảm, chống lừa đảo Link Guard, Quản lý tab và Pomodoro.\n\n💡 *Mẹo: Bạn có thể gõ câu hỏi bất kỳ hoặc dùng các phím tắt nhanh trên thanh công cụ để bắt đầu!*";
+    }
+  }
+
+  return null;
+}
+
 async function aiSendCurrent(){
   if(aiIsSending){ aiQuickCtx=null; return; }
   const quickReq = aiQuickCtx; aiQuickCtx = null;
@@ -2220,6 +2421,14 @@ async function aiSendCurrent(){
   aiAttachedImages=[];
   aiAttachedImage=null;
   aiRenderAttachedImages();
+  if(imagesToSend.length === 0 && !isPageQuery && !quickReq){
+    const localAnswer = aiCheckLocalAssistantQuery(raw);
+    if(localAnswer){
+      aiAppendMessage("assistant", localAnswer, provider);
+      aiSaveHistorySoon();
+      return;
+    }
+  }
   aiIsSending=true; aiUserStopped=false; aiAbort=new AbortController();
   const sendBtn=document.getElementById("ai-btn-send");
   if(sendBtn){ sendBtn.classList.add("is-stop"); sendBtn.textContent="⏹"; sendBtn.disabled=false; sendBtn.title=aiT("ai_btn_stop",null,"Dừng tạo câu trả lời"); }
@@ -2607,8 +2816,19 @@ function aiInitEvents(){
   const sessBackdrop=document.getElementById("ai-sessions-backdrop"); if(sessBackdrop) sessBackdrop.addEventListener("click",aiHideSessions);
   const sessSearch=document.getElementById("ai-session-search"); if(sessSearch) sessSearch.addEventListener("input",aiRenderSessions);
   const sessNew=document.getElementById("ai-btn-new-session"); if(sessNew) sessNew.addEventListener("click",()=>{ const dt=(function(){ try{ return new Date().toLocaleString(); }catch(e){ return ""; } })(); aiSessionsNew(aiT("ai_session_default_name",null,"Phiên")+" "+dt); aiRenderSessions(); if(typeof showToast==="function") showToast("ai_toast_session_saved","success"); });
-  const openSettings=document.getElementById("ai-btn-open-settings"); const closeSettings=document.getElementById("ai-btn-close-settings"); const backdrop=document.getElementById("ai-settings-backdrop"); const modal=document.getElementById("ai-settings-modal"); const changeModelBtn=document.getElementById("ai-btn-change-model"); const showModal=()=>{ if(modal) modal.style.display="flex"; aiPopulateModelSelect(); aiRenderCustomServers(); aiSyncCompanionFromStorage(); }; const hideModal=()=>{ if(modal) modal.style.display="none"; }; if(openSettings) openSettings.addEventListener("click",showModal); if(changeModelBtn) changeModelBtn.addEventListener("click",showModal); if(closeSettings) closeSettings.addEventListener("click",hideModal); if(backdrop) backdrop.addEventListener("click",hideModal);
+  const openSettings=document.getElementById("ai-btn-open-settings"); const closeSettings=document.getElementById("ai-btn-close-settings"); const backdrop=document.getElementById("ai-settings-backdrop"); const modal=document.getElementById("ai-settings-modal"); const changeModelBtn=document.getElementById("ai-btn-change-model"); const showModal=()=>{ if(modal) modal.style.display="flex"; aiPopulateModelSelect(); aiRenderCustomServers(); aiRenderModelsManager(); aiSyncCompanionFromStorage(); }; const hideModal=()=>{ if(modal) modal.style.display="none"; }; if(openSettings) openSettings.addEventListener("click",showModal); if(changeModelBtn) changeModelBtn.addEventListener("click",showModal); if(closeSettings) closeSettings.addEventListener("click",hideModal); if(backdrop) backdrop.addEventListener("click",hideModal);
   const modelSel=document.getElementById("ai-model-select"); if(modelSel) modelSel.addEventListener("change",()=>aiOnModelChange(modelSel.value));
+  const manageProvSel=document.getElementById("ai-manage-provider-select");
+  if(manageProvSel) manageProvSel.addEventListener("change", aiRenderModelsManager);
+  const addModelBtn=document.getElementById("ai-btn-add-model");
+  const newModelInp=document.getElementById("ai-new-model-name");
+  if(addModelBtn&&newModelInp){
+    const doAddModel=()=>{ const v=newModelInp.value.trim(); if(v){ aiAddCustomModel(manageProvSel?.value||"gemini", v); newModelInp.value=""; } };
+    addModelBtn.addEventListener("click", doAddModel);
+    newModelInp.addEventListener("keydown", (e)=>{ if(e.key==="Enter"){ e.preventDefault(); doAddModel(); } });
+  }
+  const resetModelsBtn=document.getElementById("ai-btn-reset-models");
+  if(resetModelsBtn) resetModelsBtn.addEventListener("click", ()=>{ aiResetCustomModels(manageProvSel?.value||"gemini"); });
   const addServerBtn=document.getElementById("ai-btn-add-server"); if(addServerBtn) addServerBtn.addEventListener("click",aiAddCustomServer);
   const fetchBtn=document.getElementById("ai-btn-fetch-models");
   if(fetchBtn) {fetchBtn.addEventListener("click",async()=>{
@@ -2663,6 +2883,6 @@ if(typeof window!=="undefined"){
   window.AI_SKILLS=AI_SKILLS; window.aiDetectSkill=aiDetectSkill;
   window.AI_PIPELINES=AI_PIPELINES; window.aiResolvePipeline=aiResolvePipeline; window.aiUpdateTypingStatus=aiUpdateTypingStatus;
   window.aiExtractViaScripting=aiExtractViaScripting; window.aiExtractViaBackgroundFetch=aiExtractViaBackgroundFetch;
-  window.AI_PROVIDERS=AI_PROVIDERS; window.aiValidateCustomUrl=aiValidateCustomUrl; window.aiSanitizeExternal=aiSanitizeExternal; window.aiSanitizeHistory=aiSanitizeHistory; window.aiRateLimitOk=aiRateLimitOk; window.aiSelectRelevantWindow=aiSelectRelevantWindow; window.aiIsYouTubeUrl=aiIsYouTubeUrl; window.aiHistoryToGeminiContents=aiHistoryToGeminiContents; window.aiHistoryToOpenAIMessages=aiHistoryToOpenAIMessages; window.aiHistoryToClaudeMessages=aiHistoryToClaudeMessages; window.aiCollectTabsContext=aiCollectTabsContext; window.aiScholarSearch=aiScholarSearch; window.aiAttachImageFile=aiAttachImageFile; window.aiAttachImageFiles=aiAttachImageFiles; window.aiRenderAttachedImages=aiRenderAttachedImages; window.aiExtractYouTubeId=aiExtractYouTubeId; window.aiYtMetaViaFetch=aiYtMetaViaFetch; window.aiYtBalancedJson=aiYtBalancedJson; window.aiCallGeminiLite=aiCallGeminiLite; window.aiSig=aiSig; window.aiRegenerate=aiRegenerate; window.aiSelectRelevantWindows=aiSelectRelevantWindows; window.aiSessionsSearch=aiSessionsSearch; window.aiMemKey=aiMemKey; window.aiMemFor=aiMemFor; window.aiRenderSessions=aiRenderSessions; window.aiShowSessions=aiShowSessions; window.aiHideSessions=aiHideSessions; window.aiGetProviderConfig=aiGetProviderConfig; window.aiGetModel=aiGetModel; window.aiSetModel=aiSetModel; window.aiFetchGeminiModels=aiFetchGeminiModels; window.aiHasKey=aiHasKey; window.aiBuildPrompt=aiBuildPrompt; window.aiAddPage=aiAddPage; window.aiRemovePage=aiRemovePage; window.aiRenderPages=aiRenderPages; window.aiGetCurrentPageInfo=aiGetCurrentPageInfo; window.aiLocalFallback=aiLocalFallback; window.aiUseWebBridge=aiUseWebBridge; window.aiContextCovers=aiContextCovers; window.aiCallProvider=aiCallProvider; window.aiLoadSettings=aiLoadSettings; window.aiSaveHistory=aiSaveHistory; window.aiRenderHistory=aiRenderHistory; window.aiScrollToBottom=aiScrollToBottom; window.aiDetectPageIntent=aiDetectPageIntent; window.aiGroundingSources=aiGroundingSources; window.aiSourcesLabel=aiSourcesLabel; window.aiGeminiSupportsGrounding=aiGeminiSupportsGrounding; window.aiGeminiSupportsVideo=aiGeminiSupportsVideo; window.aiGeminiSupportsAgentic=aiGeminiSupportsAgentic; window.aiPickVideoModel=aiPickVideoModel; window.aiVideoContents=aiVideoContents; window.aiCallGeminiVideo=aiCallGeminiVideo; window.aiIsTranscriptRequest=aiIsTranscriptRequest; window.aiQueryRefersToVideo=aiQueryRefersToVideo; window.aiIsContinueRequest=aiIsContinueRequest; window.aiLastTimestampSec=aiLastTimestampSec; window.aiConversationMarkdown=aiConversationMarkdown; window.aiUpdateLatestBtn=aiUpdateLatestBtn; window.aiAppendMessage=aiAppendMessage; window.aiClearHistory=aiClearHistory; window.aiUpdateProviderUI=aiUpdateProviderUI; window.aiPopulateModelSelect=aiPopulateModelSelect; window.aiSendCurrent=aiSendCurrent; window.aiQuickPrompt=aiQuickPrompt; window.initAI=initAI; window.aiProvider=aiProvider; window.aiSettings=aiSettings; window.aiModels=aiModels; window.aiCustomServers=aiCustomServers; window.aiSetCompanionEnabled=aiSetCompanionEnabled; window.aiUpdateCompanionUI=aiUpdateCompanionUI; window.aiOnModelChange=aiOnModelChange; window.aiRenderCustomServers=aiRenderCustomServers; window.aiAddCustomServer=aiAddCustomServer; window.aiUpdateCurrentPageDisplay=aiUpdateCurrentPageDisplay; window.aiGroundingQueries=aiGroundingQueries; window.aiSearchQueriesLabel=aiSearchQueriesLabel; window.aiBuildSystemInstruction=aiBuildSystemInstruction; window.aiSearchMultiSources=aiSearchMultiSources; window.aiDecodeHtmlEntities=aiDecodeHtmlEntities; window.aiExportMarkdown=aiExportMarkdown; window.aiExportAnki=aiExportAnki; window.aiParseTimestampSec=aiParseTimestampSec; window.aiCheckYtLive=aiCheckYtLive;
+  window.AI_PROVIDERS=AI_PROVIDERS; window.aiValidateCustomUrl=aiValidateCustomUrl; window.aiSanitizeExternal=aiSanitizeExternal; window.aiSanitizeHistory=aiSanitizeHistory; window.aiRateLimitOk=aiRateLimitOk; window.aiSelectRelevantWindow=aiSelectRelevantWindow; window.aiIsYouTubeUrl=aiIsYouTubeUrl; window.aiHistoryToGeminiContents=aiHistoryToGeminiContents; window.aiHistoryToOpenAIMessages=aiHistoryToOpenAIMessages; window.aiHistoryToClaudeMessages=aiHistoryToClaudeMessages; window.aiCollectTabsContext=aiCollectTabsContext; window.aiScholarSearch=aiScholarSearch; window.aiAttachImageFile=aiAttachImageFile; window.aiAttachImageFiles=aiAttachImageFiles; window.aiRenderAttachedImages=aiRenderAttachedImages; window.aiExtractYouTubeId=aiExtractYouTubeId; window.aiYtMetaViaFetch=aiYtMetaViaFetch; window.aiYtBalancedJson=aiYtBalancedJson; window.aiCallGeminiLite=aiCallGeminiLite; window.aiSig=aiSig; window.aiRegenerate=aiRegenerate; window.aiSelectRelevantWindows=aiSelectRelevantWindows; window.aiSessionsSearch=aiSessionsSearch; window.aiMemKey=aiMemKey; window.aiMemFor=aiMemFor; window.aiRenderSessions=aiRenderSessions; window.aiShowSessions=aiShowSessions; window.aiHideSessions=aiHideSessions; window.aiGetProviderConfig=aiGetProviderConfig; window.aiGetModel=aiGetModel; window.aiSetModel=aiSetModel; window.aiFetchGeminiModels=aiFetchGeminiModels; window.aiHasKey=aiHasKey; window.aiBuildPrompt=aiBuildPrompt; window.aiAddPage=aiAddPage; window.aiRemovePage=aiRemovePage; window.aiRenderPages=aiRenderPages; window.aiGetCurrentPageInfo=aiGetCurrentPageInfo; window.aiLocalFallback=aiLocalFallback; window.aiUseWebBridge=aiUseWebBridge; window.aiContextCovers=aiContextCovers; window.aiCallProvider=aiCallProvider; window.aiLoadSettings=aiLoadSettings; window.aiSaveHistory=aiSaveHistory; window.aiRenderHistory=aiRenderHistory; window.aiScrollToBottom=aiScrollToBottom; window.aiDetectPageIntent=aiDetectPageIntent; window.aiGroundingSources=aiGroundingSources; window.aiSourcesLabel=aiSourcesLabel; window.aiGeminiSupportsGrounding=aiGeminiSupportsGrounding; window.aiGeminiSupportsVideo=aiGeminiSupportsVideo; window.aiGeminiSupportsAgentic=aiGeminiSupportsAgentic; window.aiPickVideoModel=aiPickVideoModel; window.aiVideoContents=aiVideoContents; window.aiCallGeminiVideo=aiCallGeminiVideo; window.aiIsTranscriptRequest=aiIsTranscriptRequest; window.aiQueryRefersToVideo=aiQueryRefersToVideo; window.aiIsContinueRequest=aiIsContinueRequest; window.aiLastTimestampSec=aiLastTimestampSec; window.aiConversationMarkdown=aiConversationMarkdown; window.aiUpdateLatestBtn=aiUpdateLatestBtn; window.aiAppendMessage=aiAppendMessage; window.aiClearHistory=aiClearHistory; window.aiUpdateProviderUI=aiUpdateProviderUI; window.aiPopulateModelSelect=aiPopulateModelSelect; window.aiSendCurrent=aiSendCurrent; window.aiQuickPrompt=aiQuickPrompt; window.initAI=initAI; window.aiProvider=aiProvider; window.aiSettings=aiSettings; window.aiModels=aiModels; window.aiCustomServers=aiCustomServers; window.aiSetCompanionEnabled=aiSetCompanionEnabled; window.aiUpdateCompanionUI=aiUpdateCompanionUI; window.aiOnModelChange=aiOnModelChange; window.aiRenderCustomServers=aiRenderCustomServers; window.aiAddCustomServer=aiAddCustomServer; window.aiAddCustomModel=aiAddCustomModel; window.aiDeleteCustomModel=aiDeleteCustomModel; window.aiResetCustomModels=aiResetCustomModels; window.aiRenderModelsManager=aiRenderModelsManager; window.aiCheckLocalAssistantQuery=aiCheckLocalAssistantQuery; window.aiGetProviderModels=aiGetProviderModels; window.aiUpdateCurrentPageDisplay=aiUpdateCurrentPageDisplay; window.aiGroundingQueries=aiGroundingQueries; window.aiSearchQueriesLabel=aiSearchQueriesLabel; window.aiBuildSystemInstruction=aiBuildSystemInstruction; window.aiSearchMultiSources=aiSearchMultiSources; window.aiDecodeHtmlEntities=aiDecodeHtmlEntities; window.aiExportMarkdown=aiExportMarkdown; window.aiExportAnki=aiExportAnki; window.aiParseTimestampSec=aiParseTimestampSec; window.aiCheckYtLive=aiCheckYtLive;
 }
 if(document.readyState!=="loading") initAI(); else document.addEventListener("DOMContentLoaded",initAI);

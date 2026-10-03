@@ -940,7 +940,13 @@ body.is-popup .ai-chat-wrapper {
 }
 
 /* Deep Reasoning (Thinking) Block */
-.ai-thinking-box {
+.ai-thinking-box { display: none !important; }
+.ai-thinking-head { display: none !important; }
+.ai-models-list { display: flex; flex-wrap: wrap; gap: 5px; }
+.ai-model-tag { display: inline-flex; align-items: center; gap: 5px; background: rgba(124, 58, 237, 0.16); border: 1px solid rgba(139, 92, 246, 0.35); border-radius: 5px; padding: 3px 8px; font-size: 11px; color: #e2e8f0; }
+.ai-model-tag-del { cursor: pointer; color: #94a3b8; font-weight: bold; font-size: 11px; line-height: 1; padding: 1px 3px; border-radius: 3px; border: none; background: transparent; display: inline-flex; align-items: center; justify-content: center; }
+.ai-model-tag-del:hover { color: #ef4444; background: rgba(239, 68, 68, 0.2); }
+.ai-thinking-box-old {
   margin: 6px 0 10px;
   padding: 8px 12px;
   border-radius: 8px;
