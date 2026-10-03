@@ -4085,3 +4085,5 @@ body.is-popup .ai-chat-wrapper { max-height:calc(600px - 140px); }
   justify-content: flex-end;
   margin-top: 6px;
 }
+
+.ai-pipeline-status { display: none !important; }

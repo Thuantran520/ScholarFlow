@@ -2235,6 +2235,22 @@ async function aiSendCurrent(){
   const hist=aiHistory.slice(0,-1);
   const streaming=aiSettings.stream!==false&&aiHasKey(provider)&&(provider==="gemini"||provider==="openai");
   let streamAcc=""; let streamRow=null;
+  let streamRaf=null;
+  const renderLiveStream=()=>{
+    streamRaf=null;
+    if(!streamRow) return;
+    aiRenderFormattedText(streamRow, streamAcc);
+    const cur=document.createElement("span");
+    cur.className="ai-stream-cursor";
+    const lastEl=streamRow.lastElementChild;
+    if(lastEl && !lastEl.classList.contains("ai-table") && !lastEl.classList.contains("ai-code-wrap") && !lastEl.classList.contains("ai-flashcard") && !lastEl.classList.contains("ai-chapter-card")){
+      lastEl.appendChild(cur);
+    } else {
+      streamRow.appendChild(cur);
+    }
+    const c2=document.getElementById("ai-chat-history");
+    if(c2) c2.scrollTop=c2.scrollHeight;
+  };
   const onToken=(piece)=>{
     streamAcc+=piece;
     if(!streamRow){
@@ -2244,13 +2260,9 @@ async function aiSendCurrent(){
       streamRow=c&&c.lastElementChild?c.lastElementChild.querySelector(".ai-bubble"):null;
     }
     if(streamRow){
-      streamRow.textContent=streamAcc;
-      const cur=document.createElement("span");
-      cur.className="ai-stream-cursor";
-      cur.textContent="▌";
-      streamRow.appendChild(cur);
-      const c2=document.getElementById("ai-chat-history");
-      if(c2) c2.scrollTop=c2.scrollHeight;
+      if(!streamRaf){
+        streamRaf=requestAnimationFrame(renderLiveStream);
+      }
     }
   };
   const pipeline = aiResolvePipeline(raw, isPageQuery, detectedSkill, quickReq, hasActiveWebPage, pageUrl);
@@ -2382,6 +2394,7 @@ async function aiSendCurrent(){
       }
     }catch(e){
       if(aiUserStopped){
+        if(streamRaf){ cancelAnimationFrame(streamRaf); streamRaf=null; }
         answer=String(streamAcc||"")+"\n\n"+aiT("ai_toast_stopped",null,"⏹ Đã dừng tạo câu trả lời."); usedFallback=true; if(typeof showToast==="function") showToast("ai_toast_stopped","warning");
       } else {
       const msg0=(e&&e.message)?e.message:"unknown";
@@ -2406,7 +2419,17 @@ async function aiSendCurrent(){
     answer=aiCleanFormatting(answer);
   }
   aiHideTyping();
-  if(streaming){ const last=aiHistory[aiHistory.length-1]; if(streamRow&&last&&last.role==="assistant"){ last.content=String(answer).slice(0,16000); aiSaveHistorySoon(); aiRenderHistory(); } else if(answer){ aiAppendMessage("assistant", answer, provider); } }
+  if(streaming){
+    if(streamRaf){ cancelAnimationFrame(streamRaf); streamRaf=null; }
+    const last=aiHistory[aiHistory.length-1];
+    if(streamRow&&last&&last.role==="assistant"){
+      last.content=String(answer).slice(0,16000);
+      aiSaveHistorySoon();
+      aiRenderHistory();
+    } else if(answer){
+      aiAppendMessage("assistant", answer, provider);
+    }
+  }
   else { aiAppendMessage("assistant", answer, provider); }
   if(!usedFallback){ try{ aiMemRemember(pageUrl, raw); aiSessionsSaveCurrent(); }catch(e){} }
   if(!usedFallback&&typeof showToast==="function") showToast("ai_toast_done","success");

@@ -831,7 +831,8 @@ body.is-popup .ai-chat-wrapper {
 }
 
 .ai-pipeline-status {
-  display: flex;
+  display: none !important;
+  /* display: flex; */
   flex-direction: column;
   align-self: stretch;
   gap: 7px;
