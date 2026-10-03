@@ -131,6 +131,12 @@
   justify-content: center;
   position: relative;
 }
+.nav-icon-img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  display: block;
+}
 .nav-label {
   font-size: 10px;
   white-space: nowrap;
@@ -216,6 +222,10 @@
 }
 .main-nav-bar.is-compact-nav .nav-icon {
   font-size: 14px;
+}
+.main-nav-bar.is-compact-nav .nav-icon-img {
+  width: 16px;
+  height: 16px;
 }
 .main-nav-bar.is-compact-nav .nav-badge {
   top: 3px;
