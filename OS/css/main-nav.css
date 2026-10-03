@@ -130,10 +130,11 @@
   align-items: center;
   justify-content: center;
   position: relative;
+  height: 22px;
 }
 .nav-icon-img {
-  width: 14px;
-  height: 14px;
+  width: 22px;
+  height: 22px;
   object-fit: contain;
   display: block;
 }
@@ -222,10 +223,11 @@
 }
 .main-nav-bar.is-compact-nav .nav-icon {
   font-size: 14px;
+  height: 24px;
 }
 .main-nav-bar.is-compact-nav .nav-icon-img {
-  width: 16px;
-  height: 16px;
+  width: 24px;
+  height: 24px;
 }
 .main-nav-bar.is-compact-nav .nav-badge {
   top: 3px;

@@ -3157,7 +3157,7 @@ body.is-popup .ai-disclaimer-row { border-radius:10px; }
 .ai-status.is-connected { border-color:rgba(16,185,129,0.4); color:#10b981; background:rgba(16,185,129,0.1); }
 /* AI Assistant - missing pieces */
 .ai-chat-icon { color:#a78bfa; font-size:14px; display:inline-flex; align-items:center; justify-content:center; }
-.ai-chat-icon-img { width:18px; height:18px; object-fit:contain; display:block; }
+.ai-chat-icon-img { width:22px; height:22px; object-fit:contain; display:block; }
 .ai-top-actions { display:flex; gap:6px; align-items:center; margin-left:auto; flex-shrink:0; }
 .ai-gear-btn { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid rgba(255,255,255,0.09); border-radius:9px; color:#94a3b8; font-size:14px; line-height:1; cursor:pointer; background:linear-gradient(180deg, rgba(148,163,184,0.10), rgba(148,163,184,0.02)); transition:transform .12s ease, box-shadow .12s ease, color .12s ease, border-color .12s ease; padding:0; }
 .ai-gear-btn:hover { color:#e2e8f0; border-color:rgba(var(--primary-rgb),0.35); transform:translateY(-1px); box-shadow:0 3px 10px rgba(2,6,23,0.45); }

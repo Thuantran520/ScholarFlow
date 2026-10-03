@@ -2216,6 +2216,15 @@ async function aiSendCurrent(){
   aiIsSending=true; aiUserStopped=false; aiAbort=new AbortController();
   const sendBtn=document.getElementById("ai-btn-send");
   if(sendBtn){ sendBtn.classList.add("is-stop"); sendBtn.textContent="⏹"; sendBtn.disabled=false; sendBtn.title=aiT("ai_btn_stop",null,"Dừng tạo câu trả lời"); }
+  if(!aiHasKey(provider)){
+    aiIsSending=false;
+    if(sendBtn){ sendBtn.classList.remove("is-stop"); sendBtn.textContent="➤"; sendBtn.disabled=false; sendBtn.title=aiT("ai_btn_send",null,"Gửi câu hỏi"); }
+    const label=aiGetProviderConfig(provider).label;
+    const needKeyMsg=(typeof getI18nText==="function")?getI18nText("ai_need_key",[label]):"⚠️ Chưa nhập API key cho "+label+". Hãy bấm ⚙ Cài đặt → nhập key.";
+    aiAppendMessage("assistant", needKeyMsg, provider);
+    if(typeof showToast==="function") showToast("ai_toast_need_key","warning");
+    return;
+  }
   const hist=aiHistory.slice(0,-1);
   const streaming=aiSettings.stream!==false&&aiHasKey(provider)&&(provider==="gemini"||provider==="openai");
   let streamAcc=""; let streamRow=null;
@@ -2329,8 +2338,8 @@ async function aiSendCurrent(){
   let answer=""; let usedFallback=false; let callOpts=null;
   if(!aiHasKey(provider)){
     const label=aiGetProviderConfig(provider).label;
-    const needKeyMsg=(typeof getI18nText==="function")?getI18nText("ai_need_key",[label]):"⚠️ Chưa nhập API key cho "+label+". Hãy bấm ⚙ Cài đặt → nhập key (Gemini free tại aistudio.google.com). Đã chuẩn hoá: chỉ gửi 4000 ký tự đầu để tiết kiệm token.";
-    answer=needKeyMsg+"\n\n--- Context preview that will be sent (first ~5000 chars) ---\n"+prompt.slice(0,1200)+(prompt.length>1200?"...":"")+"\n\n("+aiLocalFallback(prompt, pageText)+")";
+    const needKeyMsg=(typeof getI18nText==="function")?getI18nText("ai_need_key",[label]):"⚠️ Chưa nhập API key cho "+label+". Hãy bấm ⚙ Cài đặt → nhập key.";
+    answer=needKeyMsg;
     usedFallback=true; if(typeof showToast==="function") showToast("ai_toast_need_key","warning");
   } else {
     aiUpdateTypingStatus({label:pipeline.label, step:3, total:pipeline.steps.length, text:pipeline.steps[2]});
