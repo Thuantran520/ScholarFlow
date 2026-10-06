@@ -5,10 +5,26 @@ Tất cả thay đổi đáng chú ý của dự án đều được ghi tại �
 
 ---
 
+## [2.5.7] - Unreleased
+
+### Added
+- **AI Agent (Agentic AI & Sandbox)**: mục **Tác nhân thông minh** trong ⚙ Cài đặt AI với hai tuỳ chọn - *Bật chế độ AI Agent (Thử nghiệm)* và *Hỏi cấp quyền trước khi Agent duyệt web*. Khi gõ `/agent <yêu cầu>`, Agent tự tìm kiếm web, đọc trang, tổng hợp dữ liệu công lập và hiển thị **thẻ xin cấp quyền** ngay trong khung chat (Cho phép / Hủy bỏ) nếu bật xác nhận; kết quả gắn nhãn *Đã duyệt & lọc an toàn qua ScholarFlow Sandbox*.
+- **Tự điều hướng bằng ngôn ngữ tự nhiên**: nhận diện câu kiểu *"tìm youtube về chủ đề X rồi mở lên giúp tôi"*, tự quét nhiều nguồn tìm kiếm, chọn đúng host (ưu tiên youtube.com / youtu.be) và mở tab mới; nếu không có kết quả khớp sẽ liệt kê các địa chỉ liên quan kèm nút *Mở lại tab này*.
+- **Weather Hero Card trong tab Lịch**: thẻ tóm tắt thời tiết (nhiệt độ, mô tả, độ ẩm, khoảng nhiệt min–max, cảnh báo) đặt trên lịch, bấm để mở hộp thoại chi tiết; badge thời tiết ở header giờ bấm được.
+- **Bộ icon thời tiết SVG 24 trạng thái**: `OS/assest/24-weather/` (Nắng → Bão) + `OS/js/utils/weather-icons.js` render inline, ánh xạ mã WMO của Open-Meteo sang icon phù hợp, có biến thể ngày/đêm; thêm icon độ ẩm (25), nhiệt độ (26) và cảnh báo (27).
+- **Nhân vật "Dự báo viên" trong hộp thoại thời tiết**: 6 GIF chibi (`OS/assest/dubaovien/`) đổi theo trạng thái thời tiết hiện tại.
+- **Menu lệnh của userscript trên sidebar**: script đã gọi `GM_registerMenuCommand` giờ hiện nút *Menu* trong thẻ script, bấm ra dropdown liệt kê các lệnh (`caption`, `accessKey`), bấm là chạy đúng callback của script đó; background thêm action `US_MENU_REGISTER` / `US_MENU_UNREGISTER` và bridge method `menu.get`.
+- `GM_webRequest`, `GM_getTab`, `GM_saveTab`, `GM_getTabs`, `GM_audio`, `GM.setValues` / `getValues` / `deleteValues` được shim; parser metadata nhận thêm tag `supportURL`, `run-in`, `sandbox`, `unwrap`, `tag`, `webRequest` và bool tag `unwrap`.
+
+### Changed
+- `OS/assets/` gộp vào `OS/assest/` (một thư mục duy nhất) và cập nhật mọi tham chiếu trong HTML/CSS/JS.
+- Bộ lọc nhiễu của inspect mode bỏ qua thêm khối YouTube (`ytd-comments`, `ytd-watch-next-secondary-results-renderer`, `ytd-masthead`, `ytd-live-chat-frame`) và các phần tử có id chứa `comments|disqus|related|sidebar|masthead|advert`.
+- Nâng cấp version lên 2.5.7.
+
 ## [2.5.6] - Unreleased
 
 ### Added
-- **Phiên bản phát triển mới**: Cơ sở cho các tính năng cải tiến lớn sắp tới (UI/UX nâng cấp, hiệu năng tốt hơn, bảo mật 강화).
+- **Phiên bản phát triển mới**: Cơ sở cho các tính năng cải tiến lớn sắp tới (UI/UX nâng cấp, hiệu năng tốt hơn, bảo mật mạnh).
 
 ### Changed
 - Nâng cấp version lên 2.5.6 cho chu kỳ phát triển tiếp theo.

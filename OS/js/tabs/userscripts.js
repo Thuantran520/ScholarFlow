@@ -356,6 +356,7 @@
   }
 
   let _currentTabUrl = '';
+  let _closeMenuDropdown = null;
 
   /**
    * Robust tab resolver that finds an active or open http/https web page tab.
@@ -400,6 +401,80 @@
     } catch (_) {}
 
     return null;
+  }
+
+  /**
+   * Fetch menu commands (GM_registerMenuCommand) for a script from the background.
+   * Shows a dropdown button if the script has registered menu commands.
+   */
+  function _fetchScriptMenuCommands(script, btnMenu, btnGroup) {
+    btnMenu.style.display = 'inline-flex';
+    btnMenu.onclick = async (e) => {
+      e.stopPropagation();
+      try {
+        const scriptId = _idOf(script);
+        if (!scriptId || !browserApi.runtime || !browserApi.runtime.sendMessage) return;
+        const res = await browserApi.runtime.sendMessage({ action: 'US_BRIDGE', method: 'menu.get', payload: { scriptId: scriptId } });
+        _showMenuDropdown(btnMenu, (res && res.items) || [], script, btnGroup);
+      } catch (_) {}
+    };
+  }
+
+  function _showMenuDropdown(btnMenu, items, script, btnGroup) {
+    if (_closeMenuDropdown) _closeMenuDropdown();
+
+    // Remove any existing dropdown
+    const existing = document.querySelector('.us-menu-dropdown');
+    if (existing) existing.remove();
+
+    const dropdown = document.createElement('div');
+    dropdown.className = 'us-menu-dropdown';
+    dropdown.style.cssText = 'position:absolute;top:100%;right:0;z-index:1000;background:var(--card-bg);border:1px solid var(--border-color);border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.3);min-width:180px;max-width:280px;padding:4px 0;';
+    dropdown.onclick = (event) => event.stopPropagation();
+
+    const closeHandler = (e) => {
+      if (!dropdown.contains(e.target) && e.target !== btnMenu) closeMenu();
+    };
+    const closeMenu = () => {
+      dropdown.remove();
+      document.removeEventListener('click', closeHandler);
+      if (_closeMenuDropdown === closeMenu) _closeMenuDropdown = null;
+    };
+    _closeMenuDropdown = closeMenu;
+    
+    items.forEach(item => {
+      const menuItem = document.createElement('div');
+      menuItem.style.cssText = 'padding:8px 12px;cursor:pointer;font-size:12px;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+      menuItem.textContent = item.caption;
+      menuItem.title = item.caption;
+      menuItem.onmouseenter = () => { menuItem.style.background = 'var(--hover-bg)'; };
+      menuItem.onmouseleave = () => { menuItem.style.background = 'transparent'; };
+      menuItem.onclick = (event) => {
+        event.stopPropagation();
+        _invokeMenuCommand(item.id, script);
+        closeMenu();
+      };
+      dropdown.appendChild(menuItem);
+    });
+
+    // Close on click outside
+    setTimeout(() => {
+      if (_closeMenuDropdown === closeMenu) document.addEventListener('click', closeHandler);
+    }, 0);
+
+    btnGroup.style.position = 'relative';
+    btnGroup.appendChild(dropdown);
+  }
+
+  async function _invokeMenuCommand(menuId, script) {
+    try {
+      const tabs = await browserApi.tabs.query({ active: true, currentWindow: true });
+      const tabId = tabs && tabs[0] && tabs[0].id;
+      await browserApi.runtime.sendMessage({ action: 'US_MENU_INVOKE', tabId, id: menuId, scriptId: script.id });
+      _notify((typeof t === 'function' ? t('us_menu_invoked') : 'Đã gọi lệnh menu') + ': ' + menuId, 'success');
+    } catch (e) {
+      _notify((typeof t === 'function' ? t('us_menu_err') : 'Lỗi khi gọi lệnh menu') + ': ' + (e && e.message ? e.message : String(e)), 'error');
+    }
   }
 
   /**
@@ -1398,13 +1473,29 @@
       btnDel.className = 'us-btn us-btn-icon us-danger';
       btnDel.title = (typeof t === 'function' ? t('us_del_script') : null) || 'Xóa script này';
       btnDel.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>';
-      btnDel.onclick = () => {
+      btnDel.onclick = async () => {
         if (confirm((typeof t === 'function' ? t('us_del_confirm', [script.name]) : null) || ("Xóa script \"" + script.name + "\"?"))) {
-          _mutateAll((list) => {
+          await _mutateAll((list) => {
             const at = _locate(list, script);
             if (at > -1) list.splice(at, 1);
             return list;
           }, { allowDelete: true });
+          // Clean up menu commands
+          try {
+            if (browserApi.storage && browserApi.storage.local) {
+              const key = 'sf_us_menu';
+              const cur = await browserApi.storage.local.get(key);
+              const map = (cur && cur[key]) || {};
+              const scriptId = _idOf(script);
+              for (const k in map) {
+                if (map[k] && (map[k].scriptId === scriptId)) {
+                  delete map[k];
+                }
+              }
+              await browserApi.storage.local.set({ [key]: map });
+            }
+          } catch (_) {}
+          await _load();
         }
       };
 
@@ -1415,6 +1506,18 @@
       btnGroup.appendChild(btnOpenWeb);
       btnGroup.appendChild(btnDupe);
       btnGroup.appendChild(btnDel);
+
+      // Menu button (GM_registerMenuCommand)
+      const btnMenu = document.createElement('button');
+      btnMenu.type = 'button';
+      btnMenu.className = 'us-btn us-btn-icon';
+      btnMenu.title = (typeof t === 'function' ? t('us_menu_title') : null) || 'Cài đặt script (menu)';
+      btnMenu.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>';
+      btnMenu.style.display = 'inline-flex';
+      btnGroup.appendChild(btnMenu);
+
+      // Fetch and show menu commands if any
+      _fetchScriptMenuCommands(script, btnMenu, btnGroup);
 
       topRow.appendChild(btnGroup);
       li.appendChild(topRow);

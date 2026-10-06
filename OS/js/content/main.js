@@ -610,7 +610,7 @@
             };
 
             const rootSel = pickBestContainer(document);
-            const skip = { SCRIPT: 1, STYLE: 1, NOSCRIPT: 1, NAV: 1, HEADER: 1, FOOTER: 1, ASIDE: 1, FORM: 1, BUTTON: 1, SELECT: 1 };
+            const skip = { SCRIPT: 1, STYLE: 1, NOSCRIPT: 1, NAV: 1, HEADER: 1, FOOTER: 1, ASIDE: 1, FORM: 1, BUTTON: 1, SELECT: 1, "YTD-COMMENTS": 1, "YTD-WATCH-NEXT-SECONDARY-RESULTS-RENDERER": 1, "YTD-MASTHEAD": 1, "YTD-LIVE-CHAT-FRAME": 1 };
             const blockish = { P: 1, DIV: 1, LI: 1, UL: 1, OL: 1, TABLE: 1, TR: 1, SECTION: 1, H1: 1, H2: 1, H3: 1, H4: 1, H5: 1, H6: 1, BLOCKQUOTE: 1, PRE: 1, FIGCAPTION: 1 };
             const hidden = (el) => {
               try { const cs = window.getComputedStyle(el); return cs.display === "none" || cs.visibility === "hidden" || cs.position === "fixed"; } catch (e) { return false; }
@@ -626,7 +626,7 @@
               if (skip[el.tagName] || (el !== document.body && hidden(el))) return;
               if (el !== rootSel && el !== document.body) {
                 const idCls = (el.id || "") + " " + (el.className || "");
-                if (NOISE_CLASS_RE.test(idCls) && !GOOD_CLASS_RE.test(idCls)) return;
+                if ((NOISE_CLASS_RE.test(idCls) || /(comments?|disqus|related|sidebar|masthead|advert)/i.test(el.id || "")) && !GOOD_CLASS_RE.test(idCls)) return;
                 // Lọc bỏ các khối danh sách liên kết/menu có mật độ link cao (Link Density > 0.65)
                 if ((el.tagName === "DIV" || el.tagName === "UL" || el.tagName === "SECTION" || el.tagName === "ASIDE") && el.children && el.children.length > 1) {
                   const tStr = (el.textContent || "").trim();

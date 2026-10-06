@@ -322,6 +322,12 @@ body.is-popup .ai-msg-user .ai-bubble {
   border-radius: 14px 14px 4px 14px;
 }
 
+body.is-popup .ai-typing-row .ai-bubble.ai-typing {
+  padding: 2px 8px !important;
+  border-radius: 10px 10px 10px 4px !important;
+  width: fit-content;
+}
+
 body.is-popup .ai-msg-assistant .ai-bubble {
   border-radius: 14px 14px 14px 4px;
 }

@@ -295,7 +295,7 @@
 
   function SF_getDiagnosticSnapshot() {
     return {
-      version: '2.5.6',
+      version: '2.5.7',
       timestamp: new Date().toISOString(),
       userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'Node.js',
       errorCount: _diagnosticsLog.length,

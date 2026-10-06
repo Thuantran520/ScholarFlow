@@ -10,6 +10,49 @@
 // Also provides safe global assignment helpers that won't throw on const/frozen bindings.
 var _sfStorageListeners = typeof _sfStorageListeners !== 'undefined' ? _sfStorageListeners : {};
 
+var _sfMenuCommands = {};
+var _sfMenuCmdId = 1;
+
+var _sfGM_registerMenuCommand = typeof GM_registerMenuCommand === 'function' ? GM_registerMenuCommand : function(name, callback, options) {
+  var id = 'cmd_' + _sfMenuCmdId++;
+  _sfMenuCommands[id] = { name: name, cb: callback };
+  try {
+    window.postMessage({ type: '__SF_US_REGISTER_MENU__', id: id, name: name }, '*');
+  } catch(e) {}
+  return id;
+};
+
+var _sfGM_unregisterMenuCommand = typeof GM_unregisterMenuCommand === 'function' ? GM_unregisterMenuCommand : function(id) {
+  delete _sfMenuCommands[id];
+  try {
+    window.postMessage({ type: '__SF_US_UNREGISTER_MENU__', id: id }, '*');
+  } catch(e) {}
+};
+
+window.addEventListener('message', function(e) {
+  if (e.source !== window || !e.data || typeof e.data !== 'object') return;
+  if (e.data.type === '__SF_US_EXEC_MENU__' && e.data.id && _sfMenuCommands[e.data.id]) {
+    try { _sfMenuCommands[e.data.id].cb(); } catch(err) {}
+  }
+});
+
+var _sfGM_openInTab = typeof GM_openInTab === 'function' ? GM_openInTab : function(url, options) {
+  var loadInBackground = false;
+  if (typeof options === 'boolean') loadInBackground = options;
+  else if (options && typeof options === 'object') loadInBackground = !!options.active; // wait, active means foreground!
+  // Simplified for ScholarFlow shim
+  window.open(url, '_blank');
+};
+
+var _sfGM_setClipboard = typeof GM_setClipboard === 'function' ? GM_setClipboard : function(data, info, cb) {
+  try {
+    navigator.clipboard.writeText(data).then(function() {
+      if (typeof cb === 'function') cb();
+    }).catch(function() {});
+  } catch(e) {}
+};
+
+
 var _sfGM_getValue = typeof GM_getValue === 'function' ? GM_getValue : function(key, def) {
   try { return JSON.parse(localStorage.getItem('GM_' + key)) ?? def; }
   catch(e) { return localStorage.getItem('GM_' + key) || def; }
@@ -68,7 +111,6 @@ var _sfGM_xmlhttpRequest = typeof GM_xmlhttpRequest === 'function' ? GM_xmlhttpR
     var resReqId = e.data.reqId || (e.data.payload && e.data.payload.reqId);
     if (resReqId !== reqId) return;
     window.removeEventListener('message', msgHandler);
-    document.removeEventListener('__SF_US_XHR_RES__', legacyHandler);
     var res = e.data.payload || e.data;
     if (res && res.error) {
       if (typeof details.onerror === 'function') details.onerror(res);
@@ -77,20 +119,6 @@ var _sfGM_xmlhttpRequest = typeof GM_xmlhttpRequest === 'function' ? GM_xmlhttpR
     }
   };
   window.addEventListener('message', msgHandler);
-
-  var legacyHandler = function(e) {
-    var d = e && e.detail;
-    if (d && d.reqId === reqId) {
-      document.removeEventListener('__SF_US_XHR_RES__', legacyHandler);
-      window.removeEventListener('message', msgHandler);
-      if (d.error) {
-        if (typeof details.onerror === 'function') details.onerror(d);
-      } else {
-        if (typeof details.onload === 'function') details.onload(d);
-      }
-    }
-  };
-  document.addEventListener('__SF_US_XHR_RES__', legacyHandler);
 
   var reqPayload = {
     reqId: reqId,
@@ -101,9 +129,6 @@ var _sfGM_xmlhttpRequest = typeof GM_xmlhttpRequest === 'function' ? GM_xmlhttpR
     timeout: details.timeout || 30000
   };
 
-  try {
-    document.dispatchEvent(new CustomEvent('__SF_US_XHR_REQ__', { detail: reqPayload }));
-  } catch(e) {}
   try {
     window.postMessage({ type: '__SF_US_XHR_REQ__', reqId: reqId, payload: reqPayload }, '*');
   } catch(e) {}
@@ -200,7 +225,12 @@ var _sfGM_openInTab = typeof GM_openInTab === 'function' ? GM_openInTab : functi
 var _sfGM_registerMenuCommand = typeof GM_registerMenuCommand === 'function' ? GM_registerMenuCommand : function(caption, onClick) {
   try {
     document.dispatchEvent(new CustomEvent('__SF_US_MENU_REQ__', {
-      detail: { caption: caption }
+      detail: {
+        id: 'menu_' + Math.random().toString(36).slice(2, 10),
+        caption: caption,
+        scriptId: (typeof _sfGM_info !== 'undefined' && _sfGM_info.script && _sfGM_info.script.id) || null,
+        scriptName: (typeof _sfGM_info !== 'undefined' && _sfGM_info.script && _sfGM_info.script.name) || ''
+      }
     }));
   } catch(e) {}
   return caption;
@@ -300,7 +330,7 @@ var _sfGM_waitForElement = typeof GM_waitForElement === 'function' ? GM_waitForE
 var _sfGM_info = (typeof GM_info !== 'undefined' && GM_info) ? GM_info : {
   script: { name: 'ScholarFlow Script', version: '1.0' },
   scriptHandler: 'ScholarFlow',
-  version: '2.5.6'
+  version: '2.5.7'
 };
 
 var _sfGM_log = typeof GM_log === 'function' ? GM_log : function() {

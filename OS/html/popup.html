@@ -52,7 +52,6 @@
       </div>
       <div class="header-brand">
         <span class="title">ScholarFlow</span>
-        <span class="version-tag header-weather-badge" id="sf-header-weather" title="Thời tiết • Bấm để xem chi tiết" data-i18n-title="weather_header_title">⛅ --°C</span>
       </div>
     </div>
     <div class="header-item" data-header-item="lang">
@@ -795,6 +794,13 @@
             </div>
             <div class="ai-temp-scale"><span data-i18n="ai_temp_chet">Chặt chẽ</span><span data-i18n="ai_temp_canbai">Cân bằng</span><span data-i18n="ai_temp_sangtao">Sáng tạo</span></div>
           </div>
+        </div>
+        <div class="ai-settings-section">
+          <div class="ai-field-label" data-i18n="ai_agent_section_title">Tác nhân thông minh (Agentic AI & Sandbox)</div>
+          <label class="ai-check"><input type="checkbox" id="ai-opt-agent-mode"> <span data-i18n="ai_opt_agent_mode">Bật chế độ AI Agent (Thử nghiệm)</span></label>
+          <div class="ai-hint" style="margin-left:22px; font-size:10.5px; margin-top:2px;" data-i18n="ai_opt_agent_mode_hint">Cho phép Agent tự động duyệt tìm kiếm web và xử lý dữ liệu cô lập qua Sandbox khi gõ lệnh /agent.</div>
+          <label class="ai-check" style="margin-top:8px;"><input type="checkbox" id="ai-opt-agent-confirm" checked> <span data-i18n="ai_opt_agent_confirm">Hỏi cấp quyền trước khi Agent duyệt web</span></label>
+          <div class="ai-hint" style="margin-left:22px; font-size:10.5px; margin-top:2px;" data-i18n="ai_opt_agent_confirm_hint">Hiện thẻ xác nhận trong khung chat để bạn phê duyệt mỗi khi Agent muốn mở và đọc trang web.</div>
         </div>
       </div>
     </div>
@@ -1656,7 +1662,7 @@
       <div class="rule-card" style="border-color:rgba(245,158,11,0.35); background:rgba(245,158,11,0.06);">
         <div class="rule-card-title" style="color:#f59e0b;" data-i18n="trust_card4_title">⚖️ 4. Thông Tin Bản Quyền &amp; Kỹ Thuật</div>
         <div class="rule-card-body" data-i18n="trust_card4_body_html" data-i18n-html="true">
-          • <b>Phiên bản:</b> ScholarFlow v2.5.6 (Stable Release)<br>
+          • <b>Phiên bản:</b> ScholarFlow v2.5.7 (Stable Release)<br>
           • <b>Kiến trúc:</b> Manifest V3 (Chromium 114+ &amp; Firefox 109+ Native Gecko)<br>
           • <b>Bản quyền:</b> Bản quyền phần mềm thuộc về Minh Thuận<br>
           • <b>Chính sách bảo mật:</b> <a href="privacy.html" target="_blank" style="color:var(--primary); text-decoration:underline;">Xem toàn văn Chính Sách Quyền Riêng Tư (Privacy Policy)</a>
@@ -2496,7 +2502,7 @@
       <div class="modal-header">
         <div class="modal-title">
           <span style="display:inline-flex; align-items:center; gap:6px;">
-            <span>⛅</span>
+            <span id="cal-weather-modal-logo">⛅</span>
             <span data-i18n="cal_weather_modal_title">Dự báo thời tiết &amp; độ ẩm 7 ngày</span>
           </span>
         </div>
@@ -4354,7 +4360,7 @@
   <div class="footer-trust-bar">
     <div class="trust-pill" title="Phiên bản hiện tại" data-i18n-title="tip_trust_version">
       <span class="trust-dot dot-green"></span>
-      <span id="app-version-display">v2.5.6</span>
+      <span id="app-version-display">v2.5.7</span>
     </div>
     <div class="trust-divider">•</div>
     <div class="trust-pill" title="Được phát triển bởi Minh Thuận" data-i18n-title="tip_trust_author">
@@ -4395,6 +4401,7 @@
   <script src="../js/tabs/video.js"></script>
   <script src="../js/init.js"></script>
   <script src="../js/core/header-layout.js"></script>
+  <script src="../js/utils/weather-icons.js"></script>
   <script src="../js/tabs/calendar.js"></script>
   <script src="../js/tabs/pomodoro.js"></script>
   <script src="../js/tabs/ai.js"></script>

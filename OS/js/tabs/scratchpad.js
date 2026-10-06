@@ -918,7 +918,7 @@
     } else if (format === 'json') {
       var backupData = {
         app: 'ScholarFlow',
-        version: '2.5.6',
+        version: '2.5.7',
         exportedAt: new Date().toISOString(),
         notes: notes
       };

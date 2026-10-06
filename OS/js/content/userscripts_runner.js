@@ -137,11 +137,15 @@
       (detail.payload && typeof detail.payload === 'object') ? detail.payload : null,
       { scriptId: detail.scriptId || 'anon', name: detail.name || '' }
     );
-    request(
-      { action: 'US_BRIDGE', method: detail.method, payload: payload },
-      '__SF_US_BRIDGE_RES__',
-      detail.reqId
-    );
+    if (detail.method === 'xhr') {
+      request({ action: 'GM_XHR', req: payload }, '__SF_US_BRIDGE_RES__', detail.reqId);
+    } else {
+      request(
+        { action: 'US_BRIDGE', method: detail.method, payload: payload },
+        '__SF_US_BRIDGE_RES__',
+        detail.reqId
+      );
+    }
   });
 
   // ---- GM_registerMenuCommand --------------------------------------------
@@ -159,6 +163,31 @@
     });
   });
 
+  on('__SF_US_MENU_REQ__', function(detail) {
+    if (!detail || !detail.caption) return;
+    send({
+      action: 'US_MENU_REGISTER',
+      entry: {
+        id: String(detail.id || detail.caption),
+        caption: String(detail.caption),
+        scriptId: detail.scriptId || null,
+        scriptName: detail.scriptName || '',
+        accessKey: detail.accessKey || ''
+      }
+    });
+  });
+
+  on('__SF_US_MENU_REMOVE__', function(detail) {
+    if (!detail || !detail.id) return;
+    send({
+      action: 'US_MENU_UNREGISTER',
+      entry: {
+        id: String(detail.id),
+        scriptId: detail.scriptId || null
+      }
+    });
+  });
+
   // ---- menu commands invoked from the extension UI ------------------------
   // The sidebar cannot call a page callback directly, so it asks the tab to
   // dispatch the click and the shim looks the entry up by id.
@@ -166,7 +195,10 @@
     if (api.runtime.onMessage && api.runtime.onMessage.addListener) {
       api.runtime.onMessage.addListener(function(message) {
         if (!message || message.action !== 'SF_US_MENU_CLICK') return undefined;
-        respond('__SF_US_MENU_CLICK__', { id: String(message.id || '') });
+        respond('__SF_US_MENU_CLICK__', {
+          id: String(message.id || ''),
+          scriptId: message.scriptId || null
+        });
         return Promise.resolve({ ok: true });
       });
     }

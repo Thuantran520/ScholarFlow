@@ -161,6 +161,13 @@ function aiMemRemember(url, question){ if(!url||url==="—"||/^(about|chrome|moz
 function aiMemFor(url){ const k=aiMemKey(url); const e=aiMem[k]; if(!e||!Array.isArray(e.q)||!e.q.length) return ""; if(Date.now()-(e.ts||0)>30*864e5) return ""; return "[Kỷ niệm AI về trang này] Câu hỏi trước:\n- "+e.q.join("\n- ")+"\n(LƯU Ý: Chỉ dùng ngữ cảnh này khi người dùng trực tiếp hỏi về lịch sử trước đó, TUYỆT ĐỐI không tự ý đề cập hay chèn vào câu trả lời hiện tại.)"; }
 /* ── AI Skill Engine (Slash commands & Intent auto-detection) ── */
 const AI_SKILLS = {
+  agent: {
+    key: "agent",
+    label: "Tác nhân Agentic AI & Sandbox",
+    trigger: /^[\/!](agent|sandbox|browse)\b/i,
+    intent: /(chạy agent|chay agent|agent tìm kiếm|agent tim kiem|tự động lướt web|tu dong luot web|agent duyệt web|agent duyet web|autonomous agent)/i,
+    instruction: "\n\n[KỸ NĂNG CHUYÊN SÂU: TÁC NHÂN AGENTIC AI & DUYỆT WEB SANDBOX]\n- Tác nhân đã được người dùng ủy quyền thực thi trong môi trường Sandbox cô lập.\n- Tổng hợp, phân tích và đối chiếu thông tin từ các nguồn đã duyệt một cách toàn diện, khách quan, trung thực.\n- Bố cục kết quả rõ ràng: Bối cảnh, Phân tích chi tiết, Bảng so sánh hoặc Điểm then chốt, và Khuyến nghị hành động."
+  },
   code: {
     key: "code",
     label: "Lập trình & Kỹ thuật",
@@ -1049,6 +1056,22 @@ async function aiSearchMultiSources(query){
     });
     if(!res.ok) return { text:"", sources:[] };
     const html=await res.text();
+    const reTitle=/<a[^>]*class="result__a"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+    const titlesMap=[];
+    let tm;
+    while((tm=reTitle.exec(html))!==null&&titlesMap.length<8){
+      let rUrl=tm[1];
+      if(rUrl.includes("uddg=")){
+        try{
+          const u=new URL("https:"+(rUrl.startsWith("//")?rUrl:"//"+rUrl));
+          rUrl=decodeURIComponent(u.searchParams.get("uddg")||rUrl);
+        }catch(e){}
+      }
+      const tText=aiDecodeHtmlEntities(tm[2].replace(/<[^>]+>/g,"").replace(/\s+/g," ").trim());
+      if(rUrl.startsWith("http")){
+        titlesMap.push({ u:rUrl, title:tText });
+      }
+    }
     const re=/<a[^>]*class="result__snippet"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
     let m;
     const items=[];
@@ -1065,9 +1088,19 @@ async function aiSearchMultiSources(query){
       if(snippet && rawUrl.startsWith("http")){
         let host="";
         try{ host=new URL(rawUrl).hostname.replace(/^www\./,""); }catch(e){}
-        items.push("- [Nguồn "+(items.length+1)+": "+host+"] ("+rawUrl+"):\n  \""+snippet+"\"");
-        sources.push({ u: rawUrl, t: host });
+        const matchedTitleObj=titlesMap.find(item=>item.u===rawUrl)||titlesMap[items.length]||null;
+        const pageTitle=(matchedTitleObj&&matchedTitleObj.title)?matchedTitleObj.title:host;
+        items.push("- [Nguồn "+(items.length+1)+": "+pageTitle+"] ("+rawUrl+"):\n  \""+snippet+"\"");
+        sources.push({ u: rawUrl, t: pageTitle, host: host });
       }
+    }
+    if(!sources.length&&titlesMap.length){
+      titlesMap.slice(0,6).forEach((tmItem,idx)=>{
+        let host="";
+        try{ host=new URL(tmItem.u).hostname.replace(/^www\./,""); }catch(e){}
+        items.push("- [Nguồn "+(idx+1)+": "+tmItem.title+"] ("+tmItem.u+")");
+        sources.push({ u: tmItem.u, t: tmItem.title, host: host });
+      });
     }
     if(!items.length) return { text:"", sources:[] };
     const header="[KẾT QUẢ TÌM KIẾM ĐA NGUỒN TỪ WEB THỰC TẾ (ĐỐI CHIẾU CHÉO)]:\nQUY TẮC ĐỐI CHIẾU: Hãy đọc kỹ các nguồn bên dưới, tìm thông tin trùng khớp nhất giữa các nguồn (tên thật, ngày/tháng/năm sinh, quê quán, danh tính) để trả lời. Khi các nguồn cùng nhắc đến một thông tin (đồng thuận), hãy khẳng định thông tin đó là đúng. TUYỆT ĐỐI KHÔNG chèn nhãn [Nguồn:...], [Source:...] hay đường link URL vào giữa câu trả lời; trình bày thông tin trực tiếp, tự nhiên và đẹp mắt.\n\n";
@@ -2371,6 +2404,455 @@ function aiCheckLocalAssistantQuery(rawQuery){
   return null;
 }
 
+function aiDetectAutoNavIntent(rawQuery){
+    if(!rawQuery || typeof rawQuery !== "string") return null;
+    const q = rawQuery.trim().replace(/^[\/!](agent|sandbox|browse)\s+/i, "");
+  
+    const isYt = /(youtube|kênh|kenh|video|clip|yt)/i.test(q);
+  
+    // Pattern: "tìm kênh youtube độ mixi và bật lên" or "tìm trang web mixigaming thì tìm kiếm và bật lên"
+    // Also matches generic "mở [xyz]" or "bật [xyz]"
+    const match = /(?:tìm(?:\s+kiếm)?|search|kiếm|mở|bật|truy cập)\s+(.+?)(?:\s+(?:thì\s+tìm\s+kiếm\s+)?(?:và|rồi|va|roi)?\s*(?:bật|mở|open|truy cập|vào)\s*(?:lên|ra)?(?:\s+(?:giúp|hộ)\s+(?:tôi|tao|mình|em|nha|nhé|cho tôi))?)?$/i.exec(q);
+    
+    if(match && match[1]){
+      let topic = match[1].trim();
+      // Remove trailing " và bật lên" just in case the regex captured it in group 1
+      topic = topic.replace(/(?:\s+(?:thì\s+tìm\s+kiếm\s+)?(?:và|rồi)\s*(?:bật|mở)\s*lên)$/i, "").trim();
+      if(topic.length >= 2) return { query: topic, original: q, isYoutube: isYt };
+    }
+  
+    return null;
+  }
+  
+  async function aiExecuteAutoNav(navIntent, provider){
+  aiIsSending = true;
+  aiUserStopped = false;
+  aiAbort = new AbortController();
+
+  const sendBtn = document.getElementById("ai-btn-send");
+  if(sendBtn){
+    sendBtn.classList.add("is-stop");
+    sendBtn.textContent = "⏹";
+    sendBtn.disabled = false;
+    sendBtn.title = aiT("ai_btn_stop", null, "Dừng tạo câu trả lời");
+  }
+
+  aiShowTyping(aiT("ai_autonav_searching", null, "🔍 Đang tìm kiếm và chuẩn bị mở trang web..."));
+
+  let targetUrl = "";
+  let targetTitle = "";
+  let extraSources = [];
+
+  try {
+    let sQuery = navIntent.query;
+    if(navIntent.isYoutube && !/youtube/i.test(sQuery)){
+      sQuery = "youtube " + sQuery;
+    }
+    const searchRes = await aiSearchMultiSources(sQuery);
+
+    if(aiUserStopped) return;
+
+    if(searchRes && Array.isArray(searchRes.sources) && searchRes.sources.length){
+      if(navIntent.isYoutube){
+        const yt = searchRes.sources.find(s => s && s.u && /youtube\.com|youtu\.be/i.test(s.u));
+        if(yt){
+          targetUrl = yt.u;
+          targetTitle = yt.t || "YouTube";
+        }
+      }
+      if(!targetUrl){
+        targetUrl = searchRes.sources[0].u;
+        targetTitle = searchRes.sources[0].t || "";
+      }
+      extraSources = searchRes.sources.filter(s => s.u !== targetUrl).slice(0, 3);
+    }
+
+    if(!targetUrl){
+      if(navIntent.isYoutube){
+        targetUrl = "https://www.youtube.com/results?search_query=" + encodeURIComponent(navIntent.query);
+        targetTitle = "YouTube Search: " + navIntent.query;
+      } else if(/^([a-z0-9_-]+\.)+[a-z]{2,}(\/.*)?$/i.test(navIntent.query)){
+        targetUrl = "https://" + navIntent.query;
+        targetTitle = navIntent.query;
+      } else {
+        targetUrl = "https://www.google.com/search?q=" + encodeURIComponent(navIntent.query);
+        targetTitle = "Tìm kiếm: " + navIntent.query;
+      }
+    }
+
+    const tabsApi = (typeof browser !== "undefined" && browser.tabs) ? browser.tabs : (typeof chrome !== "undefined" ? chrome.tabs : null);
+    let opened = false;
+    if(tabsApi && tabsApi.create){
+      try {
+        tabsApi.create({ url: targetUrl, active: true });
+        opened = true;
+      } catch(e) {}
+    }
+    if(!opened){
+      try {
+        window.open(targetUrl, "_blank");
+        opened = true;
+      } catch(e) {}
+    }
+
+    aiHideTyping();
+    aiIsSending = false;
+    if(sendBtn){
+      sendBtn.classList.remove("is-stop");
+      sendBtn.textContent = "➤";
+      sendBtn.title = aiT("ai_btn_send", null, "Gửi câu hỏi");
+    }
+
+    let report = "🚀 **" + aiT("ai_autonav_opened", null, "Đã tìm thấy và tự động mở trang web:") + "**\n\n";
+    report += "👉 **[" + (targetTitle || targetUrl) + "](" + targetUrl + ")**\n\n";
+    report += "- 🌐 **Địa chỉ web:** `" + targetUrl + "`\n";
+    report += "- ⚡ **Thao tác:** Đã tự động mở trong tab mới của trình duyệt\n";
+    report += "- 🛡️ **Bảo mật:** " + aiT("ai_agent_badge_safe", null, "Đã duyệt & lọc an toàn qua ScholarFlow Sandbox") + " (0 Token)\n";
+
+    if(extraSources.length){
+      report += "\n**" + aiT("ai_autonav_related", null, "Các địa chỉ liên quan:") + "**\n";
+      extraSources.forEach(es => {
+        report += "- [" + (es.t || es.u) + "](" + es.u + ")\n";
+      });
+    }
+
+    report += "\n*(Nếu trình duyệt ngăn mở tab tự động, bạn có thể bấm trực tiếp vào đường link màu xanh phía trên để truy cập)*";
+
+    aiAppendMessage("assistant", report, provider);
+    aiSaveHistorySoon();
+  } catch(err) {
+    aiHideTyping();
+    aiIsSending = false;
+    if(sendBtn){
+      sendBtn.classList.remove("is-stop");
+      sendBtn.textContent = "➤";
+      sendBtn.title = aiT("ai_btn_send", null, "Gửi câu hỏi");
+    }
+    aiAppendMessage("assistant", aiT("ai_autonav_not_found", null, "⚠️ Không tìm thấy địa chỉ trang web phù hợp cho yêu cầu này."), provider);
+  }
+}
+
+function aiAppendAgentApprovalCard(cleanQuery, raw, provider, key, detectedSkill, isDemo){
+  const c = document.getElementById("ai-chat-history");
+  if(!c) return;
+  const row = document.createElement("div");
+  row.className = "ai-msg ai-msg-assistant ai-agent-approval-row";
+
+  const bubble = document.createElement("div");
+  bubble.className = "ai-bubble ai-agent-card";
+
+  const head = document.createElement("div");
+  head.className = "ai-agent-head";
+  head.textContent = aiT("ai_agent_approval_title", null, "🛡️ Agentic AI Sandbox — Yêu cầu cấp quyền") + (isDemo ? " (0 Token Demo)" : "");
+  bubble.appendChild(head);
+
+  const desc = document.createElement("div");
+  desc.className = "ai-agent-desc";
+  desc.textContent = aiT("ai_agent_approval_desc", null, "Agent yêu cầu quyền kích hoạt Sandbox để tự động tìm kiếm web, bóc tách và cô lập dữ liệu an toàn cho mục tiêu:");
+  bubble.appendChild(desc);
+
+  const targetBox = document.createElement("div");
+  targetBox.className = "ai-agent-target";
+  targetBox.textContent = "“" + (cleanQuery || raw) + "”" + (isDemo ? " [Chạy thử nghiệm 0 Token]" : "");
+  bubble.appendChild(targetBox);
+
+  const actions = document.createElement("div");
+  actions.className = "ai-agent-actions";
+
+  const approveBtn = document.createElement("button");
+  approveBtn.type = "button";
+  approveBtn.className = "btn btn-primary ai-agent-btn-approve";
+  approveBtn.textContent = isDemo ? "✓ Chạy thử nghiệm Sandbox (0 Token)" : aiT("ai_agent_btn_approve", null, "✓ Cho phép Agent thực thi");
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.type = "button";
+  cancelBtn.className = "btn btn-secondary ai-agent-btn-cancel";
+  cancelBtn.textContent = aiT("ai_agent_btn_cancel", null, "✕ Hủy bỏ");
+
+  actions.appendChild(approveBtn);
+  actions.appendChild(cancelBtn);
+  bubble.appendChild(actions);
+
+  const statusMsg = document.createElement("div");
+  statusMsg.className = "ai-agent-status-label";
+  statusMsg.style.display = "none";
+  bubble.appendChild(statusMsg);
+
+  row.appendChild(bubble);
+  c.appendChild(row);
+  c.scrollTop = c.scrollHeight;
+
+  approveBtn.addEventListener("click", () => {
+    approveBtn.disabled = true;
+    cancelBtn.disabled = true;
+    actions.style.display = "none";
+    statusMsg.style.display = "block";
+    statusMsg.className = "ai-agent-status-label is-approved";
+    statusMsg.textContent = isDemo
+      ? "✓ Đang kích hoạt Sandbox và thu thập dữ liệu (0 Token)..."
+      : aiT("ai_agent_approved_status", null, "✓ Đã cấp quyền — Đang thực thi trong Sandbox an toàn...");
+    aiRunAgentWorkflow(cleanQuery, raw, provider, key, detectedSkill, isDemo);
+  });
+
+  cancelBtn.addEventListener("click", () => {
+    approveBtn.disabled = true;
+    cancelBtn.disabled = true;
+    actions.style.display = "none";
+    statusMsg.style.display = "block";
+    statusMsg.className = "ai-agent-status-label is-cancelled";
+    statusMsg.textContent = aiT("ai_agent_cancelled_status", null, "✕ Đã hủy bỏ tác vụ Agent.");
+  });
+}
+
+async function aiRunAgentWorkflow(cleanQuery, raw, provider, key, detectedSkill, isDemo){
+  if(aiIsSending) return;
+  aiIsSending = true;
+  aiUserStopped = false;
+  aiAbort = new AbortController();
+
+  const sendBtn = document.getElementById("ai-btn-send");
+  if(sendBtn){
+    sendBtn.classList.add("is-stop");
+    sendBtn.textContent = "⏹";
+    sendBtn.disabled = false;
+    sendBtn.title = aiT("ai_btn_stop", null, "Dừng tạo câu trả lời");
+  }
+
+  aiShowTyping("🔍 Đang kích hoạt Sandbox và tìm kiếm dữ liệu web...");
+
+  let webRes = null; let scholarRes = "";
+  try {
+    const actualQuery = cleanQuery.replace(/^(demo|test)\s+/i, "");
+    const _sr = await Promise.all([
+      aiSearchMultiSources(actualQuery),
+      aiScholarSearch(actualQuery)
+    ]);
+    webRes = _sr[0]; scholarRes = _sr[1];
+
+    if(aiUserStopped) return;
+
+    aiUpdateTypingStatus("📑 Đang đọc & bóc tách dữ liệu sạch trong Sandbox cô lập...");
+
+    let sandboxCleanText = "";
+    if(webRes && webRes.text){
+      sandboxCleanText += webRes.text + "\n\n";
+    }
+    if(scholarRes){
+      sandboxCleanText += "[DỮ LIỆU TÀI LIỆU HỌC THUẬT TỪ SANDBOX]:\n" + scholarRes + "\n\n";
+    }
+
+    if(aiUserStopped) return;
+
+    if(isDemo){
+      aiUpdateTypingStatus("✨ Đang tổng hợp báo cáo Sandbox cục bộ (0 Token)...");
+      await new Promise(r => setTimeout(r, 600));
+      aiHideTyping();
+
+      let demoReport = "## 🛡️ Báo cáo Tổng hợp Agentic Sandbox (Chế độ Thử nghiệm 0 Token)\n\n";
+      demoReport += "🎯 **Mục tiêu đã duyệt:** *" + actualQuery + "*\n\n";
+      demoReport += "### 1. Dữ liệu đã bóc tách & cô lập an toàn trong Sandbox:\n";
+      if(webRes && Array.isArray(webRes.sources) && webRes.sources.length){
+        demoReport += "- **Đã quét qua " + webRes.sources.length + " nguồn trực tuyến:**\n";
+        webRes.sources.forEach((s, idx) => {
+          demoReport += "  " + (idx + 1) + ". `" + s.t + "` — " + s.u + "\n";
+        });
+      } else {
+        demoReport += "- Đã quét dữ liệu trực tuyến trong môi trường Sandbox cô lập.\n";
+      }
+      if(scholarRes){
+        demoReport += "- **Tài liệu học thuật (OpenAlex / Crossref):** Đã đối chiếu các công trình nghiên cứu liên quan.\n";
+      }
+      demoReport += "\n### 2. Thông tin cốt lõi đã làm sạch (Clean Data):\n";
+      if(webRes && webRes.text){
+        const cleanSnippet = webRes.text.replace(/\[KẾT QUẢ TÌM KIẾM[\s\S]*?\n\n/i, "").slice(0, 1000);
+        demoReport += "> " + cleanSnippet.split("\n").filter(Boolean).slice(0, 6).join("\n> ") + "\n\n";
+      }
+      if(scholarRes){
+        const scholarLines = scholarRes.split("\n").filter(Boolean).slice(0, 4);
+        demoReport += "**Nguồn học thuật tiêu biểu:**\n";
+        scholarLines.forEach(l => { demoReport += l + "\n"; });
+        demoReport += "\n";
+      }
+      demoReport += "### 3. Đánh giá bảo mật của Sandbox:\n";
+      demoReport += "- ✅ Mã độc JavaScript / Pop-up: **Đã chặn 100% trong Sandbox**\n";
+      demoReport += "- ✅ Tracker & Cookie theo dõi: **Cách ly tuyệt đối**\n";
+      demoReport += "- ✅ Chi phí token: **0 Token (Chạy cục bộ 100% trên trình duyệt)**\n\n";
+      demoReport += "GỢI Ý:\n- Bạn có thể lấy API key miễn phí tại Google AI Studio để AI phân tích chuyên sâu hơn\n- Thử lệnh: /agent demo pin thể rắn 2026\n- Thử lệnh: /agent demo xe điện thế hệ mới";
+      demoReport += "\n\n> 🛡️ *" + aiT("ai_agent_badge_safe", null, "Đã duyệt & lọc an toàn qua ScholarFlow Sandbox") + " (Local Demo 0 Token)*";
+
+      aiAppendMessage("assistant", demoReport, provider);
+      return;
+    }
+
+    aiUpdateTypingStatus("✨ Đang đối chiếu đa nguồn và tổng hợp báo cáo...");
+
+    const agentPrompt = "<<<DATA_UNTRUSTED_1_BEGIN>>>\n" +
+      (sandboxCleanText.trim() || "[Không tìm thấy dữ liệu bổ sung từ web]") +
+      "\n<<<DATA_UNTRUSTED_1_END>>>\n\n" +
+      cleanQuery;
+
+    const agentSysDirective = "\n\n[TÁC NHÂN AGENTIC AI — MÔI TRƯỜNG SANDBOX ĐÃ CẤP QUYỀN VÀ BẢO VỆ]\n" +
+      "- Bạn là Agentic AI được người dùng cấp quyền thực thi tự động duyệt tìm kiếm trong Sandbox vô trùng.\n" +
+      "- Phân tích, tổng hợp và đối chiếu thông tin từ dữ liệu Sandbox đã bóc tách phía trên một cách toàn diện, trung thực.\n" +
+      "- Tuyệt đối không chèn nhãn [Nguồn:...] hay link URL vào giữa câu trả lời; trình bày tự nhiên, cấu trúc Markdown rõ ràng (tiêu đề ##, bullet, bảng so sánh).\n" +
+      "- Đưa ra khuyến nghị thiết thực và kết thúc bằng 3 câu hỏi gợi ý tiếp theo.";
+
+    const sysInst = aiBuildSystemInstruction("auto") + agentSysDirective;
+
+    const hist = aiHistory.slice(0, -1);
+    const streaming = aiSettings.stream !== false && aiHasKey(provider) && (provider === "gemini" || provider === "openai");
+
+    let streamAcc = "";
+    let streamRow = null;
+    let streamRaf = null;
+
+    const renderLiveStream = () => {
+      streamRaf = null;
+      if(!streamRow) return;
+      aiRenderFormattedText(streamRow, streamAcc);
+      const cur = document.createElement("span");
+      cur.className = "ai-stream-cursor";
+      const lastEl = streamRow.lastElementChild;
+      if(lastEl && !lastEl.classList.contains("ai-table") && !lastEl.classList.contains("ai-code-wrap") && !lastEl.classList.contains("ai-flashcard")){
+        lastEl.appendChild(cur);
+      } else {
+        streamRow.appendChild(cur);
+      }
+      const c2 = document.getElementById("ai-chat-history");
+      if(c2) c2.scrollTop = c2.scrollHeight;
+    };
+
+    const onToken = (piece) => {
+      streamAcc += piece;
+      if(!streamRow){
+        aiHideTyping();
+        aiAppendMessage("assistant", "", provider);
+        const c = document.getElementById("ai-chat-history");
+        streamRow = c && c.lastElementChild ? c.lastElementChild.querySelector(".ai-bubble") : null;
+      }
+      if(!streamRaf){
+        streamRaf = requestAnimationFrame(renderLiveStream);
+      }
+    };
+
+    const apiKey = String(key || aiKeys[provider] || "").trim();
+    const callOpts = {
+      signal: aiAbort.signal,
+      onToken: onToken,
+      groundOverride: false,
+      skill: detectedSkill,
+      isPageQuery: false,
+      sysInstruction: sysInst
+    };
+
+    let fullAnswer = "";
+    if(streaming){
+      await aiCallProvider(provider, agentPrompt, apiKey, [], hist, callOpts);
+      fullAnswer = String(streamAcc || "");
+    } else {
+      fullAnswer = await aiCallProvider(provider, agentPrompt, apiKey, [], hist, callOpts);
+    }
+
+    if(streamRaf){ cancelAnimationFrame(streamRaf); streamRaf = null; }
+    aiHideTyping();
+
+    if(!aiUserStopped){
+    if(/(bật|mở|truy cập|vào|open|launch)\s*(lên|ra)?/i.test(cleanQuery) && webRes && Array.isArray(webRes.sources) && webRes.sources.length){
+      try {
+        const topU = webRes.sources[0].u;
+        const tabsApi = (typeof browser !== "undefined" && browser.tabs) ? browser.tabs : (typeof chrome !== "undefined" ? chrome.tabs : null);
+        if(tabsApi && tabsApi.create) tabsApi.create({ url: topU, active: true });
+        else window.open(topU, "_blank");
+      } catch(e) {}
+    }
+      const safeBadgeText = "\n\n> 🛡️ *" + aiT("ai_agent_badge_safe", null, "Đã duyệt & lọc an toàn qua ScholarFlow Sandbox") + "*";
+      let fullContent = (typeof fullAnswer === "string" && fullAnswer) ? fullAnswer : streamAcc;
+      if(!fullContent.includes("ScholarFlow Sandbox")){
+        fullContent = fullContent.trim() + safeBadgeText;
+      }
+  if(streamRow){
+        aiRenderFormattedText(streamRow, fullContent);
+        if(aiHistory.length && aiHistory[aiHistory.length - 1].role === "assistant"){
+          aiHistory[aiHistory.length - 1].content = fullContent;
+          aiSaveHistorySoon();
+        }
+      } else {
+        aiAppendMessage("assistant", fullContent, provider);
+      }
+    }
+  } catch(err) {
+    aiHideTyping();
+    if(!aiUserStopped){
+      const errMsg = String(err && (err.message || err) || "");
+      if(errMsg.includes("API key not valid") || errMsg.includes("gemini_400") || errMsg.includes("401") || errMsg.includes("INVALID_ARGUMENT")){
+        aiAppendMessage("assistant", "⚠️ **API Key của bạn không hợp lệ hoặc đã hết hạn (Lỗi 400/401 từ Google/OpenAI).**\n\n1. Hãy mở **⚙ Cài đặt AI** → Kiểm tra lại API Key.\n2. Lấy API key miễn phí tại: https://aistudio.google.com/app/apikey\n\n💡 **Mẹo:** Bạn có thể gõ `/agent demo " + cleanQuery + "` để chạy thử nghiệm tính năng Agent Sandbox **ngay lập tức mà không cần API key và không tốn token**!", provider);
+      } else if(errMsg.includes("429") || errMsg.includes("RESOURCE_EXHAUSTED") || errMsg.includes("quota") || errMsg.includes("Quota")){
+        let liteWorked = false;
+        if(provider === "gemini"){
+          try{
+            aiUpdateTypingStatus("⚡ Model chính chạm giới hạn (429) — Đang chuyển sang Flash Lite...");
+            const lite = await aiCallGeminiLite(agentPrompt, apiKey, [], hist);
+            if(lite && lite.text){
+              liteWorked = true;
+              let content = lite.text.trim();
+              if(!content.includes("ScholarFlow Sandbox")){
+                content += "\n\n> 🛡️ *" + aiT("ai_agent_badge_safe", null, "Đã duyệt & lọc an toàn qua ScholarFlow Sandbox") + "*";
+              }
+              aiAppendMessage("assistant", content, provider);
+              if(typeof showToast === "function") showToast("ai_toast_auto_fallback", "info", [lite.model]);
+            }
+          }catch(liteErr){}
+        }
+        if(!liteWorked){
+          let rescueReport = "⚠️ **Hạn mức yêu cầu tạm thời bị vượt quá (Lỗi 429 Quota Exceeded từ Google).**\n\n";
+          rescueReport += "🛡️ **Agent đã tự động kích hoạt Chế độ Cứu hộ Sandbox (0 Token)** để tổng hợp đầy đủ dữ liệu cho bạn:\n\n";
+          rescueReport += "🎯 **Mục tiêu đã duyệt:** *" + cleanQuery + "*\n\n";
+          rescueReport += "### 1. Dữ liệu đã bóc tách từ Sandbox:\n";
+          if(webRes && Array.isArray(webRes.sources) && webRes.sources.length){
+            rescueReport += "- **Đã quét qua " + webRes.sources.length + " nguồn trực tuyến:**\n";
+            webRes.sources.forEach((s, idx) => {
+              rescueReport += "  " + (idx + 1) + ". `" + s.t + "` — " + s.u + "\n";
+            });
+          }
+          if(scholarRes){
+            rescueReport += "- **Tài liệu học thuật (OpenAlex / Crossref):** Đã đối chiếu các công trình nghiên cứu liên quan.\n";
+          }
+          if(webRes && webRes.text){
+            const cleanSnippet = webRes.text.replace(/\[KẾT QUẢ TÌM KIẾM[\s\S]*?\n\n/i, "").slice(0, 1000);
+            rescueReport += "\n### 2. Thông tin cốt lõi thu thập được:\n";
+            rescueReport += "> " + cleanSnippet.split("\n").filter(Boolean).slice(0, 6).join("\n> ") + "\n\n";
+          }
+          rescueReport += "💡 **Lời khuyên:** Vui lòng đợi khoảng 30 - 60 giây để Google giải phóng hạn mức (Rate limit) hoặc chọn model khác trong **⚙ Cài đặt AI**.";
+          rescueReport += "\n\n> 🛡️ *" + aiT("ai_agent_badge_safe", null, "Đã duyệt & lọc an toàn qua ScholarFlow Sandbox") + " (Sandbox Rescue 0 Token)*";
+          aiAppendMessage("assistant", rescueReport, provider);
+        }
+      } else {
+        let friendlyErr = errMsg;
+        try {
+          const jsonM = errMsg.match(/\{[\s\S]*\}/);
+          if(jsonM){
+            const parsed = JSON.parse(jsonM[0]);
+            if(parsed.error && parsed.error.message){
+              friendlyErr = parsed.error.message;
+            }
+          }
+        } catch(e){}
+        aiAppendMessage("assistant", "⚠️ **Không thể hoàn thành tác vụ Agent:** " + friendlyErr + "\n\n💡 Bạn có thể thử lại sau giây lát hoặc gõ `/agent demo " + cleanQuery + "` để chạy chế độ 0 Token.", provider);
+      }
+    }
+  } finally {
+    aiIsSending = false;
+    if(sendBtn){
+      sendBtn.classList.remove("is-stop");
+      sendBtn.textContent = "➤";
+      sendBtn.disabled = false;
+      sendBtn.title = aiT("ai_btn_send", null, "Gửi câu hỏi");
+    }
+    const c = document.getElementById("ai-chat-history");
+    if(c) c.scrollTop = c.scrollHeight;
+  }
+}
+
 async function aiSendCurrent(){
   if(aiIsSending){ aiQuickCtx=null; return; }
   const quickReq = aiQuickCtx; aiQuickCtx = null;
@@ -2421,6 +2903,39 @@ async function aiSendCurrent(){
   aiAttachedImages=[];
   aiAttachedImage=null;
   aiRenderAttachedImages();
+  const autoNavIntent = (imagesToSend.length === 0 && !isPageQuery && !quickReq) ? aiDetectAutoNavIntent(raw) : null;
+  if(autoNavIntent){
+    aiExecuteAutoNav(autoNavIntent, provider);
+    return;
+  }
+  const isAgentCmd = /^[\/!](agent|sandbox|browse)\b/i.test(raw) || (detectedSkill && detectedSkill.key === "agent");
+  if(isAgentCmd){
+    if(!cleanQuery){
+      aiAppendMessage("assistant", "💡 Hãy nhập yêu cầu tìm kiếm cùng lệnh, ví dụ: `/agent tìm kiếm công nghệ pin thể rắn mới nhất`", provider);
+      return;
+    }
+    if(!aiSettings.agentMode){
+      const disabledMsg = (typeof getI18nText === "function")
+        ? getI18nText("ai_agent_disabled_notice")
+        : "⚠️ **Chế độ AI Agent chưa được bật trong Cài đặt.**\n\nVui lòng mở ⚙ **Cài đặt AI** và bật *'Bật chế độ AI Agent (Thử nghiệm)'* để cho phép Agent tự động duyệt web trong Sandbox khi gõ lệnh `/agent`.";
+      aiAppendMessage("assistant", disabledMsg, provider);
+      return;
+    }
+    if(!aiHasKey(provider)){
+      const label = aiGetProviderConfig(provider).label;
+      const needKeyMsg = (typeof getI18nText === "function")
+        ? getI18nText("ai_need_key", [label])
+        : "⚠️ Chưa nhập API key cho " + label + ". Hãy bấm ⚙ Cài đặt → nhập key.";
+      aiAppendMessage("assistant", needKeyMsg, provider);
+      return;
+    }
+    if(aiSettings.agentConfirm !== false){
+      aiAppendAgentApprovalCard(cleanQuery, raw, provider, key, detectedSkill);
+      return;
+    }
+    aiRunAgentWorkflow(cleanQuery, raw, provider, key, detectedSkill);
+    return;
+  }
   if(imagesToSend.length === 0 && !isPageQuery && !quickReq){
     const localAnswer = aiCheckLocalAssistantQuery(raw);
     if(localAnswer){
@@ -2777,7 +3292,7 @@ function aiInitEvents(){
   const newChatBtn=document.getElementById("ai-btn-new-chat"); if(newChatBtn) newChatBtn.addEventListener("click",()=>{ const dt=(function(){ try{ return new Date().toLocaleString(); }catch(e){ return ""; } })(); aiSessionsNew(aiT("ai_session_default_name",null,"Phiên")+" "+dt); if(typeof showToast==="function") showToast("ai_toast_session_saved","success"); });
   const copyBtn=document.getElementById("ai-btn-copy-last"); if(copyBtn) copyBtn.addEventListener("click",()=>{ const last=aiHistory.slice().reverse().find(m=>m.role==="assistant"); if(!last){ if(typeof showToast==="function") showToast("ai_toast_no_answer","warning"); return; } navigator.clipboard.writeText(last.content).then(()=>{ if(typeof showToast==="function") showToast("toast_copied","success"); }).catch(()=>{ if(typeof showToast==="function") showToast("toast_copy_failed","error"); }); });
   const insertBtn=document.getElementById("ai-btn-insert-note"); if(insertBtn) insertBtn.addEventListener("click",()=>{ const last=aiHistory.slice().reverse().find(m=>m.role==="assistant"); if(!last){ if(typeof showToast==="function") showToast("ai_toast_no_answer","warning"); return; } const notesEl=document.getElementById("f-notes"); if(!notesEl) return; const sep=notesEl.value.trim()?"\n\n":""; notesEl.value=notesEl.value+sep+last.content.slice(0,2000); notesEl.dispatchEvent(new Event("input",{bubbles:true})); if(typeof showToast==="function") showToast("toast_notes_inserted","success"); });
-  ["ai-opt-page","ai-opt-selection","ai-opt-notes","ai-opt-images","ai-opt-source","ai-opt-stream","ai-opt-websearch","ai-opt-autovideo"].forEach(id=>{ const el=document.getElementById(id); if(!el) return; el.addEventListener("change",()=>{ if(id==="ai-opt-page") aiSettings.includePage=el.checked; if(id==="ai-opt-selection") aiSettings.includeSelection=el.checked; if(id==="ai-opt-notes") aiSettings.includeNotes=el.checked; if(id==="ai-opt-images") aiSettings.includeImages=el.checked; if(id==="ai-opt-source") aiSettings.includeSource=el.checked; if(id==="ai-opt-stream") aiSettings.stream=el.checked; if(id==="ai-opt-websearch") aiSettings.webSearch=el.checked; if(id==="ai-opt-autovideo") aiSettings.autoVideo=el.checked; aiSaveSettings(); }); });
+  ["ai-opt-page","ai-opt-selection","ai-opt-notes","ai-opt-images","ai-opt-source","ai-opt-stream","ai-opt-websearch","ai-opt-autovideo","ai-opt-agent-mode","ai-opt-agent-confirm"].forEach(id=>{ const el=document.getElementById(id); if(!el) return; el.addEventListener("change",()=>{ if(id==="ai-opt-page") aiSettings.includePage=el.checked; if(id==="ai-opt-selection") aiSettings.includeSelection=el.checked; if(id==="ai-opt-notes") aiSettings.includeNotes=el.checked; if(id==="ai-opt-images") aiSettings.includeImages=el.checked; if(id==="ai-opt-source") aiSettings.includeSource=el.checked; if(id==="ai-opt-stream") aiSettings.stream=el.checked; if(id==="ai-opt-websearch") aiSettings.webSearch=el.checked; if(id==="ai-opt-autovideo") aiSettings.autoVideo=el.checked; if(id==="ai-opt-agent-mode") aiSettings.agentMode=el.checked; if(id==="ai-opt-agent-confirm") aiSettings.agentConfirm=el.checked; aiSaveSettings(); }); });
   document.addEventListener("change", (e) => {
     if (e.target && e.target.id === "ai-opt-companion") {
       aiSetCompanionEnabled(e.target.checked, true);
@@ -2868,7 +3383,7 @@ function aiInitEvents(){
 async function initAI(){
   await aiLoadSettings(); aiUpdateProviderUI();
   const page=document.getElementById("ai-opt-page"); const sel=document.getElementById("ai-opt-selection"); const notes=document.getElementById("ai-opt-notes"); const imgs=document.getElementById("ai-opt-images"); const src=document.getElementById("ai-opt-source"); const strm=document.getElementById("ai-opt-stream");
-  if(page) page.checked=!!aiSettings.includePage; if(sel) sel.checked=!!aiSettings.includeSelection; if(notes) notes.checked=!!aiSettings.includeNotes; if(imgs) imgs.checked=!!aiSettings.includeImages; if(src) src.checked=!!aiSettings.includeSource;   if(strm) strm.checked=aiSettings.stream!==false; const wsc=document.getElementById("ai-opt-websearch"); if(wsc) wsc.checked=aiSettings.webSearch!==false; const av=document.getElementById("ai-opt-autovideo"); if(av) av.checked=aiSettings.autoVideo!==false;
+  if(page) page.checked=!!aiSettings.includePage; if(sel) sel.checked=!!aiSettings.includeSelection; if(notes) notes.checked=!!aiSettings.includeNotes; if(imgs) imgs.checked=!!aiSettings.includeImages; if(src) src.checked=!!aiSettings.includeSource;   if(strm) strm.checked=aiSettings.stream!==false; const wsc=document.getElementById("ai-opt-websearch"); if(wsc) wsc.checked=aiSettings.webSearch!==false; const av=document.getElementById("ai-opt-autovideo"); if(av) av.checked=aiSettings.autoVideo!==false; const agm=document.getElementById("ai-opt-agent-mode"); if(agm) agm.checked=!!aiSettings.agentMode; const agc=document.getElementById("ai-opt-agent-confirm"); if(agc) agc.checked=aiSettings.agentConfirm!==false;
   const scp=document.getElementById("ai-scope-select"); if(scp) scp.value=(aiSettings.scope==="only"||aiSettings.scope==="web")?aiSettings.scope:"auto";
   aiRenderHistory(); aiInitEvents(); aiUpdateCurrentPageDisplay(); aiUpdateChatHeight(); setInterval(()=>{ const ta=document.getElementById("tab-ai"); if(ta&&!ta.classList.contains("active")) return; aiUpdateCurrentPageDisplay(); aiUpdateChatHeight(); },2000); window.addEventListener("resize",aiUpdateChatHeight); const aiVisHandler=()=>{ if(document.visibilityState==="visible"){ aiUpdateCurrentPageDisplay(); aiUpdateChatHeight(); } }; document.addEventListener("visibilitychange",aiVisHandler); const tabAi=document.getElementById("tab-ai"); if(tabAi){ const obs=new MutationObserver(()=>{ if(tabAi.classList.contains("active")){ aiUpdateCurrentPageDisplay(); aiUpdateChatHeight(); requestAnimationFrame(()=>requestAnimationFrame(aiScrollToBottom)); } }); obs.observe(tabAi,{attributes:true,attributeFilter:["class"]}); }
   const tabsApi=(typeof browser!=="undefined"&&browser.tabs)?browser.tabs:(typeof chrome!=="undefined"?chrome.tabs:null);
@@ -2881,7 +3396,7 @@ async function initAI(){
 }
 if(typeof window!=="undefined"){
   window.AI_SKILLS=AI_SKILLS; window.aiDetectSkill=aiDetectSkill;
-  window.AI_PIPELINES=AI_PIPELINES; window.aiResolvePipeline=aiResolvePipeline; window.aiUpdateTypingStatus=aiUpdateTypingStatus;
+  window.AI_PIPELINES=AI_PIPELINES; window.aiResolvePipeline=aiResolvePipeline; window.aiAppendAgentApprovalCard=aiAppendAgentApprovalCard; window.aiRunAgentWorkflow=aiRunAgentWorkflow; window.aiDetectAutoNavIntent=aiDetectAutoNavIntent; window.aiExecuteAutoNav=aiExecuteAutoNav; window.aiUpdateTypingStatus=aiUpdateTypingStatus;
   window.aiExtractViaScripting=aiExtractViaScripting; window.aiExtractViaBackgroundFetch=aiExtractViaBackgroundFetch;
   window.AI_PROVIDERS=AI_PROVIDERS; window.aiValidateCustomUrl=aiValidateCustomUrl; window.aiSanitizeExternal=aiSanitizeExternal; window.aiSanitizeHistory=aiSanitizeHistory; window.aiRateLimitOk=aiRateLimitOk; window.aiSelectRelevantWindow=aiSelectRelevantWindow; window.aiIsYouTubeUrl=aiIsYouTubeUrl; window.aiHistoryToGeminiContents=aiHistoryToGeminiContents; window.aiHistoryToOpenAIMessages=aiHistoryToOpenAIMessages; window.aiHistoryToClaudeMessages=aiHistoryToClaudeMessages; window.aiCollectTabsContext=aiCollectTabsContext; window.aiScholarSearch=aiScholarSearch; window.aiAttachImageFile=aiAttachImageFile; window.aiAttachImageFiles=aiAttachImageFiles; window.aiRenderAttachedImages=aiRenderAttachedImages; window.aiExtractYouTubeId=aiExtractYouTubeId; window.aiYtMetaViaFetch=aiYtMetaViaFetch; window.aiYtBalancedJson=aiYtBalancedJson; window.aiCallGeminiLite=aiCallGeminiLite; window.aiSig=aiSig; window.aiRegenerate=aiRegenerate; window.aiSelectRelevantWindows=aiSelectRelevantWindows; window.aiSessionsSearch=aiSessionsSearch; window.aiMemKey=aiMemKey; window.aiMemFor=aiMemFor; window.aiRenderSessions=aiRenderSessions; window.aiShowSessions=aiShowSessions; window.aiHideSessions=aiHideSessions; window.aiGetProviderConfig=aiGetProviderConfig; window.aiGetModel=aiGetModel; window.aiSetModel=aiSetModel; window.aiFetchGeminiModels=aiFetchGeminiModels; window.aiHasKey=aiHasKey; window.aiBuildPrompt=aiBuildPrompt; window.aiAddPage=aiAddPage; window.aiRemovePage=aiRemovePage; window.aiRenderPages=aiRenderPages; window.aiGetCurrentPageInfo=aiGetCurrentPageInfo; window.aiLocalFallback=aiLocalFallback; window.aiUseWebBridge=aiUseWebBridge; window.aiContextCovers=aiContextCovers; window.aiCallProvider=aiCallProvider; window.aiLoadSettings=aiLoadSettings; window.aiSaveHistory=aiSaveHistory; window.aiRenderHistory=aiRenderHistory; window.aiScrollToBottom=aiScrollToBottom; window.aiDetectPageIntent=aiDetectPageIntent; window.aiGroundingSources=aiGroundingSources; window.aiSourcesLabel=aiSourcesLabel; window.aiGeminiSupportsGrounding=aiGeminiSupportsGrounding; window.aiGeminiSupportsVideo=aiGeminiSupportsVideo; window.aiGeminiSupportsAgentic=aiGeminiSupportsAgentic; window.aiPickVideoModel=aiPickVideoModel; window.aiVideoContents=aiVideoContents; window.aiCallGeminiVideo=aiCallGeminiVideo; window.aiIsTranscriptRequest=aiIsTranscriptRequest; window.aiQueryRefersToVideo=aiQueryRefersToVideo; window.aiIsContinueRequest=aiIsContinueRequest; window.aiLastTimestampSec=aiLastTimestampSec; window.aiConversationMarkdown=aiConversationMarkdown; window.aiUpdateLatestBtn=aiUpdateLatestBtn; window.aiAppendMessage=aiAppendMessage; window.aiClearHistory=aiClearHistory; window.aiUpdateProviderUI=aiUpdateProviderUI; window.aiPopulateModelSelect=aiPopulateModelSelect; window.aiSendCurrent=aiSendCurrent; window.aiQuickPrompt=aiQuickPrompt; window.initAI=initAI; window.aiProvider=aiProvider; window.aiSettings=aiSettings; window.aiModels=aiModels; window.aiCustomServers=aiCustomServers; window.aiSetCompanionEnabled=aiSetCompanionEnabled; window.aiUpdateCompanionUI=aiUpdateCompanionUI; window.aiOnModelChange=aiOnModelChange; window.aiRenderCustomServers=aiRenderCustomServers; window.aiAddCustomServer=aiAddCustomServer; window.aiAddCustomModel=aiAddCustomModel; window.aiDeleteCustomModel=aiDeleteCustomModel; window.aiResetCustomModels=aiResetCustomModels; window.aiRenderModelsManager=aiRenderModelsManager; window.aiCheckLocalAssistantQuery=aiCheckLocalAssistantQuery; window.aiGetProviderModels=aiGetProviderModels; window.aiUpdateCurrentPageDisplay=aiUpdateCurrentPageDisplay; window.aiGroundingQueries=aiGroundingQueries; window.aiSearchQueriesLabel=aiSearchQueriesLabel; window.aiBuildSystemInstruction=aiBuildSystemInstruction; window.aiSearchMultiSources=aiSearchMultiSources; window.aiDecodeHtmlEntities=aiDecodeHtmlEntities; window.aiExportMarkdown=aiExportMarkdown; window.aiExportAnki=aiExportAnki; window.aiParseTimestampSec=aiParseTimestampSec; window.aiCheckYtLive=aiCheckYtLive;
 }

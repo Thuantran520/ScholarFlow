@@ -964,6 +964,15 @@ async function _bridge(method, payload, sender) {
       return { ok: true };
     }
 
+    case 'menu.get': {
+      if (!store) return { ok: false, error: 'storage unavailable' };
+      const res = await store.get(US_MENU_KEY);
+      const map = (res && res[US_MENU_KEY]) || {};
+      const scriptId = String(p.scriptId || '');
+      const items = Object.values(map).filter(m => m.scriptId === scriptId || !m.scriptId);
+      return { ok: true, items: items };
+    }
+
     case 'tab.open': {
       const tabs = (typeof chrome !== 'undefined' && chrome.tabs) ? chrome.tabs : ((typeof browser !== 'undefined' && browser.tabs) ? browser.tabs : null);
       if (!tabs || !tabs.create) return { ok: false, error: 'tabs unavailable' };
@@ -1376,7 +1385,7 @@ function _wire() {
           const target = Number(request.tabId);
           if (!Number.isFinite(target)) return { ok: false, error: 'no tabId' };
           try {
-            await tabs.sendMessage(target, { action: 'SF_US_MENU_CLICK', id: String(request.id || '') });
+            await tabs.sendMessage(target, { action: 'SF_US_MENU_CLICK', id: String(request.id || ''), scriptId: request.scriptId || null });
             return { ok: true };
           } catch (e) {
             return { ok: false, error: 'tab unreachable' };

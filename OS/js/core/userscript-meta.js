@@ -19,11 +19,13 @@
     require: 'requires',
     resource: 'resources',
     grant: 'grants',
-    connect: 'connects'
+    connect: 'connects',
+    tag: 'tags',
+    webrequest: 'webRequests'
   };
 
   // Tags whose value is a boolean flag rather than a string.
-  var BOOL_TAGS = { noframes: 'noframes' };
+  var BOOL_TAGS = { noframes: 'noframes', unwrap: 'unwrap' };
 
   // Order used when the header is regenerated. Multi-value tags are emitted
   // once per value so a round-trip never collapses them into one line.
@@ -31,7 +33,7 @@
     'name', 'namespace', 'version', 'description', 'author', 'homepage',
     'match', 'include', 'exclude', 'exclude-match',
     'require', 'resource', 'run-at', 'noframes',
-    'grant', 'updateURL', 'downloadURL'
+    'grant', 'updateURL', 'downloadURL', 'supportURL', 'run-in', 'sandbox', 'unwrap', 'tag', 'webRequest', 'supportURL', 'run-in', 'sandbox', 'unwrap', 'tag'
   ];
 
   var RUN_AT_VALUES = ['document_start', 'document_body', 'document_end', 'document_idle'];
@@ -366,7 +368,8 @@
       'GM_waitForElement', 'GM_xmlhttpRequest', 'GM_addValueChangeListener',
       'GM_removeValueChangeListener', 'GM_setClipboard', 'GM_notification',
       'GM_openInTab', 'GM_registerMenuCommand', 'GM_unregisterMenuCommand',
-      'GM_info', 'GM_cookie', 'GM_download', 'GM_log'
+      'GM_info', 'GM_cookie', 'GM_download', 'GM_log', 'GM_webRequest',
+      'GM_getTab', 'GM_saveTab', 'GM_getTabs', 'GM_audio'
     ];
 
     var gmPattern = gmApiNames.map(escapeRegExp).join('|');
@@ -453,7 +456,7 @@
     });
 
     // 4. Handle GM. notation for any remaining GM.* property access
-    src = src.replace(/\bGM\.(getValue|setValue|deleteValue|listValues|addStyle|addElement|getResourceText|getResourceURL|waitForElement|xmlhttpRequest|addValueChangeListener|removeValueChangeListener|setClipboard|notification|openInTab|registerMenuCommand|unregisterMenuCommand|info|cookie|download|log)\b/g, function(m, method) {
+    src = src.replace(/\bGM\.(getValue|setValue|deleteValue|listValues|setValues|getValues|deleteValues|addStyle|addElement|getResourceText|getResourceURL|waitForElement|xmlhttpRequest|webRequest|addValueChangeListener|removeValueChangeListener|setClipboard|notification|openInTab|registerMenuCommand|unregisterMenuCommand|info|cookie|download|getTab|saveTab|getTabs|audio|log)\b/g, function(m, method) {
       return '_sfGM_' + method;
     });
 

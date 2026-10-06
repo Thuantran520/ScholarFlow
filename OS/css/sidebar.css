@@ -126,26 +126,27 @@
     .header-weather-badge {
       display: inline-flex;
       align-items: center;
-      gap: 3px;
-      font-size: 9.5px;
+      gap: 4.5px;
+      font-size: 10px;
       font-weight: 700;
-      color: var(--primary);
-      background: rgba(var(--primary-rgb), 0.12);
-      border: 1px solid rgba(var(--primary-rgb), 0.28);
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.28);
       border-radius: 6px;
-      padding: 1px 6px;
-      line-height: 1.2;
+      padding: 1.5px 6.5px;
+      min-height: 20px;
+      line-height: 1;
       white-space: nowrap;
       cursor: pointer;
       transition: all 0.18s ease;
       user-select: none;
     }
     .header-weather-badge:hover {
-      background: rgba(var(--primary-rgb), 0.24);
-      border-color: rgba(var(--primary-rgb), 0.55);
-      color: var(--primary-light);
+      background: rgba(56, 189, 248, 0.22);
+      border-color: rgba(56, 189, 248, 0.55);
+      color: #7dd3fc;
       transform: translateY(-0.5px);
-      box-shadow: 0 2px 6px rgba(var(--primary-rgb), 0.2);
+      box-shadow: 0 2px 8px rgba(56, 189, 248, 0.22);
     }
     .header-right {
       display: flex;
@@ -3146,8 +3147,8 @@ body.is-popup .ai-chat-wrapper { max-height:calc(600px - 140px); }
 /* AI modern touches */
 .ai-msg { animation:aiFade .18s ease-out; }
 @keyframes aiFade { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
-.ai-typing-row .ai-typing { display:flex; flex-direction:column; gap:8px; align-items:flex-start; padding:10px 14px; }
-.ai-loading-thinking-wrap { display:flex; align-items:center; padding:2px 0; }
+.ai-typing-row .ai-bubble.ai-typing, .ai-typing-row .ai-typing { display:flex; flex-direction:column; gap:4px; align-items:flex-start; padding:2px 8px !important; min-width:0; border-radius:10px 10px 10px 4px !important; width:fit-content; }
+.ai-loading-thinking-wrap { display:flex; align-items:center; justify-content:center; padding:0; }
 .ai-loading-thinking-anim { height:28px; width:auto; max-width:80px; object-fit:contain; display:block; }
 .ai-thinking-icon { height:15px; width:auto; object-fit:contain; display:inline-block; vertical-align:middle; }
 .ai-dot { width:6px; height:6px; border-radius:50%; background:#a78bfa; animation:aiBlink 1.2s infinite; }
@@ -4087,3 +4088,79 @@ body.is-popup .ai-chat-wrapper { max-height:calc(600px - 140px); }
 }
 
 .ai-pipeline-status { display: none !important; }
+
+/* Agentic AI Approval Card */
+.ai-agent-card {
+  border: 1px solid rgba(139, 92, 246, 0.35) !important;
+  background: linear-gradient(180deg, rgba(30, 27, 75, 0.65), rgba(15, 23, 42, 0.85)) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  padding: 10px 12px;
+  border-radius: 10px;
+}
+.ai-agent-head {
+  font-weight: 700;
+  font-size: 11.5px;
+  color: #c4b5fd;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ai-agent-desc {
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.4;
+  margin-bottom: 6px;
+}
+.ai-agent-target {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #f1f5f9;
+  background: rgba(0, 0, 0, 0.25);
+  border-left: 3px solid #8b5cf6;
+  padding: 5px 8px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  word-break: break-word;
+}
+.ai-agent-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+.ai-agent-btn-approve {
+  font-size: 10.5px;
+  padding: 4px 10px;
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.ai-agent-btn-cancel {
+  font-size: 10.5px;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.ai-agent-status-label {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  margin-top: 4px;
+}
+.ai-agent-status-label.is-approved {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+.ai-agent-status-label.is-cancelled {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}

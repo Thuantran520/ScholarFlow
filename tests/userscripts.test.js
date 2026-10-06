@@ -451,10 +451,60 @@ function newWindow(relPaths, stub) {
       await wait(20);
       check(!!xhrReq, "GM_xmlhttpRequest is forwarded to the background");
       eq(xhrReq && xhrReq.url, "https://api.example/x", "the request URL is preserved");
-      eq(xhrRes.length, 1, "the XHR response is relayed back exactly once");
-      eq(xhrRes[0] && xhrRes[0].reqId, "xhr9", "the XHR response keeps the reqId");
-      eq(xhrRes[0] && xhrRes[0].status, 200, "the status code reaches the shim");
-      eq(xhrRes[0] && xhrRes[0].responseText, '{"ok":true}', "the body reaches the shim");
+        eq(xhrRes.length, 1, "the XHR response is relayed back exactly once");
+        eq(xhrRes[0] && xhrRes[0].reqId, "xhr9", "the XHR response keeps the reqId");
+        eq(xhrRes[0] && xhrRes[0].status, 200, "the status code reaches the shim");
+        eq(xhrRes[0] && xhrRes[0].responseText, '{"ok":true}', "the body reaches the shim");
+    }
+
+      // Firefox/Xray path: requests and responses cross through window.postMessage.
+      {
+        let postedReq = null;
+        const { w: w5 } = boot((msg) => {
+          if (msg.action === "GM_XHR") {
+            postedReq = msg.req;
+            return { status: 204, responseText: '', finalUrl: postedReq.url };
+          }
+          return { ok: true };
+        });
+        const postedRes = [];
+        w5.addEventListener('message', (event) => {
+          if (event.data && event.data.type === '__SF_US_XHR_RES__') postedRes.push(event.data.payload || event.data);
+        });
+        w5.dispatchEvent(new w5.MessageEvent('message', {
+          source: w5,
+          data: {
+            type: '__SF_US_XHR_REQ__',
+            reqId: 'xhr-firefox-1',
+            payload: { reqId: 'xhr-firefox-1', scriptId: 's7', url: 'https://api.example/post-message', method: 'GET' }
+          }
+        }));
+        await wait(20);
+        check(!!postedReq, 'Firefox postMessage XHR reaches the background');
+        eq(postedReq && postedReq.reqId, 'xhr-firefox-1', 'postMessage preserves the request id');
+        eq(postedRes.length, 1, 'Firefox postMessage XHR response is relayed once');
+        eq(postedRes[0] && postedRes[0].reqId, 'xhr-firefox-1', 'postMessage response preserves the request id');
+        eq(postedRes[0] && postedRes[0].status, 204, 'postMessage response preserves the status');
+      }
+
+    // --- GM_registerMenuCommand relay --------------------------------------
+    {
+      const { w: w4, sent: menuSent } = boot(() => ({ ok: true }));
+      w4.document.dispatchEvent(new w4.CustomEvent('__SF_US_MENU_ADD__', {
+        detail: { id: 'menu_1', caption: 'Open settings', scriptId: 's7', scriptName: 'Demo' }
+      }));
+      await wait(10);
+      const registered = menuSent.find((message) => message.action === 'US_MENU_REGISTER');
+      check(!!registered, 'menu registration is forwarded to the background');
+      eq(registered && registered.entry.caption, 'Open settings', 'menu caption is preserved');
+      eq(registered && registered.entry.scriptId, 's7', 'menu script identity is preserved');
+
+      const clicks = [];
+      w4.document.addEventListener('__SF_US_MENU_CLICK__', (event) => clicks.push(event.detail));
+      await w4.__onMsg({ action: 'SF_US_MENU_CLICK', id: 'menu_1', scriptId: 's7' });
+      eq(clicks.length, 1, 'a menu click is relayed back into the page');
+      eq(clicks[0] && clicks[0].id, 'menu_1', 'the clicked menu id is preserved');
+      eq(clicks[0] && clicks[0].scriptId, 's7', 'the clicked script identity is preserved');
     }
 
     finish();
