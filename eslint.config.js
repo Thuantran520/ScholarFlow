@@ -5,6 +5,7 @@ module.exports = [
     ignores: [
       "OS/js/content/i18n.js",
       "OS/js/libs/peer.min.js",
+      "OS/js/libs/webllm/**",
       "node_modules/**",
       "dist/**",
       "scripts/split/backup/**",

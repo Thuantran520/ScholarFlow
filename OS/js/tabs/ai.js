@@ -4,9 +4,16 @@ const AI_PROVIDERS = {
   gemini: { label: "Gemini", apiHost: "generativelanguage.googleapis.com", apiUrlBase: "https://generativelanguage.googleapis.com/v1beta/models/", models: ["gemini-3.5-flash","gemini-3.5-flash-lite","gemini-3-flash","gemini-3.1-flash-lite","gemini-3.8-flash","gemini-3.7-flash"], defaultModel: "gemini-3.5-flash-lite", keyPlaceholder: "AIza...", webUrl: "https://gemini.google.com/app", loginUrl: "https://aistudio.google.com/apikey" },
   openai: { label: "ChatGPT", apiHost: "api.openai.com", apiUrl: "https://api.openai.com/v1/chat/completions", models: ["gpt-4o","gpt-4o-mini","o3-mini","o1","o3","o4-mini","gpt-4.1"], defaultModel: "gpt-4o", webUrl: "https://chatgpt.com/" },
   claude: { label: "Claude", apiHost: "api.anthropic.com", apiUrl: "https://api.anthropic.com/v1/messages", models: ["claude-3-7-sonnet","claude-sonnet-5","claude-opus-4-8","claude-3-5-sonnet-20241022","claude-3-5-haiku-20241022"], defaultModel: "claude-3-7-sonnet", webUrl: "https://claude.ai/" },
-  custom: { label: "Custom", models: [], defaultModel: "", webUrl: "" }
+  custom: { label: "Custom", models: [], defaultModel: "", webUrl: "" },
+  webllm: { label: "WebLLM", models: [], defaultModel: "Qwen3.5-2B-q4f16_1-MLC", keyPlaceholder: "—", webUrl: "", loginUrl: "" }
 };
 const AI_MODEL_LABELS = {
+  "Qwen3.5-2B-q4f16_1-MLC": "Qwen3.5 2B",
+  "Qwen2.5-1.5B-Instruct-q4f16_1-MLC": "Qwen2.5 1.5B Instruct",
+  "Llama-3.2-1B-Instruct-q4f16_1-MLC": "Llama 3.2 1B Instruct",
+  "Phi-4-mini-instruct-q4f16_1-MLC": "Phi-4 mini instruct",
+  "Qwen3-1.7B-q4f16_1-MLC": "Qwen3 1.7B",
+  "SmolLM2-360M-Instruct-q4f16_1-MLC": "SmolLM2 360M",
   "gemini-3.5-flash": "Gemini 3.5 Flash",
   "gemini-3.5-flash-lite": "Gemini 3.5 Flash-Lite",
   "gemini-3-flash": "Gemini 3 Flash",
@@ -28,13 +35,13 @@ const AI_MODEL_LABELS = {
 };
 const AI_DEFAULT_CUSTOM_SERVERS = [
   { id: "ollama", name: "Ollama Local", url: "http://localhost:11434/v1/chat/completions", model: "llama3", key: "" },
-  { id: "lmstudio", name: "LM Studio", url: "http://localhost:1234/v1/chat/completions", model: "local-model", key: "" },
+  { id: "lmstudio",  name: "LM Studio",    url: "http://localhost:1234/v1/chat/completions",  model: "", key: "" },
   { id: "openrouter", name: "OpenRouter", url: "https://openrouter.ai/api/v1/chat/completions", model: "deepseek/deepseek-r1", key: "" }
 ];
 let aiCustomServers = [...AI_DEFAULT_CUSTOM_SERVERS];
 let aiActiveCustomServerId = "ollama";
 const AI_STORAGE_KEYS = { provider: "sf_ai_provider", keys: "sf_ai_keys", history: "sf_ai_history", settings: "sf_ai_settings", models: "sf_ai_models", customModels: "sf_ai_custom_models", prompts: "sf_ai_prompts", sessions: "sf_ai_sessions", mem: "sf_ai_mem", customServers: "sf_ai_custom_servers", activeCustomServer: "sf_ai_active_custom_server" };
-const AI_DEFAULT_SETTINGS = { includePage: true, includeSelection: true, includeNotes: false, includeImages: true, includeSource: false, stream: true, webSearch: true, autoVideo: true, readingCompanion: true, scope: "auto", maxChars: 16000, temperature: 0.7 };
+const AI_DEFAULT_SETTINGS = { includePage: true, includeSelection: true, includeNotes: false, includeImages: true, includeSource: false, stream: true, webSearch: true, autoVideo: true, readingCompanion: true, scope: "auto", maxChars: 16000, temperature: 0.7, ctxBudget: 4096 };
 const AI_DEFAULT_PROMPTS = { summary: "Tóm tắt trang này thành 5 bullet + 1 đoạn 100 chữ bằng tiếng Việt.", qa: "Trả lời câu hỏi dựa trên nội dung trang đang đứng, trích dẫn nguồn nếu có.", explain: "Giải thích đoạn bôi đen bằng tiếng Việt đơn giản.", translate: "Dịch nội dung chính của trang sang tiếng Việt tự nhiên.", outline: "Tạo outline 3 cấp (I, 1, a) cho bài viết này.", timeline: "Tạo danh sách các mốc thời gian (timeline/chương) quan trọng của video hoặc bài viết theo định dạng:\n- [mm:ss] Tiêu đề chương: tóm tắt ngắn nội dung chính.", flashcard: "Tạo 5 thẻ flashcard ôn tập kiến thức cốt lõi từ nội dung trang theo định dạng:\nQ: [Câu hỏi ôn tập]\nA: [Câu trả lời giải thích chi tiết]", cite: "Gợi ý 3 câu hỏi nghiên cứu + 5 từ khóa học thuật từ trang này.", answer: "Giải các câu trắc nghiệm trong nội dung trang: mỗi câu nêu đáp án đúng (A/B/C/D hoặc giá trị) kèm giải thích 1 dòng bằng tiếng Việt. Nếu dữ liệu đáp án nằm trong mã nguồn/script của trang, hãy dựa vào đó để khẳng định.", tabs: "Tóm tắt TỪNG tab đang mở (mỗi tab 2 gạch đầu dòng bằng tiếng Việt), sau đó lập bảng so sánh các tab theo: chủ đề, luận điểm chính, độ tin cậy nguồn.", papers: "Dựa vào danh sách tài liệu tìm được từ Crossref/OpenAlex ở phần ngữ cảnh: chọn và xếp hạng 5 công trình liên quan nhất tới chủ đề trang, mỗi cái nêu lý do 1 dòng và định dạng trích dẫn APA." };
 let aiProvider = "gemini";
 let aiKeys = {};
@@ -112,6 +119,12 @@ function aiGetCurrentPageInfo() {
   return { url: url, title: title, favicon: favicon };
 }
 function aiGetProviderModels(prov){
+  if(prov === "webllm"){
+    const lm = (typeof window !== "undefined" && Array.isArray(window.SF_WEBLLM_MODELS)) ? window.SF_WEBLLM_MODELS : [];
+    if(lm.length) return lm.map(m => m.id);
+    if(AI_PROVIDERS.webllm && AI_PROVIDERS.webllm.models.length) return [...AI_PROVIDERS.webllm.models];
+    return [];
+  }
   if(prov === "custom") return [];
   if(aiCustomModels && Array.isArray(aiCustomModels[prov]) && aiCustomModels[prov].length > 0){
     return aiCustomModels[prov];
@@ -734,6 +747,75 @@ function aiSaveKeys(){ storSet({[AI_STORAGE_KEYS.keys]:aiKeys}); }
 function aiSaveHistory(){ storSet({[AI_STORAGE_KEYS.history]:aiHistory.slice(-50)}); }
 function aiSaveSettings(){ storSet({[AI_STORAGE_KEYS.settings]:aiSettings}); }
 function aiHasKey(p){ const v=aiKeys[p]; return typeof v==="string"&&v.trim().length>8; }
+function aiActiveCustomServer(){
+  if(!aiCustomServers||!aiCustomServers.length) return null;
+  return aiCustomServers.find(x=>x.id===aiActiveCustomServerId)||aiCustomServers[0];
+}
+function aiCanUse(p){
+  if(p==="webllm"){
+    try{ return !!(typeof window!=="undefined" && window.sfWebllmIsReady && window.sfWebllmIsReady()); }catch(e){ return false; }
+  }
+  if(aiHasKey(p)) return true;
+  if(p==="custom"){
+    const s=aiActiveCustomServer();
+    if(s&&s.url&&String(s.url).trim()) return true;
+  }
+  return false;
+}
+function aiNeedProviderMsg(p){
+  const label=aiGetProviderConfig(p).label;
+  if(p==="webllm"){
+    return (typeof getI18nText==="function")?getI18nText("ai_need_webllm",[label]):"⚠️ WebLLM chưa sẵn sàng. Hãy mở ⚙ Cài đặt AI → WebLLM → Tải model trước khi gửi.";
+  }
+  return (typeof getI18nText==="function")?getI18nText("ai_need_key",[label]):"⚠️ Chưa nhập API key cho "+label+". Hãy bấm ⚙ Cài đặt → nhập key.";
+}
+function aiNeedProviderToastKey(p){
+  return (p==="webllm")?"ai_toast_webllm_not_loaded":"ai_toast_need_key";
+}
+function aiWebllmStatusText(){
+  try{
+    const s=(typeof window!=="undefined"&&window.sfWebllmState)?window.sfWebllmState:{status:"idle"};
+    if(s.status==="loading"){ const pct=String(Math.round((s.progress||0)*100)); return aiT("ai_webllm_status_loading",[pct],"⏳ Đang tải model... "+pct+"%"); }
+    if(s.status==="ready") return aiT("ai_webllm_status_ready",[s.modelId||""],"● Sẵn sàng — "+(s.modelId||""));
+    if(s.status==="error") return aiT("ai_webllm_status_error",null,"● Lỗi tải model (kiểm tra WebGPU / bộ nhớ / mạng)");
+    return aiT("ai_webllm_status_idle",null,"○ Chưa tải model");
+  }catch(e){ return "○ Chưa tải model"; }
+}
+function aiWebllmSyncSection(){
+  try{
+    const supported=(typeof window!=="undefined"&&typeof window.sfWebllmSupported==="function")?window.sfWebllmSupported():false;
+    const s=(typeof window!=="undefined"&&window.sfWebllmState)?window.sfWebllmState:{status:"idle"};
+    const st=document.getElementById("ai-webllm-status");
+    if(st) st.textContent=supported?aiWebllmStatusText():aiT("ai_webllm_unsupported",null,"⚠️ Trình duyệt không hỗ trợ WebGPU — WebLLM cần Chrome/Edge 113+ trở lên.");
+    const bar=document.getElementById("ai-webllm-progress");
+    if(bar) bar.style.display=(supported&&s.status==="loading")?"":"none";
+    const fill=document.getElementById("ai-webllm-progress-fill");
+    if(fill) fill.style.width=String(Math.round((s.progress||0)*100))+"%";
+    const loadBtn=document.getElementById("ai-btn-webllm-load");
+    if(loadBtn) loadBtn.disabled=!supported||s.status==="loading";
+    const unloadBtn=document.getElementById("ai-btn-webllm-unload");
+    if(unloadBtn) unloadBtn.disabled=s.status!=="ready";
+    const budgetSel=document.getElementById("ai-webllm-ctx-budget");
+    if(budgetSel) budgetSel.value=String(aiSettings.ctxBudget||4096);
+    const budgetVal=document.getElementById("ai-webllm-ctx-budget-val");
+    if(budgetVal) budgetVal.textContent=String(aiSettings.ctxBudget||4096);
+  }catch(e){}
+}
+function aiNormalizeCustomUrl(raw){
+  let u=String(raw||"").trim();
+  if(!u) return u;
+  let suffix="";
+  const qi=u.indexOf("?");
+  if(qi>=0){ suffix=u.slice(qi); u=u.slice(0,qi); }
+  u=u.replace(/\/+$/,"");
+  let path="";
+  try{ path=new URL(u).pathname.replace(/\/+$/,""); }catch(e){ return String(raw||"").trim(); }
+  if(/\/chat\/completions$/.test(path)) return u+suffix;
+  if(path===""||path==="/") return u+"/v1/chat/completions"+suffix;
+  if(/\/v1$/.test(path)) return u+"/chat/completions"+suffix;
+  if(/\/v1\/chat$/.test(path)) return u+"/completions"+suffix;
+  return u+suffix;
+}
 function aiBuildContext(){
   const a=[]; try{ const t=(currentMeta&&currentMeta.title)?currentMeta.title:(document.title||""); const u=currentTabUrl||(currentMeta&&currentMeta.url)||""; if(t) a.push("Title: "+t); if(u) a.push("URL: "+u);}catch(e){} return a.join("\n");
 }
@@ -1665,7 +1747,7 @@ function aiPopulateModelSelect(explicitVal){
   const noKeysEntered = !hasGeminiKey && !hasOpenaiKey && !hasClaudeKey;
 
   // Auto-switch to an active keyed provider if current provider doesn't have a key
-  if(!noKeysEntered && aiProvider !== "custom"){
+  if(!noKeysEntered && aiProvider !== "custom" && aiProvider !== "webllm"){
     if(!aiHasKey(aiProvider)){
       if(hasGeminiKey) aiProvider = "gemini";
       else if(hasOpenaiKey) aiProvider = "openai";
@@ -1722,6 +1804,19 @@ function aiPopulateModelSelect(explicitVal){
         const o = document.createElement("option");
         o.value = "custom:" + srv.id;
         o.textContent = "Custom - " + srv.name + (srv.model ? " (" + srv.model + ")" : "");
+        sel.appendChild(o);
+      });
+    }
+
+    // WebLLM (in-browser model): shown when it is the active provider or the
+    // browser has WebGPU, mirroring how Gemini is shown without a key.
+    const webllmActive = aiProvider === "webllm";
+    const webllmSupported = (typeof window !== "undefined" && typeof window.sfWebllmSupported === "function") ? window.sfWebllmSupported() : false;
+    if(webllmActive || webllmSupported){
+      aiGetProviderModels("webllm").forEach(m => {
+        const o = document.createElement("option");
+        o.value = "webllm:" + m;
+        o.textContent = "WebLLM (Offline) - " + (AI_MODEL_LABELS[m] || m);
         sel.appendChild(o);
       });
     }
@@ -1854,18 +1949,18 @@ function aiRenderCustomServers(){
   });
 }
 function aiAddCustomServer(){
-  const nameEl = document.getElementById("ai-custom-new-name");
-  const modelEl = document.getElementById("ai-custom-new-model");
-  const urlEl = document.getElementById("ai-custom-new-url");
-  const keyEl = document.getElementById("ai-custom-new-key");
+  const nameEl = document.getElementById("ai-cs-name");
+  const modelEl = document.getElementById("ai-cs-model");
+  const urlEl = document.getElementById("ai-cs-url");
+  const keyEl = document.getElementById("ai-cs-key");
   if(!urlEl) return;
-  const url = urlEl.value.trim();
+  const url = aiNormalizeCustomUrl(urlEl.value.trim());
   if(!url || !aiValidateCustomUrl(url, true)){
     if(typeof showToast === "function") showToast("ai_toast_url_blocked", "warning");
     return;
   }
   const name = (nameEl ? nameEl.value.trim() : "") || "Custom Server";
-  const model = (modelEl ? modelEl.value.trim() : "") || "default";
+  const model = (modelEl ? modelEl.value.trim() : "");
   const key = keyEl ? keyEl.value.trim() : "";
   const id = "srv_" + Date.now().toString(36) + Math.floor(Math.random()*1000).toString(36);
   
@@ -1899,13 +1994,14 @@ function aiUpdateProviderUI(){
   const sel=document.getElementById("ai-provider-select"); if(sel) sel.value=aiProvider;
   const cfg=aiGetProviderConfig(aiProvider); aiSyncKeyInputs();
   const st=document.getElementById("ai-key-status");
-  if(st){ const has=aiHasKey(aiProvider); if(has){ st.textContent=aiT("ai_key_connected",null,"API đã kết nối"); st.className="ai-status is-connected"; } else { st.textContent=aiT("ai_key_missing",null,"○ Chưa nhập key"); st.className="ai-status"; } }
+  if(st){ if(aiProvider==="webllm"){ st.textContent=aiWebllmStatusText(); st.className=(typeof window!=="undefined"&&window.sfWebllmIsReady&&window.sfWebllmIsReady())?"ai-status is-connected":"ai-status"; } else { const has=aiCanUse(aiProvider); const local=aiProvider==="custom"&&!aiHasKey("custom")&&!!aiActiveCustomServer(); if(has){ st.textContent=local?aiT("ai_key_server_ready",null,"Đã kết nối máy chủ tùy biến"):aiT("ai_key_connected",null,"API đã kết nối"); st.className="ai-status is-connected"; } else { st.textContent=aiT("ai_key_missing",null,"○ Chưa nhập key"); st.className="ai-status"; } } }
   const loginBtn=document.getElementById("ai-btn-open-provider");
   if(loginBtn){ loginBtn.textContent=(typeof getI18nText==="function")?getI18nText("ai_btn_open_provider"):"Mở trang lấy API key ↗"; loginBtn.setAttribute("data-mode","api"); loginBtn.style.display=cfg.loginUrl?"":"none"; }
   document.querySelectorAll(".ai-provider-pill").forEach(p=>{ p.classList.toggle("active", p.dataset.provider===aiProvider); });
   aiUpdateModelLine();
   const cu=document.getElementById("ai-custom-url");
   if(cu){ cu.value=(aiProvider==="custom")?(aiKeys["custom"]||""):""; cu.style.display=aiProvider==="custom"?"":"none"; const lab=document.querySelector('[data-i18n="ai_custom_label"]'); if(lab&&lab.parentElement) lab.parentElement.style.display=aiProvider==="custom"?"":"none"; }
+  aiWebllmSyncSection();
 }
 function aiBuildSystemInstruction(isPageQuery, skill, pipeline){
   const LANGN={vi:"tiếng Việt",en:"English",zh:"中文",ru:"русский язык",ja:"日本語"};
@@ -2082,27 +2178,40 @@ async function aiCallProvider(provider, prompt, apiKey, image, hist, opts){
   const cfg=aiGetProviderConfig(provider);
   const imgs=Array.isArray(image)?image.filter(x=>x&&x.data):((image&&image.data)?[image]:[]);
   const wantStream=!!(opts&&opts.onToken);
+  if(provider==="webllm"){
+    const b=(typeof window!=="undefined")?window:null;
+    if(!b||typeof b.sfWebllmChat!=="function") throw new Error("webllm_unsupported");
+    if(typeof b.sfWebllmIsReady!=="function"||!b.sfWebllmIsReady()) throw new Error("webllm_not_loaded");
+    const selModel=aiGetModel("webllm");
+    if(selModel&&b.sfWebllmState&&b.sfWebllmState.modelId&&b.sfWebllmState.modelId!==selModel) throw new Error("webllm_model_mismatch");
+    const text=await b.sfWebllmChat(aiHistoryToOpenAIMessages(hist,prompt,[]),{temperature:aiSettings.temperature,signal:opts&&opts.signal,promptBudget:aiSettings.ctxBudget});
+    return String(text||"").slice(0,16000);
+  }
   if(provider==="custom"){
     let server = null;
     if(aiCustomServers && aiCustomServers.length){
       server = aiCustomServers.find(s=>s.id===aiActiveCustomServerId) || aiCustomServers[0];
     }
     let url = (apiKey && String(apiKey).startsWith("http")) ? String(apiKey).trim() : (server ? server.url : (aiKeys["custom"]||"").trim());
+    url = aiNormalizeCustomUrl(url);
     let key = (server && server.key) ? server.key.trim() : "";
     let model = (server && server.model) ? server.model.trim() : "";
+    if(model==="local-model"||model==="default") model = "";
     if(!url) throw new Error("custom_url_invalid");
     if(!aiValidateCustomUrl(url, true)) throw new Error("custom_url_blocked");
     const headers = { "Content-Type": "application/json" };
     if(key) headers["Authorization"] = "Bearer " + key;
-    const isChatEndpoint = url.includes("/chat/completions") || url.includes("/v1/") || url.includes("/api/");
+    let urlPath=""; try{ urlPath=new URL(url).pathname; }catch(e){ urlPath=url; }
+    const isOllamaNative = /\/api\/(generate|completion|embeddings)$/.test(urlPath);
+    const isChatEndpoint = !isOllamaNative;
     let bodyObj;
     if(isChatEndpoint){
       const msgs = aiHistoryToOpenAIMessages(hist, prompt, imgs);
       bodyObj = {
-        model: model || "local-model",
         messages: msgs,
         temperature: aiSettings.temperature
       };
+      if(model) bodyObj.model = model;
     } else {
       bodyObj = { prompt: prompt, model: model || undefined };
     }
@@ -2114,8 +2223,11 @@ async function aiCallProvider(provider, prompt, apiKey, image, hist, opts){
       redirect: "manual"
     });
     if(res.type==="opaqueredirect"||(res.status>=300&&res.status<400)) throw new Error("custom_redirect_blocked");
-    if(!res.ok) throw new Error("http_"+res.status);
-    const d = await res.json().catch(()=>({}));
+    const rawBody = await res.text().catch(()=> "");
+    let d = {}; try{ d = JSON.parse(rawBody); }catch(e){ d = {}; }
+    const serverErr = d && typeof d==="object" ? ((d.error && ((d.error.message||d.error.error)||d.error)) || d.message || "") : "";
+    if(!res.ok) throw new Error("http_"+res.status+(serverErr?(" — "+String(serverErr).slice(0,300)):""));
+    if(serverErr && !d.choices) throw new Error(String(serverErr).slice(0,500));
     let answer = "";
     if(d.choices && d.choices[0] && d.choices[0].message && typeof d.choices[0].message.content === "string"){
       answer = d.choices[0].message.content;
@@ -2128,7 +2240,7 @@ async function aiCallProvider(provider, prompt, apiKey, image, hist, opts){
     } else if(typeof d.answer === "string"){
       answer = d.answer;
     } else {
-      answer = JSON.stringify(d);
+      answer = rawBody || JSON.stringify(d);
     }
     return String(answer).slice(0, 16000);
   }
@@ -2482,9 +2594,14 @@ function aiDetectAutoNavIntent(rawQuery){
 
     const tabsApi = (typeof browser !== "undefined" && browser.tabs) ? browser.tabs : (typeof chrome !== "undefined" ? chrome.tabs : null);
     let opened = false;
+    let tabId = null;
     if(tabsApi && tabsApi.create){
       try {
-        tabsApi.create({ url: targetUrl, active: true });
+        const created = tabsApi.create({ url: targetUrl, active: true });
+        if(created && typeof created.then === "function"){
+          const t = await created;
+          if(t && typeof t.id === "number") tabId = t.id;
+        }
         opened = true;
       } catch(e) {}
     }
@@ -2495,6 +2612,12 @@ function aiDetectAutoNavIntent(rawQuery){
       } catch(e) {}
     }
 
+    let actionResults = [];
+    if(Array.isArray(navIntent.plan) && navIntent.plan.length && !aiUserStopped){
+      aiUpdateTypingStatus(aiT("ai_agent_action_running", null, "▶ Đang thực hiện thao tác trên trang..."));
+      actionResults = await aiAgentRunPlan(navIntent.plan, tabId);
+    }
+
     aiHideTyping();
     aiIsSending = false;
     if(sendBtn){
@@ -2503,11 +2626,10 @@ function aiDetectAutoNavIntent(rawQuery){
       sendBtn.title = aiT("ai_btn_send", null, "Gửi câu hỏi");
     }
 
-    let report = "🚀 **" + aiT("ai_autonav_opened", null, "Đã tìm thấy và tự động mở trang web:") + "**\n\n";
-    report += "👉 **[" + (targetTitle || targetUrl) + "](" + targetUrl + ")**\n\n";
-    report += "- 🌐 **Địa chỉ web:** `" + targetUrl + "`\n";
-    report += "- ⚡ **Thao tác:** Đã tự động mở trong tab mới của trình duyệt\n";
-    report += "- 🛡️ **Bảo mật:** " + aiT("ai_agent_badge_safe", null, "Đã duyệt & lọc an toàn qua ScholarFlow Sandbox") + " (0 Token)\n";
+    let report = "**" + aiT("ai_autonav_opened", null, "Đã tìm thấy và tự động mở trang web:") + "**\n\n";
+    report += "**[" + (targetTitle || targetUrl) + "](" + targetUrl + ")**\n\n";
+    report += "- **Địa chỉ web:** `" + targetUrl + "`\n";
+    report += "- **Thao tác:** Đã tự động mở trong tab mới của trình duyệt\n";
 
     if(extraSources.length){
       report += "\n**" + aiT("ai_autonav_related", null, "Các địa chỉ liên quan:") + "**\n";
@@ -2515,6 +2637,8 @@ function aiDetectAutoNavIntent(rawQuery){
         report += "- [" + (es.t || es.u) + "](" + es.u + ")\n";
       });
     }
+
+    report += aiAgentResultsReport(actionResults);
 
     report += "\n*(Nếu trình duyệt ngăn mở tab tự động, bạn có thể bấm trực tiếp vào đường link màu xanh phía trên để truy cập)*";
 
@@ -2532,7 +2656,333 @@ function aiDetectAutoNavIntent(rawQuery){
   }
 }
 
-function aiAppendAgentApprovalCard(cleanQuery, raw, provider, key, detectedSkill, isDemo){
+const AI_AGENT_SENSITIVE_RE = /(?:đăng\s*thông|đăng\s*ký|đăng\s*nhập|thanh\s*toán|chuyển\s*khoản|giỏ\s*hàng|đặt\s*hàng|mua\s*hàng|mua\s*ngay|checkout|payment|purchase|subscribe|sign\s*in|log\s*in|add to cart|delete account|xóa\s*tài khoản)/i;
+const AI_AGENT_ACTION_VERBS = [
+  { verb:"click", labelKey:"ai_agent_label_subscribe", sensitive:true, match:["đăng ký","dang ky","subscribe","follow","theo dõi","theo doi"],
+    re:/(^|[\s,;:!?"'`(\[■])(?:đăng\s*ký|dang\s*ky|subscribe|theo\s*dõi|theo doi|follow)(?=[\s,;.!?)"'»\]]|$)/i },
+  { verb:"click", labelKey:"ai_agent_label_login", sensitive:true, match:["đăng nhập","dang nhap","login","sign in","log in"],
+    re:/(^|[\s,;:!?"'`(\[■])(?:đăng\s*nhập|dang nhap|sign\s*in|log\s*in|login)(?=[\s,;.!?)"'»\]]|$)/i },
+  { verb:"click", labelKey:"ai_agent_label_buy", sensitive:true, match:["mua","thanh toán","checkout","add to cart","thêm vào giỏ","mua ngay"],
+    re:/(^|[\s,;:!?"'`(\[■])(?:mua\s*hàng|mua ngay|mua|mua sắm|mua sam|thanh\s*toán|checkout|payment|purchase|đặt\s*hàng|thêm vào giỏ|add to cart)(?=[\s,;.!?)"'»\]]|$)/i },
+  { verb:"submit", labelKey:"ai_agent_step_submit", sensitive:false, match:null,
+    re:/(^|[\s,;:!?"'`(\[■])(?:gửi|gui|submit|nhấn\s*enter|nhan enter|press\s*enter|enter)(?=[\s,;.!?)"'»\]]|$)/i },
+  { verb:"type", labelKey:"ai_agent_step_type", sensitive:false, match:null,
+    re:/(^|[\s,;:!?"'`(\[■])(?:gõ|go|nhập|nhap|type|điền|dien|fill)(?=[\s,;"'`\[■]|$)/i },
+  { verb:"click", labelKey:"ai_agent_step_click", sensitive:false, match:null,
+    re:/(^|[\s,;:!?"'`(\[■])(?:bấm|bam|nhấn|nhan|chọn|chon|click|tap|press)(?=[\s,;"'`\[■]|$)/i }
+];
+function aiAgentStripTail(s){
+  return String(s||"")
+    .replace(/[\s,;:.!?]*(?:giúp\s*(?:tôi|tao|mình|em|nó|no)?|ho\s*(?:tôi|tao)?|làm\s*on|lam\s*on|help\s*me|please|cho\s*(?:tôi|tao|mình|em)?|nha|nhé|ne|đi|di|nữa|nua)[\s,;:.!?]*$/i,"")
+    .replace(/[\s,;:.!?]+(?:rồi|roi|va|và|và\s*rồi|then|sau\s*đó|tiep\s*theo|tiếp theo)[\s,;:.!?]*$/i,"")
+    .trim();
+}
+function aiAgentStripLead(s){
+  return String(s||"")
+    .replace(/^(?:[\s,;:.!?]*(?:rồi|roi|va|và|then|sau\s*đó|tiep\s*theo|tiếp theo|để|de|và\s*nhập|va nhap)[\s,;:.!?]+)/i,"")
+    .replace(/^(?:[\s,;:.!?]+)/,"")
+    .trim();
+}
+function aiAgentStripSearchVerb(s){
+  const t = String(s||"").trim();
+  if(/^(?:tìm\s+hiểu|tim\s*hieu|research|tìm\s*hiểu)/i.test(t)) return t;
+  const r = t.replace(/^[\/!]?(?:agent|sandbox|browse)\s+/i,"")
+             .replace(/^(?:tìm(?:\s+kiếm)?|search|kiếm|mở|bật|truy cập|open|launch)\s+/i,"").trim();
+  return r || t;
+}
+function aiAgentIsNavCommand(s){
+  const t = String(s||"").trim();
+  if(/^[\/!]?(?:agent|sandbox|browse)\b/i.test(t)) return true;
+  if(/^(?:tìm\s+hiểu|tim\s*hieu|research|tìm\s*hiểu)\b/i.test(t)) return false;
+  return /^(?:tìm(?:\s+kiếm)?|search|kiếm|mở|bật|truy cập|open|launch)\s/i.test(t);
+}
+function aiDetectAgentAction(rawQuery){
+  if(!rawQuery || typeof rawQuery !== "string") return null;
+  const q = rawQuery.trim().replace(/^[\/!](?:agent|sandbox|browse)\s+/i,"");
+  if(q.length < 4) return null;
+  let best = null;
+  for(let i=0;i<AI_AGENT_ACTION_VERBS.length;i++){
+    const v = AI_AGENT_ACTION_VERBS[i];
+    const m = v.re.exec(q);
+    if(!m) continue;
+    const before = q.slice(0, m.index).trim();
+    if(before !== "" && !/(?:^|[\s,;:.!?])(?:rồi|roi|va|và|then|next|sau\s*đó|tiep\s*theo|tiếp theo|hãy|hay|vui\s*lòng|,)$/i.test(before)) continue;
+    const hit = { idx: m.index, verb: v, clause: q.slice(m.index + m[0].length) };
+    if(!best || hit.idx < best.idx) best = hit;
+  }
+  if(!best) return null;
+  const v = best.verb;
+  let topic = aiAgentStripTail(q.slice(0, best.idx));
+  topic = aiAgentStripSearchVerb(topic);
+  if(topic.length < 2) topic = aiAgentStripSearchVerb(aiAgentStripTail(q.slice(0, best.idx)));
+  let clause = aiAgentStripLead(best.clause);
+  clause = aiAgentStripTail(clause);
+  const out = { verb:v.verb, topic:topic, raw:rawQuery.trim(), labelKey:v.labelKey, match:null, text:null, selector:null, submitAfter:false, sensitive:!!v.sensitive };
+  if(v.verb === "type"){
+    const cm = /^(.+?)\s+(?:vào|vao|trong|into|to|at)\s+(.+)$/i.exec(clause);
+    let textPart = clause, targetPart = "";
+    if(cm){ textPart = cm[1]; targetPart = cm[2]; }
+    textPart = String(textPart||"").replace(/^["'“”']+|["'“”']+$/g,"").trim();
+    targetPart = aiAgentStripTail(String(targetPart||"").replace(/^["'“”']+|["'“”']+$/g,"").trim());
+    if(!textPart && !targetPart) return null;
+    out.text = textPart;
+    if(targetPart){ out.match = [targetPart]; out.labelKey = "ai_agent_step_type"; }
+    if(/(?:rồi|roi|va|và|,)?\s*(?:gửi|gui|submit|nhấn\s*enter|nhan enter|press\s*enter|enter)\s*$/i.test(clause) ||
+       /(?:gửi|gui|submit|enter)\s*$/i.test(q)){ out.submitAfter = true; }
+  } else if(v.verb === "submit"){
+    out.verb = "submit";
+  } else {
+    const target = aiAgentStripTail(clause);
+    if(v.match && !target){ out.match = v.match.slice(); }
+    else if(v.match && /^(?:nút|nut|button|link|tab|mục|muc|ô|trang)\s*/i.test(target)){
+      const cleaned = target.replace(/^(?:nút|nut|button|link|tab|mục|muc|ô|trang)\s+/i,"").trim();
+      out.match = cleaned ? [cleaned].concat(v.match) : v.match.slice();
+    }
+    else if(target){ out.match = [target]; }
+    else if(v.match){ out.match = v.match.slice(); }
+    if(!out.match || !out.match.length) return null;
+    out.sensitive = !!v.sensitive || AI_AGENT_SENSITIVE_RE.test((out.match||[]).join(" ") + " " + target);
+  }
+  out.sensitive = out.sensitive || AI_AGENT_SENSITIVE_RE.test(out.text || "") || AI_AGENT_SENSITIVE_RE.test((out.match||[]).join(" "));
+  return out;
+}
+function aiBuildAgentActionPlan(action, isYoutube){
+  const steps = [];
+  const a = action;
+  if(!a) return steps;
+  steps.push({ kind:"wait", ms: isYoutube ? 2600 : 1800 });
+  if(a.verb === "type"){
+    if(a.match && a.match.length) steps.push({ kind:"click", match:a.match.slice(), label:a.match[0] });
+    steps.push({ kind:"type", text:String(a.text||""), match:(a.match&&a.match.length)?a.match.slice():null, label:String(a.text||"") });
+    if(a.submitAfter) steps.push({ kind:"submit", match:(a.match&&a.match.length)?a.match.slice():null });
+  } else if(a.verb === "submit"){
+    steps.push({ kind:"submit", match:null });
+  } else {
+    steps.push({ kind:"click", match:(a.match&&a.match.length)?a.match.slice():null, selector:a.selector||null, label:(a.match&&a.match[0])||"", labelKey:a.labelKey||null, sensitive:!!a.sensitive });
+  }
+  return steps;
+}
+function aiAgentPlanIsSensitive(plan){
+  if(!Array.isArray(plan)) return false;
+  for(let i=0;i<plan.length;i++){
+    const s = plan[i];
+    if(!s) continue;
+    if(s.sensitive) return true;
+    const blob = [s.label, s.text, (s.match||[]).join(" "), s.selector].join(" ");
+    if(blob && AI_AGENT_SENSITIVE_RE.test(blob)) return true;
+  }
+  return false;
+}
+function aiAgentRequiresApproval(plan, confirmSetting){
+  if(!Array.isArray(plan) || !plan.length) return false;
+  if(aiAgentPlanIsSensitive(plan)) return true;
+  return confirmSetting !== false;
+}
+function aiAgentStepLabel(step){
+  if(!step) return "";
+  if(step.kind === "navigate") return aiT("ai_agent_step_navigate", [step.label||step.url||""], "Mở trang " + (step.label||step.url||""));
+  if(step.kind === "wait") return aiT("ai_agent_step_wait", [String(Math.round((step.ms||1500)/100)/10)], "Chờ trang tải " + Math.round((step.ms||1500)/100)/10 + "s");
+  if(step.kind === "type") return aiT("ai_agent_step_type", [step.text||""], "Nhập: " + (step.text||""));
+  if(step.kind === "submit") return aiT("ai_agent_step_submit", null, "Gửi form / Nhấn Enter");
+  if(step.kind === "click"){
+    if(step.labelKey) return aiT(step.labelKey, [step.label||(step.match&&step.match[0])||""], step.label || aiT("ai_agent_step_click", [step.label||(step.match&&step.match[0])||""], "Bấm: " + (step.label||(step.match&&step.match[0])||"")));
+    return aiT("ai_agent_step_click", [step.label||(step.match&&step.match[0])||""], "Bấm: " + (step.label||(step.match&&step.match[0])||""));
+  }
+  return String(step.kind||"");
+}
+function aiAgentSleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+function aiAgentStepIcon(kind){
+  if(kind === "navigate") return "🌐";
+  if(kind === "wait") return "⏳";
+  if(kind === "type") return "⌨️";
+  if(kind === "submit") return "📨";
+  if(kind === "click") return "🖱️";
+  return "•";
+}
+function sfAgentDomAct(step){
+  var res = { ok:false, kind:(step && step.kind) || "", found:false };
+  function norm(s){
+    var t = String(s == null ? "" : s).toLowerCase().replace(/\u0111/g, "d");
+    if(t.normalize) t = t.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return t.replace(/\s+/g, " ").trim();
+  }
+  function visible(el){
+    if(!el || !el.isConnected) return false;
+    if(el.hidden) return false;
+    if(el.disabled || (el.getAttribute && el.getAttribute("aria-disabled") === "true")) return false;
+    var n = el;
+    while(n && n.nodeType === 1){
+      if(n.hidden) return false;
+      if(window.getComputedStyle){
+        var st = window.getComputedStyle(n);
+        if(st && (st.display === "none" || st.visibility === "hidden")) return false;
+      }
+      n = n.parentElement;
+    }
+    return true;
+  }
+  function hay(el){
+    if(!el) return "";
+    var parts = [el.textContent || "", el.title || "", el.getAttribute ? (el.getAttribute("aria-label") || "") : "",
+      el.getAttribute ? (el.getAttribute("placeholder") || "") : "", el.getAttribute ? (el.getAttribute("name") || "") : "",
+      el.getAttribute ? (el.getAttribute("value") || "") : ""];
+    if(el.getAttribute && el.getAttribute("for")){
+      var lab = document.getElementById(el.getAttribute("for"));
+      if(lab) parts.push(lab.textContent || "");
+    }
+    if(el.tagName === "INPUT" || el.tagName === "TEXTAREA"){
+      var lab2 = el.labels && el.labels[0];
+      if(lab2) parts.push(lab2.textContent || "");
+    }
+    return norm(parts.join(" "));
+  }
+  function pick(st, kind){
+    if(!st) return null;
+    if(st.selector){
+      try{
+        var direct = document.querySelectorAll(st.selector);
+        for(var d=0; d<direct.length; d++){ if(visible(direct[d])) return direct[d]; }
+      }catch(e){}
+    }
+    var sel = kind === "editable"
+      ? 'input:not([type=hidden]):not([type=submit]):not([type=button]),textarea,[contenteditable=""],[contenteditable="true"]'
+      : 'a,button,[role="button"],input[type="submit"],input[type="button"],summary,label,option';
+    var pool = [];
+    try{ pool = Array.prototype.slice.call(document.querySelectorAll(sel)); }catch(e){ pool = []; }
+    var i, j, el;
+    if(st.match && st.match.length){
+      for(i=0;i<st.match.length;i++){
+        var t = norm(st.match[i]);
+        if(!t) continue;
+        for(j=0;j<pool.length;j++){
+          el = pool[j];
+          if(!visible(el)) continue;
+          if(hay(el).indexOf(t) !== -1) return el;
+        }
+      }
+    }
+    if(kind === "editable"){
+      for(j=0;j<pool.length;j++){ if(visible(pool[j])) return pool[j]; }
+      return null;
+    }
+    return null;
+  }
+  function typeInto(el, text){
+    if(!el) return false;
+    try{ if(el.focus) el.focus(); }catch(e){}
+    var proto = null;
+    if(el.tagName === "TEXTAREA" && typeof HTMLTextAreaElement !== "undefined") proto = HTMLTextAreaElement.prototype;
+    else if(el.tagName === "INPUT" && typeof HTMLInputElement !== "undefined") proto = HTMLInputElement.prototype;
+    var setter = proto ? Object.getOwnPropertyDescriptor(proto, "value") : null;
+    var val = String(text == null ? "" : text);
+    if(setter && setter.set) setter.set.call(el, val);
+    else el.value = val;
+    try{
+      el.dispatchEvent(new Event("input", { bubbles:true }));
+      el.dispatchEvent(new Event("change", { bubbles:true }));
+    }catch(e){}
+    return true;
+  }
+  try{
+    if(!step || !document) return res;
+    if(step.kind === "click"){
+      var el = pick(step, "click");
+      res.found = !!el;
+      if(!el){ res.reason = "not_found"; return res; }
+      try{ if(el.scrollIntoView) el.scrollIntoView({ block:"center" }); }catch(e){}
+      try{ el.click(); }catch(e){ try{ el.dispatchEvent(new MouseEvent("click", { bubbles:true, cancelable:true })); }catch(e2){ res.reason = "click_failed"; return res; } }
+      res.ok = true;
+      return res;
+    }
+    if(step.kind === "type"){
+      var target = pick(step, "editable");
+      res.found = !!target;
+      if(!target){ res.reason = "not_found"; return res; }
+      if(!typeInto(target, step.text)){ res.reason = "type_failed"; return res; }
+      res.ok = true;
+      return res;
+    }
+    if(step.kind === "submit"){
+      var src = pick(step, "click") || pick(step, "editable");
+      var form = src && (src.form || (src.closest ? src.closest("form") : null));
+      if(!form && document.forms && document.forms.length) form = document.forms[0];
+      if(!form){ res.reason = "no_form"; return res; }
+      res.found = true;
+      var btn = null;
+      try{ btn = form.querySelector('button[type="submit"],input[type="submit"],button:not([type])'); }catch(e){ btn = null; }
+      if(btn){
+        try{ btn.click(); }catch(e){ try{ btn.dispatchEvent(new MouseEvent("click", { bubbles:true, cancelable:true })); }catch(e2){} }
+        res.ok = true;
+        res.how = "button";
+        return res;
+      }
+      var ev = null;
+      try{ ev = new Event("submit", { bubbles:true, cancelable:true }); }catch(e){ ev = null; }
+      if(ev && form.dispatchEvent(ev)){ res.ok = true; res.how = "event"; }
+      else res.reason = "submit_blocked";
+      return res;
+    }
+    res.reason = "unknown_kind";
+  }catch(e){
+    res.reason = String((e && e.message) || e);
+  }
+  return res;
+}
+async function aiAgentRunStep(tabId, step){
+  try{
+    const scriptingApi = (typeof browser !== "undefined" && browser.scripting) ? browser.scripting
+      : ((typeof chrome !== "undefined" && chrome.scripting) ? chrome.scripting : null);
+    if(!scriptingApi || !scriptingApi.executeScript || !tabId) return { ok:false, kind:(step&&step.kind)||"", reason:"no_scripting" };
+    const raw = await scriptingApi.executeScript({
+      target: { tabId: tabId },
+      world: "ISOLATED",
+      func: window.sfAgentDomAct,
+      args: [step]
+    });
+    const out = raw && raw[0] && raw[0].result;
+    if(out && typeof out === "object") return out;
+    return { ok:false, kind:(step&&step.kind)||"", reason:"no_result" };
+  }catch(e){
+    return { ok:false, kind:(step&&step.kind)||"", reason:String((e && e.message) || e) };
+  }
+}
+async function aiAgentRunPlan(plan, tabId){
+  const results = [];
+  if(!Array.isArray(plan) || !plan.length) return results;
+  for(let i=0;i<plan.length;i++){
+    const step = plan[i];
+    if(!step) continue;
+    if(aiUserStopped) break;
+    let r;
+    if(step.kind === "wait"){ await aiAgentSleep(step.ms || 1500); r = { ok:true, kind:"wait" }; }
+    else if(step.kind === "navigate"){ r = { ok:true, kind:"navigate", skipped:!!tabId }; }
+    else r = await aiAgentRunStep(tabId, step);
+    r.label = aiAgentStepLabel(step);
+    r.icon = aiAgentStepIcon(step.kind);
+    results.push(r);
+  }
+  return results;
+}
+function aiAgentResultsReport(results){
+  if(!Array.isArray(results) || !results.length) return "";
+  const okCount = results.filter(function(r){ return r && r.ok; }).length;
+  let md = "\n\n### " + aiT("ai_agent_plan_title", null, "Kế hoạch thao tác của Agent") + "\n";
+  results.forEach(function(r){
+    md += "- " + (r.ok ? "[Thành công] " : "[Thất bại] ") + (r.label || r.kind || "");
+    if(!r.ok){
+      md += " — " + aiT("ai_agent_action_notfound", null, "không tìm thấy hoặc không thực hiện được trên trang");
+    }
+    md += "\n";
+  });
+  md += "\n" + aiT("ai_agent_action_summary", [String(okCount), String(results.length)],
+    "Đã hoàn tất " + okCount + "/" + results.length + " thao tác.");
+  return md;
+}
+
+function aiAppendAgentApprovalCard(cleanQuery, raw, provider, key, detectedSkill, isDemo, opts){
+  opts = opts || {};
+  const plan = Array.isArray(opts.plan) && opts.plan.length ? opts.plan : null;
+  const riskPlan = !!(plan && aiAgentPlanIsSensitive(plan));
   const c = document.getElementById("ai-chat-history");
   if(!c) return;
   const row = document.createElement("div");
@@ -2555,6 +3005,32 @@ function aiAppendAgentApprovalCard(cleanQuery, raw, provider, key, detectedSkill
   targetBox.className = "ai-agent-target";
   targetBox.textContent = "“" + (cleanQuery || raw) + "”" + (isDemo ? " [Chạy thử nghiệm 0 Token]" : "");
   bubble.appendChild(targetBox);
+
+  if(riskPlan){
+    const risk = document.createElement("div");
+    risk.className = "ai-agent-risk";
+    risk.textContent = aiT("ai_agent_plan_risk", null, "⚠️ Thao tác nhạy cảm trên trang web — chỉ đồng ý khi bạn tự tin vào trang đích.");
+    bubble.appendChild(risk);
+  }
+
+  if(plan){
+    const planBox = document.createElement("div");
+    planBox.className = "ai-agent-plan";
+    const planTitle = document.createElement("div");
+    planTitle.className = "ai-agent-plan-title";
+    planTitle.textContent = aiT("ai_agent_plan_title", null, "📋 Kế hoạch thao tác của Agent");
+    planBox.appendChild(planTitle);
+    const planList = document.createElement("ol");
+    planList.className = "ai-agent-plan-list";
+    plan.forEach(function(st){
+      const li = document.createElement("li");
+      li.className = "ai-agent-plan-step" + (st && st.sensitive ? " is-sensitive" : "");
+      li.textContent = aiAgentStepIcon(st && st.kind) + " " + aiAgentStepLabel(st);
+      planList.appendChild(li);
+    });
+    planBox.appendChild(planList);
+    bubble.appendChild(planBox);
+  }
 
   const actions = document.createElement("div");
   actions.className = "ai-agent-actions";
@@ -2590,8 +3066,12 @@ function aiAppendAgentApprovalCard(cleanQuery, raw, provider, key, detectedSkill
     statusMsg.className = "ai-agent-status-label is-approved";
     statusMsg.textContent = isDemo
       ? "✓ Đang kích hoạt Sandbox và thu thập dữ liệu (0 Token)..."
-      : aiT("ai_agent_approved_status", null, "✓ Đã cấp quyền — Đang thực thi trong Sandbox an toàn...");
-    aiRunAgentWorkflow(cleanQuery, raw, provider, key, detectedSkill, isDemo);
+      : (plan ? aiT("ai_agent_action_running", null, "✓ Đã cấp quyền — Đang thực hiện thao tác trên trang...") : aiT("ai_agent_approved_status", null, "✓ Đã cấp quyền — Đang thực thi trong Sandbox an toàn..."));
+    if(typeof opts.onApprove === "function"){
+      opts.onApprove();
+    } else {
+      aiRunAgentWorkflow(cleanQuery, raw, provider, key, detectedSkill, isDemo);
+    }
   });
 
   cancelBtn.addEventListener("click", () => {
@@ -2678,7 +3158,6 @@ async function aiRunAgentWorkflow(cleanQuery, raw, provider, key, detectedSkill,
       demoReport += "- ✅ Tracker & Cookie theo dõi: **Cách ly tuyệt đối**\n";
       demoReport += "- ✅ Chi phí token: **0 Token (Chạy cục bộ 100% trên trình duyệt)**\n\n";
       demoReport += "GỢI Ý:\n- Bạn có thể lấy API key miễn phí tại Google AI Studio để AI phân tích chuyên sâu hơn\n- Thử lệnh: /agent demo pin thể rắn 2026\n- Thử lệnh: /agent demo xe điện thế hệ mới";
-      demoReport += "\n\n> 🛡️ *" + aiT("ai_agent_badge_safe", null, "Đã duyệt & lọc an toàn qua ScholarFlow Sandbox") + " (Local Demo 0 Token)*";
 
       aiAppendMessage("assistant", demoReport, provider);
       return;
@@ -2765,11 +3244,8 @@ async function aiRunAgentWorkflow(cleanQuery, raw, provider, key, detectedSkill,
         else window.open(topU, "_blank");
       } catch(e) {}
     }
-      const safeBadgeText = "\n\n> 🛡️ *" + aiT("ai_agent_badge_safe", null, "Đã duyệt & lọc an toàn qua ScholarFlow Sandbox") + "*";
       let fullContent = (typeof fullAnswer === "string" && fullAnswer) ? fullAnswer : streamAcc;
-      if(!fullContent.includes("ScholarFlow Sandbox")){
-        fullContent = fullContent.trim() + safeBadgeText;
-      }
+      fullContent = fullContent.trim();
   if(streamRow){
         aiRenderFormattedText(streamRow, fullContent);
         if(aiHistory.length && aiHistory[aiHistory.length - 1].role === "assistant"){
@@ -2795,9 +3271,7 @@ async function aiRunAgentWorkflow(cleanQuery, raw, provider, key, detectedSkill,
             if(lite && lite.text){
               liteWorked = true;
               let content = lite.text.trim();
-              if(!content.includes("ScholarFlow Sandbox")){
-                content += "\n\n> 🛡️ *" + aiT("ai_agent_badge_safe", null, "Đã duyệt & lọc an toàn qua ScholarFlow Sandbox") + "*";
-              }
+
               aiAppendMessage("assistant", content, provider);
               if(typeof showToast === "function") showToast("ai_toast_auto_fallback", "info", [lite.model]);
             }
@@ -2823,7 +3297,7 @@ async function aiRunAgentWorkflow(cleanQuery, raw, provider, key, detectedSkill,
             rescueReport += "> " + cleanSnippet.split("\n").filter(Boolean).slice(0, 6).join("\n> ") + "\n\n";
           }
           rescueReport += "💡 **Lời khuyên:** Vui lòng đợi khoảng 30 - 60 giây để Google giải phóng hạn mức (Rate limit) hoặc chọn model khác trong **⚙ Cài đặt AI**.";
-          rescueReport += "\n\n> 🛡️ *" + aiT("ai_agent_badge_safe", null, "Đã duyệt & lọc an toàn qua ScholarFlow Sandbox") + " (Sandbox Rescue 0 Token)*";
+
           aiAppendMessage("assistant", rescueReport, provider);
         }
       } else {
@@ -2905,8 +3379,51 @@ async function aiSendCurrent(){
   aiRenderAttachedImages();
   const autoNavIntent = (imagesToSend.length === 0 && !isPageQuery && !quickReq) ? aiDetectAutoNavIntent(raw) : null;
   if(autoNavIntent){
+    const agentAction = aiDetectAgentAction(raw);
+    if(agentAction && agentAction.topic && agentAction.topic.length >= 2){
+      autoNavIntent.query = agentAction.topic;
+    }
+    const agentPlan = agentAction ? aiBuildAgentActionPlan(agentAction, autoNavIntent.isYoutube) : [];
+    if(agentPlan.length){
+      autoNavIntent.plan = agentPlan;
+      if(aiAgentRequiresApproval(agentPlan, aiSettings.agentConfirm)){
+        aiAppendAgentApprovalCard(cleanQuery, raw, provider, key, detectedSkill, false, {
+          plan: agentPlan,
+          onApprove: function(){ aiExecuteAutoNav(autoNavIntent, provider); }
+        });
+        return;
+      }
+    }
     aiExecuteAutoNav(autoNavIntent, provider);
     return;
+  }
+  const agentActionDirect = (imagesToSend.length === 0 && !isPageQuery && !quickReq) ? aiDetectAgentAction(raw) : null;
+  if(!autoNavIntent && agentActionDirect){
+    const isYoutube = typeof window.aiIsYouTubeUrl === "function" ? window.aiIsYouTubeUrl(aiGetCurrentPageInfo().url) : false;
+    const agentPlan = aiBuildAgentActionPlan(agentActionDirect, isYoutube);
+    if(agentPlan.length){
+      const doRun = async function(){
+        aiUpdateTypingStatus("🔄 Đang thao tác trên trang hiện tại...");
+        const tabsApi = (typeof browser !== "undefined" && browser.tabs) ? browser.tabs : (typeof chrome !== "undefined" ? chrome.tabs : null);
+        if(!tabsApi || !tabsApi.query) return;
+        tabsApi.query({active: true, currentWindow: true}, async function(tabs){
+          if(!tabs || !tabs[0]) return;
+          const results = await window.aiAgentRunPlan(agentPlan, tabs[0].id);
+          const report = aiAgentResultsReport(results);
+          aiHideTyping();
+          if(report) aiAppendMessage("assistant", report, provider);
+        });
+      };
+      if(aiAgentRequiresApproval(agentPlan, aiSettings.agentConfirm)){
+        aiAppendAgentApprovalCard(cleanQuery, raw, provider, key, detectedSkill, false, {
+          plan: agentPlan,
+          onApprove: doRun
+        });
+        return;
+      }
+      doRun();
+      return;
+    }
   }
   const isAgentCmd = /^[\/!](agent|sandbox|browse)\b/i.test(raw) || (detectedSkill && detectedSkill.key === "agent");
   if(isAgentCmd){
@@ -2921,11 +3438,8 @@ async function aiSendCurrent(){
       aiAppendMessage("assistant", disabledMsg, provider);
       return;
     }
-    if(!aiHasKey(provider)){
-      const label = aiGetProviderConfig(provider).label;
-      const needKeyMsg = (typeof getI18nText === "function")
-        ? getI18nText("ai_need_key", [label])
-        : "⚠️ Chưa nhập API key cho " + label + ". Hãy bấm ⚙ Cài đặt → nhập key.";
+    if(!aiCanUse(provider)){
+      const needKeyMsg = aiNeedProviderMsg(provider);
       aiAppendMessage("assistant", needKeyMsg, provider);
       return;
     }
@@ -2947,13 +3461,11 @@ async function aiSendCurrent(){
   aiIsSending=true; aiUserStopped=false; aiAbort=new AbortController();
   const sendBtn=document.getElementById("ai-btn-send");
   if(sendBtn){ sendBtn.classList.add("is-stop"); sendBtn.textContent="⏹"; sendBtn.disabled=false; sendBtn.title=aiT("ai_btn_stop",null,"Dừng tạo câu trả lời"); }
-  if(!aiHasKey(provider)){
+  if(!aiCanUse(provider)){
     aiIsSending=false;
     if(sendBtn){ sendBtn.classList.remove("is-stop"); sendBtn.textContent="➤"; sendBtn.disabled=false; sendBtn.title=aiT("ai_btn_send",null,"Gửi câu hỏi"); }
-    const label=aiGetProviderConfig(provider).label;
-    const needKeyMsg=(typeof getI18nText==="function")?getI18nText("ai_need_key",[label]):"⚠️ Chưa nhập API key cho "+label+". Hãy bấm ⚙ Cài đặt → nhập key.";
-    aiAppendMessage("assistant", needKeyMsg, provider);
-    if(typeof showToast==="function") showToast("ai_toast_need_key","warning");
+    aiAppendMessage("assistant", aiNeedProviderMsg(provider), provider);
+    if(typeof showToast==="function") showToast(aiNeedProviderToastKey(provider),"warning");
     return;
   }
   const hist=aiHistory.slice(0,-1);
@@ -3043,7 +3555,7 @@ async function aiSendCurrent(){
     }
   }catch(e){}
   let pageImages=[];
-  if(isPageQuery && (!_imagesForApi || !_imagesForApi.length) && aiSettings.includeImages && provider!=="custom" && pageText){ try{ pageImages=await aiGetPageImages(); }catch(e){} }
+  if(isPageQuery && (!_imagesForApi || !_imagesForApi.length) && aiSettings.includeImages && provider!=="custom" && provider!=="webllm" && pageText){ try{ pageImages=await aiGetPageImages(); }catch(e){} }
   if(isPageQuery && aiSettings.includeSource){ try{ const srcRaw=await aiGetPageSourceText(); if(srcRaw){ const winSrc=aiSelectRelevantWindow(srcRaw, cleanQuery, 1600); pageText = pageText ? pageText+"\n\n[Raw page source + scripts - relevant excerpt]\n"+winSrc : winSrc; } }catch(e){} }
   /* ── Add multi-page context from pinned pages (aiPages) ──
      Building a "pinnedNote" that ALWAYS reaches the model (regardless of page-intent):
@@ -3062,7 +3574,7 @@ async function aiSendCurrent(){
       else pinnedNote = multiPageCtx;
     }
   }
-  const apiImages=(_imagesForApi && _imagesForApi.length)?_imagesForApi.map(im=>({data:im.data,mimeType:im.mimeType||"image/jpeg"})):pageImages;
+  const apiImages=(provider==="webllm")?[]:((_imagesForApi && _imagesForApi.length)?_imagesForApi.map(im=>({data:im.data,mimeType:im.mimeType||"image/jpeg"})):pageImages);
   const imageNote=apiImages.length?("[Attached images: "+apiImages.length+". If the question needs visual info (counting objects, reading text in the image, comparing images), answer from these images.]"):null;
   const webSearchEnabled=((aiSettings.webSearch!==false)&&aiSettings.scope!=="only")||forceGround;
   let multiWebNote="";
@@ -3079,11 +3591,9 @@ async function aiSendCurrent(){
   }
   const prompt=aiBuildPrompt(raw, pageText, selectionText, imageNote, pinnedNote, {url:pageUrl||"", title:(function(){ try{ if(typeof currentMeta!=="undefined"&&currentMeta&&currentMeta.title) return String(currentMeta.title); if(typeof currentTabObj!=="undefined"&&currentTabObj&&currentTabObj.title) return String(currentTabObj.title); }catch(e){} return document.title||""; })(), videoId:aiIsYouTubeUrl(pageUrl)?aiExtractYouTubeId(pageUrl):""}, (function(){ try{ return aiMemFor(pageUrl)||""; }catch(e){ return ""; } })(), multiWebNote, isPageQuery, pipeline);
   let answer=""; let usedFallback=false; let callOpts=null;
-  if(!aiHasKey(provider)){
-    const label=aiGetProviderConfig(provider).label;
-    const needKeyMsg=(typeof getI18nText==="function")?getI18nText("ai_need_key",[label]):"⚠️ Chưa nhập API key cho "+label+". Hãy bấm ⚙ Cài đặt → nhập key.";
-    answer=needKeyMsg;
-    usedFallback=true; if(typeof showToast==="function") showToast("ai_toast_need_key","warning");
+  if(!aiCanUse(provider)){
+    answer=aiNeedProviderMsg(provider);
+    usedFallback=true; if(typeof showToast==="function") showToast(aiNeedProviderToastKey(provider),"warning");
   } else {
     aiUpdateTypingStatus({label:pipeline.label, step:3, total:pipeline.steps.length, text:pipeline.steps[2]});
     callOpts={signal:aiAbort.signal, onToken:onToken, groundOverride:forceGround, isPageQuery:isPageQuery, skill:detectedSkill, pipeline:pipeline, __groundingSources:multiWebSources.slice()};
@@ -3125,15 +3635,25 @@ async function aiSendCurrent(){
       if(provider==="gemini"&&/timeout|timed out|abort|429|503|504|408|overload/i.test(String(msg0))){
         try{
           const lite=await aiCallGeminiLite(prompt, key, apiImages, hist);
-          if(lite&&lite.text){ answer=lite.text; aiSetModel("gemini",lite.model); aiUpdateProviderUI(); if(typeof showToast==="function") showToast("ai_toast_auto_fallback","info",[lite.model]); }
+          if(lite&&lite.text){ answer=lite.text; if(typeof showToast==="function") showToast("ai_toast_auto_fallback","info",[lite.model]); }
         }catch(e2){}
       }
       if(!answer){
       const msg=msg0; let hint="";
-      if(String(msg).toLowerCase().includes("timed out")||String(msg).toLowerCase().includes("timeout")||String(msg).toLowerCase().includes("abort")) hint="\n\n"+aiT("ai_hint_timeout",[aiGetModel(provider)],"⏱️ Model "+aiGetModel(provider)+" overloaded/timeout - switch to a Lite model in Settings");
-      else if(String(msg).includes("404")&&provider==="gemini") hint="\n\n"+aiT("ai_hint_404",[aiGetModel(provider)],"💡 Gợi ý tiết kiệm token: Model "+aiGetModel(provider)+" không khả dụng (404). Hãy bấm ⚙ → Gợi ý model → chọn Lite.");
+      const _srv = provider==="custom" ? aiActiveCustomServer() : null;
+      const _label = (_srv && _srv.name) ? (aiGetProviderConfig(provider).label+" · "+_srv.name) : aiGetProviderConfig(provider).label;
+      const _model = (_srv && _srv.model) ? _srv.model : aiGetModel(provider);
+      if(provider==="webllm"&&/webllm_not_loaded|webllm_model_mismatch/i.test(String(msg))) hint="\n\n"+aiT("ai_hint_webllm_not_loaded",null,"💡 Model WebLLM chưa được tải: mở ⚙ Cài đặt AI → WebLLM → Tải model, rồi gửi lại.");
+      else if(provider==="webllm"&&/webllm_unsupported/i.test(String(msg))) hint="\n\n"+aiT("ai_webllm_unsupported",null,"⚠️ Trình duyệt không hỗ trợ WebGPU — WebLLM cần Chrome/Edge 113+ trở lên.");
+      else if(provider==="webllm"&&/webllm_context_overflow|context window|prompt tokens exceed/i.test(String(msg))) hint="\n\n"+aiT("ai_hint_webllm_ctx",null,"💡 Prompt vượt cửa sổ ngữ cảnh của model local — ScholarFlow đã tự cắt bớt ngữ cảnh; nếu vẫn lỗi, hãy giảm Số ký tự ngữ cảnh trong ⚙ Cài đặt AI hoặc chọn model lớn hơn.");
+      else if(provider==="webllm"&&/webllm_load_oom|oom|out of memory|allocat/i.test(String(msg))) hint="\n\n"+aiT("ai_hint_webllm_oom",null,"💡 Bộ nhớ không đủ — chọn model nhỏ hơn (VD SmolLM2 360M) ở ⚙ Cài đặt AI → WebLLM rồi tải lại.");
+      else if(provider==="webllm"&&/webllm_load_download|webllm_load_failed|fetch|network/i.test(String(msg))) hint="\n\n"+aiT("ai_hint_webllm_download",null,"💡 Không tải được weight model — kiểm tra mạng rồi bấm Tải model lại.");
+      else if(String(msg).toLowerCase().includes("timed out")||String(msg).toLowerCase().includes("timeout")||String(msg).toLowerCase().includes("abort")) hint="\n\n"+aiT("ai_hint_timeout",[_model],"⏱️ Model "+_model+" overloaded/timeout - switch to a Lite model in Settings");
+      else if(String(msg).includes("404")&&provider==="gemini") hint="\n\n"+aiT("ai_hint_404",[_model],"💡 Gợi ý tiết kiệm token: Model "+_model+" không khả dụng (404). Hãy bấm ⚙ → Gợi ý model → chọn Lite.");
+      else if(provider==="custom"&&/no models loaded/i.test(String(msg))) hint="\n\n"+aiT("ai_hint_no_model",null,"💡 Chưa nạp model trong LM Studio: mở app → tab Developer → Load model (hoặc chạy `lms load`), giữ server chạy rồi bấm gửi lại.");
+      else if(provider==="custom"&&/Unexpected endpoint|http_40[45]/i.test(String(msg))) hint="\n\n"+aiT("ai_hint_endpoint",null,"💡 Endpoint sai — URL máy chủ phải trỏ tới .../v1/chat/completions (VD: http://localhost:1234/v1/chat/completions).");
       else if((String(msg).includes("custom_url_blocked")||String(msg).includes("custom_redirect_blocked"))&&typeof showToast==="function") showToast("ai_toast_url_blocked","warning");
-      answer=String(aiT("ai_err_prefix",[aiGetProviderConfig(provider).label,aiGetModel(provider)],"❌ Lỗi gọi "+aiGetProviderConfig(provider).label+" ("+aiGetModel(provider)+"): ")+msg+hint).slice(0,8000); usedFallback=true; if(typeof showToast==="function") showToast("ai_toast_error","error");
+      answer=String(aiT("ai_err_prefix",[_label,_model],"❌ Lỗi gọi "+_label+" ("+_model+"): ")+msg+hint).slice(0,8000); usedFallback=true; if(typeof showToast==="function") showToast("ai_toast_error","error");
       }
       }
     }
@@ -3235,6 +3755,40 @@ function aiSyncCompanionFromStorage(){
     aiUpdateCompanionUI(true);
   }
 }
+function aiWebllmLoadAction(){
+  if(typeof window==="undefined"||typeof window.sfWebllmLoad!=="function"){ if(typeof showToast==="function") showToast("ai_webllm_unsupported","error"); return; }
+  if(!(window.sfWebllmSupported&&window.sfWebllmSupported())){ if(typeof showToast==="function") showToast("ai_webllm_unsupported","error"); aiWebllmSyncSection(); return; }
+  const sel=document.getElementById("ai-webllm-model-select");
+  const modelId=(sel&&sel.value)||aiGetModel("webllm")||"";
+  if(!modelId) return;
+  aiSetModel("webllm",modelId);
+  if(typeof showToast==="function") showToast("ai_toast_webllm_loading","info",[modelId]);
+  aiUpdateProviderUI();
+  window.sfWebllmLoad(modelId,function(pct,_txt){
+    const bar=document.getElementById("ai-webllm-progress");
+    if(bar) bar.style.display="";
+    const fill=document.getElementById("ai-webllm-progress-fill");
+    if(fill) fill.style.width=String(Math.round(pct*100))+"%";
+    const pctStr=String(Math.round(pct*100));
+    const st=document.getElementById("ai-webllm-status");
+    if(st) st.textContent=aiT("ai_webllm_status_loading",[pctStr],"⏳ Đang tải model... "+pctStr+"%");
+    const kst=document.getElementById("ai-key-status");
+    if(kst&&aiProvider==="webllm") kst.textContent=st?st.textContent:"";
+  }).then(function(){
+    if(typeof showToast==="function") showToast("ai_toast_webllm_ready","success",[modelId]);
+    aiUpdateProviderUI();
+  }).catch(function(){
+    if(typeof showToast==="function") showToast("ai_toast_webllm_error","error");
+    aiUpdateProviderUI();
+  });
+}
+function aiWebllmUnloadAction(){
+  if(typeof window==="undefined"||typeof window.sfWebllmUnload!=="function") return;
+  window.sfWebllmUnload().then(function(){
+    if(typeof showToast==="function") showToast("ai_toast_webllm_stopped","info");
+    aiUpdateProviderUI();
+  });
+}
 function aiInitEvents(){
   const favImg=document.getElementById("ai-page-favicon"); if(favImg) favImg.addEventListener("error",()=>{ aiFavState.src=null; aiApplyFavicon(); });
   const chatHist=document.getElementById("ai-chat-history");
@@ -3333,6 +3887,19 @@ function aiInitEvents(){
   const sessNew=document.getElementById("ai-btn-new-session"); if(sessNew) sessNew.addEventListener("click",()=>{ const dt=(function(){ try{ return new Date().toLocaleString(); }catch(e){ return ""; } })(); aiSessionsNew(aiT("ai_session_default_name",null,"Phiên")+" "+dt); aiRenderSessions(); if(typeof showToast==="function") showToast("ai_toast_session_saved","success"); });
   const openSettings=document.getElementById("ai-btn-open-settings"); const closeSettings=document.getElementById("ai-btn-close-settings"); const backdrop=document.getElementById("ai-settings-backdrop"); const modal=document.getElementById("ai-settings-modal"); const changeModelBtn=document.getElementById("ai-btn-change-model"); const showModal=()=>{ if(modal) modal.style.display="flex"; aiPopulateModelSelect(); aiRenderCustomServers(); aiRenderModelsManager(); aiSyncCompanionFromStorage(); }; const hideModal=()=>{ if(modal) modal.style.display="none"; }; if(openSettings) openSettings.addEventListener("click",showModal); if(changeModelBtn) changeModelBtn.addEventListener("click",showModal); if(closeSettings) closeSettings.addEventListener("click",hideModal); if(backdrop) backdrop.addEventListener("click",hideModal);
   const modelSel=document.getElementById("ai-model-select"); if(modelSel) modelSel.addEventListener("change",()=>aiOnModelChange(modelSel.value));
+  const wlModelSel=document.getElementById("ai-webllm-model-select");
+  if(wlModelSel){
+    wlModelSel.textContent="";
+    aiGetProviderModels("webllm").forEach(m=>{ const o=document.createElement("option"); o.value=m; o.textContent=(AI_MODEL_LABELS[m]||m); wlModelSel.appendChild(o); });
+    const wlCur=aiGetModel("webllm");
+    if(wlCur) wlModelSel.value=wlCur;
+    wlModelSel.addEventListener("change",()=>{ aiSetModel("webllm",wlModelSel.value); aiUpdateProviderUI(); });
+  }
+  const wlLoadBtn=document.getElementById("ai-btn-webllm-load"); if(wlLoadBtn) wlLoadBtn.addEventListener("click",aiWebllmLoadAction);
+  const wlUnloadBtn=document.getElementById("ai-btn-webllm-unload"); if(wlUnloadBtn) wlUnloadBtn.addEventListener("click",aiWebllmUnloadAction);
+  const wlBudget=document.getElementById("ai-webllm-ctx-budget");
+  if(wlBudget){ const wlBudgetSync=()=>{ const v=Math.max(1024,Math.min(16384,Number(wlBudget.value)||4096)); aiSettings.ctxBudget=v; const bv=document.getElementById("ai-webllm-ctx-budget-val"); if(bv) bv.textContent=String(v); aiSaveSettings(); }; wlBudget.addEventListener("input",wlBudgetSync); }
+  aiWebllmSyncSection();
   const manageProvSel=document.getElementById("ai-manage-provider-select");
   if(manageProvSel) manageProvSel.addEventListener("change", aiRenderModelsManager);
   const addModelBtn=document.getElementById("ai-btn-add-model");
@@ -3398,6 +3965,7 @@ if(typeof window!=="undefined"){
   window.AI_SKILLS=AI_SKILLS; window.aiDetectSkill=aiDetectSkill;
   window.AI_PIPELINES=AI_PIPELINES; window.aiResolvePipeline=aiResolvePipeline; window.aiAppendAgentApprovalCard=aiAppendAgentApprovalCard; window.aiRunAgentWorkflow=aiRunAgentWorkflow; window.aiDetectAutoNavIntent=aiDetectAutoNavIntent; window.aiExecuteAutoNav=aiExecuteAutoNav; window.aiUpdateTypingStatus=aiUpdateTypingStatus;
   window.aiExtractViaScripting=aiExtractViaScripting; window.aiExtractViaBackgroundFetch=aiExtractViaBackgroundFetch;
-  window.AI_PROVIDERS=AI_PROVIDERS; window.aiValidateCustomUrl=aiValidateCustomUrl; window.aiSanitizeExternal=aiSanitizeExternal; window.aiSanitizeHistory=aiSanitizeHistory; window.aiRateLimitOk=aiRateLimitOk; window.aiSelectRelevantWindow=aiSelectRelevantWindow; window.aiIsYouTubeUrl=aiIsYouTubeUrl; window.aiHistoryToGeminiContents=aiHistoryToGeminiContents; window.aiHistoryToOpenAIMessages=aiHistoryToOpenAIMessages; window.aiHistoryToClaudeMessages=aiHistoryToClaudeMessages; window.aiCollectTabsContext=aiCollectTabsContext; window.aiScholarSearch=aiScholarSearch; window.aiAttachImageFile=aiAttachImageFile; window.aiAttachImageFiles=aiAttachImageFiles; window.aiRenderAttachedImages=aiRenderAttachedImages; window.aiExtractYouTubeId=aiExtractYouTubeId; window.aiYtMetaViaFetch=aiYtMetaViaFetch; window.aiYtBalancedJson=aiYtBalancedJson; window.aiCallGeminiLite=aiCallGeminiLite; window.aiSig=aiSig; window.aiRegenerate=aiRegenerate; window.aiSelectRelevantWindows=aiSelectRelevantWindows; window.aiSessionsSearch=aiSessionsSearch; window.aiMemKey=aiMemKey; window.aiMemFor=aiMemFor; window.aiRenderSessions=aiRenderSessions; window.aiShowSessions=aiShowSessions; window.aiHideSessions=aiHideSessions; window.aiGetProviderConfig=aiGetProviderConfig; window.aiGetModel=aiGetModel; window.aiSetModel=aiSetModel; window.aiFetchGeminiModels=aiFetchGeminiModels; window.aiHasKey=aiHasKey; window.aiBuildPrompt=aiBuildPrompt; window.aiAddPage=aiAddPage; window.aiRemovePage=aiRemovePage; window.aiRenderPages=aiRenderPages; window.aiGetCurrentPageInfo=aiGetCurrentPageInfo; window.aiLocalFallback=aiLocalFallback; window.aiUseWebBridge=aiUseWebBridge; window.aiContextCovers=aiContextCovers; window.aiCallProvider=aiCallProvider; window.aiLoadSettings=aiLoadSettings; window.aiSaveHistory=aiSaveHistory; window.aiRenderHistory=aiRenderHistory; window.aiScrollToBottom=aiScrollToBottom; window.aiDetectPageIntent=aiDetectPageIntent; window.aiGroundingSources=aiGroundingSources; window.aiSourcesLabel=aiSourcesLabel; window.aiGeminiSupportsGrounding=aiGeminiSupportsGrounding; window.aiGeminiSupportsVideo=aiGeminiSupportsVideo; window.aiGeminiSupportsAgentic=aiGeminiSupportsAgentic; window.aiPickVideoModel=aiPickVideoModel; window.aiVideoContents=aiVideoContents; window.aiCallGeminiVideo=aiCallGeminiVideo; window.aiIsTranscriptRequest=aiIsTranscriptRequest; window.aiQueryRefersToVideo=aiQueryRefersToVideo; window.aiIsContinueRequest=aiIsContinueRequest; window.aiLastTimestampSec=aiLastTimestampSec; window.aiConversationMarkdown=aiConversationMarkdown; window.aiUpdateLatestBtn=aiUpdateLatestBtn; window.aiAppendMessage=aiAppendMessage; window.aiClearHistory=aiClearHistory; window.aiUpdateProviderUI=aiUpdateProviderUI; window.aiPopulateModelSelect=aiPopulateModelSelect; window.aiSendCurrent=aiSendCurrent; window.aiQuickPrompt=aiQuickPrompt; window.initAI=initAI; window.aiProvider=aiProvider; window.aiSettings=aiSettings; window.aiModels=aiModels; window.aiCustomServers=aiCustomServers; window.aiSetCompanionEnabled=aiSetCompanionEnabled; window.aiUpdateCompanionUI=aiUpdateCompanionUI; window.aiOnModelChange=aiOnModelChange; window.aiRenderCustomServers=aiRenderCustomServers; window.aiAddCustomServer=aiAddCustomServer; window.aiAddCustomModel=aiAddCustomModel; window.aiDeleteCustomModel=aiDeleteCustomModel; window.aiResetCustomModels=aiResetCustomModels; window.aiRenderModelsManager=aiRenderModelsManager; window.aiCheckLocalAssistantQuery=aiCheckLocalAssistantQuery; window.aiGetProviderModels=aiGetProviderModels; window.aiUpdateCurrentPageDisplay=aiUpdateCurrentPageDisplay; window.aiGroundingQueries=aiGroundingQueries; window.aiSearchQueriesLabel=aiSearchQueriesLabel; window.aiBuildSystemInstruction=aiBuildSystemInstruction; window.aiSearchMultiSources=aiSearchMultiSources; window.aiDecodeHtmlEntities=aiDecodeHtmlEntities; window.aiExportMarkdown=aiExportMarkdown; window.aiExportAnki=aiExportAnki; window.aiParseTimestampSec=aiParseTimestampSec; window.aiCheckYtLive=aiCheckYtLive;
+  window.aiDetectAgentAction=aiDetectAgentAction; window.aiBuildAgentActionPlan=aiBuildAgentActionPlan; window.aiAgentRequiresApproval=aiAgentRequiresApproval; window.aiAgentPlanIsSensitive=aiAgentPlanIsSensitive; window.aiAgentStepLabel=aiAgentStepLabel; window.aiAgentStepIcon=aiAgentStepIcon; window.aiAgentResultsReport=aiAgentResultsReport; window.aiAgentRunPlan=aiAgentRunPlan; window.aiAgentRunStep=aiAgentRunStep; window.sfAgentDomAct=sfAgentDomAct; window.aiAgentIsNavCommand=aiAgentIsNavCommand;
+  window.AI_PROVIDERS=AI_PROVIDERS; window.AI_MODEL_LABELS=AI_MODEL_LABELS; window.aiValidateCustomUrl=aiValidateCustomUrl; window.aiSanitizeExternal=aiSanitizeExternal; window.aiSanitizeHistory=aiSanitizeHistory; window.aiRateLimitOk=aiRateLimitOk; window.aiSelectRelevantWindow=aiSelectRelevantWindow; window.aiIsYouTubeUrl=aiIsYouTubeUrl; window.aiHistoryToGeminiContents=aiHistoryToGeminiContents; window.aiHistoryToOpenAIMessages=aiHistoryToOpenAIMessages; window.aiHistoryToClaudeMessages=aiHistoryToClaudeMessages; window.aiCollectTabsContext=aiCollectTabsContext; window.aiScholarSearch=aiScholarSearch; window.aiAttachImageFile=aiAttachImageFile; window.aiAttachImageFiles=aiAttachImageFiles; window.aiRenderAttachedImages=aiRenderAttachedImages; window.aiExtractYouTubeId=aiExtractYouTubeId; window.aiYtMetaViaFetch=aiYtMetaViaFetch; window.aiYtBalancedJson=aiYtBalancedJson; window.aiCallGeminiLite=aiCallGeminiLite; window.aiSig=aiSig; window.aiRegenerate=aiRegenerate; window.aiSelectRelevantWindows=aiSelectRelevantWindows; window.aiSessionsSearch=aiSessionsSearch; window.aiMemKey=aiMemKey; window.aiMemFor=aiMemFor; window.aiRenderSessions=aiRenderSessions; window.aiShowSessions=aiShowSessions; window.aiHideSessions=aiHideSessions; window.aiGetProviderConfig=aiGetProviderConfig; window.aiGetModel=aiGetModel; window.aiSetModel=aiSetModel; window.aiFetchGeminiModels=aiFetchGeminiModels; window.aiHasKey=aiHasKey; window.aiCanUse=aiCanUse; window.aiActiveCustomServer=aiActiveCustomServer; window.aiNormalizeCustomUrl=aiNormalizeCustomUrl; window.aiBuildPrompt=aiBuildPrompt; window.aiAddPage=aiAddPage; window.aiRemovePage=aiRemovePage; window.aiRenderPages=aiRenderPages; window.aiGetCurrentPageInfo=aiGetCurrentPageInfo; window.aiLocalFallback=aiLocalFallback; window.aiUseWebBridge=aiUseWebBridge; window.aiContextCovers=aiContextCovers; window.aiCallProvider=aiCallProvider; window.aiLoadSettings=aiLoadSettings; window.aiSaveHistory=aiSaveHistory; window.aiRenderHistory=aiRenderHistory; window.aiScrollToBottom=aiScrollToBottom; window.aiDetectPageIntent=aiDetectPageIntent; window.aiGroundingSources=aiGroundingSources; window.aiSourcesLabel=aiSourcesLabel; window.aiGeminiSupportsGrounding=aiGeminiSupportsGrounding; window.aiGeminiSupportsVideo=aiGeminiSupportsVideo; window.aiGeminiSupportsAgentic=aiGeminiSupportsAgentic; window.aiPickVideoModel=aiPickVideoModel; window.aiVideoContents=aiVideoContents; window.aiCallGeminiVideo=aiCallGeminiVideo; window.aiIsTranscriptRequest=aiIsTranscriptRequest; window.aiQueryRefersToVideo=aiQueryRefersToVideo; window.aiIsContinueRequest=aiIsContinueRequest; window.aiLastTimestampSec=aiLastTimestampSec; window.aiConversationMarkdown=aiConversationMarkdown; window.aiUpdateLatestBtn=aiUpdateLatestBtn; window.aiAppendMessage=aiAppendMessage; window.aiClearHistory=aiClearHistory; window.aiUpdateProviderUI=aiUpdateProviderUI; window.aiPopulateModelSelect=aiPopulateModelSelect; window.aiSendCurrent=aiSendCurrent; window.aiQuickPrompt=aiQuickPrompt; window.initAI=initAI; window.aiProvider=aiProvider; window.aiSettings=aiSettings; window.aiModels=aiModels; window.aiCustomServers=aiCustomServers; window.aiSetCompanionEnabled=aiSetCompanionEnabled; window.aiUpdateCompanionUI=aiUpdateCompanionUI; window.aiOnModelChange=aiOnModelChange; window.aiRenderCustomServers=aiRenderCustomServers; window.aiAddCustomServer=aiAddCustomServer; window.aiAddCustomModel=aiAddCustomModel; window.aiDeleteCustomModel=aiDeleteCustomModel; window.aiResetCustomModels=aiResetCustomModels; window.aiRenderModelsManager=aiRenderModelsManager; window.aiCheckLocalAssistantQuery=aiCheckLocalAssistantQuery; window.aiGetProviderModels=aiGetProviderModels; window.aiUpdateCurrentPageDisplay=aiUpdateCurrentPageDisplay; window.aiGroundingQueries=aiGroundingQueries; window.aiSearchQueriesLabel=aiSearchQueriesLabel; window.aiBuildSystemInstruction=aiBuildSystemInstruction; window.aiSearchMultiSources=aiSearchMultiSources; window.aiDecodeHtmlEntities=aiDecodeHtmlEntities; window.aiExportMarkdown=aiExportMarkdown; window.aiExportAnki=aiExportAnki; window.aiParseTimestampSec=aiParseTimestampSec; window.aiCheckYtLive=aiCheckYtLive; window.aiWebllmStatusText=aiWebllmStatusText; window.aiWebllmSyncSection=aiWebllmSyncSection; window.aiWebllmLoadAction=aiWebllmLoadAction; window.aiWebllmUnloadAction=aiWebllmUnloadAction; window.aiNeedProviderMsg=aiNeedProviderMsg; window.aiNeedProviderToastKey=aiNeedProviderToastKey;
 }
 if(document.readyState!=="loading") initAI(); else document.addEventListener("DOMContentLoaded",initAI);

@@ -143,7 +143,11 @@ if ($ch) { Test-ManifestPaths $ch "Chrome" }
 # 3. JavaScript syntax (via node --check when available)
 # ---------------------------------------------------------------------------
 $nodeExe = Get-Command node -ErrorAction SilentlyContinue
-$jsFiles = @(Get-ChildItem -Path (Join-Path $root "OS\js") -Recurse -Filter *.js)
+# OS\js\libs\webllm is a vendored third-party ESM bundle (@mlc-ai/web-llm) that
+# embeds a base64 WASM binary and third-party doc URLs — exempt from the content
+# scans below (npm run check syntax-checks it as an ES module instead).
+$jsFiles = @(Get-ChildItem -Path (Join-Path $root "OS\js") -Recurse -Filter *.js |
+    Where-Object { $_.FullName -notlike "*\OS\js\libs\webllm\*" })
 $jsTotal = $jsFiles.Count
 if ($nodeExe) {
     $jsFail = 0

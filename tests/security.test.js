@@ -22,6 +22,13 @@ const path = require("path");
 
 const ROOT = REPO_ROOT;
 const SKIP_DIRS = new Set(["node_modules", ".git", "build", "tests", ".vscode", "scripts", "dist"]);
+// Vendored third-party bundle (@mlc-ai/web-llm). It embeds a base64 WASM binary
+// and third-party docs/URLs, so it is exempt from the *content* scans below
+// (secret patterns, eval/new Function, dynamic innerHTML, URL allowlist) — those
+// produce false positives on the embedded binary. First-party code is fully
+// scanned; the vendor file itself is still syntax-checked by scripts/check_syntax.js.
+const VENDOR_DIR = path.join(ROOT, "OS", "js", "libs", "webllm");
+const isVendor = (p) => p.startsWith(VENDOR_DIR + path.sep);
 const ALLOWED_HOSTS = new Set([
   "doi.org",
   "export.arxiv.org",
@@ -47,6 +54,9 @@ const ALLOWED_HOSTS = new Set([
   "api.openalex.org",
   "api.crossref.org",
   "www.google.com",
+  "www.bing.com",
+  "www.duckduckgo.com",
+  "html.duckduckgo.com",
   "scholar.google.com",
   "calendar.google.com",
   "api.open-meteo.com",
@@ -122,6 +132,7 @@ async function main() {
   ];
   const secretHits = [];
   for (const f of allFiles) {
+    if (isVendor(f)) continue;
     const s = fs.readFileSync(f, "utf8");
     for (const [re, label] of secretPats) {
       const m = s.match(re);
@@ -131,6 +142,11 @@ async function main() {
   check(secretHits.length === 0, `no secrets across ${allFiles.length} scanned files` +
     (secretHits.length ? ` -> ${secretHits.slice(0, 5).join(" | ")}` : ""));
 
+  // The vendor exemption must point at a real, non-trivial file.
+  const vendorFile = path.join(VENDOR_DIR, "webllm.js");
+  check(fs.existsSync(vendorFile) && fs.statSync(vendorFile).size > 1000000,
+    "vendored webllm bundle present (>1MB)");
+
   // --- 2. eval / new Function / document.write ------------------------------
   console.log("Code-injection surface:");
   const patterns = [
@@ -139,7 +155,7 @@ async function main() {
     [/document\.write\s*\(/, "document.write()"]
   ];
   for (const [re, label] of patterns) {
-    const hits = jsFiles.filter((f) => re.test(fs.readFileSync(f, "utf8")));
+    const hits = jsFiles.filter((f) => !isVendor(f) && re.test(fs.readFileSync(f, "utf8")));
     check(hits.length === 0, `no ${label} in OS/js` + (hits.length ? ` -> ${hits.map((h) => path.basename(h)).join(", ")}` : ""));
   }
 
@@ -147,6 +163,7 @@ async function main() {
   console.log("Dynamic DOM sinks:");
   const dyn = [];
   for (const f of jsFiles) {
+    if (isVendor(f)) continue;
     const lines = fs.readFileSync(f, "utf8").split("\n");
     for (let i = 0; i < lines.length; i++) {
       const m = lines[i].match(/\.(?:innerHTML|outerHTML|insertAdjacentHTML)\s*=\s*(.+)$/);
@@ -193,6 +210,7 @@ async function main() {
   const netMiss = [];
   let plainHttp = 0;
   for (const f of [...jsFiles, ...htmlFiles]) {
+    if (isVendor(f)) continue;
     const s = fs.readFileSync(f, "utf8");
     for (const m of s.matchAll(/["'`](https?:\/\/[^"'`]*?)["'`]/g)) {
       const u = m[1];
@@ -215,10 +233,15 @@ async function main() {
     .filter((m) => fs.existsSync(path.join(ROOT, m)));
   for (const mf of manifestFiles) {
     const m = JSON.parse(fs.readFileSync(path.join(ROOT, mf), "utf8"));
-    const csp = (m.content_security_policy && typeof m.content_security_policy === "object") ||
-      (m.content_security_policy && String(m.content_security_policy));
-    const bad = csp && /unsafe-eval|unsafe-inline/.test(JSON.stringify(csp));
-    check(!bad, `${mf}: no content_security_policy with unsafe-eval/unsafe-inline`);
+    const csp = m.content_security_policy || null;
+    const cspStr = csp ? JSON.stringify(csp) : "";
+    // 'wasm-unsafe-eval' is required for WebAssembly instantiation (WebLLM) and is
+    // explicitly allowed in MV3 — only plain unsafe-eval/unsafe-inline are banned.
+    const bad = cspStr && /(?<!wasm-)unsafe-eval|unsafe-inline/.test(cspStr);
+    const hasWasmToken = /'wasm-unsafe-eval'/.test(cspStr);
+    check(!bad, `${mf}: no content_security_policy with unsafe-eval/unsafe-inline` +
+      (bad ? ` -> ${cspStr}` : ""));
+    check(hasWasmToken, `${mf}: CSP grants 'wasm-unsafe-eval' (WebLLM WebAssembly)`);
   }
 
   // --- 8. Reader mode: the article is rebuilt, not innerHTML'd ---------------

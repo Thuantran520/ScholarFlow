@@ -20,7 +20,9 @@ const DIRS = [path.join(ROOT, "OS", "js")];
 // `node --check --input-type=module` instead.
 const MODULE_FILES = new Set([
   path.join("OS", "js", "background.js"),
-  path.join("OS", "js", "userscripts_bg.js")
+  path.join("OS", "js", "userscripts_bg.js"),
+  // Vendored @mlc-ai/web-llm bundle (ESM, third-party, ships as-is).
+  path.join("OS", "js", "libs", "webllm", "webllm.js")
 ]);
 
 let checked = 0;

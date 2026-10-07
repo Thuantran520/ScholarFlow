@@ -597,7 +597,7 @@
         <div class="ai-model-bar">
           <div class="ai-model-select-wrap">
             <select id="ai-model-select-main" class="ai-model-select" aria-label="Chọn Model"></select>
-            <select id="ai-provider-select" style="display:none;" aria-hidden="true"><option value="gemini">Gemini</option><option value="openai">ChatGPT</option><option value="claude">Claude</option><option value="custom">Custom</option></select>
+            <select id="ai-provider-select" style="display:none;" aria-hidden="true"><option value="gemini">Gemini</option><option value="openai">ChatGPT</option><option value="claude">Claude</option><option value="custom">Custom</option><option value="webllm" data-i18n="ai_provider_webllm">WebLLM (Offline)</option></select>
           </div>
         </div>
         <div class="ai-top-actions">
@@ -709,6 +709,26 @@
             <input type="password" id="ai-cs-key" class="form-control" placeholder="Bearer token (nếu có)..." style="font-size:11px; margin-bottom:6px;">
             <button type="button" class="btn btn-secondary" id="ai-btn-add-server" style="width:100%; margin-top:4px;" data-i18n="ai_btn_add_server">+ Thêm máy chủ</button>
           </div>
+        </div>
+        <div class="ai-settings-section">
+          <div class="ai-field-label" data-i18n="ai_webllm_title">WebLLM — AI chạy trong trình duyệt</div>
+          <div class="ai-hint" data-i18n="ai_webllm_desc">Model chạy ngay trong extension bằng WebGPU: không cần API key, 100% offline sau khi tải. Lần đầu tải weight (~0.3–2.3 GB) từ CDN, trình duyệt tự cache để dùng lại. Dữ liệu không rời khỏi máy.</div>
+          <label class="ai-field-sub" data-i18n="ai_webllm_model_label">Model WebLLM</label>
+          <select id="ai-webllm-model-select" class="form-control" style="font-size:11px; margin-bottom:6px;"></select>
+          <div id="ai-webllm-status" class="ai-status" style="font-size:11px; margin-bottom:6px;">○ Chưa tải model</div>
+          <div id="ai-webllm-progress" style="display:none; height:6px; background:rgba(0,0,0,0.35); border-radius:4px; overflow:hidden; margin-bottom:6px;">
+            <div id="ai-webllm-progress-fill" style="height:100%; width:0%; background:var(--primary,#22c55e); transition:width 0.2s;"></div>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button type="button" class="btn btn-primary" id="ai-btn-webllm-load" style="flex:1;" data-i18n="ai_btn_webllm_load">⬇ Tải model</button>
+            <button type="button" class="btn btn-secondary" id="ai-btn-webllm-unload" data-i18n="ai_btn_webllm_unload">Giải phóng</button>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px; margin-top:10px;">
+            <label for="ai-webllm-ctx-budget" class="ai-field-sub" style="flex:1;" data-i18n="ai_webllm_ctx_budget_label">Ngân sách ngữ cảnh (token)</label>
+            <input type="range" id="ai-webllm-ctx-budget" min="2048" max="8192" step="2048" value="4096" data-i18n-aria="ai_webllm_ctx_budget_label" style="flex:1; min-width:90px;">
+            <span id="ai-webllm-ctx-budget-val" style="min-width:40px; text-align:right; font-size:11px; font-weight:600;">4096</span>
+          </div>
+          <div class="ai-hint" style="margin-top:4px;" data-i18n="ai_webllm_ctx_budget_hint">Thấp = mượt hơn · Cao = giữ nhiều nội dung trang hơn</div>
         </div>
         <div class="ai-settings-section">
           <div class="ai-field-label" data-i18n="ai_model_label">Model</div>
@@ -4404,6 +4424,7 @@
   <script src="../js/utils/weather-icons.js"></script>
   <script src="../js/tabs/calendar.js"></script>
   <script src="../js/tabs/pomodoro.js"></script>
+  <script src="../js/tabs/webllm.js"></script>
   <script src="../js/tabs/ai.js"></script>
   <script src="../js/tabs/tab-manager.js"></script>
   <script src="../js/tabs/test-helper.js"></script>

@@ -43,6 +43,7 @@ const LOAD_ORDER_MODULES = [
   "core/header-layout.js",
   "tabs/calendar.js",
   "tabs/pomodoro.js",
+  "tabs/webllm.js",
   "tabs/ai.js",
   "tabs/tab-manager.js",
   "tabs/test-helper.js",
@@ -2284,6 +2285,83 @@ async function main() {
         "sidebar: aiBuildPrompt embeds page context + trailing question");
       check(await w.eval(`aiHasKey("gemini") === false && aiGetProviderConfig("bogus").label === "Gemini"`),
         "sidebar: key-gate + provider config fallback sane");
+      check(await w.eval(`typeof sfWebllmIsReady === "function" && sfWebllmIsReady() === false && aiCanUse("webllm") === false && Array.isArray(SF_WEBLLM_MODELS) && SF_WEBLLM_MODELS.length >= 1 && aiGetProviderModels("webllm").length === SF_WEBLLM_MODELS.length && aiNeedProviderToastKey("webllm") === "ai_toast_webllm_not_loaded"`),
+        "sidebar: WebLLM offline provider wired (model roster + not-ready gate)");
+      check(await w.eval(`(function(){
+        var a=aiDetectAgentAction("tìm kênh YouTube MixiGaming rồi đăng ký giúp tôi");
+        return !!a && a.verb==="click" && a.sensitive===true && a.topic==="kênh YouTube MixiGaming" && a.match.indexOf("đăng ký")!==-1;
+      })()`),
+        "sidebar: agent action detects 'tìm ... rồi đăng ký' as a sensitive click");
+      check(await w.eval(`(function(){
+        var a=aiDetectAgentAction("mở trang web youtube.com rồi gõ hello vào ô tìm kiếm");
+        return !!a && a.verb==="type" && a.text==="hello" && a.match[0]==="ô tìm kiếm" && a.submitAfter===false && a.topic==="trang web youtube.com";
+      })()`),
+        "sidebar: agent action parses 'gõ <text> vào <target>' after a connector");
+      check(await w.eval(`(function(){
+        var a=aiDetectAgentAction("mở trang web example.com rồi gửi");
+        return !!a && a.verb==="submit" &&
+          aiDetectAgentAction("giải thích thuật ngữ click là gì")===null &&
+          aiDetectAgentAction("tìm kênh YouTube MixiGaming đăng ký")===null;
+      })()`),
+        "sidebar: agent action fires on 'rồi gửi', stays quiet without a nav command or connector");
+      check(await w.eval(`(function(){
+        var p=aiBuildAgentActionPlan(aiDetectAgentAction("tìm kênh YouTube MixiGaming rồi đăng ký giúp tôi"), true);
+        return p.length===2 && p[0].kind==="wait" && p[0].ms===2600 && p[1].kind==="click" && p[1].sensitive===true &&
+          aiAgentPlanIsSensitive(p)===true && aiAgentRequiresApproval(p,false)===true;
+      })()`),
+        "sidebar: sensitive click plan always requires approval (even with confirm off)");
+      check(await w.eval(`(function(){
+        var p=aiBuildAgentActionPlan(aiDetectAgentAction("mở trang web youtube.com rồi gõ hello vào ô tìm kiếm"), false);
+        return p.length===3 && p[0].kind==="wait" && p[0].ms===1800 && p[1].kind==="click" && p[2].kind==="type" && p[2].text==="hello" &&
+          aiAgentPlanIsSensitive(p)===false && aiAgentRequiresApproval(p,false)===false && aiAgentRequiresApproval(p,true)===true;
+      })()`),
+        "sidebar: non-sensitive plan honours the confirm setting");
+      check(await w.eval(`(function(){
+        var host=document.createElement("div");
+        var b=document.createElement("button"); b.textContent="Đăng ký MixiGaming demo"; host.appendChild(b);
+        var inp=document.createElement("input"); inp.setAttribute("placeholder","Ô tìm kiếm demo agent"); host.appendChild(inp);
+        document.body.appendChild(host);
+        var r1=sfAgentDomAct({kind:"click", match:["đăng ký mixigaming demo"]});
+        var r2=sfAgentDomAct({kind:"type", text:"xin chào", match:["ô tìm kiếm demo agent"]});
+        var r3=sfAgentDomAct({kind:"click", match:["zzz_khong_ton_tai"]});
+        var ok=r1.ok===true && r1.found===true && r2.ok===true && inp.value==="xin chào" &&
+          r3.ok===false && r3.found===false && r3.reason==="not_found" &&
+          String(sfAgentDomAct).indexOf("function pick(")!==-1;
+        document.body.removeChild(host);
+        return ok;
+      })()`),
+        "sidebar: sfAgentDomAct clicks, types, reports not-found and is self-contained (no closure)");
+      check(await w.eval(`(function(){
+        var host=document.createElement("div");
+        var f=document.createElement("form");
+        var inp=document.createElement("input"); inp.name="q"; f.appendChild(inp);
+        var sb=document.createElement("button"); sb.type="submit"; sb.textContent="Gửi form test"; f.appendChild(sb);
+        host.appendChild(f); document.body.appendChild(host);
+        var r=sfAgentDomAct({kind:"submit", match:["gửi form test"]});
+        document.body.removeChild(host);
+        return r.ok===true && r.found===true;
+      })()`),
+        "sidebar: sfAgentDomAct submits the form through its submit button");
+      check(await w.eval(`(function(){
+        var plan=aiBuildAgentActionPlan(aiDetectAgentAction("tìm kênh YouTube MixiGaming rồi đăng ký giúp tôi"), true);
+        var fired=0;
+        aiAppendAgentApprovalCard("tìm kênh YouTube MixiGaming rồi đăng ký giúp tôi","tìm kênh YouTube MixiGaming rồi đăng ký giúp tôi","gemini","",null,false,{plan:plan,onApprove:function(){fired++;}});
+        var rows=document.querySelectorAll(".ai-agent-approval-row");
+        var last=rows[rows.length-1];
+        var approve=last.querySelector(".ai-agent-btn-approve");
+        if(!approve) return false;
+        var before=fired;
+        approve.click();
+        var sensitiveOk=fired===before+1 && last.querySelectorAll(".ai-agent-plan-step").length===2 && !!last.querySelector(".ai-agent-risk") && approve.disabled===true;
+        aiAppendAgentApprovalCard("gõ hello","gõ hello","gemini","",null,false,{plan:[{kind:"wait",ms:500},{kind:"type",text:"hello",match:["a"]}],onApprove:function(){}});
+        var rows2=document.querySelectorAll(".ai-agent-approval-row");
+        var last2=rows2[rows2.length-1];
+        var benignOk=!last2.querySelector(".ai-agent-risk") && last2.querySelectorAll(".ai-agent-plan-step").length===2;
+        var md=aiAgentResultsReport([{ok:true,kind:"click",label:"Bấm",icon:"x"},{ok:false,kind:"type",label:"Nhập",icon:"y"}]);
+        var reportOk=typeof md==="string" && md.indexOf("###")!==-1 && md.indexOf("1/2")!==-1 && md.indexOf("[Thất bại]")!==-1;
+        return sensitiveOk && benignOk && reportOk;
+      })()`),
+        "sidebar: approval card lists plan steps, gates sensitive actions and reports results");
       check(await w.eval(`aiValidateCustomUrl("https://api.example.com/v1") === true && aiValidateCustomUrl("http://api.example.com/v1") === false && aiValidateCustomUrl("javascript:alert(1)") === false && aiValidateCustomUrl("https://localhost:8080/x") === false && aiValidateCustomUrl("https://169.254.169.254/meta") === false && aiValidateCustomUrl("https://10.1.2.3/v1") === false && aiValidateCustomUrl("https://192.168.0.1/v1") === false && aiValidateCustomUrl("https://[::1]/v1") === false && aiValidateCustomUrl("https://user:pw@example.com") === false`),
         "sidebar: custom URL validator blocks http/js/localhost/private-IP/creds");
       check(await w.eval(`aiSanitizeExternal("a\\u200Bb", 100).text === "ab"`),
