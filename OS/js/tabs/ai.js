@@ -2666,6 +2666,8 @@ const AI_AGENT_ACTION_VERBS = [
     re:/(^|[\s,;:!?"'`(\[■])(?:mua\s*hàng|mua ngay|mua|mua sắm|mua sam|thanh\s*toán|checkout|payment|purchase|đặt\s*hàng|thêm vào giỏ|add to cart)(?=[\s,;.!?)"'»\]]|$)/i },
   { verb:"submit", labelKey:"ai_agent_step_submit", sensitive:false, match:null,
     re:/(^|[\s,;:!?"'`(\[■])(?:gửi|gui|submit|nhấn\s*enter|nhan enter|press\s*enter|enter)(?=[\s,;.!?)"'»\]]|$)/i },
+  { verb:"type", labelKey:"ai_agent_step_type", sensitive:true, match:["mật khẩu", "mật mã", "password"],
+    re:/(^|[\s,;:!?"'(\[\u2026])(?:nhập\s*mật\s*khẩu|nhap\s*mat\s*khau|nhập\s*password|type\s*password|điền\s*mật\s*khẩu)(?=[\s,;"'\[\u2026]|$)/i },
   { verb:"type", labelKey:"ai_agent_step_type", sensitive:false, match:null,
     re:/(^|[\s,;:!?"'`(\[■])(?:gõ|go|nhập|nhap|type|điền|dien|fill)(?=[\s,;"'`\[■]|$)/i },
   { verb:"click", labelKey:"ai_agent_step_click", sensitive:false, match:null,
@@ -2966,11 +2968,32 @@ async function aiAgentRunPlan(plan, tabId){
 function aiAgentResultsReport(results){
   if(!Array.isArray(results) || !results.length) return "";
   const okCount = results.filter(function(r){ return r && r.ok; }).length;
+  
+  const rows = document.querySelectorAll(".ai-agent-approval-row");
+  const lastRow = rows[rows.length - 1];
+  if (lastRow) {
+    const statusMsg = lastRow.querySelector(".ai-agent-status-label");
+    if (statusMsg && statusMsg.className.indexOf("is-approved") !== -1) {
+      const lis = lastRow.querySelectorAll(".ai-agent-plan-step");
+      results.forEach(function(r, idx){
+        if (lis[idx]) {
+          lis[idx].textContent = (r.ok ? "[Thành công] " : "[Thất bại] ") + (r.label || r.kind || "");
+          if (!r.ok) {
+            lis[idx].textContent += " - " + aiT("ai_agent_action_notfound", null, "không tìm thấy hoặc không thực hiện được trên trang");
+          }
+        }
+      });
+      statusMsg.className = "ai-agent-status-label is-completed";
+      statusMsg.textContent = "✅ " + aiT("ai_agent_action_summary", [String(okCount), String(results.length)], "Đã hoàn tất " + okCount + "/" + results.length + " thao tác.");
+      return "";
+    }
+  }
+
   let md = "\n\n### " + aiT("ai_agent_plan_title", null, "Kế hoạch thao tác của Agent") + "\n";
   results.forEach(function(r){
     md += "- " + (r.ok ? "[Thành công] " : "[Thất bại] ") + (r.label || r.kind || "");
     if(!r.ok){
-      md += " — " + aiT("ai_agent_action_notfound", null, "không tìm thấy hoặc không thực hiện được trên trang");
+      md += " - " + aiT("ai_agent_action_notfound", null, "không tìm thấy hoặc không thực hiện được trên trang");
     }
     md += "\n";
   });
