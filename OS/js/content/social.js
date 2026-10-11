@@ -293,7 +293,7 @@
       }
     } catch (e) {}
   }
-  
+
   let _ytDislikeInterval = null;
   function _runYtDislike() {
     // Left empty since we now rely on the standalone ryd.js
@@ -376,7 +376,7 @@
           _settings.injMode = s.injMode === "warn" ? "warn" : "remove";
           _settings.linkClean = s.linkClean !== false;
             _settings.ytDislike = s.ytDislike !== false;
-            
+
           _settings.shopClean = !!s.shopClean;
           _settings.trackerBlockAll = !!s.trackerBlockAll;
           _settings.trackerBlock = Array.isArray(s.trackerBlock) ? s.trackerBlock.slice(0, 50) : [];
@@ -441,40 +441,40 @@
     const m = document.createElement('div');
     m.id = 'sf-link-guard-modal';
     m.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.8);z-index:999999999;display:flex;align-items:center;justify-content:center;font-family:sans-serif;color:#fff;backdrop-filter:blur(5px);';
-    
+
     const box = document.createElement('div');
     box.style.cssText = 'background:#1e293b;padding:30px;border-radius:12px;max-width:500px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,0.5);border:1px solid #334155;';
-    
+
     const icon = document.createElement('div');
     icon.textContent = '🛑';
     icon.style.cssText = 'font-size:40px;margin-bottom:15px;';
-    
+
     const title = document.createElement('h2');
     title.textContent = 'Điểm Dừng An Toàn (Link Guard)';
     title.style.cssText = 'margin:0 0 15px;color:#f8fafc;font-size:22px;';
-    
+
     const p = document.createElement('p');
     p.textContent = 'Bạn chuẩn bị rời khỏi trang web này và truy cập vào đường dẫn bên ngoài:';
     p.style.cssText = 'margin:0 0 20px;color:#94a3b8;font-size:15px;line-height:1.5;';
-    
+
     const linkDiv = document.createElement('div');
     linkDiv.textContent = href;
     linkDiv.style.cssText = 'background:#0f172a;padding:12px;border-radius:8px;word-break:break-all;color:#38bdf8;margin-bottom:25px;font-family:monospace;border:1px solid #1e293b;';
-    
+
     const btnRow = document.createElement('div');
     btnRow.style.cssText = 'display:flex;gap:15px;justify-content:center;';
-    
+
     const btnCancel = document.createElement('button');
     btnCancel.textContent = 'Hủy (Quay lại)';
     btnCancel.style.cssText = 'padding:10px 20px;border-radius:8px;border:none;background:#334155;color:#fff;cursor:pointer;font-weight:bold;';
-    
+
     const btnProceed = document.createElement('button');
     btnProceed.textContent = 'Tiếp tục';
     btnProceed.style.cssText = 'padding:10px 20px;border-radius:8px;border:none;background:#ef4444;color:#fff;cursor:pointer;font-weight:bold;';
-    
+
     btnCancel.addEventListener('click', function(e) { e.preventDefault(); m.parentNode.removeChild(m); });
     btnProceed.addEventListener('click', function(e) { e.preventDefault(); m.parentNode.removeChild(m); window.open(href, '_blank', 'noopener'); });
-    
+
     btnRow.appendChild(btnCancel);
     btnRow.appendChild(btnProceed);
     box.appendChild(icon);
@@ -492,10 +492,10 @@
     const t = e.target;
     const a = t && t.closest ? t.closest("a[href]") : null;
     if (!a) return;
-    
+
     let href = a.getAttribute('href');
     if (!href || href.startsWith('javascript:') || href.startsWith('#') || href.startsWith('/')) return;
-    
+
     // Unwrap Facebook redirect
     if (href.indexOf('l.php?u=') > -1 || href.indexOf('l.facebook.com/l.php') > -1) {
        try {
@@ -504,7 +504,7 @@
          if (inner) href = decodeURIComponent(inner);
        } catch (err) {}
     }
-    
+
     try {
       const u = new URL(href, window.location.href);
       if (u.hostname && u.hostname !== window.location.hostname && !u.hostname.includes('facebook.com') && !u.hostname.includes('messenger.com')) {
@@ -583,7 +583,7 @@
             for (const k in _stats) _stats[k] = 0;
             sendResponse({ ok: true });
           } catch (e) { sendResponse({ ok: false }); }
-          return;
+
         }
       });
     }

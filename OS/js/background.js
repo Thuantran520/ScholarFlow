@@ -46,7 +46,6 @@ const browserRuntimeApi = (typeof browser !== "undefined" && browser.runtime) ? 
 const chromeRuntimeApi = (typeof chrome !== "undefined" && chrome.runtime) ? chrome.runtime : null;
 const browserTabsApi = (typeof browser !== "undefined" && browser.tabs) ? browser.tabs : null;
 const chromeTabsApi = (typeof chrome !== "undefined" && chrome.tabs) ? chrome.tabs : null;
-const tabsApi = browserTabsApi || chromeTabsApi;
 const runtimeApi = browserRuntimeApi || chromeRuntimeApi;
 
 // Listen for messages from sidebar or content script

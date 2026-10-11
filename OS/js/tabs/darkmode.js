@@ -368,12 +368,12 @@ onReady(function () {
     });
   });
   const rTglBind = document.getElementById("sec-dm-reader");
-  if (rTglBind) rTglBind.addEventListener("change", function () {
+  if (rTglBind) {rTglBind.addEventListener("change", function () {
     dmState.reader.on = !!rTglBind.checked;
     const rp = document.getElementById("dm-reader-panel");
     if (rp) rp.classList.toggle("is-open", !!dmState.reader.on);
     dmSave();
-  });
+  });}
   const rwInp = document.getElementById("dm-r-warm");
   if (rwInp) {
     rwInp.addEventListener("input", function () {

@@ -143,7 +143,7 @@
           _hideUp(box);
         }
       }
-      if (_rejectByText(_btnsOf(document).filter(_insideFixed))) return;
+      _rejectByText(_btnsOf(document).filter(_insideFixed));
     } catch (e) {}
   }
   function kick() {

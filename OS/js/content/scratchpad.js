@@ -290,6 +290,9 @@
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
       chrome.storage.onChanged.addListener(function (changes, area) {
         if (area !== 'local') return;
+        if (changes.sf_scratchpad_font_family && typeof applyFloatingFont === 'function') {
+          applyFloatingFont(changes.sf_scratchpad_font_family.newValue);
+        }
         if (!isInternalSync) {
           if (changes.sf_scratchpad_notes) {
             loadNote(textarea, counter);
@@ -309,8 +312,143 @@
       });
     }
 
-    // Dragging logic
-    header.addEventListener('mousedown', function (e) {
+    // System Font support
+    var FONT_MAP = {
+      mono: 'ui-monospace, "Cascadia Code", "Fira Code", "JetBrains Mono", Consolas, "Liberation Mono", Menlo, monospace',
+      system: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+      serif: 'Charter, "Bitstream Charter", Cambria, Georgia, "Times New Roman", Times, "Sitka Text", serif',
+      modern: '"Segoe UI Variable Text", "Segoe UI Variable Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      clean: 'Verdana, Geneva, "Trebuchet MS", "DejaVu Sans", sans-serif',
+      hand: '"Segoe Print", "Segoe Script", "Comic Neue", "Comic Sans MS", cursive, sans-serif'
+    };
+
+    function applyFloatingFont(fontKey) {
+      if (!textarea) return;
+      var fontVal = FONT_MAP[fontKey] || FONT_MAP.system;
+      textarea.style.fontFamily = fontVal;
+    }
+
+    // Persist position and dimensions
+    function saveFloatingBounds() {
+      if (!container) return;
+      var rect = container.getBoundingClientRect();
+      if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+        chrome.storage.local.set({
+          sf_floating_scratchpad_pos: {
+            left: Math.round(rect.left),
+            top: Math.round(rect.top),
+            width: Math.round(rect.width),
+            height: Math.round(rect.height)
+          }
+        });
+      }
+    }
+
+    // Load saved position & dimensions
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.get(['sf_floating_scratchpad_pos', 'sf_scratchpad_font_family'], function (res) {
+        if (res && res.sf_floating_scratchpad_pos) {
+          var p = res.sf_floating_scratchpad_pos;
+          var winW = window.innerWidth;
+          var winH = window.innerHeight;
+          if (typeof p.width === 'number' && p.width >= 240) {
+            container.style.width = Math.min(p.width, winW - 16) + 'px';
+          }
+          if (typeof p.height === 'number' && p.height >= 180) {
+            container.style.height = Math.min(p.height, winH - 16) + 'px';
+          }
+          if (typeof p.left === 'number' && typeof p.top === 'number') {
+            var boxW = container.offsetWidth || 320;
+            var boxH = container.offsetHeight || 420;
+            var safeL = Math.max(8, Math.min(p.left, winW - boxW - 8));
+            var safeT = Math.max(8, Math.min(p.top, winH - boxH - 8));
+            container.style.left = safeL + 'px';
+            container.style.top = safeT + 'px';
+            container.style.right = 'auto';
+          }
+        }
+        if (res && res.sf_scratchpad_font_family) {
+          applyFloatingFont(res.sf_scratchpad_font_family);
+        }
+      });
+    }
+
+    // Viewport resize/zoom flexible clamp
+    function clampWithinViewport() {
+      if (!container || container.style.display === 'none') return;
+      var rect = container.getBoundingClientRect();
+      var winW = window.innerWidth;
+      var winH = window.innerHeight;
+      var boxW = rect.width;
+      var boxH = rect.height;
+
+      // Adjust size if wider/taller than viewport
+      if (boxW > winW - 16) {
+        container.style.width = Math.max(260, winW - 16) + 'px';
+        boxW = winW - 16;
+      }
+      if (boxH > winH - 16) {
+        container.style.height = Math.max(200, winH - 16) + 'px';
+        boxH = winH - 16;
+      }
+
+      var maxL = Math.max(8, winW - boxW - 8);
+      var maxT = Math.max(8, winH - boxH - 8);
+      var curL = rect.left;
+      var curT = rect.top;
+
+      var newL = Math.max(8, Math.min(curL, maxL));
+      var newT = Math.max(8, Math.min(curT, maxT));
+
+      if (newL !== curL || newT !== curT) {
+        container.style.left = newL + 'px';
+        container.style.top = newT + 'px';
+        container.style.right = 'auto';
+      }
+    }
+    window.addEventListener('resize', clampWithinViewport, { passive: true });
+
+    // Double click header to snap top-right / restore
+    var lastSavedPos = null;
+    header.addEventListener('dblclick', function (e) {
+      if (e.target.tagName === 'BUTTON') return;
+      var rect = container.getBoundingClientRect();
+      var winW = window.innerWidth;
+      var snapRight = winW - rect.width - 16;
+      var snapTop = 20;
+
+      if (Math.abs(rect.left - snapRight) < 15 && Math.abs(rect.top - snapTop) < 15) {
+        // Restore
+        if (lastSavedPos) {
+          container.style.left = lastSavedPos.left + 'px';
+          container.style.top = lastSavedPos.top + 'px';
+        }
+      } else {
+        lastSavedPos = { left: rect.left, top: rect.top };
+        container.style.left = Math.max(8, snapRight) + 'px';
+        container.style.top = snapTop + 'px';
+      }
+      container.style.right = 'auto';
+      saveFloatingBounds();
+    });
+
+    // High performance butter-smooth dragging using Pointer Events + rAF
+    var dragBoxW = 320;
+    var dragBoxH = 420;
+    var dragWinW = window.innerWidth;
+    var dragWinH = window.innerHeight;
+    var targetL = 0;
+    var targetT = 0;
+    var rafPending = false;
+
+    function applyDragPosition() {
+      container.style.left = targetL + 'px';
+      container.style.top = targetT + 'px';
+      container.style.right = 'auto';
+      rafPending = false;
+    }
+
+    function onPointerDown(e) {
       if (e.target.tagName === 'BUTTON') return;
       isDragging = true;
       startX = e.clientX;
@@ -319,38 +457,81 @@
       var rect = container.getBoundingClientRect();
       initialX = rect.left;
       initialY = rect.top;
+      dragBoxW = rect.width;
+      dragBoxH = rect.height;
+      dragWinW = window.innerWidth;
+      dragWinH = window.innerHeight;
+      targetL = initialX;
+      targetT = initialY;
 
-      function onMouseMove(moveEvt) {
-        if (!isDragging) return;
-        moveEvt.preventDefault();
-        var dx = moveEvt.clientX - startX;
-        var dy = moveEvt.clientY - startY;
+      try {
+        header.setPointerCapture(e.pointerId);
+      } catch (err) {}
 
-        var newX = Math.max(0, Math.min(initialX + dx, window.innerWidth - container.offsetWidth));
-        var newY = Math.max(0, Math.min(initialY + dy, window.innerHeight - container.offsetHeight));
-
-        container.style.left = newX + 'px';
-        container.style.top = newY + 'px';
-        container.style.right = 'auto';
-      }
-
-      function onMouseUp() {
-        isDragging = false;
-        document.removeEventListener('mousemove', onMouseMove);
-        document.removeEventListener('mouseup', onMouseUp);
-        header.style.cursor = 'grab';
-      }
-
-      document.addEventListener('mousemove', onMouseMove);
-      document.addEventListener('mouseup', onMouseUp);
+      container.style.willChange = 'left, top';
+      document.body.style.userSelect = 'none';
       header.style.cursor = 'grabbing';
+    }
+
+    function onPointerMove(e) {
+      if (!isDragging) return;
+      var dx = e.clientX - startX;
+      var dy = e.clientY - startY;
+
+      var maxL = Math.max(8, dragWinW - dragBoxW - 8);
+      var maxT = Math.max(8, dragWinH - dragBoxH - 8);
+
+      targetL = Math.max(8, Math.min(initialX + dx, maxL));
+      targetT = Math.max(8, Math.min(initialY + dy, maxT));
+
+      if (!rafPending) {
+        rafPending = true;
+        requestAnimationFrame(applyDragPosition);
+      }
+    }
+
+    function onPointerUp(e) {
+      if (!isDragging) return;
+      isDragging = false;
+      try {
+        header.releasePointerCapture(e.pointerId);
+      } catch (err) {}
+
+      container.style.willChange = 'auto';
+      document.body.style.userSelect = '';
+      header.style.cursor = 'grab';
+
+      if (rafPending) {
+        applyDragPosition();
+      }
+      saveFloatingBounds();
+    }
+
+    header.style.touchAction = 'none';
+    header.addEventListener('pointerdown', onPointerDown);
+    header.addEventListener('pointermove', onPointerMove);
+    header.addEventListener('pointerup', onPointerUp);
+    header.addEventListener('pointercancel', onPointerUp);
+
+    // Save size when manually resized via CSS resize handle
+    container.addEventListener('mouseup', function () {
+      saveFloatingBounds();
     });
   }
 
-  // Runtime listener for toggle
-  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
-    chrome.runtime.onMessage.addListener(function (req, sender, sendResponse) {
-      if (req.command === 'toggleScratchpad') {
+  // Runtime listener for toggle (Chrome & Firefox compatible)
+  var runtimeApi = (typeof chrome !== 'undefined' && chrome.runtime) ? chrome.runtime :
+    ((typeof browser !== 'undefined' && browser.runtime) ? browser.runtime : null);
+
+  if (runtimeApi && runtimeApi.onMessage) {
+    runtimeApi.onMessage.addListener(function (req, sender, sendResponse) {
+      if (req && req.command === 'toggleScratchpad') {
+        var existing = document.getElementById('sf-floating-scratchpad');
+        if (!scratchpadEl && existing) {
+          scratchpadEl = existing;
+          miniPillEl = document.getElementById('sf-floating-scratchpad-minipill');
+        }
+
         if (!scratchpadEl) {
           createScratchpad();
           sendResponse({ success: true, state: 'opened' });
@@ -364,6 +545,7 @@
             sendResponse({ success: true, state: 'closed' });
           }
         }
+        return true;
       }
     });
   }

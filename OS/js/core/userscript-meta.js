@@ -24,8 +24,6 @@
     webrequest: 'webRequests'
   };
 
-  // Tags whose value is a boolean flag rather than a string.
-  var BOOL_TAGS = { noframes: 'noframes', unwrap: 'unwrap' };
 
   // Order used when the header is regenerated. Multi-value tags are emitted
   // once per value so a round-trip never collapses them into one line.

@@ -14,10 +14,10 @@ function toggleReaderMode() {
     isReaderMode = false;
     return;
   }
-  
+
   isReaderMode = true;
   originalBodyDisplay = document.body.style.display;
-  
+
   // Very basic Readability algorithm: Find paragraph tags, headers
   const textElements = Array.from(document.querySelectorAll('h1, h2, h3, p, li, article'))
     .filter(el => {
@@ -80,10 +80,10 @@ function toggleReaderMode() {
       });
     }
   }
-  
+
   // Hide original body, show reader container
   document.body.style.display = "none";
-  
+
   readerContainer = document.createElement('div');
   readerContainer.id = "sf-cyber-reader";
   readerContainer.style.cssText = `
@@ -98,7 +98,7 @@ function toggleReaderMode() {
     font-size: 18px;
     line-height: 1.6;
   `;
-  
+
   const inner = document.createElement('div');
   inner.style.cssText = "max-width: 800px; margin: 0 auto;";
 
@@ -118,7 +118,7 @@ function toggleReaderMode() {
 
   readerContainer.appendChild(inner);
   document.documentElement.appendChild(readerContainer);
-  
+
   closeBtn.onclick = () => {
     toggleReaderMode();
   };

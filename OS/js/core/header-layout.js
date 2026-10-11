@@ -870,9 +870,9 @@
     if (btnReset) btnReset.addEventListener('click', resetAll);
 
     var modal = document.getElementById('header-settings-modal');
-    if (modal) modal.addEventListener('click', function (e) {
+    if (modal) {modal.addEventListener('click', function (e) {
       if (e.target === modal) closeModal();
-    });
+    });}
 
     document.querySelectorAll('.hdrs-theme-chip').forEach(function (chip) {
       chip.addEventListener('click', function () {

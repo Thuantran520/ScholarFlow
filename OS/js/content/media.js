@@ -759,7 +759,7 @@
             });
             return true; // hold the message channel open for the async reply
           }
-          return;
+
         }
       } catch (e) {}
     });

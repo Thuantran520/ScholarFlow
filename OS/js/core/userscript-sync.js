@@ -31,7 +31,7 @@
 
   function _toast(message, type) {
     if (typeof globalThis.SF_showToast === 'function') {
-      try { globalThis.SF_showToast(message, type || 'info'); return; } catch (e) { /* fall through */ }
+      try { globalThis.SF_showToast(message, type || 'info');  } catch (e) { /* fall through */ }
     }
   }
 

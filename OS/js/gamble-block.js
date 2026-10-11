@@ -39,13 +39,13 @@ onReady(function () {
   }
 
   const back = document.getElementById("btn-gbl-back");
-  if (back) back.addEventListener("click", function () {
+  if (back) {back.addEventListener("click", function () {
     if (window.history.length > 1) window.history.back();
     else window.close();
-  });
+  });}
 
   const allow = document.getElementById("btn-gbl-allow");
-  if (allow) allow.addEventListener("click", function () {
+  if (allow) {allow.addEventListener("click", function () {
     try {
       const rt = (typeof browser !== "undefined" && browser.runtime) ? browser.runtime : chrome.runtime;
       rt.sendMessage({ action: "GMBL_ALLOW_HOST", host: host });
@@ -55,5 +55,5 @@ onReady(function () {
     setTimeout(function () {
       if (window.history.length > 1) window.history.back();
     }, 600);
-  });
+  });}
 });

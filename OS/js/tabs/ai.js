@@ -41,7 +41,41 @@ const AI_DEFAULT_CUSTOM_SERVERS = [
 let aiCustomServers = [...AI_DEFAULT_CUSTOM_SERVERS];
 let aiActiveCustomServerId = "ollama";
 const AI_STORAGE_KEYS = { provider: "sf_ai_provider", keys: "sf_ai_keys", history: "sf_ai_history", settings: "sf_ai_settings", models: "sf_ai_models", customModels: "sf_ai_custom_models", prompts: "sf_ai_prompts", sessions: "sf_ai_sessions", mem: "sf_ai_mem", customServers: "sf_ai_custom_servers", activeCustomServer: "sf_ai_active_custom_server" };
-const AI_DEFAULT_SETTINGS = { includePage: true, includeSelection: true, includeNotes: false, includeImages: true, includeSource: false, stream: true, webSearch: true, autoVideo: true, readingCompanion: true, scope: "auto", maxChars: 16000, temperature: 0.7, ctxBudget: 4096 };
+const AI_DEFAULT_SETTINGS = { includePage: true, includeSelection: true, includeNotes: false, includeImages: true, includeSource: false, stream: true, webSearch: true, autoVideo: true, readingCompanion: true, agentMode: false, agentConfirm: true, agentVision: false, personaStyle: "casual", personaCustom: "", scope: "auto", maxChars: 16000, temperature: 0.7, ctxBudget: 4096 };
+const AI_PERSONAS = {
+  casual: {
+    id: "casual",
+    labelKey: "ai_persona_style_casual",
+    directive: "Phong cách giao tiếp: Tự nhiên, thân thiện, gần gũi như bạn bè đời thường (xưng mình/bạn hoặc tui/bồ tùy ngữ cảnh, giọng điệu ấm áp, dễ mến)."
+  },
+  humorous: {
+    id: "humorous",
+    labelKey: "ai_persona_style_humorous",
+    directive: "Phong cách giao tiếp: Hài hước, lầy lội, bắt trend, dí dỏm kiểu Gen Z (dùng từ ngữ trẻ trung, vui nhộn, tạo không khí thoải mái)."
+  },
+  polite: {
+    id: "polite",
+    labelKey: "ai_persona_style_polite",
+    directive: "Phong cách giao tiếp: Lịch sự, tinh tế, ấm áp và tôn trọng người đối diện (dùng từ ngữ nhã nhặn, chân thành, thiện cảm)."
+  },
+  concise: {
+    id: "concise",
+    labelKey: "ai_persona_style_concise",
+    directive: "Phong cách giao tiếp: Ngắn gọn, đi thẳng vào trọng tâm, dứt khoát, không vòng vo, chỉ 1-2 câu súc tích."
+  },
+  professional: {
+    id: "professional",
+    labelKey: "ai_persona_style_professional",
+    directive: "Phong cách giao tiếp: Chuyên nghiệp, học thuật, chuẩn mực và rõ ràng."
+  }
+};
+function aiBuildPersonaDirective(settings){
+  const s = settings || aiSettings || {};
+  const styleKey = (s.personaStyle && AI_PERSONAS[s.personaStyle]) ? s.personaStyle : "casual";
+  const base = AI_PERSONAS[styleKey].directive;
+  const custom = String(s.personaCustom || "").trim().slice(0, 600);
+  return custom ? (base + " Đặc điểm tính cách / cách xưng hô riêng của người dùng: " + custom + ".") : base;
+}
 const AI_DEFAULT_PROMPTS = { summary: "Tóm tắt trang này thành 5 bullet + 1 đoạn 100 chữ bằng tiếng Việt.", qa: "Trả lời câu hỏi dựa trên nội dung trang đang đứng, trích dẫn nguồn nếu có.", explain: "Giải thích đoạn bôi đen bằng tiếng Việt đơn giản.", translate: "Dịch nội dung chính của trang sang tiếng Việt tự nhiên.", outline: "Tạo outline 3 cấp (I, 1, a) cho bài viết này.", timeline: "Tạo danh sách các mốc thời gian (timeline/chương) quan trọng của video hoặc bài viết theo định dạng:\n- [mm:ss] Tiêu đề chương: tóm tắt ngắn nội dung chính.", flashcard: "Tạo 5 thẻ flashcard ôn tập kiến thức cốt lõi từ nội dung trang theo định dạng:\nQ: [Câu hỏi ôn tập]\nA: [Câu trả lời giải thích chi tiết]", cite: "Gợi ý 3 câu hỏi nghiên cứu + 5 từ khóa học thuật từ trang này.", answer: "Giải các câu trắc nghiệm trong nội dung trang: mỗi câu nêu đáp án đúng (A/B/C/D hoặc giá trị) kèm giải thích 1 dòng bằng tiếng Việt. Nếu dữ liệu đáp án nằm trong mã nguồn/script của trang, hãy dựa vào đó để khẳng định.", tabs: "Tóm tắt TỪNG tab đang mở (mỗi tab 2 gạch đầu dòng bằng tiếng Việt), sau đó lập bảng so sánh các tab theo: chủ đề, luận điểm chính, độ tin cậy nguồn.", papers: "Dựa vào danh sách tài liệu tìm được từ Crossref/OpenAlex ở phần ngữ cảnh: chọn và xếp hạng 5 công trình liên quan nhất tới chủ đề trang, mỗi cái nêu lý do 1 dòng và định dạng trích dẫn APA." };
 let aiProvider = "gemini";
 let aiKeys = {};
@@ -132,7 +166,7 @@ function aiGetProviderModels(prov){
   return [...(AI_PROVIDERS[prov]?.models || [])];
 }
 function aiGetProviderConfig(id){ return AI_PROVIDERS[id] || AI_PROVIDERS.gemini; }
-function aiGetModel(p){ const c=aiGetProviderConfig(p); const all=[...aiGetProviderModels(p),...(p==="gemini"?aiFetchedModels:[])]; if(aiModels[p] && all.includes(aiModels[p])) return aiModels[p]; if(c.defaultModel && all.includes(c.defaultModel)) return c.defaultModel; return all[0]||c.defaultModel||""; }
+function aiGetModel(p){ const c=aiGetProviderConfig(p); const all=[...aiGetProviderModels(p),...(p==="gemini"?aiFetchedModels:[])]; if(aiModels[p] && (p==="gemini" || p==="custom" || all.includes(aiModels[p]))) return aiModels[p]; if(c.defaultModel && all.includes(c.defaultModel)) return c.defaultModel; return all[0]||c.defaultModel||""; }
 function aiSetModel(p,m){ const all=[...aiGetProviderModels(p),...(p==="gemini"?aiFetchedModels:[])]; if(all.includes(m)||p==="custom"){ aiModels[p]=m; storSet({[AI_STORAGE_KEYS.models]:aiModels}); } }
 /* ── Security core ────────────────────────────────────────────────────── */
 const AI_STOPWORDS = new Set(["hay","và","cho","tôi","của","với","được","là","câu","hỏi","bạn","hãy","giúp","nào","bao","nhiêu","this","the","and","for","tell","me","page","about","what","many","please","can","you"]);
@@ -271,6 +305,13 @@ const AI_SKILLS = {
     trigger: /^[\/!](data|stat|thongke|sohoa)\b/i,
     intent: /(phân tích thống kê|phan tich thong ke|giải thích số liệu|giai thich so lieu|p-value|regression|hồi quy|hoi quy|độ lệch chuẩn|do lech chuan|tương quan|tuong quan|statistical analysis)/i,
     instruction: "\n\n[KỸ NĂNG CHUYÊN SÂU: PHÂN TÍCH THỐNG KÊ & DỮ LIỆU ĐỊNH LƯỢNG]\n- Phân tích và diễn giải ý nghĩa thực tế của các số liệu thống kê (Mean, Median, SD, P-value, R², Khoảng tin cậy 95%).\n- Phân biệt rạch ròi giữa Tương quan (Correlation) và Quan hệ nhân quả (Causation).\n- Cảnh báo các bẫy thống kê thường gặp (P-hacking, survivorship bias, selection bias) và đưa ra kết luận thận trọng."
+  },
+  vision: {
+    key: "vision",
+    label: "Thị giác Màn hình & Đọc hiểu Giao diện (Vision)",
+    trigger: /^[\/!](vision|screen|capture|nhin|xemanh|live|stream|cam|camera)\b/i,
+    intent: /(nhìn màn hình|nhin man hinh|chụp màn hình này|xem giao diện|đọc ảnh màn hình|phân tích ảnh chụp|thị giác máy tính|vision|xem trang này qua ảnh|quay trực tiếp|quay truc tiep|camera trực tiếp|live stream|quay lên|nhìn camera)/i,
+    instruction: "\n\n[KỸ NĂNG CHUYÊN SÂU: THỊ GIÁC MÀN HÌNH (VISION) & ĐỌC HIỂU GIAO DIỆN TRỰC QUAN]\n- Phân tích và quan sát toàn diện hình ảnh chụp màn hình được cung cấp.\n- Đọc hiểu mọi thành phần trực quan: nút bấm, biểu tượng (icon Follow TikTok/YouTube, avatar, nút đóng modal), biểu đồ, bảng biểu, hình vẽ minh họa, công thức và văn bản trong ảnh.\n- Phân tích chính xác bố cục, màu sắc, cảnh báo và chỉ dẫn thực tế trên giao diện để giải đáp hoặc thực thi chính xác."
   },
   video: {
     key: "video",
@@ -452,7 +493,7 @@ function aiSelectRelevantWindows(fullText, query, budget){
   return joined.slice(0, budget);
 }
 let aiAbort = null; let aiUserStopped = false;
-function aiSig(parent, ms){ const ctrl=new AbortController(); const t=setTimeout(()=>{ try{ ctrl.abort(); }catch(e){} }, ms); if(parent){ if(parent.aborted){ try{ ctrl.abort(); }catch(e){} } else { try{ parent.addEventListener("abort", ()=>{ try{ ctrl.abort(); }catch(e){} }); }catch(e){} } } return ctrl.signal; }
+function aiSig(parent, ms){ const ctrl=new AbortController(); setTimeout(()=>{ try{ ctrl.abort(); }catch(e){} }, ms); if(parent){ if(parent.aborted){ try{ ctrl.abort(); }catch(e){} } else { try{ parent.addEventListener("abort", ()=>{ try{ ctrl.abort(); }catch(e){} }); }catch(e){} } } return ctrl.signal; }
 function aiRenderPipelineStatus(el, info){
   while(el.firstChild){ el.removeChild(el.firstChild); }
   if(info==null || typeof info!=="object"){
@@ -1769,6 +1810,9 @@ function aiPopulateModelSelect(explicitVal){
     // Gemini: show if Gemini key is present OR if NO keys entered anywhere (default provided models)
     if(hasGeminiKey || noKeysEntered){
       const geminiModels = [...aiGetProviderModels("gemini"), ...aiFetchedModels];
+      if (aiModels["gemini"] && !geminiModels.includes(aiModels["gemini"])) {
+        geminiModels.unshift(aiModels["gemini"]);
+      }
       [...new Set(geminiModels)].forEach(m => {
         const o = document.createElement("option");
         o.value = "gemini:" + m;
@@ -1901,20 +1945,20 @@ function aiRenderCustomServers(){
   aiCustomServers.forEach(srv => {
     const item = document.createElement("div");
     item.className = "ai-custom-server-item" + (aiProvider === "custom" && aiActiveCustomServerId === srv.id ? " active" : "");
-    
+
     const info = document.createElement("div");
     const title = document.createElement("div");
     title.className = "ai-custom-server-title";
     title.textContent = srv.name || srv.model || "Custom Server";
-    
+
     const meta = document.createElement("div");
     meta.className = "ai-custom-server-meta";
     meta.textContent = (srv.model ? srv.model + " · " : "") + srv.url;
-    
+
     info.appendChild(title);
     info.appendChild(meta);
     item.appendChild(info);
-    
+
     const delBtn = document.createElement("button");
     delBtn.type = "button";
     delBtn.className = "ai-custom-server-del";
@@ -1933,7 +1977,7 @@ function aiRenderCustomServers(){
       if(typeof showToast === "function") showToast("ai_toast_server_deleted", "success");
     });
     item.appendChild(delBtn);
-    
+
     item.addEventListener("click", () => {
       aiProvider = "custom";
       aiActiveCustomServerId = srv.id;
@@ -1944,7 +1988,7 @@ function aiRenderCustomServers(){
       aiUpdateProviderUI();
       aiRenderCustomServers();
     });
-    
+
     listEl.appendChild(item);
   });
 }
@@ -1963,7 +2007,7 @@ function aiAddCustomServer(){
   const model = (modelEl ? modelEl.value.trim() : "");
   const key = keyEl ? keyEl.value.trim() : "";
   const id = "srv_" + Date.now().toString(36) + Math.floor(Math.random()*1000).toString(36);
-  
+
   const newSrv = { id, name, url, model, key };
   aiCustomServers.push(newSrv);
   aiActiveCustomServerId = id;
@@ -1973,12 +2017,12 @@ function aiAddCustomServer(){
     [AI_STORAGE_KEYS.activeCustomServer]: id,
     [AI_STORAGE_KEYS.provider]: "custom"
   });
-  
+
   if(nameEl) nameEl.value = "";
   if(modelEl) modelEl.value = "";
   if(urlEl) urlEl.value = "";
   if(keyEl) keyEl.value = "";
-  
+
   aiRenderCustomServers();
   aiUpdateProviderUI();
   if(typeof showToast === "function") showToast("ai_toast_server_saved", "success");
@@ -2016,7 +2060,7 @@ function aiBuildSystemInstruction(isPageQuery, skill, pipeline){
   }
   if(sysBody.indexOf("{0}")!==-1) sysBody=sysBody.split("{0}").join(langName);
   const factRule="\n\nQUY TẮC SỰ THẬT (GOOGLE SEARCH & ĐA NGUỒN): Khi câu hỏi hỏi về nhân vật, sự kiện, dữ liệu thực tế hoặc học thuật: hãy kết hợp cả công cụ Google Search (grounding) và khối dữ liệu đối chiếu đa nguồn từ web thực tế. Tìm điểm trùng khớp và sự đồng thuận cao nhất giữa các nguồn uy tín để khẳng định thông tin chính xác 100%. Phân biệt rõ ràng từng đối tượng, không nhầm lẫn hay ghép nối sai lệch. Trình bày nội dung trực tiếp, tự nhiên; TUYỆT ĐỐI KHÔNG chèn nhãn [Nguồn:...] hay link URL vào câu trả lời.";
-  
+
   let skillRule="";
   if(skill&&skill.instruction) skillRule=skill.instruction;
   let pipelineRule="";
@@ -2055,7 +2099,7 @@ function aiBuildPrompt(userText, pageText, selectionText, imageNote, pinnedNote,
   if(sysBody.indexOf("{0}")!==-1) sysBody=sysBody.split("{0}").join(langName);
   const FACT_RULE="\n\nQUY TẮC SỰ THẬT: Khi câu hỏi hỏi về nhân vật, tác giả, sự kiện thực tế hoặc dữ liệu thời gian: hãy kết hợp sử dụng Google Search (grounding) và dữ liệu web thực tế để lấy thông tin chính xác nhất từ nguồn uy tín (người dùng không cần trích dẫn URL nguồn, chỉ cần thông tin chính xác 100%). Phân biệt rõ ràng từng cá nhân, sự kiện, không nhầm lẫn hay chắp vá. TUYỆT ĐỐI KHÔNG chèn nhãn [Nguồn:...] hay link URL vào nội dung câu trả lời.";
   const COMPLETENESS_RULE="\n\nQUY TẮC NỘI DUNG ĐẦY ĐỦ: Khi người dùng yêu cầu nội dung đầy đủ/chi tiết/toàn bộ (lời bài hát, thơ, tài liệu, thuật toán, code, bài giải...): (1) Bắt buộc tìm kiếm hoặc trích xuất bản đầy đủ chính xác nhất — không cắt xén, không dùng dấu '...' hay tóm tắt sơ sài. (2) Trình bày TOÀN BỘ nội dung liền mạch theo đúng trật tự. (3) Nếu nội dung quá dài, trình bày tối đa phần hoàn chỉnh và hướng dẫn tiếp tục liền mạch.";
-  
+
   const sys=sysBody+FACT_RULE+COMPLETENESS_RULE+"\n\n";
   let scopeNote="";
   if(isPageQuery) {
@@ -2321,6 +2365,415 @@ function aiUseWebBridge(prompt, provider){
   const hint=(typeof getI18nText==="function")?getI18nText("ai_toast_web_hint"):"Đã copy prompt + nội dung trang — dán (Ctrl+V) vào "+cfg.label+" Web để hỏi (miễn phí, không cần API key).";
   return hint+"\n\n---\n"+prompt.slice(0,3000)+(prompt.length>3000?"...":"")+"\n\n("+aiLocalFallback(prompt,"")+")";
 }
+
+/* ── Vision: Token-Saving Viewport Compression & Capture ── */
+async function aiCaptureActiveTabLowToken(maxDimension = 768, quality = 0.6) {
+  const tabsApi = (typeof browser !== "undefined" && browser.tabs) ? browser.tabs : (typeof chrome !== "undefined" ? chrome.tabs : null);
+  if (!tabsApi || !tabsApi.captureVisibleTab) return null;
+  return new Promise((resolve) => {
+    try {
+      tabsApi.captureVisibleTab(null, { format: "jpeg", quality: 65 }, async (dataUrl) => {
+        if (!dataUrl) {
+          try {
+            tabsApi.captureVisibleTab(null, { format: "png" }, async (pngUrl) => {
+              if (!pngUrl) return resolve(null);
+              const compressed = await aiCompressDataUrl(pngUrl, maxDimension, quality);
+              resolve(compressed);
+            });
+          } catch(e) { resolve(null); }
+          return;
+        }
+        const compressed = await aiCompressDataUrl(dataUrl, maxDimension, quality);
+        resolve(compressed);
+      });
+    } catch(e) {
+      resolve(null);
+    }
+  });
+}
+
+function aiCompressDataUrl(dataUrl, maxDimension = 768, quality = 0.6) {
+  return new Promise((resolve) => {
+    try {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width;
+        let h = img.height;
+        if (w > maxDimension || h > maxDimension) {
+          if (w > h) {
+            h = Math.round((h * maxDimension) / w);
+            w = maxDimension;
+          } else {
+            w = Math.round((w * maxDimension) / h);
+            h = maxDimension;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, w, h);
+        const lowResDataUrl = canvas.toDataURL("image/jpeg", quality);
+        const parts = lowResDataUrl.split(",");
+        const base64Data = parts[1] || "";
+        resolve({
+          name: "screen_vision.jpg",
+          size: Math.round(base64Data.length * 0.75),
+          mimeType: "image/jpeg",
+          data: base64Data,
+          preview: lowResDataUrl,
+          width: w,
+          height: h,
+          isVision: true
+        });
+      };
+      img.onerror = () => resolve(null);
+      img.src = dataUrl;
+    } catch(e) {
+      resolve(null);
+    }
+  });
+}
+
+async function aiHandleVisionCaptureClick() {
+  const visionBtn = document.getElementById("ai-btn-capture-vision");
+  const existingIdx = aiAttachedImages.findIndex(im => im && im.isVision);
+  if (existingIdx !== -1) {
+    aiAttachedImages.splice(existingIdx, 1);
+    aiRenderAttachedImages();
+    if (visionBtn) visionBtn.classList.remove("is-active");
+    return;
+  }
+  if (typeof aiUpdateTypingStatus === "function") {
+    aiUpdateTypingStatus("⏳ Đang chụp & nén màn hình tiết kiệm token...");
+  }
+  const snap = await aiCaptureActiveTabLowToken(768, 0.6);
+  if (typeof aiHideTyping === "function") {
+    aiHideTyping();
+  }
+  if (snap && snap.data) {
+    aiAttachedImages.push(snap);
+    aiRenderAttachedImages();
+    if (visionBtn) visionBtn.classList.add("is-active");
+    const kb = Math.round(snap.size / 1024);
+    if (typeof showToast === "function") {
+      showToast("ai_toast_vision_captured", "success", [kb]);
+    }
+  } else {
+    if (typeof showToast === "function") {
+      showToast("ai_toast_capture_failed", "warning");
+    }
+  }
+}
+
+/* ── Realtime Live Stream Controller (Camera & Screen) ── */
+let aiLiveStream = null;
+let aiLiveSilentActive = false;
+let aiLiveSourceType = 'tab';
+let aiLiveRefreshTimer = null;
+
+async function aiCheckHasCamera() {
+  try {
+    if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      return devices.some(d => d.kind === 'videoinput');
+    }
+  } catch(e) {}
+  return false;
+}
+
+function aiBroadcastLiveBorder(enabled) {
+  const tabsApi = (typeof browser !== "undefined" && browser.tabs) ? browser.tabs : (typeof chrome !== "undefined" ? chrome.tabs : null);
+  if (!tabsApi || !tabsApi.query) return;
+  try {
+    tabsApi.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs && tabs[0] && tabs[0].id) {
+        try {
+          tabsApi.sendMessage(tabs[0].id, { action: "SET_LIVE_VISION_BORDER", enabled: !!enabled }, () => {
+            void (chrome.runtime && chrome.runtime.lastError);
+          });
+        } catch(e) {}
+      }
+    });
+  } catch(e) {}
+}
+
+async function aiStartLiveStream(sourceType = 'tab', isFallback = false) {
+  const box = document.getElementById('ai-live-box');
+  const video = document.getElementById('ai-live-video');
+  const previewImg = document.getElementById('ai-live-preview-img');
+  const tabCard = document.getElementById('ai-live-tab-card');
+  const tabTitle = document.getElementById('ai-live-tab-title');
+  const select = document.getElementById('ai-live-source-select');
+  const btn = document.getElementById('ai-btn-live-stream');
+  const statusText = document.getElementById('ai-live-status-text');
+
+  if (select) select.value = sourceType;
+
+  if (aiLiveStream) {
+    try {
+      aiLiveStream.getTracks().forEach(t => t.stop());
+    } catch(e) {}
+    aiLiveStream = null;
+    window.aiLiveStream = null;
+  }
+  if (aiLiveRefreshTimer) {
+    clearInterval(aiLiveRefreshTimer);
+    aiLiveRefreshTimer = null;
+  }
+
+  aiLiveSourceType = sourceType;
+
+  try {
+    if (sourceType === 'camera') {
+      let stream = null;
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false
+        });
+      } else {
+        throw new Error('getUserMedia not supported');
+      }
+
+      if (!stream) throw new Error('Could not acquire camera stream');
+
+      aiLiveStream = stream;
+      window.aiLiveStream = stream;
+      aiLiveSilentActive = false;
+      window.aiLiveSilentActive = false;
+
+      stream.getVideoTracks().forEach(track => {
+        track.onended = () => {
+          aiStopLiveStream(false);
+        };
+      });
+
+      if (video) {
+        video.style.display = 'block';
+        video.srcObject = stream;
+        try { await video.play(); } catch(e) {}
+      }
+      if (previewImg) previewImg.style.display = 'none';
+      if (tabCard) tabCard.style.display = 'none';
+    } else if (sourceType === 'screen') {
+      // ── Hardware-Accelerated 60 FPS Window / Screen Stream ──
+      let stream = null;
+      if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+        stream = await navigator.mediaDevices.getDisplayMedia({
+          video: { width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } },
+          audio: false
+        });
+      } else {
+        throw new Error('getDisplayMedia not supported');
+      }
+
+      if (!stream) throw new Error('Could not acquire display stream');
+
+      aiLiveStream = stream;
+      window.aiLiveStream = stream;
+      aiLiveSilentActive = false;
+      window.aiLiveSilentActive = false;
+
+      stream.getVideoTracks().forEach(track => {
+        track.onended = () => {
+          aiStopLiveStream(false);
+        };
+      });
+
+      if (video) {
+        video.style.display = 'block';
+        video.srcObject = stream;
+        try { await video.play(); } catch(e) {}
+      }
+      if (previewImg) previewImg.style.display = 'none';
+      if (tabCard) tabCard.style.display = 'none';
+    } else {
+      // ── Tab hiện tại (Silent Ambient Viewport - Viền phát sáng đổ sáng bên trong, 100% không hiện thanh chia sẻ) ──
+      aiLiveSilentActive = true;
+      window.aiLiveSilentActive = true;
+      aiLiveStream = null;
+      window.aiLiveStream = null;
+
+      if (video) {
+        video.style.display = 'none';
+        video.srcObject = null;
+      }
+      if (previewImg) previewImg.style.display = 'none';
+
+      if (tabCard) {
+        tabCard.style.display = 'flex';
+        const info = (typeof aiGetCurrentPageInfo === 'function') ? aiGetCurrentPageInfo() : null;
+        if (tabTitle) {
+          tabTitle.textContent = (info && info.title) ? info.title : document.title || 'Tab hiện tại';
+        }
+      }
+    }
+
+    if (box) box.style.display = 'flex';
+    if (btn) btn.classList.add('is-active');
+
+    aiBroadcastLiveBorder(true);
+
+    let sourceLabel = 'Tab';
+    if (sourceType === 'camera') {
+      sourceLabel = (typeof aiT === 'function') ? aiT('ai_live_source_camera', null, 'Camera') : 'Camera';
+    } else if (sourceType === 'screen') {
+      sourceLabel = (typeof aiT === 'function') ? aiT('ai_live_source_screen', null, 'Màn hình') : 'Màn hình';
+    } else {
+      sourceLabel = (typeof aiT === 'function') ? aiT('ai_live_source_tab', null, 'Tab hiện tại') : 'Tab hiện tại';
+    }
+
+    if (statusText) {
+      statusText.textContent = 'REALTIME LIVE (' + sourceLabel + ')';
+    }
+
+    if (typeof showToast === 'function') {
+      showToast('ai_toast_live_started', 'success', [sourceLabel]);
+    }
+    return true;
+  } catch (err) {
+    console.warn('aiStartLiveStream error:', err);
+
+    if ((sourceType === 'screen' || sourceType === 'camera') && !isFallback) {
+      console.info('Switching to Silent Tab Viewport fallback...');
+      return await aiStartLiveStream('tab', true);
+    }
+
+    aiStopLiveStream(false);
+
+    const isCancelled = err && (
+      err.name === 'NotAllowedError' ||
+      err.name === 'AbortError' ||
+      (err.message && err.message.toLowerCase().includes('permission denied'))
+    );
+
+    if (!isCancelled) {
+      if (typeof showToast === 'function') {
+        showToast('ai_toast_live_error', 'warning');
+      }
+    }
+    return false;
+  }
+}
+
+function aiStopLiveStream(notify = true) {
+  aiBroadcastLiveBorder(false);
+  if (aiLiveRefreshTimer) {
+    clearInterval(aiLiveRefreshTimer);
+    aiLiveRefreshTimer = null;
+  }
+  if (aiLiveStream) {
+    try {
+      aiLiveStream.getTracks().forEach(t => t.stop());
+    } catch(e) {}
+    aiLiveStream = null;
+    window.aiLiveStream = null;
+  }
+  aiLiveSilentActive = false;
+  window.aiLiveSilentActive = false;
+
+  const video = document.getElementById('ai-live-video');
+  if (video) {
+    video.srcObject = null;
+    video.style.display = 'none';
+  }
+
+  const previewImg = document.getElementById('ai-live-preview-img');
+  if (previewImg) {
+    previewImg.src = '';
+    previewImg.style.display = 'none';
+  }
+
+  const tabCard = document.getElementById('ai-live-tab-card');
+  if (tabCard) {
+    tabCard.style.display = 'none';
+  }
+
+  const box = document.getElementById('ai-live-box');
+  if (box) box.style.display = 'none';
+
+  const btn = document.getElementById('ai-btn-live-stream');
+  if (btn) btn.classList.remove('is-active');
+
+  if (notify && typeof showToast === 'function') {
+    showToast('ai_toast_live_stopped', 'info');
+  }
+}
+
+async function aiToggleLiveStream() {
+  if (aiLiveSilentActive || aiLiveStream) {
+    aiStopLiveStream(true);
+    return;
+  }
+  await aiStartLiveStream('tab');
+}
+
+async function aiSwitchLiveStreamSource() {
+  const sources = ['tab', 'screen', 'camera'];
+  const curIdx = sources.indexOf(aiLiveSourceType);
+  const nextSource = sources[(curIdx + 1) % sources.length];
+  await aiStartLiveStream(nextSource, true);
+}
+
+function aiGrabLiveFrame(maxDimension = 768, quality = 0.6) {
+  const video = document.getElementById('ai-live-video');
+  if (video && video.srcObject && video.videoWidth && video.videoHeight) {
+    let w = video.videoWidth;
+    let h = video.videoHeight;
+    if (w > maxDimension || h > maxDimension) {
+      if (w > h) {
+        h = Math.round((h * maxDimension) / w);
+        w = maxDimension;
+      } else {
+        w = Math.round((w * maxDimension) / h);
+        h = maxDimension;
+      }
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, w, h);
+    const lowResDataUrl = canvas.toDataURL('image/jpeg', quality);
+    const parts = lowResDataUrl.split(',');
+    const base64Data = parts[1] || '';
+    return {
+      name: 'live_stream_frame.jpg',
+      size: Math.round(base64Data.length * 0.75),
+      mimeType: 'image/jpeg',
+      data: base64Data,
+      preview: lowResDataUrl,
+      width: w,
+      height: h,
+      isLiveFrame: true
+    };
+  }
+  if (window._aiLastLiveTabSnap) {
+    return Object.assign({}, window._aiLastLiveTabSnap, { isLiveFrame: true });
+  }
+  return null;
+}
+
+function aiHandleLiveSnapClick() {
+  const frame = aiGrabLiveFrame(768, 0.6);
+  if (!frame) {
+    if (typeof showToast === "function") showToast("ai_toast_capture_failed", "warning");
+    return;
+  }
+  const existingIdx = aiAttachedImages.findIndex(im => im && im.isLiveFrame);
+  if (existingIdx !== -1) {
+    aiAttachedImages.splice(existingIdx, 1);
+  }
+  aiAttachedImages.push(frame);
+  aiRenderAttachedImages();
+  const kb = Math.round(frame.size / 1024);
+  if (typeof showToast === "function") {
+    showToast("ai_toast_vision_captured", "success", [kb]);
+  }
+}
+
+
 function aiRenderAttachedImages(){
   const preview=document.getElementById("ai-image-preview");
   const list=document.getElementById("ai-image-preview-list");
@@ -2367,6 +2820,7 @@ function aiRenderAttachedImages(){
       list.appendChild(card);
     });
   }
+  const visionBtn=document.getElementById("ai-btn-capture-vision"); if(visionBtn){ const hasV=aiAttachedImages.some(im=>im&&im.isVision); visionBtn.classList.toggle("is-active", hasV || !!aiSettings.agentVision); }
   if(thumb&&aiAttachedImages[0]) thumb.src=aiAttachedImages[0].preview;
   if(nameEl&&aiAttachedImages[0]){
     nameEl.textContent=(aiAttachedImages.length===1)
@@ -2519,23 +2973,36 @@ function aiCheckLocalAssistantQuery(rawQuery){
 function aiDetectAutoNavIntent(rawQuery){
     if(!rawQuery || typeof rawQuery !== "string") return null;
     const q = rawQuery.trim().replace(/^[\/!](agent|sandbox|browse)\s+/i, "");
-  
+
     const isYt = /(youtube|kênh|kenh|video|clip|yt)/i.test(q);
-  
+
     // Pattern: "tìm kênh youtube độ mixi và bật lên" or "tìm trang web mixigaming thì tìm kiếm và bật lên"
     // Also matches generic "mở [xyz]" or "bật [xyz]"
     const match = /(?:tìm(?:\s+kiếm)?|search|kiếm|mở|bật|truy cập)\s+(.+?)(?:\s+(?:thì\s+tìm\s+kiếm\s+)?(?:và|rồi|va|roi)?\s*(?:bật|mở|open|truy cập|vào)\s*(?:lên|ra)?(?:\s+(?:giúp|hộ)\s+(?:tôi|tao|mình|em|nha|nhé|cho tôi))?)?$/i.exec(q);
-    
+
     if(match && match[1]){
       let topic = match[1].trim();
       // Remove trailing " và bật lên" just in case the regex captured it in group 1
       topic = topic.replace(/(?:\s+(?:thì\s+tìm\s+kiếm\s+)?(?:và|rồi)\s*(?:bật|mở)\s*lên)$/i, "").trim();
-      if(topic.length >= 2) return { query: topic, original: q, isYoutube: isYt };
+      if(topic.length >= 2) return { query: topic, topic: topic, original: q, isYoutube: isYt };
     }
-  
+
+    const authNav = /^(?:hãy\s+|giúp\s+tôi\s+|làm\s+ơn\s+)?(đăng\s*ký|dang\s*ky|sign\s*up|register|tạo\s*tài\s*khoản|đăng\s*nhập|dang\s*nhap|login|sign\s*in|log\s*in)\s+(?:tài\s*khoản\s+|tai\s*khoan\s+|trang\s+|web\s+)?(aws|amazon|github|gitlab|google|gmail|openai|chatgpt|claude|discord|tiktok|facebook|messenger|instagram|linkedin|twitter|reddit|netflix|spotify|canva|figma|notion|vercel|cloudflare|azure|gcp|[a-z0-9-]+\.[a-z]{2,})(?:\s+(?:giúp|hộ|cho)\s*(?:tôi|tao|mình|em)?|\s+(?:nha|nhé|luôn|đi))*[\s.!?]*$/i.exec(q);
+    if(authNav && authNav[2]){
+      const isSignup = /đăng\s*ký|dang\s*ky|sign\s*up|register|tạo\s*tài\s*khoản/i.test(authNav[1]);
+      const svc = authNav[2].trim();
+      return {
+        query: svc + (isSignup ? " sign up create account" : " login sign in"),
+        topic: svc,
+        action: isSignup ? "signup" : "login",
+        original: q,
+        isYoutube: false
+      };
+    }
+
     return null;
   }
-  
+
   async function aiExecuteAutoNav(navIntent, provider){
   aiIsSending = true;
   aiUserStopped = false;
@@ -2656,33 +3123,59 @@ function aiDetectAutoNavIntent(rawQuery){
   }
 }
 
-const AI_AGENT_SENSITIVE_RE = /(?:đăng\s*thông|đăng\s*ký|đăng\s*nhập|thanh\s*toán|chuyển\s*khoản|giỏ\s*hàng|đặt\s*hàng|mua\s*hàng|mua\s*ngay|checkout|payment|purchase|subscribe|sign\s*in|log\s*in|add to cart|delete account|xóa\s*tài khoản)/i;
+const AI_AGENT_SENSITIVE_RE = /(?:đang\s*thông|đăng\s*ký|dang\s*ky|đăng\s*nhập|dang\s*nhap|thanh\s*toán|chuyển\s*khoản|giỏ\s*hàng|đặt\s*hàng|mua\s*hàng|mua\s*ngay|checkout|payment|purchase|subscribe|follow|sign\s*in|log\s*in|add to cart|delete account|xóa\s*tài khoản)/i;
 const AI_AGENT_ACTION_VERBS = [
+  { verb:"click", labelKey:"ai_agent_label_unsubscribe", sensitive:true, match:["hủy đăng ký","huy dang ky","unsubscribe","unfollow","bỏ theo dõi","bo theo doi","huỷ đăng ký"],
+    re:/(^|[\s,;:!?"'`(\[■])(?:(?:nhấn|nhan|bấm|bam|click|tap|press|chọn|chon)\s+(?:nút\s+|nut\s+|vào\s+|vao\s+)?)?(?:hủy\s*đăng\s*ký|huy\s*dang\s*ky|bỏ\s*theo\s*dõi|bo\s*theo\s*doi|unsubscribe|unfollow)(?=[\s,;.!?)"'»\]]|$)/i },
   { verb:"click", labelKey:"ai_agent_label_subscribe", sensitive:true, match:["đăng ký","dang ky","subscribe","follow","theo dõi","theo doi"],
-    re:/(^|[\s,;:!?"'`(\[■])(?:đăng\s*ký|dang\s*ky|subscribe|theo\s*dõi|theo doi|follow)(?=[\s,;.!?)"'»\]]|$)/i },
+    selector:"ytd-watch-metadata ytd-subscribe-button-renderer button, #owner #subscribe-button button, yt-subscribe-button-view-model button, #subscribe-button-shape button, ytd-subscribe-button-renderer button, #subscribe-button button, button[data-e2e='follow-button'], [data-e2e='follow-button'] button, [data-e2e='follow-button'], button[data-e2e='browse-follow'], [data-e2e='browse-follow'], button[data-e2e='feed-follow'], [data-e2e='feed-follow'], button[data-e2e='user-info-follow-btn']",
+    re:/(^|[\s,;:!?"'`(\[■])(?:(?:nhấn|nhan|bấm|bam|click|tap|press|chọn|chon)\s+(?:nút\s+|nut\s+|vào\s+|vao\s+)?)?(?:đăng\s*ký(?:\s+kênh)?|dang\s*ky(?:\s+kenh)?|subscribe|theo\s*dõi|theo\s*doi|follow)(?=[\s,;.!?)"'»\]]|$)/i },
+  { verb:"click", labelKey:"ai_agent_label_like", sensitive:false, match:["like","thích","thich","thả tim","tha tim","upvote","love"],
+    selector:"ytd-WatchMetadata like-button-view-model button, segmented-like-dislike-button-view-model like-button-view-model button, #top-level-buttons-computed ytd-toggle-button-renderer:first-of-type button, [data-e2e='like-icon'], [data-e2e='browse-like-icon'], button[aria-label*='like this' i], button[aria-label*='thích video' i], div[role='button'][aria-label*='Thích' i], div[role='button'][aria-label*='Like' i]",
+    re:/(^|[\s,;:!?"'`(\[■])(?:(?:nhấn|nhan|bấm|bam|click|tap|press|chọn|chon)\s+(?:nút\s+|nut\s+|vào\s+|vao\s+)?)?(?:like|thích|thả\s*tim|tha\s*tim|upvote)(?=[\s,;.!?)"'»\]]|$)/i },
+  { verb:"click", labelKey:"ai_agent_label_share", sensitive:false, match:["chia sẻ","chia se","share"],
+    selector:"ytd-WatchMetadata button[aria-label*='Share' i], ytd-WatchMetadata button[aria-label*='Chia sẻ' i], #top-level-buttons-computed ytd-button-renderer button[aria-label*='Share' i], [data-e2e='share-icon'], [data-e2e='browse-share-group'], button[aria-label*='Share' i], button[aria-label*='Chia sẻ' i]",
+    re:/(^|[\s,;:!?"'`(\[■])(?:(?:nhấn|nhan|bấm|bam|click|tap|press)\s+(?:nút\s+|nut\s+|vào\s+|vao\s+)?)?(?:chia\s*sẻ|chia\s*se|share)(?=[\s,;.!?)"'»\]]|$)/i },
   { verb:"click", labelKey:"ai_agent_label_login", sensitive:true, match:["đăng nhập","dang nhap","login","sign in","log in"],
-    re:/(^|[\s,;:!?"'`(\[■])(?:đăng\s*nhập|dang nhap|sign\s*in|log\s*in|login)(?=[\s,;.!?)"'»\]]|$)/i },
+    re:/(^|[\s,;:!?"'`(\[■])(?:(?:nhấn|nhan|bấm|bam|click|tap|press)\s+(?:nút\s+|nut\s+|vào\s+|vao\s+)?)?(?:đăng\s*nhập|dang\s*nhap|sign\s*in|log\s*in|login)(?=[\s,;.!?)"'»\]]|$)/i },
   { verb:"click", labelKey:"ai_agent_label_buy", sensitive:true, match:["mua","thanh toán","checkout","add to cart","thêm vào giỏ","mua ngay"],
     re:/(^|[\s,;:!?"'`(\[■])(?:mua\s*hàng|mua ngay|mua|mua sắm|mua sam|thanh\s*toán|checkout|payment|purchase|đặt\s*hàng|thêm vào giỏ|add to cart)(?=[\s,;.!?)"'»\]]|$)/i },
+  { verb:"scroll", labelKey:"ai_agent_step_scroll", sensitive:false, match:null,
+    re:/(^|[\s,;:!?"'`(\[■])(?:cuộn\s*(?:xuống|lên|trang)?|kéo\s*(?:xuống|lên)|scroll\s*(?:down|up|to\s*bottom|to\s*top)?)(?=[\s,;.!?)"'»\]]|$)/i },
+  { verb:"comment", labelKey:"ai_agent_label_comment", sensitive:false, match:["bình luận","binh luan","comment","nhận xét","add a comment","viết bình luận"],
+    selector:"#contenteditable-root[contenteditable='true'], ytd-comment-simplebox-renderer #placeholder-area, [data-e2e='comment-input'] [contenteditable='true'], [data-e2e='comment-text'] [contenteditable='true'], div[class*='DivInputEditor'] [contenteditable='true'], textarea[placeholder*='comment' i], textarea[placeholder*='bình luận' i], [contenteditable='true'][aria-label*='comment' i], [contenteditable='true'][aria-label*='bình luận' i], [role='textbox'][aria-label*='comment' i], [role='textbox'][aria-label*='bình luận' i]",
+    re:/(^|[\s,;:!?"'`(\[■])(?:(?:viết|viet|gửi|gui|đăng|dang|thêm|them|nhập|nhap)\s+)?(?:bình\s*luận|binh\s*luan|comment|nhận\s*xét|nhan\s*xet|cmt)(?=[\s,:;.!?)"'»\]]|$)/i },
+  { verb:"message", labelKey:"ai_agent_label_message", sensitive:false, match:["tin nhắn","tin nhan","message","nhắn tin","aa","write a message","gửi tin nhắn"],
+    selector:"div[role='textbox'][contenteditable='true'], [contenteditable='true'][aria-label*='message' i], [contenteditable='true'][aria-label*='tin nhắn' i], [contenteditable='true'][data-lexical-editor='true'], div[class*='slateTextArea'][contenteditable='true'], textarea[placeholder*='message' i], textarea[placeholder*='tin nhắn' i]",
+    re:/(^|[\s,;:!?"'`(\[■])(?:(?:gửi\s+|gui\s+)?(?:tin\s*nhắn|tin\s*nhan)|nhắn\s*tin|nhan\s*tin|trả\s*lời\s*tin\s*nhắn|reply\s*message|send\s*message|chat\s*với)(?=[\s,:;.!?)"'»\]]|$)/i },
   { verb:"submit", labelKey:"ai_agent_step_submit", sensitive:false, match:null,
     re:/(^|[\s,;:!?"'`(\[■])(?:gửi|gui|submit|nhấn\s*enter|nhan enter|press\s*enter|enter)(?=[\s,;.!?)"'»\]]|$)/i },
   { verb:"type", labelKey:"ai_agent_step_type", sensitive:true, match:["mật khẩu", "mật mã", "password"],
-    re:/(^|[\s,;:!?"'(\[\u2026])(?:nhập\s*mật\s*khẩu|nhap\s*mat\s*khau|nhập\s*password|type\s*password|điền\s*mật\s*khẩu)(?=[\s,;"'\[\u2026]|$)/i },
+    selector:"input[type='password']",
+    re:/(^|[\s,;:!?"'(\[\u2026])(?:nhập\s*mật\s*khẩu|nhap\s*mat\s*khau|nhập\s*password|type\s*password|điền\s*mật\s*khẩu)(?=[\s,:;"'\[\u2026]|$)/i },
   { verb:"type", labelKey:"ai_agent_step_type", sensitive:false, match:null,
-    re:/(^|[\s,;:!?"'`(\[■])(?:gõ|go|nhập|nhap|type|điền|dien|fill)(?=[\s,;"'`\[■]|$)/i },
+    re:/(^|[\s,;:!?"'`(\[■])(?:gõ|go|nhập|nhap|type|điền|dien|fill)(?=[\s,:;"'`\[■]|$)/i },
   { verb:"click", labelKey:"ai_agent_step_click", sensitive:false, match:null,
-    re:/(^|[\s,;:!?"'`(\[■])(?:bấm|bam|nhấn|nhan|chọn|chon|click|tap|press)(?=[\s,;"'`\[■]|$)/i }
+    re:/(^|[\s,;:!?"'`(\[■])(?:bấm|bam|nhấn|nhan|chọn|chon|click|tap|press)(?=[\s,:;"'`\[■]|$)/i }
 ];
 function aiAgentStripTail(s){
   return String(s||"")
-    .replace(/[\s,;:.!?]*(?:giúp\s*(?:tôi|tao|mình|em|nó|no)?|ho\s*(?:tôi|tao)?|làm\s*on|lam\s*on|help\s*me|please|cho\s*(?:tôi|tao|mình|em)?|nha|nhé|ne|đi|di|nữa|nua)[\s,;:.!?]*$/i,"")
+    .replace(/[\s,;:.!?]*(?:giúp\s*(?:tôi|tao|mình|em|nó|no)?|hộ\s*(?:tôi|tao|mình|em)?|ho\s*(?:tôi|tao)?|làm\s*ơn|lam\s*on|help\s*me|please|cho\s*(?:tôi|tao|mình|em)?|nha|nhé|ne|đi|di|nữa|nua|luôn|luon)[\s,;:.!?]*$/i,"")
     .replace(/[\s,;:.!?]+(?:rồi|roi|va|và|và\s*rồi|then|sau\s*đó|tiep\s*theo|tiếp theo)[\s,;:.!?]*$/i,"")
     .trim();
 }
 function aiAgentStripLead(s){
   return String(s||"")
-    .replace(/^(?:[\s,;:.!?]*(?:rồi|roi|va|và|then|sau\s*đó|tiep\s*theo|tiếp theo|để|de|và\s*nhập|va nhap)[\s,;:.!?]+)/i,"")
+    .replace(/^(?:[\s,;:.!?]*(?:rồi|roi|va|và|then|sau\s*đó|tiep\s*theo|tiếp theo|để|de|và\s*nhập|va nhap|trực\s*tiếp|truc\s*tiep)[\s,;:.!?]+)/i,"")
     .replace(/^(?:[\s,;:.!?]+)/,"")
+    .trim();
+}
+function aiAgentStripDeicticTarget(s){
+  return String(s||"")
+    .replace(/^(?:vào\s+|vao\s+|cho\s+|trên\s+|tren\s+|ở\s+|o\s+|tại\s+|tai\s+)?(?:nút\s+|nut\s+|button\s+)?(?:kênh|kenh|video|clip|bài\s*viết|bai\s*viet|bài\s*đăng|bài|bai|trang\s*web|trang|page|channel|post|stream|livestream)(?:\s+(?:youtube|tiktok|facebook|fb|discord|messenger|instagram|ig|x|twitter|web|này|nay|đó|do|hiện\s*tại|đang\s*xem|đang\s*mở))*$/i, "")
+    .replace(/\s+(?:trên|tren|ở|o|tại|tai|vào|vao|cho)\s+(?:kênh|kenh|video|clip|bài\s*viết|bài|trang|youtube|tiktok|facebook|fb|discord|messenger)(?:\s+(?:này|nay|đó|do|hiện\s*tại|đang\s*xem))?$/i, "")
+    .replace(/\s+(?:kênh|kenh|video|clip|bài\s*viết|bài|trang|channel|post)\s+(?:này|nay|đó|do|hiện\s*tại|đang\s*xem)$/i, "")
+    .replace(/^(?:này|nay|đó|do|hiện\s*tại|đang\s*xem)$/i, "")
     .trim();
 }
 function aiAgentStripSearchVerb(s){
@@ -2708,9 +3201,9 @@ function aiDetectAgentAction(rawQuery){
     const m = v.re.exec(q);
     if(!m) continue;
     const before = q.slice(0, m.index).trim();
-    if(before !== "" && !/(?:^|[\s,;:.!?])(?:rồi|roi|va|và|then|next|sau\s*đó|tiep\s*theo|tiếp theo|hãy|hay|vui\s*lòng|,)$/i.test(before)) continue;
-    const hit = { idx: m.index, verb: v, clause: q.slice(m.index + m[0].length) };
-    if(!best || hit.idx < best.idx) best = hit;
+    if(before !== "" && !/(?:^|[\s,;:.!?])(?:rồi|roi|va|và|then|next|sau\s*đó|tiep\s*theo|tiếp theo|hãy|hay|vui\s*lòng|làm\s*ơn|giúp\s*tôi|hộ\s*tôi|,)$/i.test(before)) continue;
+    const hit = { idx: m.index, verb: v, matchedText: m[0], clause: q.slice(m.index + m[0].length), priority: i };
+    if(!best || hit.idx < best.idx || (hit.idx === best.idx && hit.priority < best.priority)) best = hit;
   }
   if(!best) return null;
   const v = best.verb;
@@ -2719,28 +3212,50 @@ function aiDetectAgentAction(rawQuery){
   if(topic.length < 2) topic = aiAgentStripSearchVerb(aiAgentStripTail(q.slice(0, best.idx)));
   let clause = aiAgentStripLead(best.clause);
   clause = aiAgentStripTail(clause);
-  const out = { verb:v.verb, topic:topic, raw:rawQuery.trim(), labelKey:v.labelKey, match:null, text:null, selector:null, submitAfter:false, sensitive:!!v.sensitive };
+  const out = { verb:v.verb, topic:topic, raw:rawQuery.trim(), labelKey:v.labelKey, match:null, text:null, selector:v.selector||null, submitAfter:false, sensitive:!!v.sensitive };
+  if(v.verb === "scroll"){
+    const isUp = /(?:lên|up|top)/i.test(best.matchedText + " " + clause);
+    out.dir = isUp ? "up" : "down";
+    return out;
+  }
+  if(v.verb === "comment" || v.verb === "message"){
+    let textPart = clause;
+    textPart = textPart.replace(/^(?:trực\s*tiếp\s+)?(?:trên|tren|vào|vao|ở|o|tại|tai|cho)\s+(?:kênh\s+|video\s+|bài\s+|trang\s+)?(?:youtube|discord|messenger|facebook|fb|tiktok|web|này|nay|đó|do)(?:\s+(?:này|nay|bản\s*web))?\s*(?:[:：,-]|\s+là|\s+rằng|\s+nội\s*dung)?\s*/i, "");
+    const cm = /^(.+?)\s+(?:vào|vao|trên|tren|trong|into|to|at)\s+(?:ô\s+|khung\s+|kênh\s+|video\s+)?(youtube|discord|messenger|facebook|tiktok|bình\s*luận|comment|tin\s*nhắn|chat)(?:\s+này)?$/i.exec(textPart);
+    if(cm) textPart = cm[1];
+    textPart = String(textPart||"").replace(/^[:：,\s]+/, "").replace(/^["'“”']+|["'“”']+$/g,"").trim();
+    out.match = v.match ? v.match.slice() : [v.verb];
+    if(textPart){
+      out.text = textPart;
+      out.submitAfter = true;
+    }
+    return out;
+  }
   if(v.verb === "type"){
     const cm = /^(.+?)\s+(?:vào|vao|trong|into|to|at)\s+(.+)$/i.exec(clause);
     let textPart = clause, targetPart = "";
     if(cm){ textPart = cm[1]; targetPart = cm[2]; }
-    textPart = String(textPart||"").replace(/^["'“”']+|["'“”']+$/g,"").trim();
+    textPart = String(textPart||"").replace(/^[:：,\s]+/, "").replace(/^["'“”']+|["'“”']+$/g,"").trim();
     targetPart = aiAgentStripTail(String(targetPart||"").replace(/^["'“”']+|["'“”']+$/g,"").trim());
     if(!textPart && !targetPart) return null;
     out.text = textPart;
     if(targetPart){ out.match = [targetPart]; out.labelKey = "ai_agent_step_type"; }
+    else if(v.match && v.match.length){ out.match = v.match.slice(); }
     if(/(?:rồi|roi|va|và|,)?\s*(?:gửi|gui|submit|nhấn\s*enter|nhan enter|press\s*enter|enter)\s*$/i.test(clause) ||
        /(?:gửi|gui|submit|enter)\s*$/i.test(q)){ out.submitAfter = true; }
   } else if(v.verb === "submit"){
     out.verb = "submit";
   } else {
-    const target = aiAgentStripTail(clause);
+    let target = aiAgentStripTail(clause);
+    target = aiAgentStripDeicticTarget(target);
     if(v.match && !target){ out.match = v.match.slice(); }
     else if(v.match && /^(?:nút|nut|button|link|tab|mục|muc|ô|trang)\s*/i.test(target)){
-      const cleaned = target.replace(/^(?:nút|nut|button|link|tab|mục|muc|ô|trang)\s+/i,"").trim();
+      const cleaned = aiAgentStripDeicticTarget(target.replace(/^(?:nút|nut|button|link|tab|mục|muc|ô|trang)\s+/i,"").trim());
       out.match = cleaned ? [cleaned].concat(v.match) : v.match.slice();
     }
-    else if(target){ out.match = [target]; }
+    else if(target){
+      out.match = v.match ? [target].concat(v.match) : [target];
+    }
     else if(v.match){ out.match = v.match.slice(); }
     if(!out.match || !out.match.length) return null;
     out.sensitive = !!v.sensitive || AI_AGENT_SENSITIVE_RE.test((out.match||[]).join(" ") + " " + target);
@@ -2752,15 +3267,32 @@ function aiBuildAgentActionPlan(action, isYoutube){
   const steps = [];
   const a = action;
   if(!a) return steps;
-  steps.push({ kind:"wait", ms: isYoutube ? 2600 : 1800 });
-  if(a.verb === "type"){
-    if(a.match && a.match.length) steps.push({ kind:"click", match:a.match.slice(), label:a.match[0] });
-    steps.push({ kind:"type", text:String(a.text||""), match:(a.match&&a.match.length)?a.match.slice():null, label:String(a.text||"") });
-    if(a.submitAfter) steps.push({ kind:"submit", match:(a.match&&a.match.length)?a.match.slice():null });
-  } else if(a.verb === "submit"){
-    steps.push({ kind:"submit", match:null });
+
+  if (a.verb === 'scroll') {
+    return [{ kind:'scroll', dir:a.dir||'down', y:a.dir==='up'?-550:550, label:a.dir==='up'?'lên trên':'xuống dưới' }];
+  }
+
+  // Dynamic fallback for complex intents
+  const isComplexTarget = /aws|amazon|tài\s*khoản|tai\s*khoan|đăng\s*ký\s*aws|đăng\s*ký\s*tài\s*khoản|hủy\s*đăng\s*ký|huy\s*dang\s*ky/i.test(a.raw || "") || ['đăng nhập', 'dang nhap', 'login', 'sign in', 'mua', 'checkout', 'nhắn tin', 'tin nhắn', 'message', 'hủy đăng ký', 'unsubscribe', 'unfollow', 'bỏ theo dõi'].some(m => (a.match||[]).includes(m));
+
+  if ((!a.selector || isComplexTarget) && (a.verb === 'click' || a.verb === 'message' || a.verb === 'comment' || a.verb === 'type')) {
+       // Only fallback if there's no pre-defined text to type (e.g. social compose)
+       if (!a.text) {
+         return [{ kind: 'dynamic', rawQuery: a.raw, isYoutube: isYoutube }];
+       }
+  }
+
+  // Otherwise, use static plan
+  steps.push({ kind:'wait', ms: isYoutube ? 2600 : 1800 });
+
+  if (a.verb === 'type' || a.verb === 'comment' || a.verb === 'message') {
+    if(a.match && a.match.length) steps.push({ kind:'click', match:a.match.slice(), selector:a.selector||null, label:a.match[0] });
+    if(a.text) steps.push({ kind:'type', text:String(a.text), match:(a.match&&a.match.length)?a.match.slice():null, selector:a.selector||null, label:String(a.text), strictEditable: true });
+    if(a.submitAfter) steps.push({ kind:'submit', match:(a.match&&a.match.length)?a.match.slice():null, selector:a.selector||null, strictEditable: true });
+  } else if (a.verb === 'submit') {
+    steps.push({ kind:'submit', match:null });
   } else {
-    steps.push({ kind:"click", match:(a.match&&a.match.length)?a.match.slice():null, selector:a.selector||null, label:(a.match&&a.match[0])||"", labelKey:a.labelKey||null, sensitive:!!a.sensitive });
+    steps.push({ kind:'click', match:(a.match&&a.match.length)?a.match.slice():null, selector:a.selector||null, label:(a.match&&a.match[0])||'', labelKey:a.labelKey||null, sensitive:!!a.sensitive });
   }
   return steps;
 }
@@ -2782,13 +3314,34 @@ function aiAgentRequiresApproval(plan, confirmSetting){
 }
 function aiAgentStepLabel(step){
   if(!step) return "";
-  if(step.kind === "navigate") return aiT("ai_agent_step_navigate", [step.label||step.url||""], "Mở trang " + (step.label||step.url||""));
-  if(step.kind === "wait") return aiT("ai_agent_step_wait", [String(Math.round((step.ms||1500)/100)/10)], "Chờ trang tải " + Math.round((step.ms||1500)/100)/10 + "s");
-  if(step.kind === "type") return aiT("ai_agent_step_type", [step.text||""], "Nhập: " + (step.text||""));
+  if(step.kind === "navigate") {
+    let lbl = step.label||step.url||"";
+    return aiT("ai_agent_step_navigate", [lbl], "Mở trang " + lbl).replace("{0}", lbl);
+  }
+      if(step.kind === "dynamic") {
+      return "Tự động phân tích DOM và hành động...";
+    }
+    if(step.kind === "wait") {
+    let lbl = String(Math.round((step.ms||1500)/100)/10);
+    return aiT("ai_agent_step_wait", [lbl], "Chờ trang tải " + lbl + "s").replace("{0}", lbl);
+  }
+  if(step.kind === "scroll") {
+    let lbl = step.label || (step.dir === "up" ? "lên trên" : "xuống dưới");
+    return aiT("ai_agent_step_scroll", [lbl], "Cuộn trang " + lbl).replace("{0}", lbl);
+  }
+  if(step.kind === "type") {
+    let lbl = step.text||step.label||"";
+    return aiT("ai_agent_step_type", [lbl], "Nhập: " + lbl).replace("{0}", lbl);
+  }
   if(step.kind === "submit") return aiT("ai_agent_step_submit", null, "Gửi form / Nhấn Enter");
   if(step.kind === "click"){
-    if(step.labelKey) return aiT(step.labelKey, [step.label||(step.match&&step.match[0])||""], step.label || aiT("ai_agent_step_click", [step.label||(step.match&&step.match[0])||""], "Bấm: " + (step.label||(step.match&&step.match[0])||"")));
-    return aiT("ai_agent_step_click", [step.label||(step.match&&step.match[0])||""], "Bấm: " + (step.label||(step.match&&step.match[0])||""));
+    let lbl = step.label || (step.match && step.match[0]) || "";
+    if(step.labelKey && step.labelKey !== "ai_agent_step_click") {
+      let text = aiT(step.labelKey, [lbl], "");
+      if(text && text !== step.labelKey) return text.split("{0}").join(lbl);
+    }
+    if(!lbl) lbl = "nút tương ứng";
+    return aiT("ai_agent_step_click", [lbl], "Bấm: " + lbl).split("{0}").join(lbl);
   }
   return String(step.kind||"");
 }
@@ -2796,6 +3349,7 @@ function aiAgentSleep(ms){ return new Promise(function(r){ setTimeout(r, ms); })
 function aiAgentStepIcon(kind){
   if(kind === "navigate") return "🌐";
   if(kind === "wait") return "⏳";
+  if(kind === "scroll") return "📜";
   if(kind === "type") return "⌨️";
   if(kind === "submit") return "📨";
   if(kind === "click") return "🖱️";
@@ -2825,8 +3379,13 @@ function sfAgentDomAct(step){
   }
   function hay(el){
     if(!el) return "";
-    var parts = [el.textContent || "", el.title || "", el.getAttribute ? (el.getAttribute("aria-label") || "") : "",
-      el.getAttribute ? (el.getAttribute("placeholder") || "") : "", el.getAttribute ? (el.getAttribute("name") || "") : "",
+    var parts = [el.textContent || "", el.title || "", el.id || "",
+      el.getAttribute ? (el.getAttribute("aria-label") || "") : "",
+      el.getAttribute ? (el.getAttribute("placeholder") || "") : "",
+      el.getAttribute ? (el.getAttribute("aria-placeholder") || "") : "",
+      el.getAttribute ? (el.getAttribute("data-placeholder") || "") : "",
+      el.getAttribute ? (el.getAttribute("data-e2e") || "") : "",
+      el.getAttribute ? (el.getAttribute("name") || "") : "",
       el.getAttribute ? (el.getAttribute("value") || "") : ""];
     if(el.getAttribute && el.getAttribute("for")){
       var lab = document.getElementById(el.getAttribute("for"));
@@ -2838,45 +3397,180 @@ function sfAgentDomAct(step){
     }
     return norm(parts.join(" "));
   }
+  function isFollowStep(st){
+    if(!st) return false;
+    if(st.labelKey === "ai_agent_label_subscribe") return true;
+    if(Array.isArray(st.match)){
+      for(var k=0; k<st.match.length; k++){
+        var m = norm(st.match[k]);
+        if(m === "follow" || m === "theo doi" || m === "subscribe" || m === "dang ky") return true;
+      }
+    }
+    return false;
+  }
+  function isSearchInput(el){
+    if(!el) return false;
+    var tp = norm(el.type || "");
+    var rl = norm(el.getAttribute ? (el.getAttribute("role") || "") : "");
+    var nm = norm(el.name || "");
+    var id = norm(el.id || "");
+    var e2e = norm(el.getAttribute ? (el.getAttribute("data-e2e") || "") : "");
+    if(tp === "search" || rl === "searchbox" || nm === "q" || nm === "search_query" || id === "search" || id === "search-input" || e2e.indexOf("search") !== -1) return true;
+    var h = hay(el);
+    if(/\b(?:tim kiem|search)\b/.test(h) && !/\b(?:binh luan|comment|tin nhan|message|chat)\b/.test(h)) return true;
+    return false;
+  }
+  function isExcludedCandidate(el, st, kind){
+    if(!el) return true;
+    if(kind === "editable" && st && st.strictEditable){
+      if(isSearchInput(el)) return true;
+      if(el.closest && el.closest('form[role="search"], [role="search"], #search-form, ytd-searchbox, [data-e2e*="search"]')) return true;
+    }
+    if(kind === "click" && isFollowStep(st)){
+      if(el.tagName === "A") return true;
+      if(el.closest && el.closest('nav, aside, [role="navigation"], [data-e2e*="nav-"], [class*="SideNav" i], [class*="DivSideNavContainer" i], ytd-guide-renderer, ytd-mini-guide-renderer')) return true;
+      var e2e = norm(el.getAttribute ? (el.getAttribute("data-e2e") || "") : "");
+      if(e2e && (e2e.indexOf("nav-") !== -1 || e2e.indexOf("followers") !== -1 || e2e.indexOf("following") !== -1 || e2e.indexOf("suggested") !== -1 || e2e.indexOf("unfollow") !== -1)) return true;
+      var h = hay(el);
+      if(/(?:tai khoan da follow|cac tai khoan|following accounts|suggested accounts|tai khoan duoc de xuat|dang follow|da follow|da theo doi|nguoi theo doi|luot theo doi|\bfollowing\b|\bfollowers\b|\bunfollow\b|bo follow|bo theo doi|da dang ky|\bsubscribed\b|\bunsubscribe\b|huy dang ky|\bban be\b|\bfriends\b)/.test(h)) return true;
+    }
+    return false;
+  }
+  function pickBestInViewport(cands){
+    if(!cands || !cands.length) return null;
+    if(cands.length === 1) return cands[0];
+    var vh = (typeof window !== "undefined" && window.innerHeight) ? window.innerHeight : 0;
+    var vw = (typeof window !== "undefined" && window.innerWidth) ? window.innerWidth : 0;
+    if(!vh) return cands[0];
+    var bestEl = cands[0];
+    var bestScore = -1e9;
+    for(var idx=0; idx<cands.length; idx++){
+      var c = cands[idx];
+      var r = c.getBoundingClientRect ? c.getBoundingClientRect() : null;
+      if(!r || (r.width === 0 && r.height === 0)){
+        if(0 > bestScore){ bestScore = 0; bestEl = c; }
+        continue;
+      }
+      var cy = r.top + r.height / 2;
+      var cx = r.left + r.width / 2;
+      var inV = (r.bottom > 0 && r.top < vh && (!vw || (r.right > 0 && r.left < vw)));
+      var dist = Math.abs(cy - vh / 2) + (vw ? Math.abs(cx - vw / 2) * 0.25 : 0);
+      var score = (inV ? 100000 : 0) - dist;
+      if(score > bestScore){
+        bestScore = score;
+        bestEl = c;
+      }
+    }
+    return bestEl;
+  }
   function pick(st, kind){
     if(!st) return null;
     if(st.selector){
       try{
         var direct = document.querySelectorAll(st.selector);
-        for(var d=0; d<direct.length; d++){ if(visible(direct[d])) return direct[d]; }
+        var directValid = [];
+        for(var d=0; d<direct.length; d++){
+          if(visible(direct[d]) && !isExcludedCandidate(direct[d], st, kind)) directValid.push(direct[d]);
+        }
+        if(directValid.length) return pickBestInViewport(directValid);
       }catch(e){}
     }
     var sel = kind === "editable"
-      ? 'input:not([type=hidden]):not([type=submit]):not([type=button]),textarea,[contenteditable=""],[contenteditable="true"]'
-      : 'a,button,[role="button"],input[type="submit"],input[type="button"],summary,label,option';
+      ? 'input:not([type=hidden]):not([type=submit]):not([type=button]):not([type=checkbox]):not([type=radio]),textarea,[contenteditable=""],[contenteditable="true"],[role="textbox"]'
+      : 'a,button,[role="button"],ytd-toggle-button-renderer,ytd-button-renderer,like-button-view-model,input[type="submit"],input[type="button"],summary,label,option,#placeholder-area';
     var pool = [];
     try{ pool = Array.prototype.slice.call(document.querySelectorAll(sel)); }catch(e){ pool = []; }
     var i, j, el;
     if(st.match && st.match.length){
+      if(kind === "click" && isFollowStep(st)){
+        var exactHits = [];
+        for(i=0;i<st.match.length;i++){
+          var tf = norm(st.match[i]);
+          if(!tf) continue;
+          for(j=0;j<pool.length;j++){
+            el = pool[j];
+            if(!visible(el) || isExcludedCandidate(el, st, kind)) continue;
+            var txt = norm(el.textContent || "");
+            if(txt === tf || txt === "+" + tf) exactHits.push(el);
+          }
+        }
+        if(exactHits.length) return pickBestInViewport(exactHits);
+      }
+      var subHits = [];
       for(i=0;i<st.match.length;i++){
         var t = norm(st.match[i]);
         if(!t) continue;
         for(j=0;j<pool.length;j++){
           el = pool[j];
-          if(!visible(el)) continue;
-          if(hay(el).indexOf(t) !== -1) return el;
+          if(!visible(el) || isExcludedCandidate(el, st, kind)) continue;
+          if(hay(el).indexOf(t) !== -1) subHits.push(el);
         }
+        if(subHits.length) return pickBestInViewport(subHits);
       }
     }
-    if(kind === "editable"){
-      for(j=0;j<pool.length;j++){ if(visible(pool[j])) return pool[j]; }
+    if(kind === "editable" && (!st || !st.strictEditable)){
+      for(j=0;j<pool.length;j++){
+        if(visible(pool[j]) && !isExcludedCandidate(pool[j], st, kind)) return pool[j];
+      }
       return null;
     }
     return null;
   }
+  function highlightEl(el){
+    if(!el || !el.style) return;
+    try{
+      var prevOutline = el.style.outline;
+      var prevOffset = el.style.outlineOffset;
+      el.style.outline = "2px solid #8b5cf6";
+      el.style.outlineOffset = "2px";
+      setTimeout(function(){
+        try{
+          el.style.outline = prevOutline;
+          el.style.outlineOffset = prevOffset;
+        }catch(e){}
+      }, 2400);
+    }catch(e){}
+  }
   function typeInto(el, text){
     if(!el) return false;
+    var val = String(text == null ? "" : text);
     try{ if(el.focus) el.focus(); }catch(e){}
+    highlightEl(el);
+    var isCE = el.isContentEditable || (el.getAttribute && (el.getAttribute("contenteditable") === "true" || el.getAttribute("contenteditable") === "" || el.getAttribute("role") === "textbox"));
+    if(isCE && el.tagName !== "INPUT" && el.tagName !== "TEXTAREA"){
+      var inserted = false;
+      try{
+        if(window.getSelection && document.createRange){
+          var sel = window.getSelection();
+          var range = document.createRange();
+          range.selectNodeContents(el);
+          range.collapse(false);
+          if(sel){ sel.removeAllRanges(); sel.addRange(range); }
+        }
+        if(typeof document.execCommand === "function"){
+          document.execCommand("selectAll", false, null);
+          inserted = !!document.execCommand("insertText", false, val);
+        }
+      }catch(e){}
+      if(!inserted || !(el.textContent || "").trim()){
+        el.textContent = val;
+      }
+      try{
+        if(typeof InputEvent === "function"){
+          el.dispatchEvent(new InputEvent("beforeinput", { bubbles:true, cancelable:true, inputType:"insertText", data:val }));
+          el.dispatchEvent(new InputEvent("input", { bubbles:true, inputType:"insertText", data:val }));
+        } else {
+          el.dispatchEvent(new Event("input", { bubbles:true }));
+        }
+        el.dispatchEvent(new Event("change", { bubbles:true }));
+        el.dispatchEvent(new KeyboardEvent("keyup", { key:" ", bubbles:true }));
+      }catch(e){}
+      return true;
+    }
     var proto = null;
     if(el.tagName === "TEXTAREA" && typeof HTMLTextAreaElement !== "undefined") proto = HTMLTextAreaElement.prototype;
     else if(el.tagName === "INPUT" && typeof HTMLInputElement !== "undefined") proto = HTMLInputElement.prototype;
     var setter = proto ? Object.getOwnPropertyDescriptor(proto, "value") : null;
-    var val = String(text == null ? "" : text);
     if(setter && setter.set) setter.set.call(el, val);
     else el.value = val;
     try{
@@ -2887,17 +3581,42 @@ function sfAgentDomAct(step){
   }
   try{
     if(!step || !document) return res;
+    if(step.kind === "scroll"){
+      var scEl = null;
+      if(step.selector){
+        try{ scEl = document.querySelector(step.selector); }catch(e){}
+      }
+      if(scEl && scEl.scrollIntoView){
+        try{ scEl.scrollIntoView({ behavior:"smooth", block:"center" }); }catch(e){ try{ scEl.scrollIntoView(); }catch(e2){} }
+      } else if(window.scrollBy){
+        var dy = Number(step.y) || (step.dir === "up" ? -500 : 500);
+        try{ window.scrollBy({ top:dy, behavior:"smooth" }); }catch(e){ try{ window.scrollBy(0, dy); }catch(e2){} }
+      }
+      res.found = true;
+      res.ok = true;
+      return res;
+    }
     if(step.kind === "click"){
       var el = pick(step, "click");
       res.found = !!el;
       if(!el){ res.reason = "not_found"; return res; }
       try{ if(el.scrollIntoView) el.scrollIntoView({ block:"center" }); }catch(e){}
+      highlightEl(el);
       try{ el.click(); }catch(e){ try{ el.dispatchEvent(new MouseEvent("click", { bubbles:true, cancelable:true })); }catch(e2){ res.reason = "click_failed"; return res; } }
       res.ok = true;
       return res;
     }
     if(step.kind === "type"){
       var target = pick(step, "editable");
+      if(!target){
+        try{
+          var ytPh = document.querySelector("ytd-comment-simplebox-renderer #placeholder-area, #placeholder-area");
+          if(ytPh && visible(ytPh)){
+            ytPh.click();
+            target = document.querySelector("#contenteditable-root[contenteditable='true'], ytd-commentbox #contenteditable-root");
+          }
+        }catch(e){}
+      }
       res.found = !!target;
       if(!target){ res.reason = "not_found"; return res; }
       if(!typeInto(target, step.text)){ res.reason = "type_failed"; return res; }
@@ -2905,23 +3624,62 @@ function sfAgentDomAct(step){
       return res;
     }
     if(step.kind === "submit"){
-      var src = pick(step, "click") || pick(step, "editable");
-      var form = src && (src.form || (src.closest ? src.closest("form") : null));
-      if(!form && document.forms && document.forms.length) form = document.forms[0];
-      if(!form){ res.reason = "no_form"; return res; }
-      res.found = true;
-      var btn = null;
-      try{ btn = form.querySelector('button[type="submit"],input[type="submit"],button:not([type])'); }catch(e){ btn = null; }
-      if(btn){
-        try{ btn.click(); }catch(e){ try{ btn.dispatchEvent(new MouseEvent("click", { bubbles:true, cancelable:true })); }catch(e2){} }
-        res.ok = true;
-        res.how = "button";
-        return res;
+      if(step.selector){
+        try{
+          var directBtns = document.querySelectorAll(step.selector);
+          for(var bIdx=0; bIdx<directBtns.length; bIdx++){
+            if(visible(directBtns[bIdx])){
+              directBtns[bIdx].click();
+              res.found = true; res.ok = true; res.how = "selector_button";
+              return res;
+            }
+          }
+        }catch(e){}
       }
-      var ev = null;
-      try{ ev = new Event("submit", { bubbles:true, cancelable:true }); }catch(e){ ev = null; }
-      if(ev && form.dispatchEvent(ev)){ res.ok = true; res.how = "event"; }
-      else res.reason = "submit_blocked";
+      var src = pick(step, "editable") || (!step.strictEditable ? pick(step, "click") : null);
+      var form = src && (src.form || (src.closest ? src.closest("form") : null));
+      if(!form && !step.strictEditable && document.forms && document.forms.length) form = document.forms[0];
+      if(form){
+        res.found = true;
+        var btn = null;
+        try{ btn = form.querySelector('button[type="submit"],input[type="submit"],button:not([type])'); }catch(e){ btn = null; }
+        if(btn){
+          try{ btn.click(); }catch(e){ try{ btn.dispatchEvent(new MouseEvent("click", { bubbles:true, cancelable:true })); }catch(e2){} }
+          res.ok = true;
+          res.how = "button";
+          return res;
+        }
+        var ev = null;
+        try{ ev = new Event("submit", { bubbles:true, cancelable:true }); }catch(e){ ev = null; }
+        if(ev && form.dispatchEvent(ev)){ res.ok = true; res.how = "event"; return res; }
+      }
+      var socialBtnSel = "ytd-commentbox #submit-button button:not([disabled]), ytd-comment-simplebox-renderer #submit-button button:not([disabled]), [data-e2e='comment-post'], div[aria-label='Press enter to send' i][role='button'], div[aria-label*='Nhấn Enter để gửi' i][role='button'], button[aria-label='Send' i], button[aria-label*='Send message' i], button[aria-label*='Gửi' i], div[role='button'][aria-label*='Send' i], div[role='button'][aria-label*='Gửi' i]";
+      try{
+        var sBtns = document.querySelectorAll(socialBtnSel);
+        for(var sIdx=0; sIdx<sBtns.length; sIdx++){
+          if(visible(sBtns[sIdx])){
+            sBtns[sIdx].click();
+            res.found = true; res.ok = true; res.how = "social_button";
+            return res;
+          }
+        }
+      }catch(e){}
+      if(src){
+        res.found = true;
+        try{
+          if(src.focus) src.focus();
+          var kd = new KeyboardEvent("keydown", { key:"Enter", code:"Enter", keyCode:13, which:13, bubbles:true, cancelable:true });
+          var kp = new KeyboardEvent("keypress", { key:"Enter", code:"Enter", keyCode:13, which:13, bubbles:true, cancelable:true });
+          var ku = new KeyboardEvent("keyup", { key:"Enter", code:"Enter", keyCode:13, which:13, bubbles:true, cancelable:true });
+          src.dispatchEvent(kd);
+          src.dispatchEvent(kp);
+          src.dispatchEvent(ku);
+          res.ok = true;
+          res.how = "enter_key";
+          return res;
+        }catch(e){}
+      }
+      res.reason = "no_form";
       return res;
     }
     res.reason = "unknown_kind";
@@ -2929,6 +3687,313 @@ function sfAgentDomAct(step){
     res.reason = String((e && e.message) || e);
   }
   return res;
+}
+function aiDetectSocialPlatform(rawQuery, pageUrl){
+  const q = String(rawQuery || "").toLowerCase();
+  const u = String(pageUrl || "").toLowerCase();
+  if(/messenger|fb\.com\/messages|facebook\.com\/messages/.test(q) || /messenger\.com|facebook\.com\/messages/.test(u)) return { id:"messenger", label:"Messenger", icon:"💬", kind:"message" };
+  if(/discord/.test(q) || /discord\.com/.test(u)) return { id:"discord", label:"Discord Web", icon:"🎮", kind:"message" };
+  if(/youtube|youtu\.be|yt\b/.test(q) || /youtube\.com|youtu\.be/.test(u)) return { id:"youtube", label:"YouTube Comment", icon:"📺", kind:"comment" };
+  if(/tiktok/.test(q) || /tiktok\.com/.test(u)) return { id:"tiktok", label:"TikTok", icon:"🎵", kind:"comment" };
+  if(/telegram/.test(q) || /telegram\.org/.test(u)) return { id:"telegram", label:"Telegram Web", icon:"✈️", kind:"message" };
+  if(/zalo/.test(q) || /zalo\.me/.test(u)) return { id:"zalo", label:"Zalo Web", icon:"💙", kind:"message" };
+  if(/facebook|\bfb\b/.test(q) || /facebook\.com/.test(u)) return { id:"facebook", label:"Facebook", icon:"📘", kind:"comment" };
+  return { id:"web", label:"Web Chat / Comment", icon:"🌐", kind:/bình\s*luận|comment|cmt|nhận\s*xét/i.test(q) ? "comment" : "message" };
+}
+function aiDetectSocialComposeIntent(rawQuery, pageUrl){
+  if(!rawQuery || typeof rawQuery !== "string") return null;
+  const q = rawQuery.trim().replace(/^[\/!](?:agent|sandbox|browse)\s+/i, "");
+  if(q.length < 4) return null;
+  if(/^(?:tóm\s*tắt|tom\s*tat|dịch|dich|giải\s*thích|giai\s*thich|phân\s*tích|phan\s*tich|tại\s*sao|tai\s*sao|là\s*gì|la\s*gi)\b/i.test(q)) return null;
+  const hasSocialVerb = /(?:^|[\s,;:!?"'\[])(?:nhắn\s*tin|nhan\s*tin|gửi\s*tin\s*nhắn|gui\s*tin\s*nhan|nhắn\s+giúp|nhắn\s+hộ|nhắn\s+cho|nhắn\s+vào|nhắn\s+trên|nhắn\s+bảo|trả\s*lời\s*tin\s*nhắn|rep\s*tin\s*nhắn|soạn\s*tin\s*nhắn|viết\s*tin\s*nhắn|bình\s*luận|binh\s*luan|comment|cmt|viết\s*bình\s*luận|đăng\s*bình\s*luận|nhận\s*xét\s*video)(?=[\s,:;.!?)"'\]]|$)/i.test(q);
+  if(!hasSocialVerb) return null;
+  const platform = aiDetectSocialPlatform(q, pageUrl);
+  let hint = q
+    .replace(/^(?:hãy|hay|vui\s*lòng|làm\s*ơn|giúp\s*tôi|giúp\s*mình|agent\s*ơi|trợ\s*lý\s*ơi)\s+/i, "")
+    .replace(/^(?:soạn|viết|đăng|gửi|nhập|thử|hỗ\s*trợ)?\s*(?:tin\s*nhắn|nhắn\s*tin|nhắn|trả\s*lời\s*tin\s*nhắn|rep\s*tin\s*nhắn|bình\s*luận|binh\s*luan|comment|cmt|nhận\s*xét)\s*/i, "")
+    .replace(/^(?:trực\s*tiếp\s+)?(?:giúp\s*(?:tôi|mình|em|tao)?|hộ\s*(?:tôi|mình|em|tao)?)\s*/i, "")
+    .replace(/^(?:trực\s*tiếp\s+)?(?:trên|tren|vào|vao|ở|o|tại|tai|cho)\s+(?:kênh\s+|video\s+|bài\s+|trang\s+)?(?:youtube|discord|messenger|facebook|fb|tiktok|telegram|zalo|web|này|nay|đó|do)(?:\s+(?:bản\s*web|này|nay))?\s*/i, "")
+    .replace(/^(?:theo\s*tính\s*cách(?:\s*của\s*(?:tôi|mình))?|dựa\s*trên\s*tính\s*cách(?:\s*của\s*(?:tôi|mình))?)\s*/i, "")
+    .replace(/^[:：,\s]+/, "")
+    .trim();
+  const autoSend = /(?:gửi\s*luôn|gui\s*luon|đăng\s*luôn|dang\s*luon|send\s*now)\s*$/i.test(q);
+  return {
+    raw: rawQuery.trim(),
+    platform: platform,
+    kind: platform.kind,
+    hint: hint,
+    autoSend: autoSend
+  };
+}
+function aiLocalPersonaDraft(intent, pageTitle){
+  const s = aiSettings || {};
+  const style = (s.personaStyle && AI_PERSONAS[s.personaStyle]) ? s.personaStyle : "casual";
+  const custom = String(s.personaCustom || "").trim();
+  let core = String((intent && intent.hint) || "").trim();
+  core = core
+    .replace(/^(?:bảo|nói|nhắn|khen|hỏi|rủ|chúc)\s+(?:nó|bạn\s*ấy|họ|anh\s*em|mọi\s*người|kênh|video(?:\s*này)?)?\s*(?:là|rằng|:)?\s*/i, "")
+    .replace(/\s*(?:giúp\s*(?:tôi|mình)|hộ\s*(?:tôi|mình)|theo\s*tính\s*cách(?:\s*của\s*(?:tôi|mình))?)\s*$/i, "")
+    .replace(/^["'“”']+|["'“”']+$/g, "")
+    .trim();
+  const isComment = intent && intent.kind === "comment";
+  if(!core){
+    if(isComment){
+      const tShort = pageTitle ? String(pageTitle).replace(/\s*-\s*YouTube$/i, "").slice(0, 60) : "video này";
+      if(style === "humorous") return "Xem " + tShort + " cuốn thực sự luôn á, đỉnh của chóp! 🔥😂";
+      if(style === "polite") return "Cảm ơn kênh đã chia sẻ nội dung rất hữu ích và chỉn chu. Chúc kênh ngày càng phát triển nhé! ❤️";
+      if(style === "concise") return "Nội dung rất hay và chất lượng, cảm ơn tác giả! 👍";
+      if(style === "professional") return "Nội dung phân tích rất sâu sắc, bố cục mạch lạc và mang lại nhiều giá trị thực tiễn. Cảm ơn tác giả đã chia sẻ.";
+      return "Video hay và cuốn quá, cảm ơn kênh đã chia sẻ nha! ❤️👍";
+    } else {
+      if(style === "humorous") return "Alo alo đồng chí ơi, đang làm gì đó? Vào việc luôn thôi nào! 😎🔥";
+      if(style === "polite") return "Chào bạn nhé, khi nào rảnh phản hồi giúp mình tin nhắn này nha. Cảm ơn bạn nhiều!";
+      if(style === "concise") return "Chào bạn, nhắn lại mình khi rảnh nhé.";
+      if(style === "professional") return "Xin chào, tôi liên hệ để trao đổi nhanh về công việc. Mong sớm nhận được phản hồi từ bạn.";
+      return "Ê bạn ơi, rảnh không cho mình nhắn cái này xíu nha! 😊";
+    }
+  }
+  if(style === "humorous") return core + " nha fen ơi 😂🔥";
+  if(style === "polite") return "Dạ " + core.charAt(0).toLowerCase() + core.slice(1) + " ạ. Cảm ơn nhiều nhé! ✨";
+  if(style === "concise") return core.replace(/[.!?]+$/, "") + ".";
+  if(style === "professional") return core.charAt(0).toUpperCase() + core.slice(1) + ". Trân trọng.";
+  return core + (custom ? "" : " nha! 😊");
+}
+async function aiGeneratePersonaDraft(intent, pageContext, provider, key){
+  const pInfo = aiGetCurrentPageInfo();
+  const pageTitle = (pInfo && pInfo.title) ? pInfo.title : "";
+  const personaRule = aiBuildPersonaDirective(aiSettings);
+  const prov = provider || aiProvider;
+  const apiKey = key !== undefined ? key : (aiKeys[prov] || "");
+  if(!aiCanUse(prov)){
+    return aiLocalPersonaDraft(intent, pageTitle);
+  }
+  const isComment = intent && intent.kind === "comment";
+  const platformLabel = (intent && intent.platform && intent.platform.label) || (isComment ? "YouTube Comment" : "Messenger / Discord");
+  const prompt = [
+    "NHIỆM VỤ: Hãy đóng vai người dùng và soạn ĐÚNG MỘT " + (isComment ? "bình luận (comment)" : "tin nhắn chat") + " trên nền tảng " + platformLabel + ".",
+    "[TÍNH CÁCH & PHONG CÁCH CỦA NGƯỜI DÙNG]",
+    personaRule,
+    pageTitle ? ("[TIÊU ĐỀ TRANG / VIDEO ĐANG MỞ]: " + pageTitle) : "",
+    pageContext ? ("[NGỮ CẢNH TRANG / CUỘC TRÒ CHUYỆN]:\n" + String(pageContext).slice(0, 2000)) : "",
+    "[YÊU CẦU CỦA NGƯỜI DÙNG]: " + ((intent && intent.hint) ? intent.hint : (intent ? intent.raw : "Viết nội dung phù hợp với ngữ cảnh hiện tại")),
+    "QUY TẮC BẮT BUỘC: Chỉ trả về DUY NHẤT nội dung tin nhắn/bình luận hoàn chỉnh để điền thẳng vào ô chat (KHÔNG giải thích, KHÔNG đặt trong dấu ngoặc kép, KHÔNG thêm tiêu đề hay GỢI Ý)."
+  ].filter(Boolean).join("\n\n");
+  try{
+    const rawAns = await aiCallProvider(prov, prompt, apiKey, [], [], { isPageQuery: false });
+    let cleaned = String(rawAns || "").trim()
+      .replace(/\n*GỢI Ý:[\s\S]*$/i, "")
+      .replace(/^["'“”']+|["'“”']+$/g, "")
+      .trim();
+    if(cleaned) return cleaned;
+  }catch(e){}
+  return aiLocalPersonaDraft(intent, pageTitle);
+}
+function aiBuildSocialSendPlan(platformId, text, shouldSubmit){
+  const msg = String(text || "").trim();
+  if(!msg) return [];
+  if(platformId === "youtube"){
+    return aiBuildAgentActionPlan({
+      verb: "comment",
+      text: msg,
+      submitAfter: !!shouldSubmit,
+      match: ["bình luận", "comment", "add a comment"]
+    }, true);
+  }
+  if(platformId === "discord"){
+    return aiBuildAgentActionPlan({
+      verb: "message",
+      text: msg,
+      submitAfter: !!shouldSubmit,
+      selector: "div[class*='slateTextArea'][contenteditable='true'], div[role='textbox'][contenteditable='true']",
+      match: ["message", "tin nhắn"]
+    }, false);
+  }
+  if(platformId === "messenger"){
+    return aiBuildAgentActionPlan({
+      verb: "message",
+      text: msg,
+      submitAfter: !!shouldSubmit,
+      selector: "div[role='textbox'][contenteditable='true'][data-lexical-editor='true'], div[role='textbox'][contenteditable='true']",
+      match: ["aa", "message", "tin nhắn"]
+    }, false);
+  }
+  return aiBuildAgentActionPlan({
+    verb: platformId === "tiktok" || platformId === "facebook" ? "comment" : "message",
+    text: msg,
+    submitAfter: !!shouldSubmit,
+    match: ["bình luận", "comment", "tin nhắn", "message", "aa"]
+  }, false);
+}
+async function aiAppendSocialComposeCard(intent, provider, key){
+  const c = document.getElementById("ai-chat-history");
+  if(!c || !intent) return;
+  const em = c.querySelector(".ai-empty");
+  if(em) c.removeChild(em);
+
+  const row = document.createElement("div");
+  row.className = "ai-msg ai-msg-assistant ai-social-compose-row";
+
+  const bubble = document.createElement("div");
+  bubble.className = "ai-bubble ai-agent-card ai-compose-card";
+
+  const head = document.createElement("div");
+  head.className = "ai-agent-head";
+  const headDot = document.createElement("span");
+  headDot.className = "ai-agent-head-dot";
+  const headText = document.createElement("span");
+  headText.className = "ai-agent-head-text";
+  headText.textContent = aiT("ai_compose_card_title", null, "Trợ lý Soạn thảo · Theo tính cách");
+  head.appendChild(headDot);
+  head.appendChild(headText);
+  bubble.appendChild(head);
+
+  const metaRow = document.createElement("div");
+  metaRow.className = "ai-compose-meta";
+  const platBadge = document.createElement("span");
+  platBadge.className = "ai-compose-badge is-platform";
+  platBadge.textContent = (intent.platform.icon || "💬") + " " + (intent.platform.label || "Web Chat");
+  metaRow.appendChild(platBadge);
+
+  const pStyleKey = (aiSettings.personaStyle && AI_PERSONAS[aiSettings.personaStyle]) ? aiSettings.personaStyle : "casual";
+  const personaBadge = document.createElement("span");
+  personaBadge.className = "ai-compose-badge is-persona";
+  personaBadge.textContent = "🎭 " + aiT(AI_PERSONAS[pStyleKey].labelKey, null, "Tự nhiên, thân thiện");
+  metaRow.appendChild(personaBadge);
+  bubble.appendChild(metaRow);
+
+  const safeNotice = document.createElement("div");
+  safeNotice.className = "ai-compose-safe-notice";
+  safeNotice.textContent = aiT("ai_compose_safe_notice", null, "🔒 Chế độ an toàn: Không tự động gửi ngầm. Khuyên dùng \"Chỉ điền vào ô chat\" hoặc \"Sao chép\" để tự kiểm tra trước.");
+  bubble.appendChild(safeNotice);
+
+  const draftLbl = document.createElement("div");
+  draftLbl.className = "ai-compose-label";
+  draftLbl.textContent = aiT("ai_compose_draft_lbl", null, "Nội dung dự kiến (bạn có thể sửa trực tiếp trước khi gửi):");
+  bubble.appendChild(draftLbl);
+
+  const textarea = document.createElement("textarea");
+  textarea.className = "ai-compose-textarea";
+  textarea.rows = 3;
+  textarea.value = aiT("ai_compose_generating", null, "⏳ Đang soạn nội dung theo tính cách của bạn...");
+  textarea.disabled = true;
+  bubble.appendChild(textarea);
+
+  const actions = document.createElement("div");
+  actions.className = "ai-agent-actions";
+
+  const fillOnlyBtn = document.createElement("button");
+  fillOnlyBtn.type = "button";
+  fillOnlyBtn.className = "btn btn-primary ai-agent-btn-approve ai-compose-btn-fill";
+  fillOnlyBtn.textContent = aiT("ai_compose_btn_fill_only", null, "✍️ Chỉ điền vào ô chat (An toàn)");
+  fillOnlyBtn.disabled = true;
+
+  const copyBtn = document.createElement("button");
+  copyBtn.type = "button";
+  copyBtn.className = "btn btn-secondary ai-compose-btn-secondary ai-compose-btn-copy";
+  copyBtn.textContent = aiT("ai_compose_btn_copy", null, "📋 Sao chép");
+  copyBtn.disabled = true;
+
+  const sendNowBtn = document.createElement("button");
+  sendNowBtn.type = "button";
+  sendNowBtn.className = "btn btn-secondary ai-compose-btn-secondary ai-compose-btn-send";
+  sendNowBtn.textContent = aiT("ai_compose_btn_send", null, "🚀 Điền & Gửi luôn");
+  sendNowBtn.disabled = true;
+
+  const regenBtn = document.createElement("button");
+  regenBtn.type = "button";
+  regenBtn.className = "btn btn-secondary ai-compose-btn-secondary ai-compose-btn-regen";
+  regenBtn.textContent = aiT("ai_compose_btn_regen", null, "🔄 Soạn lại");
+  regenBtn.disabled = true;
+
+  actions.appendChild(fillOnlyBtn);
+  actions.appendChild(copyBtn);
+  actions.appendChild(sendNowBtn);
+  actions.appendChild(regenBtn);
+  bubble.appendChild(actions);
+
+  const statusMsg = document.createElement("div");
+  statusMsg.className = "ai-agent-status-label";
+  statusMsg.style.display = "none";
+  bubble.appendChild(statusMsg);
+
+  row.appendChild(bubble);
+  c.appendChild(row);
+  c.scrollTop = c.scrollHeight;
+
+  const setBtnsDisabled = function(dis){
+    fillOnlyBtn.disabled = dis;
+    copyBtn.disabled = dis;
+    sendNowBtn.disabled = dis;
+    regenBtn.disabled = dis;
+  };
+
+  const generateAndFillTextarea = async function(){
+    textarea.disabled = true;
+    setBtnsDisabled(true);
+    textarea.value = aiT("ai_compose_generating", null, "⏳ Đang soạn nội dung theo tính cách của bạn...");
+    let pgCtx = "";
+    try{ pgCtx = await aiGetPageContextText(intent.raw || ""); }catch(e){}
+    const draft = await aiGeneratePersonaDraft(intent, pgCtx, provider, key);
+    textarea.value = draft;
+    textarea.disabled = false;
+    setBtnsDisabled(false);
+  };
+
+  const executeOnPage = async function(shouldSubmit){
+    const textToUse = String(textarea.value || "").trim();
+    if(!textToUse) return;
+    setBtnsDisabled(true);
+    statusMsg.style.display = "block";
+    statusMsg.className = "ai-agent-status-label is-approved";
+    statusMsg.textContent = aiT("ai_agent_action_running", null, "▶ Đang thực hiện thao tác trên trang...");
+
+    const plan = aiBuildSocialSendPlan(intent.platform.id, textToUse, shouldSubmit);
+    const tabsApi = (typeof browser !== "undefined" && browser.tabs) ? browser.tabs : (typeof chrome !== "undefined" ? chrome.tabs : null);
+    if(!tabsApi || !tabsApi.query){
+      statusMsg.className = "ai-agent-status-label is-cancelled";
+      statusMsg.textContent = aiT("ai_compose_failed", null, "⚠️ Chưa tìm thấy đúng ô chat/bình luận trên trang (đã chặn tự điền nhầm vào ô tìm kiếm). Hãy bấm mở ô bình luận hoặc bấm \"📋 Sao chép\".");
+      setBtnsDisabled(false);
+      return;
+    }
+    tabsApi.query({ active: true, currentWindow: true }, async function(tabs){
+      if(!tabs || !tabs[0]){
+        statusMsg.className = "ai-agent-status-label is-cancelled";
+        statusMsg.textContent = aiT("ai_compose_failed", null, "⚠️ Chưa tìm thấy đúng ô chat/bình luận trên trang (đã chặn tự điền nhầm vào ô tìm kiếm). Hãy bấm mở ô bình luận hoặc bấm \"📋 Sao chép\".");
+        setBtnsDisabled(false);
+        return;
+      }
+      const results = await window.aiAgentRunPlan(plan, tabs[0].id);
+      const typeOk = results.some(function(r){ return r && r.kind === "type" && r.ok; });
+      if(typeOk){
+        statusMsg.className = "ai-agent-status-label is-completed";
+        statusMsg.textContent = shouldSubmit
+          ? aiT("ai_compose_sent_ok", null, "✅ Đã tự động điền và gửi trên trang!")
+          : aiT("ai_compose_filled_ok", null, "✅ Đã điền vào đúng ô nhập trên trang (đã viền sáng — bạn tự kiểm tra rồi bấm Enter để gửi).");
+      } else {
+        statusMsg.className = "ai-agent-status-label is-cancelled";
+        statusMsg.textContent = aiT("ai_compose_failed", null, "⚠️ Chưa tìm thấy đúng ô chat/bình luận trên trang (đã chặn tự điền nhầm vào ô tìm kiếm). Hãy bấm mở ô bình luận hoặc bấm \"📋 Sao chép\".");
+      }
+      setBtnsDisabled(false);
+    });
+  };
+
+  fillOnlyBtn.addEventListener("click", function(){ executeOnPage(false); });
+  copyBtn.addEventListener("click", async function(){
+    const textToUse = String(textarea.value || "").trim();
+    if(!textToUse) return;
+    try{
+      if(navigator && navigator.clipboard && navigator.clipboard.writeText){
+        await navigator.clipboard.writeText(textToUse);
+      }
+    }catch(e){}
+    statusMsg.style.display = "block";
+    statusMsg.className = "ai-agent-status-label is-completed";
+    statusMsg.textContent = aiT("ai_compose_copied_ok", null, "✅ Đã sao chép nội dung! Bạn có thể dán (Ctrl+V) vào bất kỳ ô chat nào.");
+  });
+  sendNowBtn.addEventListener("click", function(){ executeOnPage(true); });
+  regenBtn.addEventListener("click", function(){ generateAndFillTextarea(); });
+
+  await generateAndFillTextarea();
 }
 async function aiAgentRunStep(tabId, step){
   try{
@@ -2967,8 +4032,8 @@ async function aiAgentRunPlan(plan, tabId){
 }
 function aiAgentResultsReport(results){
   if(!Array.isArray(results) || !results.length) return "";
-  const okCount = results.filter(function(r){ return r && r.ok; }).length;
-  
+
+
   const rows = document.querySelectorAll(".ai-agent-approval-row");
   const lastRow = rows[rows.length - 1];
   if (lastRow) {
@@ -2984,7 +4049,9 @@ function aiAgentResultsReport(results){
         }
       });
       statusMsg.className = "ai-agent-status-label is-completed";
-      statusMsg.textContent = "✅ " + aiT("ai_agent_action_summary", [String(okCount), String(results.length)], "Đã hoàn tất " + okCount + "/" + results.length + " thao tác.");
+      let msg = aiT("ai_agent_action_done", null, "Đã hoàn tất thao tác.");
+      statusMsg.textContent = msg;
+      if(statusMsg.textContent.indexOf("✅") !== 0) statusMsg.textContent = "✅ " + statusMsg.textContent;
       return "";
     }
   }
@@ -2997,8 +4064,9 @@ function aiAgentResultsReport(results){
     }
     md += "\n";
   });
-  md += "\n" + aiT("ai_agent_action_summary", [String(okCount), String(results.length)],
-    "Đã hoàn tất " + okCount + "/" + results.length + " thao tác.");
+  let smry = aiT("ai_agent_action_done", null, "Đã hoàn tất thao tác.");
+  if(smry.indexOf("✅") !== 0) smry = "✅ " + smry;
+  md += "\n" + smry;
   return md;
 }
 
@@ -3016,12 +4084,18 @@ function aiAppendAgentApprovalCard(cleanQuery, raw, provider, key, detectedSkill
 
   const head = document.createElement("div");
   head.className = "ai-agent-head";
-  head.textContent = aiT("ai_agent_approval_title", null, "🛡️ Agentic AI Sandbox — Yêu cầu cấp quyền") + (isDemo ? " (0 Token Demo)" : "");
+  const headDot = document.createElement("span");
+  headDot.className = "ai-agent-head-dot";
+  const headText = document.createElement("span");
+  headText.className = "ai-agent-head-text";
+  headText.textContent = aiT("ai_agent_approval_title", null, "Trợ lý tự động · Xác nhận thao tác") + (isDemo ? " (Demo)" : "");
+  head.appendChild(headDot);
+  head.appendChild(headText);
   bubble.appendChild(head);
 
   const desc = document.createElement("div");
   desc.className = "ai-agent-desc";
-  desc.textContent = aiT("ai_agent_approval_desc", null, "Agent yêu cầu quyền kích hoạt Sandbox để tự động tìm kiếm web, bóc tách và cô lập dữ liệu an toàn cho mục tiêu:");
+  desc.textContent = aiT("ai_agent_approval_desc", null, "Yêu cầu cần thực hiện:");
   bubble.appendChild(desc);
 
   const targetBox = document.createElement("div");
@@ -3041,7 +4115,7 @@ function aiAppendAgentApprovalCard(cleanQuery, raw, provider, key, detectedSkill
     planBox.className = "ai-agent-plan";
     const planTitle = document.createElement("div");
     planTitle.className = "ai-agent-plan-title";
-    planTitle.textContent = aiT("ai_agent_plan_title", null, "📋 Kế hoạch thao tác của Agent");
+    planTitle.textContent = aiT("ai_agent_plan_title", null, "Các bước thực hiện");
     planBox.appendChild(planTitle);
     const planList = document.createElement("ol");
     planList.className = "ai-agent-plan-list";
@@ -3061,7 +4135,7 @@ function aiAppendAgentApprovalCard(cleanQuery, raw, provider, key, detectedSkill
   const approveBtn = document.createElement("button");
   approveBtn.type = "button";
   approveBtn.className = "btn btn-primary ai-agent-btn-approve";
-  approveBtn.textContent = isDemo ? "✓ Chạy thử nghiệm Sandbox (0 Token)" : aiT("ai_agent_btn_approve", null, "✓ Cho phép Agent thực thi");
+  approveBtn.textContent = isDemo ? "✓ Chạy thử nghiệm (0 Token)" : aiT("ai_agent_btn_approve", null, "✓ Thực hiện ngay");
 
   const cancelBtn = document.createElement("button");
   cancelBtn.type = "button";
@@ -3088,8 +4162,8 @@ function aiAppendAgentApprovalCard(cleanQuery, raw, provider, key, detectedSkill
     statusMsg.style.display = "block";
     statusMsg.className = "ai-agent-status-label is-approved";
     statusMsg.textContent = isDemo
-      ? "✓ Đang kích hoạt Sandbox và thu thập dữ liệu (0 Token)..."
-      : (plan ? aiT("ai_agent_action_running", null, "✓ Đã cấp quyền — Đang thực hiện thao tác trên trang...") : aiT("ai_agent_approved_status", null, "✓ Đã cấp quyền — Đang thực thi trong Sandbox an toàn..."));
+      ? "✓ Đang thực hiện thử nghiệm (0 Token)..."
+      : (plan ? aiT("ai_agent_action_running", null, "▶ Đang thực hiện thao tác trên trang...") : aiT("ai_agent_approved_status", null, "✓ Đang thực hiện yêu cầu..."));
     if(typeof opts.onApprove === "function"){
       opts.onApprove();
     } else {
@@ -3103,7 +4177,7 @@ function aiAppendAgentApprovalCard(cleanQuery, raw, provider, key, detectedSkill
     actions.style.display = "none";
     statusMsg.style.display = "block";
     statusMsg.className = "ai-agent-status-label is-cancelled";
-    statusMsg.textContent = aiT("ai_agent_cancelled_status", null, "✕ Đã hủy bỏ tác vụ Agent.");
+    statusMsg.textContent = aiT("ai_agent_cancelled_status", null, "✕ Đã hủy bỏ tác vụ.");
   });
 }
 
@@ -3391,8 +4465,34 @@ async function aiSendCurrent(){
   const forceGround = aiForceGround; aiForceGround = false;
   const provider=aiProvider; const key=aiKeys[provider]||"";
   const imagesToSend=aiAttachedImages.slice();
-  const imagePreviews=imagesToSend.map(im=>im.preview);
+  const isSummaryQuery = !!quickReq || (aiQuickCtx && aiQuickCtx.kind === "page") || /^(tóm tắt|tom tat|summary)\b/i.test(raw);
+  const isLiveRunning = !!(window.aiLiveSilentActive || window.aiLiveStream || aiLiveStream || aiLiveSilentActive);
+  if(imagesToSend.length === 0 && isLiveRunning){
+    try {
+      const liveSnap = aiGrabLiveFrame(768, 0.6);
+      if(liveSnap && liveSnap.data){
+        liveSnap.isSilent = true;
+        imagesToSend.push(liveSnap);
+      }
+    } catch(e){}
+  } else if(imagesToSend.length === 0 && (isSummaryQuery || (detectedSkill && detectedSkill.key === "vision"))){
+    try {
+      const snap = await aiCaptureActiveTabLowToken(768, 0.6);
+      if(snap && snap.data){
+        snap.isSilent = true;
+        imagesToSend.push(snap);
+      }
+    } catch(e){}
+  }
+  // Copilot Vision mode: silent background captures are not displayed as bulky images in the chat history
+  const imagePreviews = imagesToSend.filter(im => !im.isSilent && !im.isLiveFrame).map(im => im.preview);
   aiAppendMessage("user", raw, provider, imagePreviews);
+  if(imagesToSend.some(im => im.isSilent || im.isLiveFrame)){
+    const copilotMsg = (typeof aiT === "function")
+      ? aiT("ai_typing_copilot_vision", null, "Copilot Vision đang đọc hiểu giao diện màn hình...")
+      : "Copilot Vision đang đọc hiểu giao diện màn hình...";
+    aiUpdateTypingStatus(copilotMsg);
+  }
   if(input){ input.value=""; input.style.height=""; }
   const _imgInput=document.getElementById("ai-image-input");
   if(_imgInput) _imgInput.value="";
@@ -3400,7 +4500,8 @@ async function aiSendCurrent(){
   aiAttachedImages=[];
   aiAttachedImage=null;
   aiRenderAttachedImages();
-  const autoNavIntent = (imagesToSend.length === 0 && !isPageQuery && !quickReq) ? aiDetectAutoNavIntent(raw) : null;
+  const canRunAgentIntent = (imagesToSend.length === 0 && !quickReq && !/^[+@]/.test(raw));
+  const autoNavIntent = (canRunAgentIntent && !isPageQuery) ? aiDetectAutoNavIntent(raw) : null;
   if(autoNavIntent){
     const agentAction = aiDetectAgentAction(raw);
     if(agentAction && agentAction.topic && agentAction.topic.length >= 2){
@@ -3420,18 +4521,63 @@ async function aiSendCurrent(){
     aiExecuteAutoNav(autoNavIntent, provider);
     return;
   }
-  const agentActionDirect = (imagesToSend.length === 0 && !isPageQuery && !quickReq) ? aiDetectAgentAction(raw) : null;
+  const socialComposeIntent = canRunAgentIntent ? aiDetectSocialComposeIntent(raw, pageUrl) : null;
+  if(socialComposeIntent){
+    aiAppendSocialComposeCard(socialComposeIntent, provider, key);
+    return;
+  }
+  const agentActionDirect = canRunAgentIntent ? aiDetectAgentAction(raw) : null;
   if(!autoNavIntent && agentActionDirect){
-    const isYoutube = typeof window.aiIsYouTubeUrl === "function" ? window.aiIsYouTubeUrl(aiGetCurrentPageInfo().url) : false;
+    const isYoutube = typeof window.aiIsYouTubeUrl === "function" ? window.aiIsYouTubeUrl(pageUrl || aiGetCurrentPageInfo().url) : false;
     const agentPlan = aiBuildAgentActionPlan(agentActionDirect, isYoutube);
     if(agentPlan.length){
-      const doRun = async function(){
-        aiUpdateTypingStatus("🔄 Đang thao tác trên trang hiện tại...");
+            const doRun = async function(){
+        aiUpdateTypingStatus("⏳ Đang phân tích Actionable DOM...");
         const tabsApi = (typeof browser !== "undefined" && browser.tabs) ? browser.tabs : (typeof chrome !== "undefined" ? chrome.tabs : null);
         if(!tabsApi || !tabsApi.query) return;
         tabsApi.query({active: true, currentWindow: true}, async function(tabs){
           if(!tabs || !tabs[0]) return;
-          const results = await window.aiAgentRunPlan(agentPlan, tabs[0].id);
+          const tabId = tabs[0].id;
+          let finalPlan = agentPlan;
+          if(agentPlan.length === 1 && agentPlan[0].kind === "dynamic") {
+            const domInfo = await new Promise(res => {
+              try {
+                sendTabMessage({action: "GET_ACTIONABLE_DOM", timeoutMs: 3000, silent: true}, r => {
+                  res(r && r.ok ? r.dom : "");
+                }, tabId);
+              } catch(e){ res(""); }
+            });
+            let visionImgList = [];
+            if(aiSettings.agentVision){
+              try {
+                aiUpdateTypingStatus("Đang chụp ảnh Vision nén (tiết kiệm token)...");
+                const shot = await aiCaptureActiveTabLowToken(768, 0.6);
+                if(shot && shot.data){
+                  visionImgList = [{ mimeType: "image/jpeg", data: shot.data }];
+                }
+              } catch(e){}
+            }
+            if(domInfo) {
+              const visionPromptNote = visionImgList.length
+                ? "\n- Kèm ảnh chụp màn hình Vision (đã nén độ phân giải thấp để tối ưu token): Hãy quan sát kỹ ảnh giao diện thực tế và đối chiếu với DOM để xác định chính xác nút bấm, icon mạng xã hội (nút Follow TikTok/YouTube, avatar, nút đóng modal, biểu tượng không có text)."
+                : "";
+              const prompt = "Dựa vào Actionable DOM" + (visionImgList.length ? " và hình ảnh giao diện thực tế đính kèm (Vision):" : ":") + "\n" + domInfo + "\n\nNhiệm vụ: " + agentPlan[0].rawQuery + "\nLưu ý:" + visionPromptNote + "\n- Nếu nhiệm vụ là nhắn tin hoặc bình luận, hãy dựa vào lịch sử trò chuyện để viết nội dung phù hợp với tính cách, ngữ cảnh và yêu cầu của người dùng.\nTrả về JSON array các bước [{kind: 'click', selector: '...', match: ['từ khóa']}, {kind: 'type', selector: '...', text: '...'}, {kind: 'wait', ms: 1000}, {kind: 'submit'}] chỉ chứa JSON.";
+              try {
+                const resText = await window.aiCallGeminiLite(prompt, key, visionImgList, window.aiHistory || []);
+                if(resText && resText.text) {
+                  const jsonMatch = resText.text.match(/\[.*\]/s);
+                  if(jsonMatch) {
+                    finalPlan = JSON.parse(jsonMatch[0]);
+                  }
+                }
+              } catch(e){}
+            } else {
+              // fallback if DOM fetch fails
+              finalPlan = [{kind: "wait", ms: 1000}, {kind: "click", match: [agentPlan[0].rawQuery]}];
+            }
+          }
+          aiUpdateTypingStatus("⏳ Đang thực thi trên trang hiện tại...");
+          const results = await window.aiAgentRunPlan(finalPlan, tabId);
           const report = aiAgentResultsReport(results);
           aiHideTyping();
           if(report) aiAppendMessage("assistant", report, provider);
@@ -3869,10 +5015,30 @@ function aiInitEvents(){
   const newChatBtn=document.getElementById("ai-btn-new-chat"); if(newChatBtn) newChatBtn.addEventListener("click",()=>{ const dt=(function(){ try{ return new Date().toLocaleString(); }catch(e){ return ""; } })(); aiSessionsNew(aiT("ai_session_default_name",null,"Phiên")+" "+dt); if(typeof showToast==="function") showToast("ai_toast_session_saved","success"); });
   const copyBtn=document.getElementById("ai-btn-copy-last"); if(copyBtn) copyBtn.addEventListener("click",()=>{ const last=aiHistory.slice().reverse().find(m=>m.role==="assistant"); if(!last){ if(typeof showToast==="function") showToast("ai_toast_no_answer","warning"); return; } navigator.clipboard.writeText(last.content).then(()=>{ if(typeof showToast==="function") showToast("toast_copied","success"); }).catch(()=>{ if(typeof showToast==="function") showToast("toast_copy_failed","error"); }); });
   const insertBtn=document.getElementById("ai-btn-insert-note"); if(insertBtn) insertBtn.addEventListener("click",()=>{ const last=aiHistory.slice().reverse().find(m=>m.role==="assistant"); if(!last){ if(typeof showToast==="function") showToast("ai_toast_no_answer","warning"); return; } const notesEl=document.getElementById("f-notes"); if(!notesEl) return; const sep=notesEl.value.trim()?"\n\n":""; notesEl.value=notesEl.value+sep+last.content.slice(0,2000); notesEl.dispatchEvent(new Event("input",{bubbles:true})); if(typeof showToast==="function") showToast("toast_notes_inserted","success"); });
-  ["ai-opt-page","ai-opt-selection","ai-opt-notes","ai-opt-images","ai-opt-source","ai-opt-stream","ai-opt-websearch","ai-opt-autovideo","ai-opt-agent-mode","ai-opt-agent-confirm"].forEach(id=>{ const el=document.getElementById(id); if(!el) return; el.addEventListener("change",()=>{ if(id==="ai-opt-page") aiSettings.includePage=el.checked; if(id==="ai-opt-selection") aiSettings.includeSelection=el.checked; if(id==="ai-opt-notes") aiSettings.includeNotes=el.checked; if(id==="ai-opt-images") aiSettings.includeImages=el.checked; if(id==="ai-opt-source") aiSettings.includeSource=el.checked; if(id==="ai-opt-stream") aiSettings.stream=el.checked; if(id==="ai-opt-websearch") aiSettings.webSearch=el.checked; if(id==="ai-opt-autovideo") aiSettings.autoVideo=el.checked; if(id==="ai-opt-agent-mode") aiSettings.agentMode=el.checked; if(id==="ai-opt-agent-confirm") aiSettings.agentConfirm=el.checked; aiSaveSettings(); }); });
+  ["ai-opt-page","ai-opt-selection","ai-opt-notes","ai-opt-images","ai-opt-source","ai-opt-stream","ai-opt-websearch","ai-opt-autovideo","ai-opt-agent-mode","ai-opt-agent-confirm","ai-opt-agent-vision"].forEach(id=>{ const el=document.getElementById(id); if(!el) return; el.addEventListener("change",()=>{ if(id==="ai-opt-page") aiSettings.includePage=el.checked; if(id==="ai-opt-selection") aiSettings.includeSelection=el.checked; if(id==="ai-opt-notes") aiSettings.includeNotes=el.checked; if(id==="ai-opt-images") aiSettings.includeImages=el.checked; if(id==="ai-opt-source") aiSettings.includeSource=el.checked; if(id==="ai-opt-stream") aiSettings.stream=el.checked; if(id==="ai-opt-websearch") aiSettings.webSearch=el.checked; if(id==="ai-opt-autovideo") aiSettings.autoVideo=el.checked; if(id==="ai-opt-agent-mode") aiSettings.agentMode=el.checked; if(id==="ai-opt-agent-confirm") aiSettings.agentConfirm=el.checked;
+      if(id==="ai-opt-agent-vision") { aiSettings.agentVision=el.checked; const vb=document.getElementById("ai-btn-capture-vision"); if(vb) vb.classList.toggle("is-active", !!el.checked); } aiSaveSettings(); }); });
+  const personaSel=document.getElementById("ai-persona-select");
+  if(personaSel){
+    personaSel.addEventListener("change",()=>{
+      aiSettings.personaStyle=(personaSel.value&&AI_PERSONAS[personaSel.value])?personaSel.value:"casual";
+      aiSaveSettings();
+      if(typeof showToast==="function") showToast("ai_toast_persona_saved","success");
+    });
+  }
+  const personaCustomEl=document.getElementById("ai-persona-custom");
+  if(personaCustomEl){
+    personaCustomEl.addEventListener("input",()=>{ aiSettings.personaCustom=String(personaCustomEl.value||"").slice(0,600); aiSaveSettings(); });
+    personaCustomEl.addEventListener("change",()=>{ aiSettings.personaCustom=String(personaCustomEl.value||"").slice(0,600); aiSaveSettings(); if(typeof showToast==="function") showToast("ai_toast_persona_saved","success"); });
+  }
   document.addEventListener("change", (e) => {
     if (e.target && e.target.id === "ai-opt-companion") {
       aiSetCompanionEnabled(e.target.checked, true);
+    } else if (e.target && e.target.id === "ai-persona-select") {
+      aiSettings.personaStyle = (e.target.value && AI_PERSONAS[e.target.value]) ? e.target.value : "casual";
+      aiSaveSettings();
+    } else if (e.target && e.target.id === "ai-persona-custom") {
+      aiSettings.personaCustom = String(e.target.value || "").slice(0, 600);
+      aiSaveSettings();
     }
   });
   document.addEventListener("click", (e) => {
@@ -3885,6 +5051,10 @@ function aiInitEvents(){
     modalContainer.addEventListener('modal-loaded', (e) => {
       if (e.detail === 'ai-settings') {
         aiUpdateCompanionUI(aiSettings.readingCompanion);
+        const ps = document.getElementById("ai-persona-select");
+        if (ps) ps.value = (aiSettings.personaStyle && AI_PERSONAS[aiSettings.personaStyle]) ? aiSettings.personaStyle : "casual";
+        const pc = document.getElementById("ai-persona-custom");
+        if (pc) pc.value = aiSettings.personaCustom || "";
       }
     });
   }
@@ -3960,6 +5130,12 @@ function aiInitEvents(){
   const addPageBtn=document.getElementById("ai-btn-add-page"); if(addPageBtn) addPageBtn.addEventListener("click",async()=>{ const info=aiGetCurrentPageInfo(); if(!info.url){ if(typeof showToast==="function") showToast("ai_toast_no_page","warning"); return; } if(aiPages.some(p=>p.url===info.url)){ if(typeof showToast==="function") showToast("ai_toast_page_added","success",[info.title||info.url]); return; } let pgText=""; try{ pgText=await aiGetPageContextText(""); }catch(e){} aiAddPage({ url:info.url, title:info.title, favicon:info.favicon, text:pgText }); if(typeof showToast==="function") showToast("ai_toast_page_added","success",[info.title||info.url]); });
   const clearPagesBtn=document.getElementById("ai-btn-clear-pages"); if(clearPagesBtn) clearPagesBtn.addEventListener("click",()=>{ aiPages=[]; aiRenderPages(); });
   const attachBtn=document.getElementById("ai-btn-attach-image"); const imgInput=document.getElementById("ai-image-input"); const removeBtn=document.getElementById("ai-btn-remove-image");
+  const visionBtn=document.getElementById("ai-btn-capture-vision"); if(visionBtn) visionBtn.addEventListener("click", aiHandleVisionCaptureClick);
+  const liveStreamBtn=document.getElementById("ai-btn-live-stream"); if(liveStreamBtn) liveStreamBtn.addEventListener("click", aiToggleLiveStream);
+  const liveCloseBtn=document.getElementById("ai-btn-live-close"); if(liveCloseBtn) liveCloseBtn.addEventListener("click", ()=>aiStopLiveStream(true));
+  const liveSwitchBtn=document.getElementById("ai-btn-live-switch"); if(liveSwitchBtn) liveSwitchBtn.addEventListener("click", aiSwitchLiveStreamSource);
+  const liveSourceSelect=document.getElementById("ai-live-source-select"); if(liveSourceSelect) liveSourceSelect.addEventListener("change", (e)=>aiStartLiveStream(e.target.value, true));
+  const liveSnapBtn=document.getElementById("ai-btn-live-snap"); if(liveSnapBtn) liveSnapBtn.addEventListener("click", aiHandleLiveSnapClick);
   if(attachBtn&&imgInput){ attachBtn.addEventListener("click",()=>imgInput.click()); imgInput.addEventListener("change",()=>{ if(imgInput.files&&imgInput.files.length) aiAttachImageFiles(imgInput.files); imgInput.value=""; }); }
   const pasteHandler=(e)=>{ const cd=e.clipboardData||null; if(!cd||!cd.items) return; const imgs=[]; for(const it of cd.items){ try{ if(it.kind==="file"&&it.type&&it.type.startsWith("image/")){ const img=it.getAsFile(); if(img) imgs.push(img); } }catch(e2){} } if(imgs.length){ if(e.preventDefault) e.preventDefault(); aiAttachImageFiles(imgs); } };
   const aiInputEl=document.getElementById("ai-input"); if(aiInputEl) aiInputEl.addEventListener("paste",pasteHandler); if(chatHist) chatHist.addEventListener("paste",pasteHandler);
@@ -3973,12 +5149,14 @@ function aiInitEvents(){
 async function initAI(){
   await aiLoadSettings(); aiUpdateProviderUI();
   const page=document.getElementById("ai-opt-page"); const sel=document.getElementById("ai-opt-selection"); const notes=document.getElementById("ai-opt-notes"); const imgs=document.getElementById("ai-opt-images"); const src=document.getElementById("ai-opt-source"); const strm=document.getElementById("ai-opt-stream");
-  if(page) page.checked=!!aiSettings.includePage; if(sel) sel.checked=!!aiSettings.includeSelection; if(notes) notes.checked=!!aiSettings.includeNotes; if(imgs) imgs.checked=!!aiSettings.includeImages; if(src) src.checked=!!aiSettings.includeSource;   if(strm) strm.checked=aiSettings.stream!==false; const wsc=document.getElementById("ai-opt-websearch"); if(wsc) wsc.checked=aiSettings.webSearch!==false; const av=document.getElementById("ai-opt-autovideo"); if(av) av.checked=aiSettings.autoVideo!==false; const agm=document.getElementById("ai-opt-agent-mode"); if(agm) agm.checked=!!aiSettings.agentMode; const agc=document.getElementById("ai-opt-agent-confirm"); if(agc) agc.checked=aiSettings.agentConfirm!==false;
+  if(page) page.checked=!!aiSettings.includePage; if(sel) sel.checked=!!aiSettings.includeSelection; if(notes) notes.checked=!!aiSettings.includeNotes; if(imgs) imgs.checked=!!aiSettings.includeImages; if(src) src.checked=!!aiSettings.includeSource;   if(strm) strm.checked=aiSettings.stream!==false; const wsc=document.getElementById("ai-opt-websearch"); if(wsc) wsc.checked=aiSettings.webSearch!==false; const av=document.getElementById("ai-opt-autovideo"); if(av) av.checked=aiSettings.autoVideo!==false; const agm=document.getElementById("ai-opt-agent-mode"); if(agm) agm.checked=!!aiSettings.agentMode; const agc=document.getElementById("ai-opt-agent-confirm"); if(agc) agc.checked=aiSettings.agentConfirm!==false; const agv=document.getElementById("ai-opt-agent-vision"); if(agv) agv.checked=!!aiSettings.agentVision;
+  const ps=document.getElementById("ai-persona-select"); if(ps) ps.value=(aiSettings.personaStyle&&AI_PERSONAS[aiSettings.personaStyle])?aiSettings.personaStyle:"casual";
+  const pc=document.getElementById("ai-persona-custom"); if(pc) pc.value=aiSettings.personaCustom||"";
   const scp=document.getElementById("ai-scope-select"); if(scp) scp.value=(aiSettings.scope==="only"||aiSettings.scope==="web")?aiSettings.scope:"auto";
   aiRenderHistory(); aiInitEvents(); aiUpdateCurrentPageDisplay(); aiUpdateChatHeight(); setInterval(()=>{ const ta=document.getElementById("tab-ai"); if(ta&&!ta.classList.contains("active")) return; aiUpdateCurrentPageDisplay(); aiUpdateChatHeight(); },2000); window.addEventListener("resize",aiUpdateChatHeight); const aiVisHandler=()=>{ if(document.visibilityState==="visible"){ aiUpdateCurrentPageDisplay(); aiUpdateChatHeight(); } }; document.addEventListener("visibilitychange",aiVisHandler); const tabAi=document.getElementById("tab-ai"); if(tabAi){ const obs=new MutationObserver(()=>{ if(tabAi.classList.contains("active")){ aiUpdateCurrentPageDisplay(); aiUpdateChatHeight(); requestAnimationFrame(()=>requestAnimationFrame(aiScrollToBottom)); } }); obs.observe(tabAi,{attributes:true,attributeFilter:["class"]}); }
   const tabsApi=(typeof browser!=="undefined"&&browser.tabs)?browser.tabs:(typeof chrome!=="undefined"?chrome.tabs:null);
   if(tabsApi&&tabsApi.onActivated){
-    try{ tabsApi.onActivated.addListener(()=>{ setTimeout(aiUpdateCurrentPageDisplay,150); }); }catch(e){}
+    try{ tabsApi.onActivated.addListener(()=>{ setTimeout(aiUpdateCurrentPageDisplay,150); if(window.aiLiveStream||aiLiveStream) aiBroadcastLiveBorder(true); }); }catch(e){}
   }
   if(tabsApi&&tabsApi.onUpdated){
     try{ tabsApi.onUpdated.addListener((tabId,changeInfo)=>{ if(changeInfo.status==="complete"||changeInfo.url||changeInfo.title){ setTimeout(aiUpdateCurrentPageDisplay,150); } }); }catch(e){}
@@ -3989,6 +5167,7 @@ if(typeof window!=="undefined"){
   window.AI_PIPELINES=AI_PIPELINES; window.aiResolvePipeline=aiResolvePipeline; window.aiAppendAgentApprovalCard=aiAppendAgentApprovalCard; window.aiRunAgentWorkflow=aiRunAgentWorkflow; window.aiDetectAutoNavIntent=aiDetectAutoNavIntent; window.aiExecuteAutoNav=aiExecuteAutoNav; window.aiUpdateTypingStatus=aiUpdateTypingStatus;
   window.aiExtractViaScripting=aiExtractViaScripting; window.aiExtractViaBackgroundFetch=aiExtractViaBackgroundFetch;
   window.aiDetectAgentAction=aiDetectAgentAction; window.aiBuildAgentActionPlan=aiBuildAgentActionPlan; window.aiAgentRequiresApproval=aiAgentRequiresApproval; window.aiAgentPlanIsSensitive=aiAgentPlanIsSensitive; window.aiAgentStepLabel=aiAgentStepLabel; window.aiAgentStepIcon=aiAgentStepIcon; window.aiAgentResultsReport=aiAgentResultsReport; window.aiAgentRunPlan=aiAgentRunPlan; window.aiAgentRunStep=aiAgentRunStep; window.sfAgentDomAct=sfAgentDomAct; window.aiAgentIsNavCommand=aiAgentIsNavCommand;
-  window.AI_PROVIDERS=AI_PROVIDERS; window.AI_MODEL_LABELS=AI_MODEL_LABELS; window.aiValidateCustomUrl=aiValidateCustomUrl; window.aiSanitizeExternal=aiSanitizeExternal; window.aiSanitizeHistory=aiSanitizeHistory; window.aiRateLimitOk=aiRateLimitOk; window.aiSelectRelevantWindow=aiSelectRelevantWindow; window.aiIsYouTubeUrl=aiIsYouTubeUrl; window.aiHistoryToGeminiContents=aiHistoryToGeminiContents; window.aiHistoryToOpenAIMessages=aiHistoryToOpenAIMessages; window.aiHistoryToClaudeMessages=aiHistoryToClaudeMessages; window.aiCollectTabsContext=aiCollectTabsContext; window.aiScholarSearch=aiScholarSearch; window.aiAttachImageFile=aiAttachImageFile; window.aiAttachImageFiles=aiAttachImageFiles; window.aiRenderAttachedImages=aiRenderAttachedImages; window.aiExtractYouTubeId=aiExtractYouTubeId; window.aiYtMetaViaFetch=aiYtMetaViaFetch; window.aiYtBalancedJson=aiYtBalancedJson; window.aiCallGeminiLite=aiCallGeminiLite; window.aiSig=aiSig; window.aiRegenerate=aiRegenerate; window.aiSelectRelevantWindows=aiSelectRelevantWindows; window.aiSessionsSearch=aiSessionsSearch; window.aiMemKey=aiMemKey; window.aiMemFor=aiMemFor; window.aiRenderSessions=aiRenderSessions; window.aiShowSessions=aiShowSessions; window.aiHideSessions=aiHideSessions; window.aiGetProviderConfig=aiGetProviderConfig; window.aiGetModel=aiGetModel; window.aiSetModel=aiSetModel; window.aiFetchGeminiModels=aiFetchGeminiModels; window.aiHasKey=aiHasKey; window.aiCanUse=aiCanUse; window.aiActiveCustomServer=aiActiveCustomServer; window.aiNormalizeCustomUrl=aiNormalizeCustomUrl; window.aiBuildPrompt=aiBuildPrompt; window.aiAddPage=aiAddPage; window.aiRemovePage=aiRemovePage; window.aiRenderPages=aiRenderPages; window.aiGetCurrentPageInfo=aiGetCurrentPageInfo; window.aiLocalFallback=aiLocalFallback; window.aiUseWebBridge=aiUseWebBridge; window.aiContextCovers=aiContextCovers; window.aiCallProvider=aiCallProvider; window.aiLoadSettings=aiLoadSettings; window.aiSaveHistory=aiSaveHistory; window.aiRenderHistory=aiRenderHistory; window.aiScrollToBottom=aiScrollToBottom; window.aiDetectPageIntent=aiDetectPageIntent; window.aiGroundingSources=aiGroundingSources; window.aiSourcesLabel=aiSourcesLabel; window.aiGeminiSupportsGrounding=aiGeminiSupportsGrounding; window.aiGeminiSupportsVideo=aiGeminiSupportsVideo; window.aiGeminiSupportsAgentic=aiGeminiSupportsAgentic; window.aiPickVideoModel=aiPickVideoModel; window.aiVideoContents=aiVideoContents; window.aiCallGeminiVideo=aiCallGeminiVideo; window.aiIsTranscriptRequest=aiIsTranscriptRequest; window.aiQueryRefersToVideo=aiQueryRefersToVideo; window.aiIsContinueRequest=aiIsContinueRequest; window.aiLastTimestampSec=aiLastTimestampSec; window.aiConversationMarkdown=aiConversationMarkdown; window.aiUpdateLatestBtn=aiUpdateLatestBtn; window.aiAppendMessage=aiAppendMessage; window.aiClearHistory=aiClearHistory; window.aiUpdateProviderUI=aiUpdateProviderUI; window.aiPopulateModelSelect=aiPopulateModelSelect; window.aiSendCurrent=aiSendCurrent; window.aiQuickPrompt=aiQuickPrompt; window.initAI=initAI; window.aiProvider=aiProvider; window.aiSettings=aiSettings; window.aiModels=aiModels; window.aiCustomServers=aiCustomServers; window.aiSetCompanionEnabled=aiSetCompanionEnabled; window.aiUpdateCompanionUI=aiUpdateCompanionUI; window.aiOnModelChange=aiOnModelChange; window.aiRenderCustomServers=aiRenderCustomServers; window.aiAddCustomServer=aiAddCustomServer; window.aiAddCustomModel=aiAddCustomModel; window.aiDeleteCustomModel=aiDeleteCustomModel; window.aiResetCustomModels=aiResetCustomModels; window.aiRenderModelsManager=aiRenderModelsManager; window.aiCheckLocalAssistantQuery=aiCheckLocalAssistantQuery; window.aiGetProviderModels=aiGetProviderModels; window.aiUpdateCurrentPageDisplay=aiUpdateCurrentPageDisplay; window.aiGroundingQueries=aiGroundingQueries; window.aiSearchQueriesLabel=aiSearchQueriesLabel; window.aiBuildSystemInstruction=aiBuildSystemInstruction; window.aiSearchMultiSources=aiSearchMultiSources; window.aiDecodeHtmlEntities=aiDecodeHtmlEntities; window.aiExportMarkdown=aiExportMarkdown; window.aiExportAnki=aiExportAnki; window.aiParseTimestampSec=aiParseTimestampSec; window.aiCheckYtLive=aiCheckYtLive; window.aiWebllmStatusText=aiWebllmStatusText; window.aiWebllmSyncSection=aiWebllmSyncSection; window.aiWebllmLoadAction=aiWebllmLoadAction; window.aiWebllmUnloadAction=aiWebllmUnloadAction; window.aiNeedProviderMsg=aiNeedProviderMsg; window.aiNeedProviderToastKey=aiNeedProviderToastKey;
+  window.AI_PERSONAS=AI_PERSONAS; window.aiBuildPersonaDirective=aiBuildPersonaDirective; window.aiDetectSocialPlatform=aiDetectSocialPlatform; window.aiDetectSocialComposeIntent=aiDetectSocialComposeIntent; window.aiLocalPersonaDraft=aiLocalPersonaDraft; window.aiGeneratePersonaDraft=aiGeneratePersonaDraft; window.aiBuildSocialSendPlan=aiBuildSocialSendPlan; window.aiAppendSocialComposeCard=aiAppendSocialComposeCard;
+  window.AI_PROVIDERS=AI_PROVIDERS; window.AI_MODEL_LABELS=AI_MODEL_LABELS; window.aiValidateCustomUrl=aiValidateCustomUrl; window.aiSanitizeExternal=aiSanitizeExternal; window.aiSanitizeHistory=aiSanitizeHistory; window.aiRateLimitOk=aiRateLimitOk; window.aiSelectRelevantWindow=aiSelectRelevantWindow; window.aiIsYouTubeUrl=aiIsYouTubeUrl; window.aiHistoryToGeminiContents=aiHistoryToGeminiContents; window.aiHistoryToOpenAIMessages=aiHistoryToOpenAIMessages; window.aiHistoryToClaudeMessages=aiHistoryToClaudeMessages; window.aiCollectTabsContext=aiCollectTabsContext; window.aiScholarSearch=aiScholarSearch; window.aiAttachImageFile=aiAttachImageFile; window.aiAttachImageFiles=aiAttachImageFiles; window.aiRenderAttachedImages=aiRenderAttachedImages; window.aiExtractYouTubeId=aiExtractYouTubeId; window.aiYtMetaViaFetch=aiYtMetaViaFetch; window.aiYtBalancedJson=aiYtBalancedJson; window.aiCallGeminiLite=aiCallGeminiLite; window.aiSig=aiSig; window.aiRegenerate=aiRegenerate; window.aiSelectRelevantWindows=aiSelectRelevantWindows; window.aiSessionsSearch=aiSessionsSearch; window.aiMemKey=aiMemKey; window.aiMemFor=aiMemFor; window.aiRenderSessions=aiRenderSessions; window.aiShowSessions=aiShowSessions; window.aiHideSessions=aiHideSessions; window.aiGetProviderConfig=aiGetProviderConfig; window.aiGetModel=aiGetModel; window.aiSetModel=aiSetModel; window.aiFetchGeminiModels=aiFetchGeminiModels; window.aiHasKey=aiHasKey; window.aiCanUse=aiCanUse; window.aiActiveCustomServer=aiActiveCustomServer; window.aiNormalizeCustomUrl=aiNormalizeCustomUrl; window.aiBuildPrompt=aiBuildPrompt; window.aiAddPage=aiAddPage; window.aiRemovePage=aiRemovePage; window.aiRenderPages=aiRenderPages; window.aiGetCurrentPageInfo=aiGetCurrentPageInfo; window.aiLocalFallback=aiLocalFallback; window.aiUseWebBridge=aiUseWebBridge; window.aiContextCovers=aiContextCovers; window.aiCallProvider=aiCallProvider; window.aiLoadSettings=aiLoadSettings; window.aiSaveHistory=aiSaveHistory; window.aiRenderHistory=aiRenderHistory; window.aiScrollToBottom=aiScrollToBottom; window.aiDetectPageIntent=aiDetectPageIntent; window.aiGroundingSources=aiGroundingSources; window.aiSourcesLabel=aiSourcesLabel; window.aiGeminiSupportsGrounding=aiGeminiSupportsGrounding; window.aiGeminiSupportsVideo=aiGeminiSupportsVideo; window.aiGeminiSupportsAgentic=aiGeminiSupportsAgentic; window.aiPickVideoModel=aiPickVideoModel; window.aiVideoContents=aiVideoContents; window.aiCallGeminiVideo=aiCallGeminiVideo; window.aiIsTranscriptRequest=aiIsTranscriptRequest; window.aiQueryRefersToVideo=aiQueryRefersToVideo; window.aiIsContinueRequest=aiIsContinueRequest; window.aiLastTimestampSec=aiLastTimestampSec; window.aiConversationMarkdown=aiConversationMarkdown; window.aiUpdateLatestBtn=aiUpdateLatestBtn; window.aiAppendMessage=aiAppendMessage; window.aiClearHistory=aiClearHistory; window.aiUpdateProviderUI=aiUpdateProviderUI; window.aiPopulateModelSelect=aiPopulateModelSelect; window.aiSendCurrent=aiSendCurrent; window.aiQuickPrompt=aiQuickPrompt; window.initAI=initAI; window.aiProvider=aiProvider; window.aiSettings=aiSettings; window.aiModels=aiModels; window.aiCustomServers=aiCustomServers; window.aiSetCompanionEnabled=aiSetCompanionEnabled; window.aiUpdateCompanionUI=aiUpdateCompanionUI; window.aiOnModelChange=aiOnModelChange; window.aiRenderCustomServers=aiRenderCustomServers; window.aiAddCustomServer=aiAddCustomServer; window.aiAddCustomModel=aiAddCustomModel; window.aiDeleteCustomModel=aiDeleteCustomModel; window.aiResetCustomModels=aiResetCustomModels; window.aiRenderModelsManager=aiRenderModelsManager; window.aiCheckLocalAssistantQuery=aiCheckLocalAssistantQuery; window.aiGetProviderModels=aiGetProviderModels; window.aiUpdateCurrentPageDisplay=aiUpdateCurrentPageDisplay; window.aiGroundingQueries=aiGroundingQueries; window.aiSearchQueriesLabel=aiSearchQueriesLabel; window.aiBuildSystemInstruction=aiBuildSystemInstruction; window.aiSearchMultiSources=aiSearchMultiSources; window.aiDecodeHtmlEntities=aiDecodeHtmlEntities; window.aiExportMarkdown=aiExportMarkdown; window.aiExportAnki=aiExportAnki; window.aiParseTimestampSec=aiParseTimestampSec; window.aiCheckYtLive=aiCheckYtLive; window.aiWebllmStatusText=aiWebllmStatusText; window.aiWebllmSyncSection=aiWebllmSyncSection; window.aiWebllmLoadAction=aiWebllmLoadAction; window.aiWebllmUnloadAction=aiWebllmUnloadAction; window.aiNeedProviderMsg=aiNeedProviderMsg; window.aiNeedProviderToastKey=aiNeedProviderToastKey; window.aiCaptureActiveTabLowToken=aiCaptureActiveTabLowToken; window.aiCompressDataUrl=aiCompressDataUrl; window.aiHandleVisionCaptureClick=aiHandleVisionCaptureClick; window.aiStartLiveStream=aiStartLiveStream; window.aiStopLiveStream=aiStopLiveStream; window.aiToggleLiveStream=aiToggleLiveStream; window.aiSwitchLiveStreamSource=aiSwitchLiveStreamSource; window.aiGrabLiveFrame=aiGrabLiveFrame; window.aiHandleLiveSnapClick=aiHandleLiveSnapClick; window.aiBroadcastLiveBorder=aiBroadcastLiveBorder;
 }
 if(document.readyState!=="loading") initAI(); else document.addEventListener("DOMContentLoaded",initAI);

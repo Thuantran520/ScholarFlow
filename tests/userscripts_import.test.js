@@ -689,13 +689,13 @@ function evt() {
       await wait(300);
       return titles();
     };
-    const before = titles();
-    const after = await toggleFirst();
+    const titlesBefore = titles();
+    const titlesAfter = await toggleFirst();
     const still = ((await p.window.browser.storage.local.get(KEY))[KEY] || []).length;
-    console.log("  " + name + ": " + before.join(" | "));
-    check(before.length >= 2, "  renders every record, none dropped: " + before.length);
-    check(after.length === before.length,
-      "  a checkbox click does not change how many are listed: " + after.length);
+    console.log("  " + name + ": " + titlesBefore.join(" | "));
+    check(titlesBefore.length >= 2, "  renders every record, none dropped: " + titlesBefore.length);
+    check(titlesAfter.length === titlesBefore.length,
+      "  a checkbox click does not change how many are listed: " + titlesAfter.length);
     check(still === seed.length, "  storage is untouched by the crash path: " + still);
     check(p.errors.length === 0, "  no page errors: " + p.errors.join(" ; "));
   }

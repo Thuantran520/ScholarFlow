@@ -84,10 +84,9 @@
     if (!el.consoleDrawer || !el.consoleLogs) return;
     el.consoleDrawer.style.display = 'flex';
     const row = document.createElement('div');
-    const colors = { log: '#10b981', warn: '#f59e0b', error: '#ef4444', info: 'var(--primary)' };
-    row.style.cssText = 'color:' + (colors[level] || '#10b981') + '; padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.05);';
+    row.className = 'us-console-line ' + (level === 'error' ? 'error' : (level === 'warn' ? 'warn' : 'info'));
     const tag = document.createElement('span');
-    tag.style.cssText = 'opacity: 0.5; margin-right: 6px; font-size: 10px;';
+    tag.className = 'us-console-tag';
     tag.textContent = '[' + level.toUpperCase() + ']';
     row.appendChild(tag);
     row.appendChild(document.createTextNode(args.map(a => {
@@ -612,7 +611,7 @@
         const meta = metaApi ? metaApi.parse(el.code.value) : parseGMMetadata(el.code.value);
         if (!meta) { alert((typeof t === 'function' ? t('us_meta_not_found') : null) || 'Không tìm thấy header ==UserScript== trong mã!'); return; }
         if (el.name && meta.name) el.name.value = meta.name;
-        
+
         const fields = metaApi ? metaApi.fieldsOf({ code: el.code.value }) : null;
         if (el.matches) {
           if (fields && fields.matches && fields.matches.length) {

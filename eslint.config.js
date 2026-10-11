@@ -4,8 +4,10 @@ module.exports = [
   {
     ignores: [
       "OS/js/content/i18n.js",
-      "OS/js/libs/peer.min.js",
-      "OS/js/libs/webllm/**",
+      "OS/js/content/ryd.js",
+      "OS/js/libs/**",
+      "OS/locales/**",
+      "scripts/archive/**",
       "node_modules/**",
       "dist/**",
       "scripts/split/backup/**",
@@ -81,7 +83,9 @@ module.exports = [
 
       // Variables
       "no-unused-vars": ["warn", {
-        "argsIgnorePattern": "^_",
+        "vars": "local",
+        "args": "none",
+        "caughtErrors": "none",
         "varsIgnorePattern": "^_"
       }],
       "no-shadow": "warn",

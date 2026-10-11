@@ -1205,6 +1205,26 @@ function calRenderWeatherUI() {
     previewTxt.appendChild(pSpan);
   }
 
+  // 1. Resolve Today's Forecast Data to synchronize hero card with today's row
+  const todayKey = calTodayKey();
+  let todayIdx = -1;
+  if (calWeatherData.daily && Array.isArray(calWeatherData.daily.time)) {
+    todayIdx = calWeatherData.daily.time.indexOf(todayKey);
+    if (todayIdx === -1) todayIdx = 0;
+  }
+  const hasDaily = (todayIdx !== -1 && calWeatherData.daily);
+  const todayDailyCode = (hasDaily && calWeatherData.daily.weather_code) ? calWeatherData.daily.weather_code[todayIdx] : cur.weather_code;
+  const todayMinT = (hasDaily && calWeatherData.daily.temperature_2m_min) ? Math.round(calWeatherData.daily.temperature_2m_min[todayIdx]) : tempVal;
+  const todayMaxT = (hasDaily && calWeatherData.daily.temperature_2m_max) ? Math.round(calWeatherData.daily.temperature_2m_max[todayIdx]) : tempVal;
+  const todayRainProb = (hasDaily && calWeatherData.daily.precipitation_probability_max) ? Math.round(calWeatherData.daily.precipitation_probability_max[todayIdx]) : 0;
+
+  // The hero card represents TODAY: prioritize today's forecasted condition
+  const reportWeatherCode = (todayDailyCode !== undefined && todayDailyCode !== null) ? todayDailyCode : cur.weather_code;
+  const reportWmo = calGetWmoInfo(reportWeatherCode, cur.is_day, todayMaxT || tempVal);
+  const isHighRain = todayRainProb >= 70;
+  const humidLabel = (window.i18n ? window.i18n.t("cal_weather_humidity") : "Độ ẩm");
+  const rainLabel = (window.i18n ? window.i18n.t("cal_weather_rain_chance") : "Khả năng mưa");
+
   // Calendar tab Weather Hero Card
   const heroCard = document.getElementById("cal-weather-hero-card");
   if (heroCard) {
@@ -1216,28 +1236,29 @@ function calRenderWeatherUI() {
     const heroIcon = document.getElementById("cal-weather-hero-icon");
     if (heroIcon) {
       heroIcon.textContent = "";
-      heroIcon.appendChild(calCreateWeatherIconEl(cur.weather_code, cur.is_day, "hero", wmo.icon, tempVal));
+      heroIcon.appendChild(calCreateWeatherIconEl(reportWeatherCode, cur.is_day, "hero", reportWmo.icon, tempVal));
     }
     const heroTemp = document.getElementById("cal-weather-hero-temp");
     if (heroTemp) {
-        heroTemp.textContent = "";
-        if (typeof window.sfWeatherIconSvg === "function") {
-          heroTemp.appendChild(window.sfWeatherIconSvg(26, "inline-weather-icon"));
-        }
-        heroTemp.appendChild(document.createTextNode(" " + tempVal + "°C"));
+      heroTemp.textContent = "";
+      if (typeof window.sfWeatherIconSvg === "function") {
+        heroTemp.appendChild(window.sfWeatherIconSvg(26, "inline-weather-icon"));
       }
+      heroTemp.appendChild(document.createTextNode(" " + tempVal + "°C"));
+    }
     const heroDesc = document.getElementById("cal-weather-hero-desc");
-    if (heroDesc) heroDesc.textContent = wmo.text || "";
+    if (heroDesc) {
+      heroDesc.textContent = reportWmo.text + " • " + humidLabel + " " + humidVal + "%";
+    }
     const heroHumid = document.getElementById("cal-weather-hero-humidity");
     if (heroHumid) {
-      calAppendIconText(heroHumid, 25, humidVal + "%" + (isHighHumidity ? " (Mưa cao)" : ""), true);
-      heroHumid.className = "cal-weather-metric-pill" + (isHighHumidity ? " alert" : "");
+      calAppendIconText(heroHumid, 25, todayRainProb + "%", true);
+      heroHumid.className = "cal-weather-metric-pill" + (isHighRain ? " alert" : "");
+      heroHumid.title = rainLabel + ": " + todayRainProb + "% • " + humidLabel + ": " + humidVal + "%";
     }
     const heroRange = document.getElementById("cal-weather-hero-range");
-    if (heroRange && calWeatherData.daily && calWeatherData.daily.temperature_2m_min && calWeatherData.daily.temperature_2m_max) {
-      calAppendIconText(heroRange, 26, Math.round(calWeatherData.daily.temperature_2m_min[0]) + "° ~ " + Math.round(calWeatherData.daily.temperature_2m_max[0]) + "°C", true);
-    } else if (heroRange) {
-      calAppendIconText(heroRange, 26, tempVal + "°C", true);
+    if (heroRange) {
+      calAppendIconText(heroRange, 26, todayMinT + "° ~ " + todayMaxT + "°C", true);
     }
     const heroAlert = document.getElementById("cal-weather-hero-alert");
     if (heroAlert) {
@@ -1265,7 +1286,7 @@ function calRenderWeatherUI() {
 
     const heroIcon = document.createElement("span");
     heroIcon.className = "cal-weather-hero-icon";
-    heroIcon.appendChild(calCreateWeatherIconEl(cur.weather_code, cur.is_day, "hero", wmo.icon, tempVal));
+    heroIcon.appendChild(calCreateWeatherIconEl(reportWeatherCode, cur.is_day, "hero", reportWmo.icon, tempVal));
     mainCol.appendChild(heroIcon);
 
     const titleCol = document.createElement("div");
@@ -1276,7 +1297,7 @@ function calRenderWeatherUI() {
 
     const heroDesc = document.createElement("div");
     heroDesc.className = "cal-weather-hero-desc";
-    heroDesc.textContent = wmo.text || "";
+    heroDesc.textContent = reportWmo.text + " • " + humidLabel + " " + humidVal + "%";
     titleCol.appendChild(heroDesc);
 
     mainCol.appendChild(titleCol);
@@ -1286,17 +1307,14 @@ function calRenderWeatherUI() {
     metricsCol.className = "cal-weather-hero-metrics";
 
     const humidPill = document.createElement("span");
-    humidPill.className = "cal-weather-metric-pill" + (isHighHumidity ? " alert" : "");
-    calAppendIconText(humidPill, 25, humidVal + "%" + (isHighHumidity ? " (Mưa cao)" : ""));
+    humidPill.className = "cal-weather-metric-pill" + (isHighRain ? " alert" : "");
+    calAppendIconText(humidPill, 25, todayRainProb + "%");
+    humidPill.title = rainLabel + ": " + todayRainProb + "% • " + humidLabel + ": " + humidVal + "%";
     metricsCol.appendChild(humidPill);
 
     const rangePill = document.createElement("span");
     rangePill.className = "cal-weather-metric-pill";
-    if (calWeatherData.daily && calWeatherData.daily.temperature_2m_min && calWeatherData.daily.temperature_2m_max) {
-      calAppendIconText(rangePill, 26, Math.round(calWeatherData.daily.temperature_2m_min[0]) + "° ~ " + Math.round(calWeatherData.daily.temperature_2m_max[0]) + "°C");
-    } else {
-      calAppendIconText(rangePill, 26, tempVal + "°C");
-    }
+    calAppendIconText(rangePill, 26, todayMinT + "° ~ " + todayMaxT + "°C");
     metricsCol.appendChild(rangePill);
     hero.appendChild(metricsCol);
 
@@ -1311,71 +1329,69 @@ function calRenderWeatherUI() {
   }
 
   // 7-day modal contents
-  
-    const sfHeaderWeather = document.getElementById("sf-header-weather");
-    if (sfHeaderWeather) {
-      sfHeaderWeather.textContent = "";
-      sfHeaderWeather.appendChild(calCreateWeatherIconEl(cur.weather_code, cur.is_day, "header-weather-badge", wmo.icon, tempVal));
+  const sfHeaderWeather = document.getElementById("sf-header-weather");
+  if (sfHeaderWeather) {
+    sfHeaderWeather.textContent = "";
+    sfHeaderWeather.appendChild(calCreateWeatherIconEl(reportWeatherCode, cur.is_day, "header-weather-badge", reportWmo.icon, tempVal));
+  }
+
+  let gifName = "Nắng"; // default
+  const repCodeNum = Number(reportWeatherCode);
+  if ([95, 96, 99].includes(repCodeNum)) gifName = "Bão";
+  else if ([71, 73, 75, 77, 85, 86].includes(repCodeNum)) gifName = "Tuyết";
+  else if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(repCodeNum) || todayRainProb >= 60) gifName = "Mưa";
+  else if ([45, 48].includes(repCodeNum)) gifName = "Sương mù";
+  else if (cur.wind_speed_10m && cur.wind_speed_10m > 25) gifName = "Gió";
+
+  if (alertBox) {
+    const calTabEl = document.getElementById("tab-cal");
+    const heroEl = document.getElementById("cal-weather-hero-card");
+    if (calTabEl && alertBox.parentElement !== calTabEl) {
+      calTabEl.insertBefore(alertBox, heroEl && heroEl.parentElement === calTabEl ? heroEl.nextSibling : calTabEl.firstElementChild);
+      alertBox.style.marginBottom = "10px";
     }
+    alertBox.style.display = "flex";
+    alertBox.textContent = "";
 
-    let gifName = "Nắng"; // default
-    const codeNum = Number(cur.weather_code);
-    if ([95, 96, 99].includes(codeNum)) gifName = "Bão";
-    else if ([71, 73, 75, 77, 85, 86].includes(codeNum)) gifName = "Tuyết";
-    else if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(codeNum)) gifName = "Mưa";
-    else if ([45, 48].includes(codeNum)) gifName = "Sương mù";
-    else if (cur.wind_speed_10m && cur.wind_speed_10m > 25) gifName = "Gió";
+    const alertIcon = document.createElement("img");
+    alertIcon.style.width = "48px";
+    alertIcon.style.height = "48px";
+    alertIcon.style.marginRight = "10px";
+    alertIcon.style.objectFit = "contain";
+    alertIcon.src = "../assest/dubaovien/Dự báo viên chibi _ " + gifName + ".gif";
+    alertBox.appendChild(alertIcon);
 
-    if (alertBox) {
-      const calTabEl = document.getElementById("tab-cal");
-      const heroEl = document.getElementById("cal-weather-hero-card");
-      if (calTabEl && alertBox.parentElement !== calTabEl) {
-        calTabEl.insertBefore(alertBox, heroEl && heroEl.parentElement === calTabEl ? heroEl.nextSibling : calTabEl.firstElementChild);
-        alertBox.style.marginBottom = "10px";
-      }
-      alertBox.style.display = "flex";
-      alertBox.textContent = "";
-      
-      const alertIcon = document.createElement("img");
-      alertIcon.style.width = "48px";
-      alertIcon.style.height = "48px";
-      alertIcon.style.marginRight = "10px";
-      alertIcon.style.objectFit = "contain";
-      
-      alertIcon.src = "../assest/dubaovien/Dự báo viên chibi _ " + gifName + ".gif";
-      alertBox.appendChild(alertIcon);
+    const alertTxt = document.createElement("div");
+    if (gifName === "Mưa") {
+      alertTxt.textContent = "Khả năng mưa hôm nay rất cao (" + todayRainProb + "%). Nhớ mang theo ô khi ra ngoài!";
+    } else {
+      alertTxt.textContent = "Dự báo: " + (reportWmo.text || "Thời tiết bình thường");
+    }
+    alertBox.appendChild(alertTxt);
+  }
 
-      const alertTxt = document.createElement("div");
-      if (isHighHumidity && gifName === "Mưa") {
-          alertTxt.textContent = window.i18n ? window.i18n.t("cal_weather_rain_alert", [humidVal]) : "Độ ẩm không khí rất cao (" + humidVal + "%). Nguy cơ mưa, nhớ mang ô!";
+  const modalHero = modalScroll ? modalScroll.querySelector(".cal-weather-hero") : null;
+  if (modalHero) {
+    const heroAlertBox = modalScroll.querySelector(".cal-weather-alert-box");
+    if (heroAlertBox) {
+      heroAlertBox.style.display = "flex";
+      heroAlertBox.textContent = "";
+      const heroAlertIcon = document.createElement("img");
+      heroAlertIcon.style.width = "32px";
+      heroAlertIcon.style.height = "32px";
+      heroAlertIcon.style.marginRight = "8px";
+      heroAlertIcon.style.objectFit = "contain";
+      heroAlertIcon.src = "../assest/dubaovien/Dự báo viên chibi _ " + gifName + ".gif";
+      heroAlertBox.appendChild(heroAlertIcon);
+      const heroAlertTxt = document.createElement("div");
+      if (gifName === "Mưa") {
+        heroAlertTxt.textContent = "Khả năng mưa hôm nay rất cao (" + todayRainProb + "%). Nhớ mang theo ô khi ra ngoài!";
       } else {
-          alertTxt.textContent = "Dự báo: " + (wmo.text || "Thời tiết bình thường");
+        heroAlertTxt.textContent = "Dự báo: " + (reportWmo.text || "Thời tiết bình thường");
       }
-      alertBox.appendChild(alertTxt);
+      heroAlertBox.appendChild(heroAlertTxt);
     }
-
-    const modalHero = modalScroll.querySelector(".cal-weather-hero");
-    if (modalHero) {
-      const heroAlertBox = modalScroll.querySelector(".cal-weather-alert-box");
-      if (heroAlertBox) {
-        heroAlertBox.style.display = "flex";
-        heroAlertBox.textContent = "";
-        const heroAlertIcon = document.createElement("img");
-        heroAlertIcon.style.width = "32px";
-        heroAlertIcon.style.height = "32px";
-        heroAlertIcon.style.marginRight = "8px";
-        heroAlertIcon.style.objectFit = "contain";
-        heroAlertIcon.src = "../assest/dubaovien/Dự báo viên chibi _ " + gifName + ".gif";
-        heroAlertBox.appendChild(heroAlertIcon);
-        const heroAlertTxt = document.createElement("div");
-        if (isHighHumidity && gifName === "Mưa") {
-            heroAlertTxt.textContent = window.i18n ? window.i18n.t("cal_weather_rain_alert", [humidVal]) : "Độ ẩm không khí rất cao (" + humidVal + "%). Nguy cơ mưa, nhớ mang ô!";
-        } else {
-            heroAlertTxt.textContent = "Dự báo: " + (wmo.text || "Thời tiết bình thường");
-        }
-        heroAlertBox.appendChild(heroAlertTxt);
-      }
-    }
+  }
 
   if (dailyList && calWeatherData.daily && Array.isArray(calWeatherData.daily.time)) {
     dailyList.textContent = "";
@@ -1392,6 +1408,7 @@ function calRenderWeatherUI() {
       const isToday = (dateStr === calTodayKey());
       const card = document.createElement("div");
       card.className = "cal-weather-day-card" + (isToday ? " is-today" : "");
+      card.style.cursor = "pointer";
 
       // Left column: Icon + Date & condition
       const left = document.createElement("div");
@@ -1407,7 +1424,7 @@ function calRenderWeatherUI() {
 
       const dateSpan = document.createElement("div");
       dateSpan.className = "cal-weather-day-date";
-      
+
       let formattedDate = dateStr;
       try {
         const parts = dateStr.split("-");
@@ -1467,6 +1484,42 @@ function calRenderWeatherUI() {
       right.appendChild(rainPill);
 
       card.appendChild(right);
+
+      // Interactive: Click day card to preview details in the hero banner
+      card.addEventListener("click", function () {
+        const allCards = dailyList.querySelectorAll(".cal-weather-day-card");
+        allCards.forEach(function (c) { c.classList.remove("active"); });
+        card.classList.add("active");
+
+        if (modalScroll) {
+          const hero = modalScroll.querySelector(".cal-weather-hero");
+          if (hero) {
+            const hIcon = hero.querySelector(".cal-weather-hero-icon");
+            const hTemp = hero.querySelector(".cal-weather-hero-temp");
+            const hDesc = hero.querySelector(".cal-weather-hero-desc");
+            const pills = hero.querySelectorAll(".cal-weather-metric-pill");
+
+            if (hIcon) {
+              hIcon.textContent = "";
+              hIcon.appendChild(calCreateWeatherIconEl(code, true, "hero", dwmo.icon, typeof maxT === "number" ? maxT : undefined));
+            }
+            if (hTemp) {
+              hTemp.textContent = (isToday ? tempVal : maxT) + "°C";
+            }
+            if (hDesc) {
+              hDesc.textContent = isToday ? (dwmo.text + " • " + humidLabel + " " + humidVal + "%") : (formattedDate + ": " + dwmo.text);
+            }
+            if (pills && pills.length >= 2) {
+              calAppendIconText(pills[0], 25, prob + "%", true);
+              pills[0].className = "cal-weather-metric-pill" + (prob >= 70 ? " alert" : "");
+              pills[0].title = rainLabel + ": " + prob + "%";
+
+              calAppendIconText(pills[1], 26, minT + "° ~ " + maxT + "°C", true);
+            }
+          }
+        }
+      });
+
       dailyList.appendChild(card);
     }
   }

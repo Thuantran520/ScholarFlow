@@ -197,7 +197,6 @@ async function main() {
 
   // The background must actually load as a module, not merely parse. This is
   // the only check that catches a runtime/module-graph failure in the engine.
-  const bgPath = path.join(jsRoot, "userscripts_bg.js");
   if (exists("OS/js/userscripts_bg.js")) {
     try {
       const { execFileSync } = require("node:child_process");

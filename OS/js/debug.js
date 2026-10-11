@@ -62,6 +62,8 @@
 
   window.sfDebug = {
     enabled: urlActive,
+    grab,
+    log,
 
     set(flag) {
       if (!hasStorage()) {

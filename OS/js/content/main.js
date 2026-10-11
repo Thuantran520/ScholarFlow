@@ -528,9 +528,66 @@
           }
           break;
 
+        case "GET_ACTIONABLE_DOM": {
+          try {
+            const out = [];
+            const els = document.querySelectorAll('input:not([type="hidden"]), textarea, button, a[href], select, [role="button"], [contenteditable="true"]');
+            for(let i=0; i<els.length; i++){
+              const el = els[i];
+              if(!el.isConnected) continue;
+              const bounds = el.getBoundingClientRect();
+              if(bounds.width === 0 || bounds.height === 0) continue;
+
+              let tag = el.tagName.toLowerCase();
+              let id = el.id ? '#' + el.id : '';
+              let type = el.type ? ' type="' + el.type + '"' : '';
+              let name = el.name ? ' name="' + el.name + '"' : '';
+              let placeholder = el.getAttribute('placeholder') ? ' placeholder="' + el.getAttribute('placeholder') + '"' : '';
+              let aria = el.getAttribute('aria-label') ? ' aria-label="' + el.getAttribute('aria-label') + '"' : '';
+              let text = (el.innerText || el.textContent || '').trim().replace(/\\n/g, ' ').substring(0, 50);
+              let val = el.value ? ' value="' + el.value + '"' : '';
+
+              let desc = `<${tag}${id}${type}${name}${placeholder}${aria}${val}>${text ? text + '</'+tag+'>' : ''}`;
+              out.push(desc);
+            }
+            return respond(req.action, { dom: out.join('\\n') });
+          } catch(e) {
+            return respond(req.action, { dom: "" });
+          }
+        }
+
         case "GET_PAGE_TEXT": {
           let txt2 = "";
           try {
+            // 0. Extract Social/Chat context for Persona Responding (Messenger, Discord, YouTube, Facebook, Tiktok)
+            let chatCtx = "";
+            const h = window.location.hostname;
+            if (h.includes("messenger.com") || h.includes("facebook.com")) {
+              const msgs = document.querySelectorAll('[role="row"] [dir="auto"], [data-scope="messages_table"] [dir="auto"]');
+              if (msgs.length) {
+                const arr = [];
+                for (let i = Math.max(0, msgs.length - 20); i < msgs.length; i++) {
+                  if (msgs[i] && msgs[i].textContent) arr.push("- " + msgs[i].textContent.trim());
+                }
+                chatCtx = "Messenger Chat History:\\n" + arr.join("\\n");
+              }
+            } else if (h.includes("discord.com")) {
+              const msgs = document.querySelectorAll('[id^="message-content-"]');
+              if (msgs.length) {
+                const arr = [];
+                for (let i = Math.max(0, msgs.length - 20); i < msgs.length; i++) {
+                  if (msgs[i] && msgs[i].textContent) arr.push("- " + msgs[i].textContent.trim());
+                }
+                chatCtx = "Discord Chat History:\\n" + arr.join("\\n");
+              }
+            } else if (h.includes("youtube.com")) {
+              const title = document.querySelector('h1.ytd-video-primary-info-renderer, h1.ytd-watch-metadata');
+              if (title) chatCtx += "YouTube Video Title: " + title.textContent.trim() + "\\n";
+              const desc = document.querySelector('ytd-text-inline-expander, #description-inline-expander');
+              if (desc) chatCtx += "Description: " + desc.textContent.substring(0, 500).trim() + "\\n";
+            }
+            if (chatCtx.length > 30) return respond(req.action, { text: chatCtx });
+
             // 1. Khai thác dữ liệu cấu trúc ẩn JSON-LD (Schema.org Article / NewsArticle / BlogPosting)
             let jsonLdBody = "";
             try {
@@ -830,12 +887,49 @@ case "GET_YT_META": {
           sendResponse({ success: seekOk });
           break;
         }
+        case "SET_LIVE_VISION_BORDER":
+          setCopilotVisionBorder(!!msg.enabled);
+          sendResponse({ success: true });
+          break;
+
         case "PING":
           sendResponse({ pong: true });
           break;
       }
       return true;
     });
+  }
+
+
+  /* ── Copilot Vision Style Live Screen Border Effect ── */
+  var _sfVisionBorderEl = null;
+
+  function setCopilotVisionBorder(enabled) {
+    if (!enabled) {
+      if (_sfVisionBorderEl && _sfVisionBorderEl.parentNode) {
+        _sfVisionBorderEl.parentNode.removeChild(_sfVisionBorderEl);
+      }
+      _sfVisionBorderEl = null;
+      return;
+    }
+    if (!_sfVisionBorderEl) {
+      _sfVisionBorderEl = document.createElement("div");
+      _sfVisionBorderEl.id = "sf-copilot-vision-border";
+
+      const badge = document.createElement("div");
+      badge.className = "sf-copilot-vision-badge";
+
+      const sparkle = document.createElement("span");
+      sparkle.className = "sf-copilot-vision-sparkle";
+      badge.appendChild(sparkle);
+
+      const text = document.createElement("span");
+      text.textContent = "ScholarFlow Live Vision";
+      badge.appendChild(text);
+
+      _sfVisionBorderEl.appendChild(badge);
+      document.documentElement.appendChild(_sfVisionBorderEl);
+    }
   }
 
   /* ── Smart Reading Companion (Floating In-line Explainer on selection) ── */

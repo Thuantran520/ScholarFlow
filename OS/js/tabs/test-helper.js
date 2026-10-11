@@ -381,7 +381,6 @@ function thPerf() {
 }
 
 function thGenerateBugMd() {
-  const active = testHelperState.tabs ? "" : "";
   const lines = [
     "# Bug Report — ScholarFlow Test Helper",
     "",

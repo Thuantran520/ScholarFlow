@@ -30,17 +30,11 @@ function initQrTab() {
   let currentIcon = elIconInput ? elIconInput.value.trim() : "";
   let customLogoImg = null;   // HTMLImageElement | null — center badge logo
   let customBgImg = null;     // HTMLImageElement | null — full background image
-  let rafId = null;
-  let qrInstance = null;
   let extractedMatrix = null;
 
   // Animation rotation offsets for 5 rings (tree mode only)
   // Set to 0 to make rings static (no radar-like rotation)
   const ringAngles = [0, 0, 0, 0, 0];
-  const ringSpeeds = [0, 0, 0, 0, 0]; // Disabled rotation for non-radar effect
-
-  // DPI scale for high-res output
-  const DPR = window.devicePixelRatio || 1;
 
   // Mulberry32 seeded pseudo-random number generator
   function createPrng(seed) {
@@ -51,21 +45,6 @@ function initQrTab() {
       t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
       return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
-  }
-
-  // FNV-1a hash function for strings
-  function hashString(str) {
-    let h = 2166136261 >>> 0;
-    for (let i = 0; i < str.length; i++) {
-      h ^= str.charCodeAt(i);
-      h = Math.imul(h, 16777619) >>> 0;
-    }
-    return h;
-  }
-
-  // High-resolution canvas size based on DPR
-  function getCanvasSize(baseSize) {
-    return Math.round(baseSize * DPR);
   }
 
   // FNV-1a hash function for strings
@@ -465,7 +444,7 @@ function initQrTab() {
     ctx.stroke();
 
     // Helper: check if cell (r, c) belongs to any 8x8 finder pattern & separator zone
-    function isFinderZone(r, c) {
+    function isCardFinderZone(r, c) {
       if (r < 8 && c < 8) return true; // Top-left
       if (r < 8 && c >= grid - 8) return true; // Top-right
       if (r >= grid - 8 && c < 8) return true; // Bottom-left
@@ -519,7 +498,7 @@ function initQrTab() {
     ctx.fillStyle = dotColor;
     for (let r = 0; r < grid; r++) {
       for (let c = 0; c < grid; c++) {
-        if (isFinderZone(r, c)) continue;
+        if (isCardFinderZone(r, c)) continue;
 
         const cx = padding + (c + 0.5) * modSize;
         const cy = padding + (r + 0.5) * modSize;
@@ -594,7 +573,7 @@ function initQrTab() {
     }
 
     try {
-      qrInstance = new QRious({
+      new QRious({
         element: elCanvas,
         value: val,
         size: size,
@@ -810,9 +789,11 @@ function initQrTab() {
     ctx.fillStyle = bgColor;
     ctx.beginPath();
     const radius = modSize * 2;
-    ctx.roundRect
-      ? ctx.roundRect(0, 0, width, height, radius)
-      : ctx.fillRect(0, 0, width, height);
+    if (ctx.roundRect) {
+      ctx.roundRect(0, 0, width, height, radius);
+    } else {
+      ctx.fillRect(0, 0, width, height);
+    }
     ctx.fill();
 
     // Draw modules with rounded corners
@@ -826,20 +807,22 @@ function initQrTab() {
 
         // Draw rounded square/rectangle
         ctx.beginPath();
-        ctx.roundRect
-          ? ctx.roundRect(
-              cx - modSize * 0.4,
-              cy - modSize * 0.4,
-              modSize * 0.8,
-              modSize * 0.8,
-              modSize * 0.15
-            )
-          : ctx.fillRect(
-              cx - modSize * 0.4,
-              cy - modSize * 0.4,
-              modSize * 0.8,
-              modSize * 0.8
-            );
+        if (ctx.roundRect) {
+          ctx.roundRect(
+            cx - modSize * 0.4,
+            cy - modSize * 0.4,
+            modSize * 0.8,
+            modSize * 0.8,
+            modSize * 0.15
+          );
+        } else {
+          ctx.fillRect(
+            cx - modSize * 0.4,
+            cy - modSize * 0.4,
+            modSize * 0.8,
+            modSize * 0.8
+          );
+        }
         ctx.fillStyle = fgColor;
         ctx.fill();
       }
@@ -1050,7 +1033,6 @@ function initQrTab() {
     updateBadgeText();
 
     const gridSize = 240;
-    const padding = 16;
 
     switch (currentMode) {
       case "tree":
@@ -1077,27 +1059,6 @@ function initQrTab() {
       case "geometric":
         drawGeometricQR(val, gridSize, gridSize);
         break;
-    }
-  }
-
-  // Animation frame loop (tree mode only - static rings, no rotation)
-  function loop() {
-    // Rings are now static - no angle updates needed
-    const val = (elInput ? elInput.value.trim() : "") || "ScholarFlow";
-    drawTreeRings(val, 240, 240, ringAngles);
-    // Don't request next frame for static display
-    // rafId = requestAnimationFrame(loop);
-  }
-
-  function startAnimation() {
-    if (elCard) {
-      elCard.classList.add("qr-anim-active");
-    }
-  }
-
-  function stopAnimation() {
-    if (elCard) {
-      elCard.classList.remove("qr-anim-active");
     }
   }
 

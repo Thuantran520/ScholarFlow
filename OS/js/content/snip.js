@@ -152,7 +152,7 @@ function onBoxEstablished() {
       if (snipActiveRect.left + relLeft < margin) {
         relLeft = 0; // Align left
         if (snipActiveRect.left + relLeft + tbW > winW - margin) {
-          relLeft = (winW - margin - tbW) - snipActiveRect.left; 
+          relLeft = (winW - margin - tbW) - snipActiveRect.left;
         }
       } else if (snipActiveRect.left + relLeft + tbW > winW - margin) {
         relLeft = (winW - margin - tbW) - snipActiveRect.left;

@@ -45,11 +45,19 @@ function makeChromeStub(storeInit = {}) {
   const storageLocal = {
     get(key, cb) {
       let res = {};
-      if (typeof key === "string") res[key] = store[key];
-      else if (Array.isArray(key)) {for (const k of key) {if (k in store) res[k] = store[k];
-      else if (typeof key === "object" && key != null) {
-        for (const k of Object.keys(key)) res[k] = k in store ? store[k] : key[k];
-      } else res = Object.assign({}, store);}}
+      if (typeof key === "string") {
+        res[key] = store[key];
+      } else if (Array.isArray(key)) {
+        for (const k of key) {
+          if (k in store) res[k] = store[k];
+        }
+      } else if (typeof key === "object" && key != null) {
+        for (const k of Object.keys(key)) {
+          res[k] = k in store ? store[k] : key[k];
+        }
+      } else {
+        res = Object.assign({}, store);
+      }
       const p = Promise.resolve(res);
       if (typeof cb === "function") { p.then(cb); return undefined; }
       return p;

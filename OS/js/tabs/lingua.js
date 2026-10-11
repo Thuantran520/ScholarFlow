@@ -185,11 +185,11 @@ async function lngCreateCard() {
   if (out) {
     out.textContent = "";
     const h = document.createElement("div");
-    h.style.cssText = "font-weight:700;color:var(--primary);margin-bottom:2px;";
+    h.className = "lng-pending-term";
     h.textContent = lngPending.term;
     out.appendChild(h);
     const d = document.createElement("div"); d.textContent = lngPending.def; out.appendChild(d);
-    lngPending.ex.forEach((s) => { const e = document.createElement("div"); e.style.cssText = "font-style:italic;color:#94a3b8;margin-top:2px;"; e.textContent = "\u2022 " + s; out.appendChild(e); });
+    lngPending.ex.forEach((s) => { const e = document.createElement("div"); e.className = "lng-pending-ex"; e.textContent = "\u2022 " + s; out.appendChild(e); });
     const add = document.createElement("button");
     add.type = "button"; add.className = "btn-text-small"; add.style.marginTop = "6px";
     add.textContent = t("lng_add_card");
@@ -217,7 +217,7 @@ function lngRenderReview() {
   area.textContent = "";
   if (!lngQueue.length) {
     const empty = document.createElement("div");
-    empty.style.cssText = "font-size:11.5px;color:#34d399;padding:14px 2px;";
+    empty.className = "lng-review-empty";
     empty.textContent = lngCards.length ? t("lng_no_due") : t("lng_deck_empty");
     area.appendChild(empty);
     lngRenderStats();
@@ -225,19 +225,19 @@ function lngRenderReview() {
   }
   const card = lngQueue[lngPos];
   const head = document.createElement("div");
-  head.style.cssText = "font-size:10px;color:#64748b;margin-bottom:4px;";
+  head.className = "lng-review-head";
   head.textContent = (lngPos + 1) + " / " + lngQueue.length + (card.kind === "gram" ? " \u00b7 \u270e" : " \u00b7 \u25b8");
   area.appendChild(head);
 
   const front = document.createElement("div");
-  front.style.cssText = "font-size:14px;font-weight:800;color:#f8fafc;margin-bottom:4px;";
+  front.className = "lng-review-front";
   front.textContent = card.kind === "gram" ? card.wrong : card.term;
   area.appendChild(front);
   if (card.kind === "cloze" && card.q) {
-    const q = document.createElement("div"); q.style.cssText = "font-size:12px;color:#cbd5e1;margin-bottom:6px;"; q.textContent = card.q;
+    const q = document.createElement("div"); q.className = "lng-review-q"; q.textContent = card.q;
     area.appendChild(q);
   } else if (card.ex && card.ex.length) {
-    const x = document.createElement("div"); x.style.cssText = "font-size:11.5px;color:#94a3b8;font-style:italic;margin-bottom:6px;"; x.textContent = card.ex[0];
+    const x = document.createElement("div"); x.className = "lng-review-ex"; x.textContent = card.ex[0];
     area.appendChild(x);
   }
 
@@ -249,9 +249,8 @@ function lngRenderReview() {
 
   if (!lngRevealed) {
     const inp = document.createElement("input");
-    inp.type = "text"; inp.className = "form-control"; inp.id = "lng-answer";
+    inp.type = "text"; inp.className = "form-control lng-quiz-input"; inp.id = "lng-answer";
     inp.placeholder = t("lng_answer_ph");
-    inp.style.cssText = "font-size:11.5px;padding:5px 8px;margin:6px 0;";
     area.appendChild(inp);
     const chk = document.createElement("button");
     chk.type = "button"; chk.className = "btn-text-small"; chk.textContent = t("lng_check");
@@ -261,7 +260,7 @@ function lngRenderReview() {
   } else {
     lngRenderAnswerKey(area, card);
     const gradeRow = document.createElement("div");
-    gradeRow.style.cssText = "display:flex;gap:6px;margin-top:8px;";
+    gradeRow.className = "lng-quiz-btn-row";
     [["again", 1, "#f87171"], ["good", 4, "#fbbf24"], ["easy", 5, "#34d399"]].forEach(function (g) {
       const b = document.createElement("button");
       b.type = "button"; b.className = "btn-text-small";
@@ -276,7 +275,7 @@ function lngRenderReview() {
 }
 function lngRenderAnswerKey(area, card) {
   const key = document.createElement("div");
-  key.style.cssText = "background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.3);border-radius:8px;padding:7px 9px;font-size:11.5px;color:#d1fae5;margin-top:6px;white-space:pre-wrap;";
+  key.className = "lng-answer-key";
   if (card.kind === "lex") {
     let s = (card.def || "") + (card.cloze ? "\n" + card.cloze.q : "") + (card.col && card.col.length ? "\n\u25b8 " + card.col.join(" \u00b7 ") : "");
     key.textContent = s;
@@ -295,7 +294,7 @@ function lngReveal(area, typed) {
       (card.syn && card.syn.some(function (s2) { return lngNormAnswer(typed) === lngNormAnswer(s2); }));
     card._auto = good ? 3 : 1;
     const v = document.createElement("div");
-    v.style.cssText = "font-size:10.5px;color:" + (good ? "#34d399" : "#f87171") + ";margin-top:4px;";
+    v.className = good ? "lng-feedback-good" : "lng-feedback-wrong";
     v.textContent = good ? t("lng_correct") : t("lng_wrong");
     area.appendChild(v);
   }
@@ -333,7 +332,7 @@ async function lngCheckWriting() {
   if (!list) { out.textContent = t("lng_bad_ai"); return; }
   if (!list.length) {
     const ok = document.createElement("div");
-    ok.style.cssText = "color:#34d399;font-weight:700;font-size:12px;padding:6px 0;";
+    ok.className = "lng-all-correct";
     ok.textContent = "\u2713 " + t("lng_no_err");
     out.appendChild(ok);
     return;
@@ -343,10 +342,10 @@ async function lngCheckWriting() {
     lngErrors.counts[cat] = (lngErrors.counts[cat] || 0) + 1;
     if (lngErrors.samples.length < 200) lngErrors.samples.push({ cat: cat, o: String(c.o || "").slice(0, 300), f: String(c.f || "").slice(0, 300), n: String(c.n || "").slice(0, 200), d: lngToday() });
     const row = document.createElement("div");
-    row.style.cssText = "border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:6px 8px;margin-bottom:6px;font-size:11px;";
-    const w0 = document.createElement("div"); w0.style.color = "#f87171"; w0.textContent = "\u2716 " + (c.o || ""); row.appendChild(w0);
-    const w1 = document.createElement("div"); w1.style.color = "#34d399"; w1.textContent = "\u2714 " + (c.f || ""); row.appendChild(w1);
-    const w2 = document.createElement("div"); w2.style.color = "#94a3b8"; w2.textContent = "[" + cat + "] " + (c.n || ""); row.appendChild(w2);
+    row.className = "lng-corr-card";
+    const w0 = document.createElement("div"); w0.className = "lng-corr-orig"; w0.textContent = "\u2716 " + (c.o || ""); row.appendChild(w0);
+    const w1 = document.createElement("div"); w1.className = "lng-corr-fixed"; w1.textContent = "\u2714 " + (c.f || ""); row.appendChild(w1);
+    const w2 = document.createElement("div"); w2.className = "lng-corr-cat"; w2.textContent = "[" + cat + "] " + (c.n || ""); row.appendChild(w2);
     const addB = document.createElement("button");
     addB.type = "button"; addB.className = "btn-text-small"; addB.style.marginTop = "4px";
     addB.textContent = t("lng_drill_this");
@@ -370,13 +369,13 @@ function lngRenderConn() {
   list.textContent = "";
   const bank = LINGUA_BANK[lngProfile.target];
   if (!bank) {
-    const n = document.createElement("div"); n.style.cssText = "font-size:11px;color:#94a3b8;"; n.textContent = t("lng_conn_none");
+    const n = document.createElement("div"); n.className = "lng-empty-note"; n.textContent = t("lng_conn_none");
     list.appendChild(n);
     return;
   }
   bank.forEach(function (it) {
     const chip = document.createElement("div");
-    chip.style.cssText = "display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:99px;padding:3px 9px;margin:0 4px 4px 0;font-size:11px;color:#e2e8f0;";
+    chip.className = "lng-chip-conn";
     chip.title = it.cat;
     chip.appendChild(document.createTextNode((LINGUA_CAT_ICON[it.cat] || "\u00b7") + " " + it.w));
     list.appendChild(chip);
@@ -390,19 +389,19 @@ function lngConnDrill() {
   const it = bank[lngDrillIdx];
   area.textContent = "";
   const q = document.createElement("div");
-  q.style.cssText = "font-size:12px;color:#e2e8f0;margin-bottom:6px;";
+  q.className = "lng-conn-q";
   q.textContent = it.ex.replace("____", "\u2192 ______ \u2190");
   area.appendChild(q);
   const inp = document.createElement("input");
-  inp.type = "text"; inp.className = "form-control";
-  inp.placeholder = t("lng_conn_ph"); inp.style.cssText = "font-size:11.5px;padding:5px 8px;margin-bottom:6px;";
+  inp.type = "text"; inp.className = "form-control lng-conn-input";
+  inp.placeholder = t("lng_conn_ph");
   area.appendChild(inp);
   const chk = document.createElement("button");
   chk.type = "button"; chk.className = "btn-text-small"; chk.textContent = t("lng_check");
   chk.addEventListener("click", function () {
     const ok = String(inp.value).toLowerCase().trim().replace(/[.,;]/g, "") === it.w;
     const v = document.createElement("div");
-    v.style.cssText = "font-size:11px;margin-top:4px;color:" + (ok ? "#34d399" : "#f87171") + ";";
+    v.className = ok ? "lng-feedback-good" : "lng-feedback-wrong";
     v.textContent = (ok ? "\u2713 " + t("lng_correct") : "\u2716 " + it.w) + " \u2014 [" + it.cat + "]";
     area.appendChild(v);
     if (ok) { lngLog[lngToday()] = (lngLog[lngToday()] || 0) + 1; storSet({ sf_lingua_log: lngLog }, function () {}); }
@@ -421,19 +420,19 @@ function lngRenderErr() {
   if (!area) return;
   area.textContent = "";
   const cats = Object.keys(lngErrors.counts || {});
-  if (!cats.length) { const n = document.createElement("div"); n.style.cssText = "font-size:11px;color:#94a3b8;"; n.textContent = t("lng_err_none"); area.appendChild(n); return; }
+  if (!cats.length) { const n = document.createElement("div"); n.className = "lng-empty-note"; n.textContent = t("lng_err_none"); area.appendChild(n); return; }
   cats.sort((a, b) => lngErrors.counts[b] - lngErrors.counts[a]).forEach(function (c) {
     const row = document.createElement("div");
-    row.style.cssText = "display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.05);";
-    const l = document.createElement("span"); l.textContent = c; l.style.color = "#cbd5e1";
-    const v = document.createElement("span"); v.textContent = "\u00d7" + lngErrors.counts[c]; v.style.color = "#f87171"; v.style.fontWeight = "700";
+    row.className = "lng-err-row";
+    const l = document.createElement("span"); l.className = "lng-err-cat-label"; l.textContent = c;
+    const v = document.createElement("span"); v.className = "lng-err-count"; v.textContent = "\u00d7" + lngErrors.counts[c];
     row.appendChild(l); row.appendChild(v);
     area.appendChild(row);
   });
   const last = (lngErrors.samples || []).slice(-5).reverse();
   last.forEach(function (s) {
     const it = document.createElement("div");
-    it.style.cssText = "font-size:10.5px;color:#64748b;margin-top:3px;";
+    it.className = "lng-err-sample";
     it.textContent = s.d + " \u00b7 [" + s.cat + "] " + (s.o || "") + " \u2192 " + (s.f || "");
     area.appendChild(it);
   });
@@ -486,7 +485,7 @@ function lngDictStart(slow) {
   if (!sentence) { showToast(t("lng_dict_none")); return; }
   area.textContent = "";
   const row = document.createElement("div");
-  row.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;";
+  row.className = "us-row-wrap";
   const play = document.createElement("button");
   play.type = "button"; play.className = "btn-text-small";
   play.textContent = (slow ? "\ud83d\udca2 " : "\ud83d\udd0a ") + t("lng_dict_play");
@@ -499,17 +498,19 @@ function lngDictStart(slow) {
   const inp = document.createElement("input");
   inp.type = "text"; inp.className = "form-control";
   inp.placeholder = t("lng_dict_ph");
-  inp.style.cssText = "font-size:11.5px;padding:5px 8px;margin-bottom:6px;width:100%;box-sizing:border-box;";
+  inp.className = "form-control lng-eval-input";
   area.appendChild(inp);
   const chk = document.createElement("button");
   chk.type = "button"; chk.className = "btn-text-small"; chk.textContent = t("lng_check");
   const finish = function () {
     const d = lingWordDiff(sentence, inp.value);
     const out = document.createElement("div");
-    out.style.cssText = "margin-top:6px;font-size:11.5px;line-height:1.8;";
+    out.className = "lng-eval-out";
     d.cells.forEach(function (c) {
       const w = document.createElement("span");
-      w.style.cssText = "margin-right:6px;padding:1px 4px;border-radius:4px;color:" + (c.ok ? "#34d399" : "#f87171") + ";background:" + (c.ok ? "rgba(52,211,153,0.08)" : "rgba(248,113,113,0.1)") + ";";
+      w.className = "lng-eval-word";
+      w.style.color = c.ok ? "#34d399" : "#f87171";
+      w.style.background = c.ok ? "rgba(52,211,153,0.08)" : "rgba(248,113,113,0.1)";
       w.textContent = c.ok ? c.w : (c.extra ? (c.got + "\u2715") : (c.got || "\u2205") + "\u2192" + c.w);
       if (!c.ok && !c.extra) {
         const cat = "spelling";
@@ -519,7 +520,8 @@ function lngDictStart(slow) {
       out.appendChild(w);
     });
     const sc = document.createElement("div");
-    sc.style.cssText = "font-weight:800;margin-top:4px;color:" + (d.score >= 80 ? "#34d399" : "#fbbf24") + ";";
+    sc.className = "lng-eval-score";
+    sc.style.color = d.score >= 80 ? "#34d399" : "#fbbf24";
     sc.textContent = t("lng_dict_score").replace("{0}", String(d.score)) + " \u00b7 " + d.cells.length + " \u00b7";
     out.appendChild(sc);
     area.appendChild(out);
@@ -550,17 +552,17 @@ async function lngLinkJoin() {
   out.textContent = "";
   j.joins.slice(0, 4).forEach(function (o) {
     const row = document.createElement("div");
-    row.style.cssText = "border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:6px 8px;margin-bottom:6px;font-size:11px;";
+    row.className = "lng-eval-row";
     const chip = document.createElement("span");
-    chip.style.cssText = "background:rgba(var(--primary-rgb),0.12);color:var(--primary);border-radius:99px;padding:1px 8px;font-weight:700;margin-right:6px;";
+    chip.className = "lng-eval-chip";
     chip.textContent = String(o.w || "").slice(0, 30);
     row.appendChild(chip);
     const body = document.createElement("span");
-    body.style.cssText = "color:#cbd5e1;white-space:pre-wrap;";
+    body.className = "lng-eval-body";
     body.textContent = String(o.t || "").slice(0, 800);
     row.appendChild(body);
     const use = document.createElement("button");
-    use.type = "button"; use.className = "btn-text-small"; use.style.cssText = "display:block;margin-top:4px;";
+    use.type = "button"; use.className = "btn-text-small lng-eval-use-btn";
     use.textContent = t("lng_link_use");
     use.addEventListener("click", function () { inp.value = o.t; showToast(t("lng_applied")); });
     row.appendChild(use);
@@ -632,7 +634,7 @@ onReady(function () {
     b.addEventListener("click", function () { lngSwitchSub(b.dataset.lngSub); });
   });
   const grabBtn = document.getElementById("btn-lng-grab");
-  if (grabBtn) grabBtn.addEventListener("click", function () {
+  if (grabBtn) {grabBtn.addEventListener("click", function () {
     try {
       sendTabMessage({ action: "GET_SELECTION_TEXT" }, function (res) {
         const sel = res && res.text ? res.text : (res && res.selection ? res.selection : "");
@@ -641,7 +643,7 @@ onReady(function () {
         else showToast(t("lng_no_selection"));
       });
     } catch (e) { showToast(t("lng_no_selection")); }
-  });
+  });}
   const mineBtn = document.getElementById("btn-lng-create");
   if (mineBtn) mineBtn.addEventListener("click", function () { lngCreateCard(); });
   const gradeBtn = document.getElementById("btn-lng-grade");
@@ -649,10 +651,10 @@ onReady(function () {
   const drillBtn = document.getElementById("btn-lng-drill");
   if (drillBtn) drillBtn.addEventListener("click", lngConnDrill);
   const clearBtn = document.getElementById("btn-lng-clear-err");
-  if (clearBtn) clearBtn.addEventListener("click", function () {
+  if (clearBtn) {clearBtn.addEventListener("click", function () {
     lngErrors = { counts: {}, samples: [] };
     lngSave("errors", lngErrors, function () { lngRenderErr(); });
-  });
+  });}
   const dictBtn = document.getElementById("btn-lng-dict");
   if (dictBtn) dictBtn.addEventListener("click", function () { lngDictStart(false); });
   const dictSlowBtn = document.getElementById("btn-lng-dict-slow");

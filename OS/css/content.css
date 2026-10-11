@@ -618,3 +618,70 @@ html.super-inspecting-active [data-super-redact-region="1"].super-element-highli
 }
 
 
+
+/* ═══════════════════════════════════════════════════════════
+   Copilot Vision Style Screen Border & Inner Ambient Glow
+   ═══════════════════════════════════════════════════════════ */
+#sf-copilot-vision-border {
+  position: fixed !important;
+  inset: 0 !important;
+  pointer-events: none !important;
+  z-index: 2147483645 !important;
+  box-sizing: border-box !important;
+  border-radius: 4px !important;
+  border: 2px solid rgba(56, 189, 248, 0.65) !important;
+  box-shadow: 
+    inset 0 0 35px 8px rgba(56, 189, 248, 0.5),
+    inset 0 0 85px 24px rgba(129, 140, 248, 0.28),
+    inset 0 0 160px 48px rgba(168, 85, 247, 0.16) !important;
+  animation: sf-copilot-inner-glow 2.4s infinite ease-in-out !important;
+  transition: opacity 0.35s ease !important;
+}
+
+@keyframes sf-copilot-inner-glow {
+  0%, 100% {
+    border-color: rgba(56, 189, 248, 0.55) !important;
+    box-shadow: 
+      inset 0 0 30px 6px rgba(56, 189, 248, 0.42),
+      inset 0 0 75px 20px rgba(129, 140, 248, 0.22),
+      inset 0 0 140px 40px rgba(168, 85, 247, 0.12) !important;
+  }
+  50% {
+    border-color: rgba(168, 85, 247, 0.8) !important;
+    box-shadow: 
+      inset 0 0 50px 14px rgba(56, 189, 248, 0.65),
+      inset 0 0 115px 35px rgba(168, 85, 247, 0.38),
+      inset 0 0 190px 60px rgba(56, 189, 248, 0.22) !important;
+  }
+}
+
+.sf-copilot-vision-badge {
+  position: absolute !important;
+  top: 10px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.92)) !important;
+  border: 1px solid rgba(56, 189, 248, 0.45) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 12px rgba(56, 189, 248, 0.25) !important;
+  border-radius: 9999px !important;
+  padding: 3px 12px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #38bdf8 !important;
+  letter-spacing: 0.5px !important;
+  pointer-events: none !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+.sf-copilot-vision-sparkle {
+  width: 6px !important;
+  height: 6px !important;
+  border-radius: 50% !important;
+  background: #38bdf8 !important;
+  box-shadow: 0 0 8px #38bdf8 !important;
+}

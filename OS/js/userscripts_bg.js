@@ -127,8 +127,7 @@ function _buildCode(script) {
     ? script.requires.map((r) => (r && typeof r.text === 'string' ? r.text : '')).filter(Boolean)
     : [];
   const resources = (script.resources && typeof script.resources === 'object') ? script.resources : {};
-  return shimApi.buildConsoleRelay(script.id, script.name || 'script') + '\n' +
-    shimApi.build({
+  return shimApi.build({
       id: script.id,
       name: script.name,
       require: requireTexts,
@@ -794,7 +793,6 @@ _ensureI18n();
 async function _bridge(method, payload, sender) {
   const p = payload || {};
   const store = _storage();
-  const rt = _runtime();
   const tabId = sender && sender.tab ? sender.tab.id : null;
   const host = _senderHost(sender);
   // Userscript storage is namespaced per script so two scripts cannot read or

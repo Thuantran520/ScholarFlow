@@ -14,7 +14,6 @@
   var currentFilter = 'all';
   var searchQuery = '';
   var currentViewMode = 'edit'; // 'edit' | 'preview' | 'split'
-  var isMonoFont = true;
   var saveTimer = null;
   var isInternalChange = false;
 
@@ -46,6 +45,9 @@
     }
   }
 
+  var LINE_HEIGHT = 20;
+  var isGutterScheduled = false;
+
   function updateLineNumbers() {
     var editor = document.getElementById('scratchpad-editor');
     var gutter = document.getElementById('scratchpad-line-numbers');
@@ -53,17 +55,64 @@
     if (!editor || !gutter) return;
 
     var val = editor.value || '';
-    var linesCount = val.split('\n').length;
-    var lineNums = [];
-    for (var i = 1; i <= linesCount; i++) {
-      lineNums.push(i);
+    var linesCount = val ? val.split('\n').length : 1;
+
+    // 1. Dynamic Gutter Width: cleanly scales for 1 digit up to 100,000+ lines
+    var digits = Math.max(2, String(linesCount).length);
+    var targetWidth = Math.max(30, digits * 8 + 14);
+    gutter.style.width = targetWidth + 'px';
+    gutter.style.minWidth = targetWidth + 'px';
+
+    // 2. High-performance rendering: Virtualized window for massive line counts (> 1,000 lines)
+    if (linesCount <= 1000) {
+      gutter.style.paddingTop = '10px';
+      gutter.style.paddingBottom = '10px';
+      var lineNums = [];
+      for (var i = 1; i <= linesCount; i++) {
+        lineNums.push(i);
+      }
+      gutter.textContent = lineNums.join('\n');
+    } else {
+      // Virtual window: only renders visible lines in the viewport with buffer
+      var scrollTop = editor.scrollTop;
+      var clientH = editor.clientHeight || 300;
+      var firstLine = Math.max(1, Math.floor(scrollTop / LINE_HEIGHT) - 8);
+      var lastLine = Math.min(linesCount, Math.ceil((scrollTop + clientH) / LINE_HEIGHT) + 12);
+
+      var nums = [];
+      for (var j = firstLine; j <= lastLine; j++) {
+        nums.push(j);
+      }
+      gutter.style.paddingTop = (10 + (firstLine - 1) * LINE_HEIGHT) + 'px';
+      gutter.style.paddingBottom = (10 + (linesCount - lastLine) * LINE_HEIGHT) + 'px';
+      gutter.textContent = nums.join('\n');
     }
-    gutter.textContent = lineNums.join('\n');
+
     gutter.scrollTop = editor.scrollTop;
 
     if (linesBadge) {
       var template = tText('scratchpad_lines_counter') || '{0} dòng';
-      linesBadge.textContent = template.replace('{0}', String(linesCount));
+      linesBadge.textContent = template.replace('{0}', linesCount.toLocaleString());
+    }
+  }
+
+  function syncEditorScroll() {
+    var editor = document.getElementById('scratchpad-editor');
+    var gutter = document.getElementById('scratchpad-line-numbers');
+    if (!editor || !gutter) return;
+
+    gutter.scrollTop = editor.scrollTop;
+
+    var val = editor.value || '';
+    var linesCount = val ? val.split('\n').length : 1;
+    if (linesCount > 1000) {
+      if (!isGutterScheduled) {
+        isGutterScheduled = true;
+        requestAnimationFrame(function () {
+          isGutterScheduled = false;
+          updateLineNumbers();
+        });
+      }
     }
   }
 
@@ -135,7 +184,9 @@
     isInternalChange = true;
     if (editor) editor.value = active.content || '';
     if (titleInput) titleInput.value = active.title || '';
+    var diffSelect = document.getElementById('scratchpad-select-difficulty');
     if (catSelect) catSelect.value = active.category || 'general';
+    if (diffSelect) diffSelect.value = active.difficulty || '';
     if (pinBtn) {
       pinBtn.classList.toggle('pinned', !!active.pinned);
     }
@@ -246,6 +297,17 @@
         duplicateNote(n.id);
       };
 
+      // Export button for this note
+      var expBtn = document.createElement('button');
+      expBtn.type = 'button';
+      expBtn.className = 'scratchpad-card-action-btn btn-export';
+      expBtn.title = tText('scratchpad_tip_export');
+      expBtn.textContent = '↗';
+      expBtn.onclick = function (e) {
+        e.stopPropagation();
+        openExportMenu(expBtn, n);
+      };
+
       // Delete button
       var delBtn = document.createElement('button');
       delBtn.type = 'button';
@@ -259,6 +321,7 @@
 
       actions.appendChild(pinBtn);
       actions.appendChild(dupBtn);
+      actions.appendChild(expBtn);
       actions.appendChild(delBtn);
 
       footer.appendChild(timeEl);
@@ -440,7 +503,7 @@
   // Helper: Tokenize inline formatting safely without dynamic innerHTML
   function renderInlineFormatted(text, parentElement) {
     if (!text) return;
-    var INLINE_REGEX = /(`[^`\n]+`|\$[^\$\n]+\$|\*\*\*[^*\n]+\*\*\*|\*\*[^*\n]+\*\*|\*(?:(?!\*)[^*\n])+\*|~~[^~\n]+~~|\[[^\]\n]+\]\(https?:\/\/[^\s\)]+\))/g;
+    var INLINE_REGEX = /(`[^`\n]+`|==[^=\n]+==|\$[^\$\n]+\$|\*\*\*[^*\n]+\*\*\*|\*\*[^*\n]+\*\*|\*(?:(?!\*)[^*\n])+\*|~~[^~\n]+~~|\[[^\]\n]+\]\(https?:\/\/[^\s\)]+\))/g;
     var lastIndex = 0;
     var match;
 
@@ -453,6 +516,11 @@
         var code = document.createElement('code');
         code.textContent = token.slice(1, -1);
         parentElement.appendChild(code);
+      } else if (token.startsWith('==') && token.endsWith('==')) {
+        var mark = document.createElement('mark');
+        mark.className = 'scratchpad-mark';
+        mark.textContent = token.slice(2, -2);
+        parentElement.appendChild(mark);
       } else if (token.startsWith('$') && token.endsWith('$')) {
         var mathBadge = document.createElement('span');
         mathBadge.className = 'scratchpad-math-badge';
@@ -578,8 +646,7 @@
 
     if (!raw.trim()) {
       var em = document.createElement('p');
-      em.style.color = '#64748b';
-      em.style.fontStyle = 'italic';
+      em.className = 'scratchpad-preview-em';
       em.textContent = tText('scratchpad_placeholder') || 'Chưa có nội dung để xem trước.';
       preview.appendChild(em);
       return;
@@ -599,19 +666,44 @@
       var tbl = document.createElement('table');
       var thead = document.createElement('thead');
       var tbody = document.createElement('tbody');
+      var colAligns = [];
 
-      tableRows.forEach(function (r, idx) {
-        if (r.trim().match(/^\|?[-:\s|]+\|?$/)) return;
+      // Determine column alignments from delimiter row (e.g., |:---|:---:|---:|)
+      tableRows.forEach(function (r) {
+        if (r.trim().match(/^\|?[-:\s|]+\|?$/)) {
+          var parts = r.split('|').filter(function (_, cIdx, arr) {
+            return cIdx > 0 && cIdx < arr.length - 1;
+          });
+          colAligns = parts.map(function (p) {
+            var t = p.trim();
+            var leftColon = t.startsWith(':');
+            var rightColon = t.endsWith(':');
+            if (leftColon && rightColon) return 'center';
+            if (rightColon) return 'right';
+            return 'left';
+          });
+        }
+      });
+
+      var isHeader = true;
+      tableRows.forEach(function (r) {
+        if (r.trim().match(/^\|?[-:\s|]+\|?$/)) {
+          isHeader = false;
+          return;
+        }
         var tr = document.createElement('tr');
         var cells = r.split('|').filter(function (_, cIdx, arr) {
           return cIdx > 0 && cIdx < arr.length - 1;
         });
-        cells.forEach(function (cellText) {
-          var cell = document.createElement(idx === 0 ? 'th' : 'td');
+        cells.forEach(function (cellText, cIdx) {
+          var cell = document.createElement(isHeader ? 'th' : 'td');
+          var align = colAligns[cIdx] || 'left';
+          cell.className = 'align-' + align;
+          cell.style.textAlign = align;
           renderInlineFormatted(cellText.trim(), cell);
           tr.appendChild(cell);
         });
-        if (idx === 0) thead.appendChild(tr);
+        if (isHeader) thead.appendChild(tr);
         else tbody.appendChild(tr);
       });
 
@@ -653,8 +745,8 @@
       var copyBtn = document.createElement('button');
       copyBtn.type = 'button';
       copyBtn.className = 'scratchpad-copy-code-btn';
-      var copyText = tText('scratchpad_copy_code') || 'Sao chép mã';
-      copyBtn.textContent = '📋 ' + copyText;
+      var copyText = tText('scratchpad_copy_code') || 'Sao chép';
+      copyBtn.textContent = copyText;
 
       var fullCodeStr = codeLines.join('\n');
       copyBtn.addEventListener('click', (function (codeToCopy, btn, baseText) {
@@ -662,10 +754,10 @@
           e.stopPropagation();
           if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(codeToCopy).then(function () {
-              btn.textContent = '✓ ' + (tText('scratchpad_copied') || 'Đã chép!');
+              btn.textContent = '✓ ' + (tText('scratchpad_copied') || 'Đã chép');
               btn.classList.add('copied');
               setTimeout(function () {
-                btn.textContent = '📋 ' + baseText;
+                btn.textContent = baseText;
                 btn.classList.remove('copied');
               }, 1500);
             });
@@ -691,8 +783,22 @@
       inCodeBlock = false;
     }
 
+    var currentBlockAlign = null;
+
     for (var i = 0; i < lines.length; i++) {
       var line = lines[i];
+
+      // Block alignment tags <div align="..."> and </div>
+      var alignStartM = line.trim().match(/^<div\s+align=["'](left|center|right|justify)["']\s*>/i);
+      if (alignStartM) {
+        flushLists();
+        currentBlockAlign = alignStartM[1].toLowerCase();
+        continue;
+      } else if (line.trim().toLowerCase() === '</div>') {
+        flushLists();
+        currentBlockAlign = null;
+        continue;
+      }
 
       // Code block start/end
       if (line.trim().startsWith('```')) {
@@ -727,8 +833,7 @@
       if (/^(\*{3,}|-{3,}|_{3,})$/.test(line.trim())) {
         flushLists();
         var hr = document.createElement('hr');
-        hr.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-        hr.style.margin = '10px 0';
+        hr.className = 'scratchpad-preview-hr';
         preview.appendChild(hr);
         continue;
       }
@@ -740,11 +845,19 @@
         var level = headingMatch[1].length;
         var hTag = 'h' + level;
         var hEl = document.createElement(hTag);
+        if (currentBlockAlign) {
+          hEl.className = 'scratchpad-align-' + currentBlockAlign;
+          hEl.style.textAlign = currentBlockAlign;
+        }
         renderInlineFormatted(headingMatch[2], hEl);
         preview.appendChild(hEl);
       } else if (line.startsWith('> ')) {
         flushLists();
         var bq = document.createElement('blockquote');
+        if (currentBlockAlign) {
+          bq.className = 'scratchpad-align-' + currentBlockAlign;
+          bq.style.textAlign = currentBlockAlign;
+        }
         renderInlineFormatted(line.substring(2), bq);
         preview.appendChild(bq);
       } else if (/^[-*]\s+\[[ xX]\]\s+/.test(line.trim())) {
@@ -818,6 +931,10 @@
       } else if (line.trim()) {
         flushLists();
         var p = document.createElement('p');
+        if (currentBlockAlign) {
+          p.className = 'scratchpad-align-' + currentBlockAlign;
+          p.style.textAlign = currentBlockAlign;
+        }
         renderInlineFormatted(line, p);
         preview.appendChild(p);
       } else {
@@ -874,15 +991,42 @@
     }
   }
 
-  function toggleFont() {
-    var editor = document.getElementById('scratchpad-editor');
-    var btnFont = document.getElementById('scratchpad-btn-font');
-    if (!editor) return;
+  var currentFontFamily = 'mono';
+  var currentFontSize = '12px';
 
-    isMonoFont = !isMonoFont;
-    editor.classList.toggle('font-sans', !isMonoFont);
-    if (btnFont) btnFont.classList.toggle('active', !isMonoFont);
+  function applyFontSettings(familyKey, sizeVal) {
+    if (familyKey) currentFontFamily = familyKey;
+    if (sizeVal) currentFontSize = sizeVal;
+
+    var editor = document.getElementById('scratchpad-editor');
+    var preview = document.getElementById('scratchpad-preview-pane');
+    var fontClasses = ['font-mono', 'font-system', 'font-serif', 'font-modern', 'font-clean', 'font-hand', 'font-sans'];
+
+    [editor, preview].forEach(function (el) {
+      if (!el) return;
+      fontClasses.forEach(function (cls) { el.classList.remove(cls); });
+      el.classList.add('font-' + (currentFontFamily || 'mono'));
+      if (currentFontSize) el.style.fontSize = currentFontSize;
+    });
+
+    var btnFont = document.getElementById('scratchpad-btn-font');
+    if (btnFont) {
+      btnFont.classList.toggle('active', currentFontFamily !== 'mono');
+    }
+
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.set({
+        sf_scratchpad_font_family: currentFontFamily,
+        sf_scratchpad_font_size: currentFontSize
+      });
+    }
   }
+
+  function toggleFont() {
+    var nextFont = currentFontFamily === 'mono' ? 'system' : 'mono';
+    applyFontSettings(nextFont, null);
+  }
+  window.sfToggleScratchpadFont = toggleFont;
 
   // Export functions
   function downloadFile(content, fileName, mimeType) {
@@ -899,31 +1043,183 @@
     }, 150);
   }
 
-  function exportActiveNote(format) {
-    var active = getActiveNote();
-    if (!active) return;
+  function exportSingleNote(targetNote, format) {
+    var noteObj = targetNote || getActiveNote();
+    if (!noteObj) return;
 
-    var safeTitle = (active.title || 'untitled').replace(/[^a-zA-Z0-9_\-\u00C0-\u024F\u1EA0-\u1EF9]/g, '_');
+    var safeTitle = (noteObj.title || 'untitled').replace(/[^a-zA-Z0-9_\-\u00C0-\u024F\u1EA0-\u1EF9]/g, '_');
     if (format === 'md') {
-      var mdContent = '# ' + (active.title || 'Untitled') + '\n\n' + (active.content || '');
-      downloadFile(mdContent, safeTitle + '.md', 'text/markdown;charset=utf-8');
+      var mdMeta = '# ' + (noteObj.title || 'Untitled') + '\n' +
+        (noteObj.category ? '> Thể loại: ' + noteObj.category + '\n' : '') +
+        (noteObj.difficulty ? '> Độ khó: ' + noteObj.difficulty + '\n' : '') +
+        '> Ngày cập nhật: ' + new Date(noteObj.updatedAt || Date.now()).toLocaleString() + '\n\n';
+      downloadFile(mdMeta + (noteObj.content || ''), safeTitle + '.md', 'text/markdown;charset=utf-8');
     } else if (format === 'txt') {
-      downloadFile(active.content || '', safeTitle + '.txt', 'text/plain;charset=utf-8');
+      downloadFile(noteObj.content || '', safeTitle + '.txt', 'text/plain;charset=utf-8');
     } else if (format === 'html') {
       var htmlContent = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' +
-        (active.title || 'ScholarFlow Note') +
-        '</title><style>body{font-family:system-ui,sans-serif;max-width:800px;margin:40px auto;padding:0 20px;line-height:1.6;}pre{background:#f1f5f9;padding:12px;border-radius:6px;}</style></head><body><h1>' +
-        (active.title || 'Untitled') + '</h1><pre>' + (active.content || '') + '</pre></body></html>';
+        (noteObj.title || 'ScholarFlow Note') +
+        '</title><style>body{font-family:system-ui,-apple-system,sans-serif;max-width:840px;margin:30px auto;padding:0 24px;line-height:1.65;color:#1e293b;background:#f8fafc;}h1,h2,h3{color:#0f172a;}pre{background:#090d16;color:#e2e8f0;padding:12px;border-radius:6px;overflow-x:auto;}code{font-family:monospace;background:rgba(0,0,0,0.06);padding:2px 4px;border-radius:3px;}table{border-collapse:collapse;width:100%;margin:15px 0;}th,td{border:1px solid #cbd5e1;padding:8px;text-align:left;}th{background:#e2e8f0;}</style></head><body><h1>' +
+        (noteObj.title || 'Untitled') + '</h1><p style="color:#64748b;font-size:12px;">Ngày: ' + new Date(noteObj.updatedAt || Date.now()).toLocaleString() + '</p><pre style="white-space:pre-wrap;font-family:inherit;background:#ffffff;color:#334155;border:1px solid #e2e8f0;padding:16px;">' + (noteObj.content || '') + '</pre></body></html>';
       downloadFile(htmlContent, safeTitle + '.html', 'text/html;charset=utf-8');
+    } else if (format === 'json') {
+      var singleJson = {
+        app: 'ScholarFlow',
+        version: '2.5.7',
+        exportedAt: new Date().toISOString(),
+        note: noteObj
+      };
+      downloadFile(JSON.stringify(singleJson, null, 2), safeTitle + '.json', 'application/json;charset=utf-8');
+    }
+
+    if (typeof window.showToast === 'function') {
+      var msg = (tText('scratchpad_export_toast') || '✓ Đã xuất ghi chú "{0}" ({1})!')
+        .replace('{0}', noteObj.title || 'Untitled')
+        .replace('{1}', format.toUpperCase());
+      window.showToast(msg);
+    }
+  }
+
+  function exportAllNotes(format) {
+    if (!notes.length) return;
+    if (format === 'md') {
+      var combinedMd = notes.map(function (n) {
+        return '# ' + (n.title || 'Untitled') + '\n' +
+          (n.category ? '> Thể loại: ' + n.category + '\n' : '') +
+          (n.difficulty ? '> Độ khó: ' + n.difficulty + '\n' : '') +
+          '> Ngày: ' + new Date(n.updatedAt || Date.now()).toLocaleString() + '\n\n' +
+          (n.content || '') + '\n\n---\n';
+      }).join('\n');
+      downloadFile(combinedMd, 'scholarflow_all_notes.md', 'text/markdown;charset=utf-8');
     } else if (format === 'json') {
       var backupData = {
         app: 'ScholarFlow',
         version: '2.5.7',
         exportedAt: new Date().toISOString(),
+        total: notes.length,
         notes: notes
       };
       downloadFile(JSON.stringify(backupData, null, 2), 'scholarflow_notes_backup.json', 'application/json;charset=utf-8');
     }
+
+    if (typeof window.showToast === 'function') {
+      var msgAll = (tText('scratchpad_export_all_toast') || '✓ Đã xuất tất cả {0} ghi chú ({1})!')
+        .replace('{0}', String(notes.length))
+        .replace('{1}', format.toUpperCase());
+      window.showToast(msgAll);
+    }
+  }
+
+  function printNoteAsPdf(targetNote) {
+    var noteObj = targetNote || getActiveNote();
+    if (!noteObj) return;
+    var printWin = window.open('', '_blank');
+    if (!printWin) return;
+    printWin.document.title = noteObj.title || 'ScholarFlow Note';
+    var doc = printWin.document;
+    var style = doc.createElement('style');
+    style.textContent = 'body{font-family:system-ui,-apple-system,sans-serif;max-width:800px;margin:20px auto;padding:0 20px;line-height:1.6;color:#111827;}h1{border-bottom:2px solid #e5e7eb;padding-bottom:8px;}pre{background:#f3f4f6;padding:12px;border-radius:6px;white-space:pre-wrap;font-family:inherit;}table{border-collapse:collapse;width:100%;margin:12px 0;}th,td{border:1px solid #d1d5db;padding:6px 10px;text-align:left;}th{background:#f9fafb;}';
+    doc.head.appendChild(style);
+    var h1 = doc.createElement('h1');
+    h1.textContent = noteObj.title || 'Untitled';
+    doc.body.appendChild(h1);
+    var p = doc.createElement('p');
+    p.className = 'scratchpad-menu-desc';
+    p.textContent = (tText('scratchpad_export_pdf_print') || 'Print') + ' • ' + new Date().toLocaleString();
+    doc.body.appendChild(p);
+    var pre = doc.createElement('pre');
+    pre.textContent = noteObj.content || '';
+    doc.body.appendChild(pre);
+    printWin.focus();
+    setTimeout(function () {
+      printWin.print();
+    }, 250);
+  }
+  function openExportMenu(anchorBtn, specificNote) {
+    closeFloatingMenu();
+    var menu = document.createElement('div');
+    menu.className = 'scratchpad-floating-menu';
+
+    var head = document.createElement('div');
+    head.className = 'scratchpad-menu-header';
+    head.textContent = tText('scratchpad_export_menu_title') || 'TÙY CHỌN XUẤT GHI CHÚ';
+    menu.appendChild(head);
+
+    var target = specificNote || getActiveNote();
+    if (target) {
+      var subHead1 = document.createElement('div');
+      subHead1.className = 'scratchpad-menu-subhead';
+      subHead1.textContent = (tText('scratchpad_export_active_title') || 'GHI CHÚ HIỆN TẠI') + ': ' + (target.title || 'Untitled');
+      menu.appendChild(subHead1);
+
+      var options = [
+        { name: tText('scratchpad_export_md') || 'Xuất Markdown (.md)', ext: 'md', badge: '.md' },
+        { name: tText('scratchpad_export_txt') || 'Xuất văn bản thô (.txt)', ext: 'txt', badge: '.txt' },
+        { name: tText('scratchpad_export_html') || 'Xuất trang HTML (.html)', ext: 'html', badge: '.html' },
+        { name: tText('scratchpad_export_pdf_print') || 'In / Lưu PDF (.pdf)', ext: 'pdf', badge: 'PDF 🖨' }
+      ];
+
+      options.forEach(function (opt) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'scratchpad-menu-item';
+        var lbl = document.createElement('span');
+        lbl.textContent = opt.name;
+        var bdg = document.createElement('span');
+        bdg.className = 'menu-badge';
+        bdg.textContent = opt.badge;
+        b.appendChild(lbl);
+        b.appendChild(bdg);
+        b.addEventListener('click', function () {
+          closeFloatingMenu();
+          if (opt.ext === 'pdf') printNoteAsPdf(target);
+          else exportSingleNote(target, opt.ext);
+        });
+        menu.appendChild(b);
+      });
+    }
+
+    // Section: All notes
+    var subHead2 = document.createElement('div');
+    subHead2.className = 'scratchpad-menu-header scratchpad-menu-subhead-spaced';
+    subHead2.textContent = tText('scratchpad_export_all_title') || 'TOÀN BỘ GHI CHÚ';
+    menu.appendChild(subHead2);
+
+    var allMdBtn = document.createElement('button');
+    allMdBtn.type = 'button';
+    allMdBtn.className = 'scratchpad-menu-item action-accent';
+    var allMdLbl = document.createElement('span');
+    allMdLbl.textContent = (tText('scratchpad_btn_export_all') || 'Xuất tất cả') + ' (.md)';
+    var allMdBdg = document.createElement('span');
+    allMdBdg.className = 'menu-badge';
+    allMdBdg.textContent = notes.length + ' notes';
+    allMdBtn.appendChild(allMdLbl);
+    allMdBtn.appendChild(allMdBdg);
+    allMdBtn.addEventListener('click', function () {
+      closeFloatingMenu();
+      exportAllNotes('md');
+    });
+    menu.appendChild(allMdBtn);
+
+    var backupBtn = document.createElement('button');
+    backupBtn.type = 'button';
+    backupBtn.className = 'scratchpad-menu-item action-accent';
+    var backupLbl = document.createElement('span');
+    backupLbl.textContent = tText('scratchpad_export_backup') || 'Sao lưu toàn bộ (JSON)';
+    var backupBdg = document.createElement('span');
+    backupBdg.className = 'menu-badge';
+    backupBdg.textContent = '.json';
+    backupBtn.appendChild(backupLbl);
+    backupBtn.appendChild(backupBdg);
+    backupBtn.addEventListener('click', function () {
+      closeFloatingMenu();
+      exportAllNotes('json');
+    });
+    menu.appendChild(backupBtn);
+
+    positionMenu(menu, anchorBtn);
+    document.body.appendChild(menu);
+    activeFloatingMenu = menu;
   }
 
   function handleImportFile(file) {
@@ -1056,6 +1352,266 @@
     });
   }
 
+
+  // ── Advanced DSA Templates & Big-O Complexity Menus ─────────────────
+  var activeFloatingMenu = null;
+
+  function closeFloatingMenu() {
+    if (activeFloatingMenu && activeFloatingMenu.parentNode) {
+      activeFloatingMenu.parentNode.removeChild(activeFloatingMenu);
+    }
+    activeFloatingMenu = null;
+  }
+
+  document.addEventListener('click', function (e) {
+    if (activeFloatingMenu && !activeFloatingMenu.contains(e.target)) {
+      closeFloatingMenu();
+    }
+  });
+
+  function positionMenu(menu, anchorBtn) {
+    var rect = anchorBtn.getBoundingClientRect();
+    menu.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+    menu.style.left = Math.max(10, Math.min(window.innerWidth - 290, rect.left + window.scrollX)) + 'px';
+  }
+
+  function openDsaTemplateMenu(anchorBtn) {
+    closeFloatingMenu();
+    var menu = document.createElement('div');
+    menu.className = 'scratchpad-floating-menu';
+
+    var head = document.createElement('div');
+    head.className = 'scratchpad-menu-header';
+    head.textContent = tText('scratchpad_dsa_menu_title') || 'MẪU GIẢI THUẬT & CẤU TRÚC DỮ LIỆU';
+    menu.appendChild(head);
+
+    var templates = [{"nameKey":"scratchpad_dsa_tmpl_two_pointers","tag":"O(N)/O(1)","snippet":"\n### Two Pointers (Hai con trỏ)\n- **Đề bài & Ca kiểm thử:** Mảng đã sắp xếp, tìm cặp số có tổng bằng Target.\n- **Độ phức tạp:** Thời gian $O(N)$ • Không gian $O(1)$\n- **Chiến lược:** $L = 0, R = N - 1$, di chuyển thu hẹp phạm vi dựa trên tổng hiện tại.\n\n```javascript\nfunction twoSumSorted(arr, target) {\n  let left = 0, right = arr.length - 1;\n  while (left < right) {\n    const sum = arr[left] + arr[right];\n    if (sum === target) return [left, right];\n    if (sum < target) left++;\n    else right--;\n  }\n  return [-1, -1];\n}\n```\n"},{"nameKey":"scratchpad_dsa_tmpl_sliding_window","tag":"O(N)/O(K)","snippet":"\n### Sliding Window (Cửa sổ trượt)\n- **Ứng dụng:** Chuỗi/mảng con dài nhất không lặp ký tự, tổng mảng con cố định size $K$.\n- **Độ phức tạp:** Thời gian $O(N)$ • Không gian $O(K)$\n\n```javascript\nfunction maxSubArraySum(arr, k) {\n  let maxSum = 0, windowSum = 0;\n  for (let i = 0; i < k; i++) windowSum += arr[i];\n  maxSum = windowSum;\n  for (let i = k; i < arr.length; i++) {\n    windowSum += arr[i] - arr[i - k];\n    maxSum = Math.max(maxSum, windowSum);\n  }\n  return maxSum;\n}\n```\n"},{"nameKey":"scratchpad_dsa_tmpl_binary_search","tag":"O(log N)","snippet":"\n### Binary Search (Tìm kiếm nhị phân)\n- **Điều kiện:** Không gian tìm kiếm đơn điệu hoặc mảng tăng dần.\n- **Độ phức tạp:** Thời gian $O(\\log N)$ • Không gian $O(1)$\n\n```javascript\nfunction binarySearch(nums, target) {\n  let left = 0, right = nums.length - 1;\n  while (left <= right) {\n    const mid = left + Math.floor((right - left) / 2);\n    if (nums[mid] === target) return mid;\n    if (nums[mid] < target) left = mid + 1;\n    else right = mid - 1;\n  }\n  return -1;\n}\n```\n"},{"nameKey":"scratchpad_dsa_tmpl_tree_dfs","tag":"Tree","snippet":"\n### Binary Tree DFS (Duyệt cây nhị phân)\n- **Cấu trúc:**\n```\n       1\n      / \\\n     2   3\n    / \\\n   4   5\n```\n- **Độ phức tạp:** Thời gian $O(N)$ • Không gian $O(H)$ (chiều cao cây)\n\n```javascript\nfunction TreeNode(val, left, right) {\n  this.val = (val===undefined ? 0 : val);\n  this.left = (left===undefined ? null : left);\n  this.right = (right===undefined ? null : right);\n}\n\nfunction maxDepth(root) {\n  if (!root) return 0;\n  return 1 + Math.max(maxDepth(root.left), maxDepth(root.right));\n}\n```\n"},{"nameKey":"scratchpad_dsa_tmpl_graph_bfs","tag":"Graph","snippet":"\n### BFS Graph Traversal (Duyệt đồ thị)\n- **Độ phức tạp:** Thời gian $O(V + E)$ • Không gian $O(V)$\n\n```javascript\nfunction shortestPathBFS(graph, start, target) {\n  const queue = [[start, 0]];\n  const visited = new Set([start]);\n  while (queue.length > 0) {\n    const [node, dist] = queue.shift();\n    if (node === target) return dist;\n    for (const neighbor of (graph[node] || [])) {\n      if (!visited.has(neighbor)) {\n        visited.add(neighbor);\n        queue.push([neighbor, dist + 1]);\n      }\n    }\n  }\n  return -1;\n}\n```\n"},{"nameKey":"scratchpad_dsa_tmpl_dp_memo","tag":"DP","snippet":"\n### Dynamic Programming & Memoization (Quy hoạch động)\n- **Hàm mục tiêu / Công thức truy hồi:** $dp[i] = \\min / \\max(dp[i-1], dp[i-2]) + cost[i]$\n- **Bài toán cơ sở (Base Case):** $dp[0] = 0, dp[1] = 1$\n- **Độ phức tạp:** Thời gian $O(N)$ • Không gian $O(N) \\rightarrow O(1)$\n\n```javascript\nfunction climbStairs(n) {\n  if (n <= 2) return n;\n  let prev2 = 1, prev1 = 2;\n  for (let i = 3; i <= n; i++) {\n    const curr = prev1 + prev2;\n    prev2 = prev1;\n    prev1 = curr;\n  }\n  return prev1;\n}\n```\n"},{"nameKey":"scratchpad_dsa_tmpl_monotonic_stack","tag":"Stack","snippet":"\n### Monotonic Stack (Ngăn xếp đơn điệu)\n- **Đặc điểm:** Duy trì các phần tử tăng/giảm đơn điệu để tìm phần tử lớn hơn gần nhất.\n- **Độ phức tạp:** Thời gian $O(N)$ • Không gian $O(N)$\n\n```javascript\nfunction nextGreaterElements(nums) {\n  const res = new Array(nums.length).fill(-1);\n  const stack = [];\n  for (let i = 0; i < nums.length; i++) {\n    while (stack.length > 0 && nums[i] > nums[stack[stack.length - 1]]) {\n      const idx = stack.pop();\n      res[idx] = nums[i];\n    }\n    stack.push(i);\n  }\n  return res;\n}\n```\n"},{"nameKey":"scratchpad_dsa_tmpl_full_review","tag":"Template","snippet":"\n# [Thuật toán]: Tiêu đề bài toán\n- **Nền tảng:** LeetCode / Codeforces / HackerRank\n- **Độ khó:** Dễ / Trung bình / Khó\n- **Chủ đề:** `Array`, `Two Pointers`, `Hash Map`\n\n### 1. Phân tích đề bài & Ca biên (Edge Cases)\n- Mảng rỗng hoặc chỉ có 1 phần tử?\n- Tràn số nguyên ($> 2^{31} - 1$)?\n- Giá trị âm hoặc trùng lặp?\n\n### 2. Bảng Dry-Run kiểm thử từng bước\n| Bước | Con trỏ $L$ | Con trỏ $R$ | Giá trị xét | Điều kiện | Trạng thái | Kết quả |\n|:---|:---|:---|:---|:---|:---|:---|\n| Init | 0 | 4 | arr[0]=2, arr[4]=9 | sum=11 > target | R-- | Đang tìm |\n| Step 1 | 0 | 3 | arr[0]=2, arr[3]=7 | sum=9 == target | Khớp! | [0, 3] |\n\n### 3. Cài đặt thuật toán tối ưu\n- **Thời gian:** $O(N)$\n- **Không gian:** $O(1)$\n\n```javascript\nfunction solve(nums, target) {\n  // Cài đặt giải thuật tại đây\n  return nums.length;\n}\n```\n"}];
+
+    templates.forEach(function (t) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'scratchpad-menu-item';
+
+      var lbl = document.createElement('span');
+      lbl.textContent = tText(t.nameKey) || t.nameKey;
+
+      var bdg = document.createElement('span');
+      bdg.className = 'menu-badge';
+      bdg.textContent = t.tag;
+
+      btn.appendChild(lbl);
+      btn.appendChild(bdg);
+
+      btn.addEventListener('click', function () {
+        closeFloatingMenu();
+        wrapSelection('', '', t.snippet);
+      });
+      menu.appendChild(btn);
+    });
+
+    positionMenu(menu, anchorBtn);
+    document.body.appendChild(menu);
+    activeFloatingMenu = menu;
+  }
+
+  function openComplexityMenu(anchorBtn) {
+    closeFloatingMenu();
+    var menu = document.createElement('div');
+    menu.className = 'scratchpad-floating-menu';
+
+    var head = document.createElement('div');
+    head.className = 'scratchpad-menu-header';
+    head.textContent = tText('scratchpad_complexity_menu_title') || 'ĐỘ PHỨC TẠP BIG-O THƯỜNG GẶP';
+    menu.appendChild(head);
+
+    var complexities = [{"tag":"$O(1)$","desc":"Hằng số (Hash Map, Array Index)"},{"tag":"$O(\\log N)$","desc":"Logarit (Binary Search, Heap)"},{"tag":"$O(N)$","desc":"Tuyến tính (Loop, Two Pointers)"},{"tag":"$O(N \\log N)$","desc":"Tuyến tính log (MergeSort, QuickSort)"},{"tag":"$O(N^2)$","desc":"Bậc hai (Nested Loops)"},{"tag":"$O(2^N)$","desc":"Hàm mũ (Recursion, Subsets)"},{"tag":"$O(N!)$","desc":"Giai thừa (Permutations)"}];
+
+    complexities.forEach(function (c) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'scratchpad-menu-item';
+
+      var lbl = document.createElement('span');
+      lbl.className = 'scratchpad-menu-item-lbl';
+      lbl.textContent = c.tag;
+
+      var bdg = document.createElement('span');
+      bdg.className = 'menu-badge';
+      bdg.textContent = c.desc;
+
+      btn.appendChild(lbl);
+      btn.appendChild(bdg);
+
+      btn.addEventListener('click', function () {
+        closeFloatingMenu();
+        wrapSelection('', '', c.tag);
+      });
+      menu.appendChild(btn);
+    });
+
+    positionMenu(menu, anchorBtn);
+    document.body.appendChild(menu);
+    activeFloatingMenu = menu;
+  }
+
+  function openTableMenu(anchorBtn) {
+    closeFloatingMenu();
+    var menu = document.createElement('div');
+    menu.className = 'scratchpad-floating-menu';
+
+    var head = document.createElement('div');
+    head.className = 'scratchpad-menu-header';
+    head.textContent = tText('scratchpad_table_menu_title') || 'CHÈN BẢNG MARKDOWN CĂN LỀ';
+    menu.appendChild(head);
+
+    var tables = [
+      {
+        name: tText('scratchpad_table_left') || 'Bảng căn lề trái (:---)',
+        desc: 'Mặc định, thích hợp văn bản & tham số',
+        badge: ':---',
+        content: '\n| Đầu vào / Tham số | Kết quả kỳ vọng | Ghi chú |\n|:---|:---|:---|\n| Trường hợp 1 | Kết quả A | Hợp lệ |\n| Trường hợp 2 | Kết quả B | Biên |\n'
+      },
+      {
+        name: tText('scratchpad_table_center') || 'Bảng căn lề giữa (:---:)',
+        desc: 'Căn giữa các ô, thích hợp trạng thái & mã hiệu',
+        badge: ':---:',
+        content: '\n| STT | Trạng thái | Đánh giá | Tiến độ |\n|:---:|:---:|:---:|:---:|\n| 01 | Hoàn thành | Đạt | 100% |\n| 02 | Đang chạy | Tốt | 75% |\n'
+      },
+      {
+        name: tText('scratchpad_table_right') || 'Bảng căn lề phải (---:)',
+        desc: 'Căn phải các ô, thích hợp số liệu & tài chính & Big-O',
+        badge: '---:',
+        content: '\n| Chỉ số | Số lượng | Đơn giá | Tổng cộng |\n|---:|---:|---:|---:|\n| Mục A | 10 | 25.5 | 255.0 |\n| Mục B | 4 | 50.0 | 200.0 |\n'
+      },
+      {
+        name: tText('scratchpad_table_multi') || 'Bảng đa căn lề (Trái - Giữa - Phải)',
+        desc: 'Chuẩn học thuật: Tiêu đề trái, Trạng thái giữa, Số liệu phải',
+        badge: 'Mix',
+        content: '\n| Thuật toán | Cấu trúc dữ liệu | Đánh giá | Thời gian (ms) |\n|:---|:---:|:---|---:|\n| QuickSort | Mảng | Tối ưu | 12.4 |\n| BinarySearch | Mảng sắp xếp | Nhanh | 0.8 |\n| BFS Graph | Hàng đợi | Chuẩn | 45.1 |\n'
+      }
+    ];
+
+    tables.forEach(function (tbl) {
+      var item = document.createElement('div');
+      item.className = 'scratchpad-menu-item';
+
+      var topRow = document.createElement('div');
+      topRow.className = 'scratchpad-menu-item-top';
+      var title = document.createElement('span');
+      title.className = 'scratchpad-menu-item-title';
+      title.textContent = tbl.name;
+      var badge = document.createElement('span');
+      badge.className = 'scratchpad-menu-badge';
+      badge.textContent = tbl.badge;
+      topRow.appendChild(title);
+      topRow.appendChild(badge);
+
+      var desc = document.createElement('div');
+      desc.className = 'scratchpad-menu-desc';
+      desc.textContent = tbl.desc;
+
+      item.appendChild(topRow);
+      item.appendChild(desc);
+
+      item.addEventListener('click', function () {
+        wrapSelection('', '', tbl.content);
+        closeFloatingMenu();
+      });
+
+      menu.appendChild(item);
+    });
+
+    positionMenu(menu, anchorBtn);
+    document.body.appendChild(menu);
+    activeFloatingMenu = menu;
+  }
+
+  function openFontMenu(anchorBtn) {
+    closeFloatingMenu();
+    var menu = document.createElement('div');
+    menu.className = 'scratchpad-floating-menu';
+
+    var head = document.createElement('div');
+    head.className = 'scratchpad-menu-header';
+    head.textContent = tText('scratchpad_font_menu_title') || 'KIỂU CHỮ & CỠ CHỮ HỆ THỐNG';
+    menu.appendChild(head);
+
+    var fonts = [
+      { key: 'mono', icon: '💻', name: tText('scratchpad_font_mono') || 'Mã lập trình (Cascadia / Consolas / Mono)', desc: 'ui-monospace, Consolas, Fira Code, Courier' },
+      { key: 'system', icon: '🖥️', name: tText('scratchpad_font_system') || 'Giao diện hệ thống (Segoe UI / SF Pro)', desc: 'system-ui, Segoe UI, Roboto, Helvetica' },
+      { key: 'serif', icon: '📖', name: tText('scratchpad_font_serif') || 'Học thuật & Báo chí (Georgia / Times)', desc: 'Georgia, Times New Roman, Cambria, Serif' },
+      { key: 'modern', icon: '✍️', name: tText('scratchpad_font_modern') || 'Hiện đại & Tròn trịa (Segoe Variable)', desc: 'Segoe UI Variable Text, Rounded Sans' },
+      { key: 'clean', icon: '🎯', name: tText('scratchpad_font_clean') || 'Rõ ràng & Dễ đọc (Verdana / Clean)', desc: 'Verdana, Trebuchet MS, DéjàVu Sans' },
+      { key: 'hand', icon: '📝', name: tText('scratchpad_font_hand') || 'Bút máy & Viết tay (Segoe Print / Casual)', desc: 'Segoe Print, Comic Neue, Cursive' }
+    ];
+
+    fonts.forEach(function (f) {
+      var item = document.createElement('div');
+      item.className = 'scratchpad-menu-item' + (currentFontFamily === f.key ? ' active-font' : '');
+
+      var topRow = document.createElement('div');
+      topRow.className = 'scratchpad-menu-item-top';
+      var title = document.createElement('span');
+      title.className = 'scratchpad-menu-item-title';
+      title.textContent = f.icon + ' ' + f.name;
+
+      if (currentFontFamily === f.key) {
+        var badge = document.createElement('span');
+        badge.className = 'scratchpad-menu-badge';
+        badge.textContent = '✓ Đang chọn';
+        topRow.appendChild(title);
+        topRow.appendChild(badge);
+      } else {
+        topRow.appendChild(title);
+      }
+
+      var desc = document.createElement('div');
+      desc.className = 'scratchpad-menu-desc';
+      desc.textContent = f.desc;
+
+      item.appendChild(topRow);
+      item.appendChild(desc);
+
+      item.addEventListener('click', function () {
+        applyFontSettings(f.key, null);
+        closeFloatingMenu();
+      });
+
+      menu.appendChild(item);
+    });
+
+    // Font size selector row
+    var sizeRow = document.createElement('div');
+    sizeRow.style.cssText = 'padding: 8px 10px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: space-between; gap: 6px;';
+    var sizeLabel = document.createElement('span');
+    sizeLabel.style.cssText = 'font-size: 11px; color: #94a3b8; font-weight: 600;';
+    sizeLabel.textContent = (tText('scratchpad_font_size_label') || 'Cỡ chữ') + ':';
+    sizeRow.appendChild(sizeLabel);
+
+    var sizesWrap = document.createElement('div');
+    sizesWrap.style.cssText = 'display: flex; gap: 4px;';
+    var sizes = ['11px', '12px', '13px', '14px', '16px'];
+    sizes.forEach(function (sz) {
+      var sBtn = document.createElement('button');
+      sBtn.type = 'button';
+      sBtn.textContent = sz;
+      var isCurSize = currentFontSize === sz;
+      sBtn.style.cssText = 'border: 1px solid ' + (isCurSize ? '#38bdf8' : 'rgba(255,255,255,0.12)') + '; background: ' + (isCurSize ? 'rgba(56,189,248,0.25)' : 'rgba(255,255,255,0.05)') + '; color: ' + (isCurSize ? '#38bdf8' : '#cbd5e1') + '; border-radius: 4px; font-size: 10.5px; padding: 2px 6px; cursor: pointer; font-weight: 600;';
+      sBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        applyFontSettings(null, sz);
+        closeFloatingMenu();
+      });
+      sizesWrap.appendChild(sBtn);
+    });
+    sizeRow.appendChild(sizesWrap);
+    menu.appendChild(sizeRow);
+
+    positionMenu(menu, anchorBtn);
+    document.body.appendChild(menu);
+    activeFloatingMenu = menu;
+  }
+
   function initScratchpad() {
     var editor = document.getElementById('scratchpad-editor');
     var btnModePage = document.getElementById('scratchpad-mode-page');
@@ -1066,7 +1622,13 @@
 
     // Load active mode and clipper settings
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-      chrome.storage.local.get(['sf_scratchpad_active_mode', 'sf_scratchpad_clipper_enabled'], function (res) {
+      chrome.storage.local.get([
+        'sf_scratchpad_active_mode',
+        'sf_scratchpad_clipper_enabled',
+        'sf_scratchpad_font_family',
+        'sf_scratchpad_font_size',
+        'sf_scratchpad_editor_height'
+      ], function (res) {
         if (res && res.sf_scratchpad_active_mode) {
           currentMode = res.sf_scratchpad_active_mode;
           if (btnModePage && btnModeGlobal) {
@@ -1076,6 +1638,15 @@
         }
         if (chkClipper && res && typeof res.sf_scratchpad_clipper_enabled === 'boolean') {
           chkClipper.checked = res.sf_scratchpad_clipper_enabled;
+        }
+        if (res && (res.sf_scratchpad_font_family || res.sf_scratchpad_font_size)) {
+          applyFontSettings(res.sf_scratchpad_font_family || 'mono', res.sf_scratchpad_font_size || '12px');
+        }
+        if (res && typeof res.sf_scratchpad_editor_height === 'number') {
+          var wrap = document.getElementById('scratchpad-editor-wrap');
+          if (wrap && res.sf_scratchpad_editor_height >= 220) {
+            wrap.style.height = Math.min(res.sf_scratchpad_editor_height, window.innerHeight - 150) + 'px';
+          }
         }
         initHostContext(initNotesAndStorage);
       });
@@ -1157,6 +1728,19 @@
       });
     }
 
+    // Note Difficulty Select
+    var diffSelect = document.getElementById('scratchpad-select-difficulty');
+    if (diffSelect) {
+      diffSelect.addEventListener('change', function () {
+        var active = getActiveNote();
+        if (active) {
+          active.difficulty = diffSelect.value;
+          active.updatedAt = Date.now();
+          scheduleSave();
+        }
+      });
+    }
+
     // Pin Button in meta row
     var pinBtn = document.getElementById('scratchpad-btn-pin');
     if (pinBtn) {
@@ -1201,10 +1785,7 @@
     });
 
     editor.addEventListener('scroll', function () {
-      var gutter = document.getElementById('scratchpad-line-numbers');
-      if (gutter) {
-        gutter.scrollTop = editor.scrollTop;
-      }
+      syncEditorScroll();
     });
 
     // Keyboard shortcuts & Code Indentation (Tab / Shift+Tab)
@@ -1294,6 +1875,12 @@
     var btnItalic = document.getElementById('scratchpad-btn-italic');
     if (btnItalic) btnItalic.addEventListener('click', function () { wrapSelection('*', '*', 'italic'); });
 
+    var btnStrike = document.getElementById('scratchpad-btn-strike');
+    if (btnStrike) btnStrike.addEventListener('click', function () { wrapSelection('~~', '~~', 'strikethrough'); });
+
+    var btnHighlight = document.getElementById('scratchpad-btn-highlight');
+    if (btnHighlight) btnHighlight.addEventListener('click', function () { wrapSelection('==', '==', 'highlight'); });
+
     var btnHeading = document.getElementById('scratchpad-btn-heading');
     if (btnHeading) btnHeading.addEventListener('click', function () { insertLinePrefix('### '); });
 
@@ -1305,6 +1892,9 @@
 
     var btnTask = document.getElementById('scratchpad-btn-task');
     if (btnTask) btnTask.addEventListener('click', function () { insertLinePrefix('- [ ] '); });
+
+    var btnCodeInline = document.getElementById('scratchpad-btn-code-inline');
+    if (btnCodeInline) btnCodeInline.addEventListener('click', function () { wrapSelection('`', '`', 'code'); });
 
     // Code Block Inserter
     var btnCode = document.getElementById('scratchpad-btn-code-block');
@@ -1322,28 +1912,97 @@
       });
     }
 
-    // Markdown Table Inserter
-    var btnTable = document.getElementById('scratchpad-btn-table');
-    if (btnTable) {
-      btnTable.addEventListener('click', function () {
-        var tblBlock = '\n| Input / Param | Expected Output | Complexity |\n|:---|:---|:---|\n| Case 1 | Output 1 | $O(N)$ |\n| Case 2 | Output 2 | $O(1)$ |\n';
-        wrapSelection('', '', tblBlock);
+    // Link Inserter
+    var btnLink = document.getElementById('scratchpad-btn-link');
+    if (btnLink) {
+      btnLink.addEventListener('click', function () {
+        wrapSelection('[', '](https://example.com)', 'Tiêu đề liên kết');
       });
     }
 
-    // LeetCode / Problem Template Inserter
+    // Horizontal Rule Inserter
+    var btnHr = document.getElementById('scratchpad-btn-hr');
+    if (btnHr) {
+      btnHr.addEventListener('click', function () {
+        wrapSelection('\n---\n', '', '');
+      });
+    }
+
+    // Markdown Table Dropdown Menu (4 Alignments)
+    var btnTable = document.getElementById('scratchpad-btn-table');
+    if (btnTable) {
+      btnTable.addEventListener('click', function (e) {
+        e.stopPropagation();
+        openTableMenu(btnTable);
+      });
+    }
+
+    // 4 Alignment Buttons (Left / Center / Right / Justify)
+    var btnAlignL = document.getElementById('scratchpad-btn-align-left');
+    if (btnAlignL) {
+      btnAlignL.addEventListener('click', function () {
+        wrapSelection('<div align="left">\n', '\n</div>\n', 'Văn bản căn trái');
+      });
+    }
+
+    var btnAlignC = document.getElementById('scratchpad-btn-align-center');
+    if (btnAlignC) {
+      btnAlignC.addEventListener('click', function () {
+        wrapSelection('<div align="center">\n', '\n</div>\n', 'Văn bản căn giữa');
+      });
+    }
+
+    var btnAlignR = document.getElementById('scratchpad-btn-align-right');
+    if (btnAlignR) {
+      btnAlignR.addEventListener('click', function () {
+        wrapSelection('<div align="right">\n', '\n</div>\n', 'Văn bản căn phải');
+      });
+    }
+
+    var btnAlignJ = document.getElementById('scratchpad-btn-align-justify');
+    if (btnAlignJ) {
+      btnAlignJ.addEventListener('click', function () {
+        wrapSelection('<div align="justify">\n', '\n</div>\n', 'Văn bản căn đều hai bên');
+      });
+    }
+
+    // DSA Templates Dropdown Menu
+    var btnDsaMenu = document.getElementById('scratchpad-btn-dsa-menu');
+    if (btnDsaMenu) {
+      btnDsaMenu.addEventListener('click', function (e) {
+        e.stopPropagation();
+        openDsaTemplateMenu(btnDsaMenu);
+      });
+    }
+
+    // Big-O Complexity Dropdown Menu
+    var btnComplexity = document.getElementById('scratchpad-btn-complexity');
+    if (btnComplexity) {
+      btnComplexity.addEventListener('click', function (e) {
+        e.stopPropagation();
+        openComplexityMenu(btnComplexity);
+      });
+    }
+
+    // Dry-Run Trace Table Inserter
+    var btnTraceTable = document.getElementById('scratchpad-btn-trace-table');
+    if (btnTraceTable) {
+      btnTraceTable.addEventListener('click', function () {
+        var traceBlock = '\n### Bảng Trace (Dry-Run)\n' +
+          '| Bước | Con trỏ L | Con trỏ R | Giá trị xét | Điều kiện | Trạng thái | Kết quả |\n' +
+          '|:---|:---|:---|:---|:---|:---|:---|\n' +
+          '| Init | 0 | 4 | arr[0]=2, arr[4]=9 | sum=11 > target | R-- | Đang tìm |\n' +
+          '| Step 1 | 0 | 3 | arr[0]=2, arr[3]=7 | sum=9 == target | Khớp! | [0, 3] |\n\n';
+        wrapSelection('', '', traceBlock);
+      });
+    }
+
+    // Fallback template button if present
     var btnTemplate = document.getElementById('scratchpad-btn-template');
     if (btnTemplate) {
-      btnTemplate.addEventListener('click', function () {
-        var tmpl = '\n### 💡 ' + (noteTitleInput ? noteTitleInput.value : 'Problem Solution') + '\n' +
-          '- **Time Complexity:** $O(N)$\n' +
-          '- **Space Complexity:** $O(1)$\n' +
-          '- **Approach:**\n' +
-          '  1. Step 1: Initialize pointers / data structure\n' +
-          '  2. Step 2: Iterate and process constraints\n' +
-          '  3. Step 3: Return result\n\n' +
-          '```python\nclass Solution:\n    def solve(self, nums):\n        # Implementation here\n        pass\n```\n';
-        wrapSelection('', '', tmpl);
+      btnTemplate.addEventListener('click', function (e) {
+        e.stopPropagation();
+        openDsaTemplateMenu(btnTemplate);
       });
     }
 
@@ -1381,10 +2040,24 @@
       btnPreview.addEventListener('click', togglePreview);
     }
 
-    // Font Switcher
+    // System Font Picker Menu (Aa)
     var btnFont = document.getElementById('scratchpad-btn-font');
     if (btnFont) {
-      btnFont.addEventListener('click', toggleFont);
+      btnFont.addEventListener('click', function (e) {
+        e.stopPropagation();
+        openFontMenu(btnFont);
+      });
+    }
+
+    // Remember manually resized editor wrap height
+    var editorWrapEl = document.getElementById('scratchpad-editor-wrap');
+    if (editorWrapEl) {
+      editorWrapEl.addEventListener('mouseup', function () {
+        var h = editorWrapEl.offsetHeight;
+        if (h >= 200 && typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+          chrome.storage.local.set({ sf_scratchpad_editor_height: h });
+        }
+      });
     }
 
     // Insert current citation
@@ -1408,20 +2081,12 @@
       });
     }
 
-    // Export Button
+    // Export Button (Rich Dropdown Menu)
     var btnExport = document.getElementById('scratchpad-btn-export');
     if (btnExport) {
-      btnExport.addEventListener('click', function () {
-        // Quick popup prompt format: md (default), txt, html, json
-        var choice = window.prompt('Nhập định dạng xuất ghi chú (md, txt, html, json):', 'md');
-        if (choice) {
-          choice = choice.trim().toLowerCase();
-          if (['md', 'txt', 'html', 'json'].indexOf(choice) !== -1) {
-            exportActiveNote(choice);
-          } else {
-            exportActiveNote('md');
-          }
-        }
+      btnExport.addEventListener('click', function (e) {
+        e.stopPropagation();
+        openExportMenu(btnExport);
       });
     }
 
@@ -1475,21 +2140,76 @@
       });
     }
 
+    // Helper: Detect browser-internal or restricted URLs where content scripts cannot execute
+    function isRestrictedTabUrl(url) {
+      if (!url) return true;
+      var u = url.toLowerCase();
+      return u.startsWith('chrome://') ||
+        u.startsWith('edge://') ||
+        u.startsWith('about:') ||
+        u.startsWith('chrome-extension://') ||
+        u.startsWith('moz-extension://') ||
+        u.startsWith('devtools://') ||
+        u.startsWith('view-source:') ||
+        u.indexOf('chromewebstore.google.com') !== -1 ||
+        u.indexOf('microsoftedge.microsoft.com/addons') !== -1;
+    }
+
     // Toggle floating scratchpad window on page
     var btnToggle = document.getElementById('btn-toggle-scratchpad');
     if (btnToggle) {
       btnToggle.addEventListener('click', function () {
-        if (typeof chrome !== 'undefined' && chrome.tabs && chrome.tabs.query) {
-          chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-            if (tabs && tabs[0] && tabs[0].id) {
-              chrome.tabs.sendMessage(tabs[0].id, { command: 'toggleScratchpad' }, function () {
-                if (chrome.runtime.lastError) {
-                  console.warn('Scratchpad: could not reach active tab content script', chrome.runtime.lastError.message);
-                }
-              });
+        var browserApi = (typeof chrome !== 'undefined' && chrome.tabs) ? chrome :
+          ((typeof browser !== 'undefined' && browser.tabs) ? browser : null);
+        if (!browserApi || !browserApi.tabs || !browserApi.tabs.query) return;
+
+        browserApi.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+          if (!tabs || !tabs[0] || !tabs[0].id) return;
+          var activeTab = tabs[0];
+          var tabUrl = activeTab.url || '';
+
+          if (isRestrictedTabUrl(tabUrl)) {
+            if (typeof window.showToast === 'function') {
+              window.showToast(tText('scratchpad_tab_restricted') || 'Không thể mở cửa sổ nổi trên trang hệ thống. Vui lòng chuyển sang một tab web bình thường!');
             }
-          });
-        }
+            return;
+          }
+
+          function sendToggleMsg(isRetry) {
+            browserApi.tabs.sendMessage(activeTab.id, { command: 'toggleScratchpad' }, function (res) {
+              var lastErr = browserApi.runtime && browserApi.runtime.lastError;
+              if (lastErr) {
+                if (!isRetry && browserApi.scripting && browserApi.scripting.executeScript) {
+                  // Content script was not yet injected into this tab (e.g. tab opened before extension load/reload)
+                  browserApi.scripting.executeScript({
+                    target: { tabId: activeTab.id },
+                    files: ['OS/js/content/i18n.js', 'OS/js/content/scratchpad.js']
+                  }).then(function () {
+                    setTimeout(function () {
+                      sendToggleMsg(true);
+                    }, 80);
+                  }).catch(function () {
+                    if (typeof window.showToast === 'function') {
+                      window.showToast(tText('scratchpad_reload_page_toast') || 'Vui lòng F5 tải lại trang web để kết nối cửa sổ nổi!');
+                    }
+                  });
+                } else {
+                  if (typeof window.showToast === 'function') {
+                    window.showToast(tText('scratchpad_reload_page_toast') || 'Vui lòng F5 tải lại trang web để kết nối cửa sổ nổi!');
+                  }
+                }
+              } else if (typeof window.showToast === 'function') {
+                var isClosed = (res && res.state === 'closed');
+                var msg = isClosed ?
+                  (tText('scratchpad_floating_closed') || 'Đã ẩn cửa sổ nổi trên trang') :
+                  (tText('scratchpad_floating_opened') || 'Đã mở cửa sổ ghi chú nổi trên trang!');
+                window.showToast(msg);
+              }
+            });
+          }
+
+          sendToggleMsg(false);
+        });
       });
     }
 

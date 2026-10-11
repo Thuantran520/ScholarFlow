@@ -27,7 +27,6 @@ function initFlowTab() {
   let pendingConnection = null;
   let currentFile = null;
   let receivingFiles = {};
-  let currentQrValue = "";
 
   let chatHistory = [];
   try {
@@ -53,17 +52,6 @@ function initFlowTab() {
   const elIncomingName = document.getElementById("flow-incoming-name");
 
   const elPinnedDrive = document.getElementById("flow-pinned-drive");
-  const elPinnedDriveLink = document.getElementById("flow-pinned-drive-link");
-
-  // QR Modal Elements
-  const elQrModal = document.getElementById("flow-qr-modal");
-  const elQrCanvas = document.getElementById("flow-qr-canvas");
-  const elQrTitle = document.getElementById("flow-qr-modal-title");
-  const elQrDesc = document.getElementById("flow-qr-modal-desc");
-  const btnQrClose = document.getElementById("btn-flow-qr-close");
-  const btnQrCopy = document.getElementById("btn-flow-qr-copy-val");
-  const btnOpenQR = document.getElementById("btn-flow-qr");
-
   if (elNameInput) elNameInput.value = myName;
 
   function saveHistory() {

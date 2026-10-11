@@ -49,7 +49,6 @@
     return parts.length >= 2 && RISKY_TLDS.indexOf(parts[parts.length - 1]) !== -1;
   }
   function gmblSafeHost(host) {
-    const root = _rootOf(host);
     const h = String(host || "").toLowerCase();
     for (let i = 0; i < SAFE_ROOTS.length; i++) {
       const s = SAFE_ROOTS[i];

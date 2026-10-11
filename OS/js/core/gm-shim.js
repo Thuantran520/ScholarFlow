@@ -498,24 +498,38 @@ try {
 
   function build(opts) {
     var code = GM_SHIM_CODE;
+    var inner = '';
     if (opts && opts.resources && typeof opts.resources === 'object') {
       try {
-        code += '\nvar _sfGM_resources = ' + JSON.stringify(opts.resources) + ';\n';
+        inner += '\nvar _sfGM_resources = ' + JSON.stringify(opts.resources) + ';\n';
       } catch(e) {}
     }
     if (opts && (opts.name || opts.id)) {
       try {
-        code += '\nif (typeof _sfGM_info !== "undefined") { _sfGM_info.script = Object.assign({}, _sfGM_info.script, ' + JSON.stringify({ name: opts.name || '', id: opts.id || '' }) + '); }\n';
+        inner += '\nif (typeof _sfGM_info !== "undefined") { _sfGM_info.script = Object.assign({}, _sfGM_info.script, ' + JSON.stringify({ name: opts.name || '', id: opts.id || '' }) + '); }\n';
       } catch(e) {}
     }
     if (opts && opts.require && Array.isArray(opts.require)) {
       opts.require.forEach(function(r) {
-        if (r && r.text) code += '\n' + r.text;
+        if (r && r.text) inner += '\n' + r.text;
       });
     }
     if (opts && opts.code) {
-      code += '\n' + opts.code;
+      inner += '\n' + opts.code;
     }
+
+    // Wrap the inner execution (including requires) in an IIFE to prevent
+    // scope pollution (lỗi xung đột) when multiple scripts are injected.
+    var idJson = JSON.stringify(String(opts.id || 'anon'));
+    var nameJson = JSON.stringify(String(opts.name || 'script'));
+    code += '\n(function() {\n  try {\n' + inner + '\n  } catch (err) {\n' +
+      '    try {\n' +
+      '      document.dispatchEvent(new CustomEvent("__SF_US_LOG__", {\n' +
+      '        detail: { level: "error", text: String((err && err.message) || err) + (err.stack ? "\\n" + err.stack : ""), scriptId: ' + idJson + ', name: ' + nameJson + ', time: Date.now() }\n' +
+      '      }));\n' +
+      '    } catch(_e) {}\n' +
+      '  }\n})();\n';
+
     return code;
   }
 

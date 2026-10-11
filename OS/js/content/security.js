@@ -235,7 +235,7 @@
         if (h) _phishAllowHost(h);
         try { if (newTab) window.open(url, "_blank"); else window.location.href = url; } catch (e2) {}
       });
-    } catch (e) {}
+    } catch (_err) {}
   }
   function _enablePhishClickBlock() {
     try {
@@ -427,11 +427,11 @@
 
   try {
     const rtv = (typeof chrome !== "undefined" && chrome.storage && chrome.storage.onChanged) ? chrome.storage : null;
-    if (rtv) chrome.storage.onChanged.addListener(function (ch, area) {
+    if (rtv) {chrome.storage.onChanged.addListener(function (ch, area) {
       if (area === "local" && ch && ch.sf_security_settings && ch.sf_security_settings.newValue) {
         try { if (ch.sf_security_settings.newValue.clickBlock === false) _disablePhishClickBlock(); else _enablePhishClickBlock(); } catch (e3) {}
       }
-    });
+    });}
   } catch (e2) {}
 
   try {

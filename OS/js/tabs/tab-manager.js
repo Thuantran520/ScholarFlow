@@ -835,7 +835,7 @@ function _tabmgrDetectSmartRam(callback) {
         }
         fallback();
       });
-      return;
+
     } catch (_) {
       fallback();
     }
@@ -1780,7 +1780,6 @@ function _tabmgrMediaSeekEl(state) {
   vpb.addEventListener("pointerdown", function (e) {
     const durNum = Math.round(Number(state.duration) || 0);
     if (live && durNum <= 1) return; // Unseekable live stream
-    const maxD = live ? ((vpb && vpb._sfLiveMax) || Math.max(1, durNum)) : Math.max(1, durNum);
     tabmgrMedia.dragging = true;
     tabmgrMedia.dragTime = null;
     vpb.classList.add("is-dragging");
@@ -3196,7 +3195,7 @@ function _tabmgrMediaRenderPlayer() {
   muteBtn.addEventListener("click", _tabmgrMediaOnMute);
   const openBtn = _tabmgrMediaSvgBtn("M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3", t("tabmgr_media_open_tab"), "tabmgr-mp-tbtn");
   openBtn.addEventListener("click", function () { if (tabmgrMedia.sourceTabId) tabmgrActivateTab(tabmgrMedia.sourceTabId); });
-  
+
   const vinylBtn = _tabmgrMediaSvgBtn("M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6zM12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z", t("tabmgr_media_btn_customize"), "tabmgr-mp-tbtn tabmgr-mp-vinyl-toggle");
   vinylBtn.addEventListener("click", _tabmgrOpenMediaSettings);
 
@@ -3416,19 +3415,19 @@ onReady(function () {
     const api = _getTabsApi();
     if (api && api.onUpdated && api.onUpdated.addListener) api.onUpdated.addListener(_tabmgrEventRefresh);
     if (api && api.onRemoved && api.onRemoved.addListener) api.onRemoved.addListener(_tabmgrEventRefresh);
-    if (api && api.onRemoved && api.onRemoved.addListener) api.onRemoved.addListener(function (tabId) {
+    if (api && api.onRemoved && api.onRemoved.addListener) {api.onRemoved.addListener(function (tabId) {
       if (!_tabmgrIsActiveModule()) return;
       _tabmgrMediaEvRemoved(tabId);
-    });
+    });}
     if (api && api.onCreated && api.onCreated.addListener) api.onCreated.addListener(_tabmgrEventRefresh);
     if (api && api.onActivated && api.onActivated.addListener) api.onActivated.addListener(_tabmgrEventRefresh);
     if (api && api.onHighlighted && api.onHighlighted.addListener) api.onHighlighted.addListener(_tabmgrEventRefresh);
     try {
       const winApi = (typeof chrome !== "undefined" && chrome.windows) ? chrome.windows : (typeof browser !== "undefined" && browser.windows) ? browser.windows : null;
-      if (winApi && winApi.onFocusChanged && winApi.onFocusChanged.addListener) winApi.onFocusChanged.addListener(function () {
+      if (winApi && winApi.onFocusChanged && winApi.onFocusChanged.addListener) {winApi.onFocusChanged.addListener(function () {
         if (!_tabmgrIsActiveModule()) return;
         setTimeout(_tabmgrEventRefresh, 200);
-      });
+      });}
       if (winApi && winApi.onRemoved && winApi.onRemoved.addListener) winApi.onRemoved.addListener(_tabmgrEventRefresh);
     } catch (e3) {}
   } catch (e2) {}

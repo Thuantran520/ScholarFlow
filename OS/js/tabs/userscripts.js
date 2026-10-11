@@ -429,7 +429,6 @@
 
     const dropdown = document.createElement('div');
     dropdown.className = 'us-menu-dropdown';
-    dropdown.style.cssText = 'position:absolute;top:100%;right:0;z-index:1000;background:var(--card-bg);border:1px solid var(--border-color);border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.3);min-width:180px;max-width:280px;padding:4px 0;';
     dropdown.onclick = (event) => event.stopPropagation();
 
     const closeHandler = (e) => {
@@ -441,14 +440,11 @@
       if (_closeMenuDropdown === closeMenu) _closeMenuDropdown = null;
     };
     _closeMenuDropdown = closeMenu;
-    
+
     items.forEach(item => {
       const menuItem = document.createElement('div');
-      menuItem.style.cssText = 'padding:8px 12px;cursor:pointer;font-size:12px;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
       menuItem.textContent = item.caption;
       menuItem.title = item.caption;
-      menuItem.onmouseenter = () => { menuItem.style.background = 'var(--hover-bg)'; };
-      menuItem.onmouseleave = () => { menuItem.style.background = 'transparent'; };
       menuItem.onclick = (event) => {
         event.stopPropagation();
         _invokeMenuCommand(item.id, script);
@@ -523,29 +519,26 @@
     if (!str) return false;
     return /ResizeObserver loop/i.test(str) || /Script error\\./i.test(str);
   }
-  const _origLog = console.log, _origWarn = console.warn, _origError = console.error, _origInfo = console.info;
-  console.log = function(...a) { _relay('log', a); _origLog.apply(console, a); };
-  console.warn = function(...a) { _relay('warn', a); _origWarn.apply(console, a); };
-  console.error = function(...a) {
-    const msg = a.map(x => String((x && x.message) || x)).join(' ');
-    if (!_isBenign(msg)) _relay('error', a);
-    _origError.apply(console, a);
-  };
-  console.info = function(...a) { _relay('info', a); _origInfo.apply(console, a); };
-
-  window.addEventListener('error', function(e) {
-    if (e && e.message) {
-      if (_isBenign(e.message)) return;
-      _relay('error', ['[Uncaught Error]', e.message, e.filename ? '(' + e.filename + ':' + e.lineno + ')' : '']);
-    }
+  
+  const _myConsole = Object.assign({}, console, {
+    log: function(...a) { _relay('log', a); console.log.apply(console, a); },
+    warn: function(...a) { _relay('warn', a); console.warn.apply(console, a); },
+    error: function(...a) {
+      const msg = a.map(x => String((x && x.message) || x)).join(' ');
+      if (!_isBenign(msg)) _relay('error', a);
+      console.error.apply(console, a);
+    },
+    info: function(...a) { _relay('info', a); console.info.apply(console, a); }
   });
 
-  try {
-    ${gmShim}
-    ${codeToRun}
-  } catch(err) {
-    _relay('error', ['[Runtime Error]', err.stack || err.message || String(err)]);
-  }
+  (function(console) {
+    try {
+      ${gmShim}
+      ${codeToRun}
+    } catch(err) {
+      _relay('error', ['[Runtime Error]', err.stack || err.message || String(err)]);
+    }
+  })(_myConsole);
 })();`;
 
     let results = null;
@@ -580,7 +573,7 @@
             if (e.detail) logs.push(e.detail);
           };
           document.addEventListener('__SF_US_LOG__', onLog);
-          let executed = false;
+          let scriptExecuted = false;
 
           let policy = null;
           if (typeof window !== 'undefined' && window.trustedTypes) {
@@ -611,12 +604,12 @@
             const runner = typeof window !== 'undefined' ? window['ev' + 'al'] : null;
             if (typeof runner === 'function') {
               runner(trustedCode);
-              executed = true;
+              scriptExecuted = true;
             }
           } catch (_evalErr) {}
 
           // 2. Blob URL script tag
-          if (!executed && typeof URL !== 'undefined' && typeof Blob !== 'undefined') {
+          if (!scriptExecuted && typeof URL !== 'undefined' && typeof Blob !== 'undefined') {
             try {
               const blob = new Blob([wrappedCode], { type: 'text/javascript' });
               const blobUrl = URL.createObjectURL(blob);
@@ -628,12 +621,12 @@
               (document.documentElement || document.head).appendChild(s);
               s.remove();
               URL.revokeObjectURL(blobUrl);
-              executed = true;
+              scriptExecuted = true;
             } catch (_bErr) {}
           }
 
           // 3. Fallback inline script tag with nonce and Trusted Types
-          if (!executed) {
+          if (!scriptExecuted) {
             try {
               const s = document.createElement('script');
               const nonceEl = document.querySelector('script[nonce]');
@@ -659,7 +652,7 @@
               if (setOk) {
                 (document.documentElement || document.head).appendChild(s);
                 s.remove();
-                executed = true;
+                scriptExecuted = true;
               }
             } catch (err) {
               logs.push({ level: 'error', text: 'Lỗi inject: ' + err.message });
@@ -1135,7 +1128,7 @@
 
   function _render() {
     if (!dom.list) return;
-    dom.list.innerHTML = '';
+    dom.list.textContent = '';
     _diagUpdate();
 
     const activeCount = (_scripts || []).filter(function (s) { return s && s.active !== false; }).length;
@@ -1163,7 +1156,7 @@
       }
       return matchText && matchStatus;
     });
-    
+
     if (filtered.length === 0) {
       const empty = document.createElement('li');
       empty.className = 'us-empty-state';
@@ -1301,15 +1294,6 @@
         infoWrap.appendChild(syncBadge);
       }
 
-      // Run count badge
-      if (script.runCount > 0) {
-        const countBadge = document.createElement('span');
-        countBadge.className = 'us-badge us-badge-count';
-        countBadge.title = ((typeof t === 'function' ? t('us_run_count_title', [script.runCount]) : null) || ('Đã chạy ' + script.runCount + ' lần')) + (script.lastRun ? ' • ' + new Date(script.lastRun).toLocaleTimeString() : '');
-        countBadge.textContent = '×' + script.runCount;
-        infoWrap.appendChild(countBadge);
-      }
-
       topRow.appendChild(infoWrap);
 
       // --- Right Action Button Group ---
@@ -1385,19 +1369,6 @@
           btnRun.style.borderColor = '#10b981';
           btnRun.style.color = '#34d399';
           btnRun.title = (typeof t === 'function' ? t('us_apply_success') : null) || 'Đã áp dụng thành công!';
-
-          // Update stats and badge dynamically
-          script.runCount = (Number(script.runCount) || 0) + 1;
-          script.lastRun = Date.now();
-          let countBadge = infoWrap.querySelector('.us-badge-count');
-          if (!countBadge) {
-            countBadge = document.createElement('span');
-            countBadge.className = 'us-badge us-badge-count';
-            infoWrap.appendChild(countBadge);
-          }
-          countBadge.title = ((typeof t === 'function' ? t('us_run_count_title', [script.runCount]) : null) || ('Đã chạy ' + script.runCount + ' lần')) + ' • ' + new Date(script.lastRun).toLocaleTimeString();
-          countBadge.textContent = '×' + script.runCount;
-          countBadge.style.display = 'inline-block';
 
           if (browserApi && browserApi.runtime && typeof browserApi.runtime.sendMessage === 'function') {
             browserApi.runtime.sendMessage({ action: 'US_SCRIPT_RAN', scriptId: script.id }).catch(() => {});
@@ -1556,7 +1527,6 @@
     }
 
 
-
   function _updateLineNumbers() {
     const editCode = document.getElementById('us-edit-code');
     const lineNumbers = document.getElementById('us-line-numbers');
@@ -1705,7 +1675,7 @@
     if (SYNC && typeof SYNC.watch === 'function') SYNC.watch(_onRemoteChange);
 
     dom.btnAdd.onclick = () => _edit();
-    
+
     if (dom.btnImport) {
       dom.btnImport.onclick = () => {
         const input = document.createElement('input');
@@ -1715,8 +1685,8 @@
           const file = e.target.files[0];
           if (!file) return;
           const reader = new FileReader();
-          reader.onload = async (e) => {
-            const code = e.target.result;
+          reader.onload = async (ev) => {
+            const code = ev.target.result;
             if (!META) {
               _notify(t('us_import_failed', 'Không tải được: ') + 'meta', 'error');
               return;
@@ -1846,7 +1816,7 @@
     }
 
     dom.btnCancel.onclick = () => _closeEditor();
-    
+
 
     const btnTest = document.getElementById('btn-us-test');
     if (btnTest) {
@@ -1914,7 +1884,7 @@
         }
       };
     }
-    
+
     dom.btnSave.onclick = async () => {
       const editId = document.getElementById('us-edit-id');
       const editName = document.getElementById('us-edit-name');
@@ -1927,10 +1897,10 @@
 
       const id = (editId && editId.value) || _newScriptId();
       const name = editName ? editName.value.trim() : "";
-      
+
       let matches = editMatches ? editMatches.value.split('\n').map(s => s.trim()).filter(s => s) : [];
       if (matches.length === 0) matches = ["<all_urls>"];
-      
+
       let excludes = editExcludes ? editExcludes.value.split('\n').map(s => s.trim()).filter(s => s) : [];
       const runAt = (editRunAt && editRunAt.value) || "document_idle";
       const world = (editWorld && editWorld.value) || "MAIN";
@@ -1953,7 +1923,6 @@
         }
         if (e.ctrlKey && e.key === 'Enter') {
           e.preventDefault();
-          const btnTest = document.getElementById('btn-us-test');
           if (btnTest) btnTest.click();
         }
         if (e.ctrlKey && e.key === 'h') {
@@ -2060,7 +2029,7 @@
     if (findInput) findInput.addEventListener('input', () => { _findInCode(); _selectMatch(0); });
     if (btnFindNext) btnFindNext.onclick = () => { _findInCode(); _selectMatch(_findIdx + 1); };
     if (btnFindPrev) btnFindPrev.onclick = () => { _findInCode(); _selectMatch(_findIdx - 1); };
-    if (btnReplaceOne) btnReplaceOne.onclick = () => {
+    if (btnReplaceOne) {btnReplaceOne.onclick = () => {
       const ta = document.getElementById('us-edit-code');
       const q = (document.getElementById('us-find-input') || {}).value || '';
       const r = (document.getElementById('us-replace-input') || {}).value || '';
@@ -2070,8 +2039,8 @@
       _updateLineNumbers();
       _findInCode();
       _selectMatch(_findIdx);
-    };
-    if (btnReplaceAll) btnReplaceAll.onclick = () => {
+    };}
+    if (btnReplaceAll) {btnReplaceAll.onclick = () => {
       const ta = document.getElementById('us-edit-code');
       const q = (document.getElementById('us-find-input') || {}).value || '';
       const r = (document.getElementById('us-replace-input') || {}).value || '';
@@ -2081,7 +2050,7 @@
       _updateLineNumbers();
       _findInCode();
       if (findCountEl) findCountEl.textContent = (typeof t === 'function' ? t('us_replaced_count', [count]) : null) || ('Đã thay ' + count + ' lần');
-    };
+    };}
 
     // ── Parse Header button ────────────────────────────────────
     const btnParseMeta = document.getElementById('btn-us-parse-meta');
@@ -2180,7 +2149,7 @@
         const name = editName ? editName.value.trim() : 'MyScript';
         const matches = editMatches ? editMatches.value.split('\n').map(s => s.trim()).filter(s => s) : ['*://*/*'];
         const updateUrl = editUpdateUrl ? editUpdateUrl.value.trim() : '';
-        
+
         // Check if already has GM header
         let finalCode = code;
         if (!code.includes('==UserScript==')) {
@@ -2200,7 +2169,7 @@
           ].filter(l => l !== '').join('\n');
           finalCode = header + '\n' + code;
         }
-        
+
         const blob = new Blob([finalCode], { type: 'application/javascript' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -2299,10 +2268,10 @@
         });
 
         const items = results && results[0] && results[0].result || [];
-        storageOutput.innerHTML = '';
+        storageOutput.textContent = '';
         if (items.length === 0) {
           const empty = document.createElement('div');
-          empty.style.cssText = 'color:var(--text-muted);font-style:italic;padding:8px;font-size:10px;text-align:center;';
+          empty.className = 'us-storage-empty';
           empty.textContent = (typeof t === 'function' ? t('us_storage_empty') : null) || '(Không có dữ liệu GM_* nào trên trang này)';
           storageOutput.appendChild(empty);
           return;
@@ -2310,21 +2279,21 @@
 
         items.forEach(item => {
           const row = document.createElement('div');
-          row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:6px;padding:3px 6px;border-bottom:1px solid rgba(255,255,255,0.06);font-size:10px;';
+          row.className = 'us-storage-item';
 
           const left = document.createElement('div');
-          left.style.cssText = 'display:flex;align-items:center;gap:6px;overflow:hidden;flex:1;min-width:0;';
+          left.className = 'us-storage-item-left';
 
           const k = document.createElement('span');
-          k.style.cssText = 'color:#818cf8;font-weight:600;font-family:monospace;white-space:nowrap;flex-shrink:0;';
+          k.className = 'us-storage-item-key';
           k.textContent = item.key;
 
           const eq = document.createElement('span');
-          eq.style.cssText = 'color:rgba(255,255,255,0.3);flex-shrink:0;';
+          eq.className = 'us-storage-item-eq';
           eq.textContent = '=';
 
           const v = document.createElement('span');
-          v.style.cssText = 'color:#10b981;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+          v.className = 'us-storage-item-val';
           v.textContent = item.value;
           v.title = item.value;
 
@@ -2333,12 +2302,11 @@
           left.appendChild(v);
 
           const actions = document.createElement('div');
-          actions.style.cssText = 'display:flex;gap:3px;flex-shrink:0;';
+          actions.className = 'us-storage-item-actions';
 
           const editBtn = document.createElement('button');
           editBtn.type = 'button';
-          editBtn.className = 'us-btn us-btn-icon';
-          editBtn.style.cssText = 'width:18px;height:18px;padding:2px;';
+          editBtn.className = 'us-btn us-btn-icon us-btn-icon-xs';
           editBtn.title = (typeof t === 'function' ? t('us_storage_edit_val') : null) || 'Chỉnh sửa giá trị';
           editBtn.innerHTML = '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>';
           editBtn.onclick = async () => {
@@ -2360,8 +2328,7 @@
 
           const delBtn = document.createElement('button');
           delBtn.type = 'button';
-          delBtn.className = 'us-btn us-btn-icon us-danger';
-          delBtn.style.cssText = 'width:18px;height:18px;padding:2px;';
+          delBtn.className = 'us-btn us-btn-icon us-danger us-btn-icon-xs';
           delBtn.title = (typeof t === 'function' ? t('us_storage_del_key') : null) || 'Xóa key này';
           delBtn.innerHTML = '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>';
           delBtn.onclick = async () => {
@@ -2500,30 +2467,35 @@
         if (modal) { modal.remove(); return; }
         modal = document.createElement('div');
         modal.id = 'us-template-modal';
-        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:9999;display:flex;align-items:center;justify-content:center;';
+        modal.className = 'us-modal-overlay';
         const box = document.createElement('div');
-        box.style.cssText = 'background:var(--bg-secondary,#1e1e2e);border:1px solid var(--border-color,#444);border-radius:8px;padding:16px;width:320px;max-height:80vh;overflow-y:auto;box-shadow:0 12px 36px rgba(0,0,0,0.85);';
+        box.className = 'us-modal-box';
         const titleEl = document.createElement('div');
-        titleEl.style.cssText = 'font-size:13px;font-weight:700;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;';
+        titleEl.className = 'us-modal-header';
         const titleText = (typeof t === 'function' ? t('us_templates_modal_title') : null) || 'Chọn Mẫu Script';
-        titleEl.innerHTML = '<span style="display:flex;align-items:center;gap:6px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg> <span></span></span>';
-        titleEl.querySelector('span > span').textContent = titleText;
+
+        const titleLeft = document.createElement('div');
+        titleLeft.className = 'us-modal-title-left';
+        titleLeft.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>';
+        const titleSpan = document.createElement('span');
+        titleSpan.textContent = titleText;
+        titleLeft.appendChild(titleSpan);
+
         const closeBtn = document.createElement('button');
+        closeBtn.className = 'us-modal-close-btn';
         closeBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
-        closeBtn.style.cssText = 'background:none;border:none;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;padding:2px;';
         closeBtn.onclick = () => modal.remove();
+        titleEl.appendChild(titleLeft);
         titleEl.appendChild(closeBtn);
         box.appendChild(titleEl);
         SCRIPT_TEMPLATES.forEach(tpl => {
           const row = document.createElement('div');
-          row.style.cssText = 'padding:8px;border:1px solid var(--border-color,#444);border-radius:6px;margin-bottom:6px;cursor:pointer;';
-          row.onmouseover = () => { row.style.background = 'rgba(255,255,255,0.05)'; };
-          row.onmouseout = () => { row.style.background = ''; };
+          row.className = 'us-modal-tpl-row';
           const rowName = document.createElement('div');
-          rowName.style.cssText = 'font-size:12px;font-weight:600;';
+          rowName.className = 'us-modal-tpl-name';
           rowName.textContent = (tpl.i18nKey && typeof t === 'function' ? t(tpl.i18nKey) : null) || tpl.name;
           const rowMeta = document.createElement('div');
-          rowMeta.style.cssText = 'font-size:10px;color:var(--text-muted);margin-top:2px;';
+          rowMeta.className = 'us-modal-tpl-meta';
           rowMeta.textContent = (tpl.matches || []).join(', ');
           row.appendChild(rowName);
           row.appendChild(rowMeta);
@@ -2582,7 +2554,7 @@
         _consoleLineCount = 0;
         if (consoleCount) consoleCount.textContent = (typeof t === 'function' ? t('us_line_count', [0]) : '0 dòng');
         const line = document.createElement('div');
-        line.style.cssText = 'color:#64748b; font-style:italic; padding:2px 0; font-size:9.5px;';
+        line.className = 'us-console-line empty';
         line.textContent = (typeof t === 'function' ? t('us_console_cleared') : null) || '(Logs đã được xóa)';
         consoleOutput.appendChild(line);
       };
@@ -2614,12 +2586,9 @@
       _consoleLineCount++;
       if (cc) cc.textContent = (typeof t === 'function' ? t('us_line_count', [_consoleLineCount]) : (_consoleLineCount + ' dòng'));
       const line = document.createElement('div');
-      line.className = 'us-log-entry';
-      const colors = { log: '#10b981', warn: '#f59e0b', error: '#ef4444', info: 'var(--primary)' };
-      line.style.cssText = 'color:' + (colors[level] || '#10b981') + ';border-bottom:1px solid rgba(255,255,255,0.05);padding:2px 0;word-break:break-all;font-family:"JetBrains Mono", Consolas, monospace;font-size:10px;line-height:1.4;';
+      line.className = 'us-console-line ' + (level === 'error' ? 'error' : (level === 'warn' ? 'warn' : 'info'));
       const tag = document.createElement('span');
-      tag.className = 'us-log-level';
-      tag.style.cssText = 'opacity:0.6;margin-right:5px;font-size:9px;font-weight:700;';
+      tag.className = 'us-console-tag';
       tag.textContent = '[' + (level || 'LOG').toUpperCase() + ']';
       line.appendChild(tag);
       line.appendChild(document.createTextNode(args.map(a => {

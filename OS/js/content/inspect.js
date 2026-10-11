@@ -880,8 +880,6 @@ var tContentShim = function(key, ...args) {
         if (cls) part += cls;
         const parent = node.parentElement;
         if (parent) {
-          let cmp = node.tagName;
-          if (cls) cmp += "." + Array.prototype.filter.call(node.classList || [], c => !c.startsWith("super-")).slice(0, 2).join(".");
           const sameTag = Array.prototype.filter.call(parent.children, ch => {
             if (ch.tagName !== node.tagName) return false;
             if (!cls) return true;

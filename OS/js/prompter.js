@@ -31,7 +31,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let paras = [];
   let playing = false;
-  let rafId = 0;
+  let _rafId = 0;
   let lastTs = 0;
   let suppressNoteScroll = false;
 
@@ -66,7 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function tick(ts) {
-    rafId = requestAnimationFrame(tick);
+    _rafId = requestAnimationFrame(tick);
     if (!playing) return;
     const dt = lastTs ? (ts - lastTs) / 1000 : 0;
     lastTs = ts;
@@ -95,7 +95,10 @@ document.addEventListener("DOMContentLoaded", () => {
     toggleBtn.classList.remove("playing");
   }
 
-  function togglePlay() { (playing ? pause() : play()); }
+  function togglePlay() {
+    if (playing) pause();
+    else play();
+  }
 
   function renderScript(text) {
     track.textContent = "";
@@ -259,5 +262,5 @@ document.addEventListener("DOMContentLoaded", () => {
     renderScript("");
   }
 
-  rafId = requestAnimationFrame(tick);
+  _rafId = requestAnimationFrame(tick);
 });

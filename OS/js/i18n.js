@@ -1,3 +1,4 @@
+"use strict";
 // Firefox 55+ chrome.* compatibility alias
 if (typeof chrome === "undefined" && typeof browser !== "undefined") {
   try { window.chrome = browser; } catch (e) {}
@@ -5,7 +6,6 @@ if (typeof chrome === "undefined" && typeof browser !== "undefined") {
 
 // ScholarFlow Universal i18n Internationalization Engine
 // Supported: Vietnamese (vi), English (en), Chinese (zh), Russian (ru), Japanese (ja)
-"use strict";
 
 // Module-scoped current language state to avoid accidental global ReferenceError
 let currentAppLanguage = "vi";

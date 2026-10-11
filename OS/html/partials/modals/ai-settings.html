@@ -138,6 +138,17 @@
           <div class="ai-hint" style="margin-left:22px; font-size:10.5px; margin-top:2px;" data-i18n="ai_opt_agent_mode_hint">Cho phép Agent tự động duyệt tìm kiếm web và xử lý dữ liệu cô lập qua Sandbox khi gõ lệnh /agent.</div>
           <label class="ai-check" style="margin-top:8px;"><input type="checkbox" id="ai-opt-agent-confirm" checked> <span data-i18n="ai_opt_agent_confirm">Hỏi cấp quyền trước khi Agent duyệt web</span></label>
           <div class="ai-hint" style="margin-left:22px; font-size:10.5px; margin-top:2px;" data-i18n="ai_opt_agent_confirm_hint">Hiện thẻ xác nhận trong khung chat để bạn phê duyệt mỗi khi Agent muốn mở và đọc trang web.</div>
+          <div class="ai-field-sub" style="margin-top:10px;" data-i18n="ai_persona_title">🎭 Tính cách & giọng điệu của bạn (Nhắn tin / Bình luận)</div>
+          <div class="ai-hint" style="font-size:10.5px; margin-bottom:6px;" data-i18n="ai_persona_hint">Agent sẽ học theo phong cách này khi soạn giúp tin nhắn Messenger, Discord hoặc bình luận YouTube, Facebook...</div>
+          <select id="ai-persona-select" class="form-control" style="font-size:11px; margin-bottom:6px;">
+            <option value="casual" selected data-i18n="ai_persona_style_casual">Thân thiện, tự nhiên (Gen Z / đời thường)</option>
+            <option value="humorous" data-i18n="ai_persona_style_humorous">Hài hước, lầy lội, vui vẻ</option>
+            <option value="polite" data-i18n="ai_persona_style_polite">Lịch sự, ấm áp, tinh tế</option>
+            <option value="concise" data-i18n="ai_persona_style_concise">Ngắn gọn, đi thẳng vào vấn đề</option>
+            <option value="professional" data-i18n="ai_persona_style_professional">Chuyên nghiệp, học thuật, chuẩn mực</option>
+          </select>
+          <label class="ai-field-sub" for="ai-persona-custom" data-i18n="ai_persona_custom_label">Mô tả thêm về tính cách / cách xưng hô của bạn:</label>
+          <textarea id="ai-persona-custom" class="form-control" rows="2" style="font-size:11px; margin-top:4px;" placeholder="VD: Hay xưng mình - bạn, nói ngắn gọn, thích thêm emoji :)), không viết hoa đầu câu..." data-i18n-placeholder="ai_persona_custom_ph"></textarea>
         </div>
       </div>
     </div>

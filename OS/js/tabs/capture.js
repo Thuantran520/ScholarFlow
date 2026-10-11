@@ -255,7 +255,7 @@ async function scrollTabTo(targetY, durationMs = 120) {
     if (!scriptingApi || !scriptingApi.executeScript) return null;
     const res = await scriptingApi.executeScript({
       target: { tabId: activeTabId },
-      func: (targetY, duration) => {
+      func: (yPos, duration) => {
         return new Promise((resolve) => {
           const doc = document.documentElement;
           const body = document.body;
@@ -270,7 +270,7 @@ async function scrollTabTo(targetY, durationMs = 120) {
 
           const startY = window.scrollY || window.pageYOffset || 0;
           const maxScroll = getMaxScroll();
-          const clampedTarget = Math.max(0, Math.min(targetY, maxScroll));
+          const clampedTarget = Math.max(0, Math.min(yPos, maxScroll));
           const distance = clampedTarget - startY;
 
           if (Math.abs(distance) < 2 || duration <= 0) {
@@ -624,7 +624,6 @@ async function captureChosenElement(info) {
       const mctx = masterCanvas.getContext("2d");
 
       let drawnH = 0;
-      const stepY = Math.round(vpH * 0.7);
       const baseDocTop = typeof viewRes?.docTop === "number" ? viewRes.docTop : (typeof info.docTop === "number" ? info.docTop : ((rect.top || 0) + (info.origScrollTop || 0)));
 
       const stallGuard = captureStallDetector(4);

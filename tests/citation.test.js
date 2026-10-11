@@ -38,8 +38,6 @@ async function main() {
   check(errors.length === 0, "no uncaught errors at load" + (errors.length ? ` -> ${errors.slice(0, 3).join(" | ")}` : ""));
 
   const cs = w.__cs;
-  const run = (fn, arg) => w.eval(`(function(){ return ${fn}(${JSON.stringify(arg)}); })()`);
-  const run2 = (fn, a, b) => w.eval(`(function(){ return ${fn}(${JSON.stringify(a)}, ${JSON.stringify(b)}); })()`);
   const build = (fn) => w.eval(`(function(){ return ${fn}(${JSON.stringify(META)}); })()`);
   const code = (expr) => w.eval(`(function(){ ${BASE}; return ${expr}; })()`);
   const code2 = (fn) => w.eval(`(function(){ return ${fn}(${JSON.stringify(META)}); })()`);

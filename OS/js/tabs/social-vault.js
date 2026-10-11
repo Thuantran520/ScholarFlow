@@ -232,10 +232,10 @@ onReady(function () {
   const btnVtExp = document.getElementById("btn-soc-vt-export");
   if (btnVtExp) btnVtExp.addEventListener("click", socVaultExport);
   const btnVtImpPick = document.getElementById("btn-soc-vt-importpick");
-  if (btnVtImpPick) btnVtImpPick.addEventListener("click", function () {
+  if (btnVtImpPick) {btnVtImpPick.addEventListener("click", function () {
     const fp = document.getElementById("soc-vt-bakfile");
     if (fp) fp.click();
-  });
+  });}
   const fpIn = document.getElementById("soc-vt-bakfile");
   if (fpIn) fpIn.addEventListener("change", socVaultImportPick);
   const btnVtImp = document.getElementById("btn-soc-vt-import");

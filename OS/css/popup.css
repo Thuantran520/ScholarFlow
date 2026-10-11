@@ -4148,19 +4148,33 @@ body.is-popup .ai-suggest { font-size:11.5px; }
   border-radius: 10px;
 }
 .ai-agent-head {
-  font-weight: 700;
-  font-size: 11.5px;
-  color: #c4b5fd;
-  margin-bottom: 4px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
+  font-weight: 700;
+  font-size: 10.5px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #ddd6fe;
+  background: rgba(139, 92, 246, 0.16);
+  border: 1px solid rgba(139, 92, 246, 0.32);
+  padding: 3px 9px;
+  border-radius: 999px;
+  margin-bottom: 7px;
+}
+.ai-agent-head-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #a78bfa;
+  box-shadow: 0 0 6px rgba(167, 139, 250, 0.85);
+  flex-shrink: 0;
 }
 .ai-agent-desc {
-  font-size: 11px;
+  font-size: 10.5px;
   color: #94a3b8;
-  line-height: 1.4;
-  margin-bottom: 6px;
+  line-height: 1.35;
+  margin-bottom: 4px;
 }
 .ai-agent-target {
   font-size: 11.5px;
@@ -4224,3 +4238,15 @@ body.is-popup .ai-suggest { font-size:11.5px; }
 .ai-agent-plan-step.is-error {
   color: #f87171;
 }
+
+.ai-agent-plan-list { list-style: decimal inside; padding-left: 12px; margin: 0; }
+.ai-agent-plan-list > li { margin-bottom: 4px; }
+.ai-agent-plan-step { font-size: 11px; color: #cbd5e1; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 6px; padding: 4px 8px; line-height: 1.35; }
+.ai-compose-card { border-color: rgba(56, 189, 248, 0.35); background: linear-gradient(145deg, rgba(15, 23, 42, 0.85), rgba(30, 41, 59, 0.75)); }
+.ai-compose-meta { display: flex; flex-wrap: wrap; gap: 6px; font-size: 10.5px; color: #38bdf8; font-weight: 600; margin-bottom: 6px; }
+.ai-compose-safe-notice { font-size: 10px; line-height: 1.35; color: #6ee7b7; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 6px; padding: 4px 8px; margin-bottom: 6px; }
+.ai-compose-label { font-size: 10.5px; color: #94a3b8; margin-bottom: 4px; }
+.ai-compose-textarea { width: 100%; box-sizing: border-box; background: rgba(2, 6, 23, 0.65); border: 1px solid rgba(148, 163, 184, 0.22); border-radius: 7px; color: #f8fafc; font-size: 11.5px; line-height: 1.45; padding: 7px 9px; resize: vertical; margin-bottom: 6px; font-family: inherit; }
+.ai-compose-btn-secondary { font-size: 10.5px; padding: 4px 9px; background: rgba(56, 189, 248, 0.12); color: #7dd3fc; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; cursor: pointer; font-weight: 600; }
+
+

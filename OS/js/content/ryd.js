@@ -132,7 +132,7 @@ var __webpack_exports__ = {};
 (() => {
 "use strict";
 
-;// CONCATENATED MODULE: ./Extensions/common/vote-client.js
+// CONCATENATED MODULE: ./Extensions/common/vote-client.js
 const DEFAULT_API_BASE_URL = "https://returnyoutubedislikeapi.com";
 const USER_ID_CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 const VALID_VIDEO_ID = /^[A-Za-z0-9_-]{11}$/;
@@ -450,8 +450,7 @@ function createVoteClient({
 }
 
 
-
-;// CONCATENATED MODULE: ./Extensions/common/delegated-vote-activation.js
+// CONCATENATED MODULE: ./Extensions/common/delegated-vote-activation.js
 function defaultGetActivationTarget(control) {
   if (control?.matches?.("button, tp-yt-paper-button#button")) {
     return control;
@@ -525,8 +524,7 @@ function resolveDelegatedVoteActivation({
 }
 
 
-
-;// CONCATENATED MODULE: ./Extensions/common/shorts-control-readiness.js
+// CONCATENATED MODULE: ./Extensions/common/shorts-control-readiness.js
 const SHORTS_HYDRATED_SURFACE_STABILITY_MS = 250;
 const SHORTS_UNHYDRATED_SURFACE_STABILITY_MS = 1500;
 const SHORTS_LINK_SELECTOR = "a[href*='/shorts/']";
@@ -680,8 +678,7 @@ function shortsNativeControlInventoryIsReadyForFallback(
 }
 
 
-
-;// CONCATENATED MODULE: ./Extensions/common/vote-transition.js
+// CONCATENATED MODULE: ./Extensions/common/vote-transition.js
 const {
   DISLIKED_STATE,
   DISLIKE_ACTION,
@@ -694,8 +691,7 @@ const {
 } = __webpack_require__(26);
 
 
-
-;// CONCATENATED MODULE: ./Extensions/UserScript/src/gm-credential-store.js
+// CONCATENATED MODULE: ./Extensions/UserScript/src/gm-credential-store.js
 const CREDENTIALS_KEY = "rydVoteCredentials";
 
 function hasModernMethod(name) {
@@ -767,8 +763,7 @@ function createGmCredentialStore() {
 }
 
 
-
-;// CONCATENATED MODULE: ./Extensions/UserScript/src/gm-synthetic-dislike-store.js
+// CONCATENATED MODULE: ./Extensions/UserScript/src/gm-synthetic-dislike-store.js
 const SYNTHETIC_DISLIKE_KEY_PREFIX = "rydSyntheticDislikedShort:";
 
 // Each currently disliked Short owns one independent key. Deliberately do not
@@ -856,16 +851,9 @@ function createGmSyntheticDislikeStore() {
 }
 
 
-
-;// CONCATENATED MODULE: ./Extensions/UserScript/userscript-version.json
+// CONCATENATED MODULE: ./Extensions/UserScript/userscript-version.json
 const userscript_version_namespaceObject = "3.2.0";
-;// CONCATENATED MODULE: ./Extensions/UserScript/src/userscript-entry.js
-
-
-
-
-
-
+// CONCATENATED MODULE: ./Extensions/UserScript/src/userscript-entry.js
 
 
 if (false) {}
@@ -1869,7 +1857,7 @@ function getLikeCountFromButton() {
   }
 }
 
-(typeof GM_addStyle != "undefined"
+(typeof GM_addStyle !== "undefined"
   ? GM_addStyle
   : (styles) => {
       let styleNode = document.createElement("style");

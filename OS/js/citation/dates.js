@@ -10,10 +10,7 @@ function formatCitationDate(rawDate, style = "ieee") {
     const yM = rawDate.match(/\b(19\d\d|20\d\d)\b/);
     return yM ? yM[1] : rawDate;
   }
-  let effectiveStyle = style;
-  if (citationSettings.dateStyle === "full") {
-    effectiveStyle = style; // we handle "full" below by avoiding month-year truncation
-  }
+
   const parsed = parseComprehensiveDate(rawDate);
   const s = parsed || rawDate.trim();
 

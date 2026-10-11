@@ -47,7 +47,7 @@ onReady(() => {
           behavior: "smooth"
         });
       }
-      
+
       if (target === "tab-cookie") {
         updateCookieTabUI();
       }
@@ -144,7 +144,6 @@ onReady(() => {
 
   // Copy citation with instant visual button feedback & Rich Text support (Italics for Word/Docs)
   document.getElementById("btn-copy-cite")?.addEventListener("click", () => {
-    const box = document.getElementById("citation-text");
     const btn = document.getElementById("btn-copy-cite");
 
     let formattedCite = getFormattedCitationByStyle(currentMeta, currentCitationTab, 1);
@@ -1412,11 +1411,11 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
     rules.forEach(r => {
       const chip = document.createElement("div");
       chip.className = "redact-keyword-chip";
-      
+
       const label = document.createElement("span");
       label.className = "kw-text";
       label.textContent = `"${r.keyword}"`;
-      
+
       const count = document.createElement("span");
       count.className = "kw-count";
       count.textContent = `(${r.count || 0})`;
@@ -2335,11 +2334,11 @@ document.getElementById("btn-quick-swap-tabs")?.addEventListener("click", swapDu
         safeSendTabMessage(activeTabId, { action: "SET_LANGUAGE", lang: e.detail?.lang });
       } catch (_) {}
     } else {
-      const tabsApi = (typeof browser !== "undefined" && browser.tabs) ? browser.tabs : (typeof chrome !== "undefined" ? chrome.tabs : null);
-      if (tabsApi && activeTabId) {
+      const _tApi = (typeof browser !== "undefined" && browser.tabs) ? browser.tabs : (typeof chrome !== "undefined" ? chrome.tabs : null);
+      if (_tApi && activeTabId) {
         try {
-          const p = tabsApi.sendMessage(activeTabId, { action: "SET_LANGUAGE", lang: e.detail?.lang }, () => {
-            if (chrome?.runtime?.lastError) {}
+          const p = _tApi.sendMessage(activeTabId, { action: "SET_LANGUAGE", lang: e.detail?.lang }, () => {
+            void (chrome?.runtime?.lastError);
           });
           if (p && typeof p.catch === "function") {
             p.catch(() => {});
@@ -3070,7 +3069,6 @@ renderTodoList();
     }
 renderTodoList();
   });
-
 
 
 function initUniversalRangeSliders() {

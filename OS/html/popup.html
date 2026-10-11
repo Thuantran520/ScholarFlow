@@ -634,6 +634,36 @@
         <button type="button" class="ai-chip" data-ai-quick="papers" data-i18n="ai_quick_papers">Tài liệu</button>
         <button type="button" class="ai-chip" data-ai-quick="tabs" data-i18n="ai_quick_tabs">Tab</button>
       </div>
+            <!-- Realtime Live Stream Monitor Box -->
+      <div id="ai-live-box" class="ai-live-box" style="display:none;">
+        <div class="ai-live-box-header">
+          <div class="ai-live-status-pill">
+            <span id="ai-live-status-text" data-i18n="ai_live_status_active">REALTIME LIVE</span>
+          </div>
+          <div class="ai-live-token-pill" data-i18n="ai_live_token_badge">⚡ Nén ~258 token/lần hỏi</div>
+          <div class="ai-live-actions">
+            <select id="ai-live-source-select" class="ai-live-source-select" title="Chọn màn hình Live">
+              <option value="tab" data-i18n="ai_live_source_tab">🌐 Tab hiện tại</option>
+              <option value="screen" data-i18n="ai_live_source_screen">🖥️ Màn hình / Cửa sổ</option>
+              <option value="camera" data-i18n="ai_live_source_camera">📷 Camera</option>
+            </select>
+            <button type="button" class="ai-live-btn" id="ai-btn-live-switch" title="Chuyển đổi giữa Camera và Màn hình" data-i18n-title="ai_btn_live_switch_tip">🔄</button>
+            <button type="button" class="ai-live-btn" id="ai-btn-live-snap" title="Chụp khung hình này vào khung chat" data-i18n-title="ai_btn_live_snap_tip">📸</button>
+            <button type="button" class="ai-live-btn" id="ai-btn-live-close" title="Dừng quay trực tiếp (Đóng Live)" data-i18n-title="ai_btn_live_close_tip">✕</button>
+          </div>
+        </div>
+        <div class="ai-live-video-wrap">
+          <video id="ai-live-video" autoplay muted playsinline style="display:none;"></video>
+          <img id="ai-live-preview-img" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:inherit;" alt="Live Preview">
+          <div id="ai-live-tab-card" class="ai-live-tab-card" style="display:none;">
+            <div class="ai-live-pulse-radar"></div>
+            <div class="ai-live-tab-info">
+              <span class="ai-live-tab-title" id="ai-live-tab-title">Tab hiện tại</span>
+              <span class="ai-live-tab-desc" data-i18n="ai_live_tab_desc">Viền đổ sáng đang kích hoạt · Không lag</span>
+            </div>
+          </div>
+        </div>
+      </div>
       <div id="ai-image-preview" class="ai-image-preview" style="display:none; padding:6px 8px; margin:6px 0; background:rgba(15,23,42,0.65); border:1px solid rgba(var(--primary-rgb),0.2); border-radius:8px; flex-direction:column; gap:6px; flex-shrink:0;">
         <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; font-size:11px;">
           <span id="ai-image-count-label" style="color:#94a3b8; font-weight:600;" data-i18n="ai_attached_images_count">Ảnh đã đính kèm (0/10)</span>
@@ -644,7 +674,9 @@
       </div>
       <div class="ai-input-row">
         <button type="button" class="btn btn-secondary" id="ai-btn-attach-image" data-i18n="ai_btn_attach_label" title="Đính kèm" data-i18n-title="ai_btn_attach_image">Ảnh</button>
-        <input type="file" id="ai-image-input" accept="image/*" multiple style="display:none;">
+        <button type="button" class="btn btn-secondary" id="ai-btn-capture-vision" data-i18n="ai_btn_vision_label" title="Chụp nhanh màn hình nén gửi kèm AI (Tiết kiệm token)" data-i18n-title="ai_btn_vision_title">Vision</button>
+                <button type="button" class="btn btn-secondary" id="ai-btn-live-stream" data-i18n="ai_btn_live_stream_label" title="Quay camera/màn hình trực tiếp thời gian thực (Realtime Live Vision)" data-i18n-title="ai_btn_live_stream_title">Live</button>
+<input type="file" id="ai-image-input" accept="image/*" multiple style="display:none;">
         <div class="ai-input-wrap">
           <textarea id="ai-input" class="ai-input" rows="1"></textarea>
         </div>
@@ -821,6 +853,19 @@
           <div class="ai-hint" style="margin-left:22px; font-size:10.5px; margin-top:2px;" data-i18n="ai_opt_agent_mode_hint">Cho phép Agent tự động duyệt tìm kiếm web và xử lý dữ liệu cô lập qua Sandbox khi gõ lệnh /agent.</div>
           <label class="ai-check" style="margin-top:8px;"><input type="checkbox" id="ai-opt-agent-confirm" checked> <span data-i18n="ai_opt_agent_confirm">Hỏi cấp quyền trước khi Agent duyệt web</span></label>
           <div class="ai-hint" style="margin-left:22px; font-size:10.5px; margin-top:2px;" data-i18n="ai_opt_agent_confirm_hint">Hiện thẻ xác nhận trong khung chat để bạn phê duyệt mỗi khi Agent muốn mở và đọc trang web.</div>
+          <label class="ai-check" style="margin-top:8px;"><input type="checkbox" id="ai-opt-agent-vision"> <span data-i18n="ai_opt_agent_vision">Bật thị giác màn hình (Vision / Chụp khung nhìn)</span></label>
+          <div class="ai-hint" style="margin-left:22px; font-size:10.5px; margin-top:2px;" data-i18n="ai_opt_agent_vision_hint">Tự động nén ảnh chụp màn hình độ phân giải thấp (~258 token) khi DOM phức tạp hoặc mạng xã hội. Tắt để tiết kiệm tối đa token.</div>
+          <div class="ai-field-sub" style="margin-top:10px;" data-i18n="ai_persona_title">🎭 Tính cách & giọng điệu của bạn (Nhắn tin / Bình luận)</div>
+          <div class="ai-hint" style="font-size:10.5px; margin-bottom:6px;" data-i18n="ai_persona_hint">Agent sẽ học theo phong cách này khi soạn giúp tin nhắn Messenger, Discord hoặc bình luận YouTube, Facebook...</div>
+          <select id="ai-persona-select" class="form-control" style="font-size:11px; margin-bottom:6px;">
+            <option value="casual" selected data-i18n="ai_persona_style_casual">Thân thiện, tự nhiên (Gen Z / đời thường)</option>
+            <option value="humorous" data-i18n="ai_persona_style_humorous">Hài hước, lầy lội, vui vẻ</option>
+            <option value="polite" data-i18n="ai_persona_style_polite">Lịch sự, ấm áp, tinh tế</option>
+            <option value="concise" data-i18n="ai_persona_style_concise">Ngắn gọn, đi thẳng vào vấn đề</option>
+            <option value="professional" data-i18n="ai_persona_style_professional">Chuyên nghiệp, học thuật, chuẩn mực</option>
+          </select>
+          <label class="ai-field-sub" for="ai-persona-custom" data-i18n="ai_persona_custom_label">Mô tả thêm về tính cách / cách xưng hô của bạn:</label>
+          <textarea id="ai-persona-custom" class="form-control" rows="2" style="font-size:11px; margin-top:4px;" placeholder="VD: Hay xưng mình - bạn, nói ngắn gọn, thích thêm emoji :)), không viết hoa đầu câu..." data-i18n-placeholder="ai_persona_custom_ph"></textarea>
         </div>
       </div>
     </div>
@@ -3941,6 +3986,9 @@
         <div class="scratchpad-drawer-filters" id="scratchpad-drawer-filters">
           <button type="button" class="scratchpad-filter-chip active" data-filter="all" data-i18n="scratchpad_category_all">Tất cả</button>
           <button type="button" class="scratchpad-filter-chip" data-filter="leetcode" data-i18n="scratchpad_category_leetcode">LeetCode / Thuật toán</button>
+          <button type="button" class="scratchpad-filter-chip" data-filter="dsa_array" data-i18n="scratchpad_cat_array">Mảng / Chuỗi</button>
+          <button type="button" class="scratchpad-filter-chip" data-filter="dsa_tree" data-i18n="scratchpad_cat_tree">Cây / Đồ thị</button>
+          <button type="button" class="scratchpad-filter-chip" data-filter="dsa_dp" data-i18n="scratchpad_cat_dp">Quy hoạch động</button>
           <button type="button" class="scratchpad-filter-chip" data-filter="exam" data-i18n="scratchpad_category_exam">Kiểm tra / Ôn thi</button>
           <button type="button" class="scratchpad-filter-chip" data-filter="dev" data-i18n="scratchpad_category_dev">Lập trình / Code</button>
           <button type="button" class="scratchpad-filter-chip" data-filter="general" data-i18n="scratchpad_category_general">Chung</button>
@@ -3956,8 +4004,17 @@
         <select id="scratchpad-select-category" class="scratchpad-category-select">
           <option value="general" data-i18n="scratchpad_category_general">Chung</option>
           <option value="leetcode" data-i18n="scratchpad_category_leetcode">LeetCode / Thuật toán</option>
+          <option value="dsa_array" data-i18n="scratchpad_cat_array">Mảng &amp; Hai con trỏ</option>
+          <option value="dsa_tree" data-i18n="scratchpad_cat_tree">Cây &amp; Đồ thị</option>
+          <option value="dsa_dp" data-i18n="scratchpad_cat_dp">Quy hoạch động (DP)</option>
           <option value="exam" data-i18n="scratchpad_category_exam">Kiểm tra / Ôn thi</option>
           <option value="dev" data-i18n="scratchpad_category_dev">Lập trình / Code</option>
+        </select>
+        <select id="scratchpad-select-difficulty" class="scratchpad-difficulty-select" title="Độ khó bài toán" data-i18n-title="scratchpad_tip_difficulty">
+          <option value="" data-i18n="scratchpad_diff_none">-- Độ khó --</option>
+          <option value="easy" data-i18n="scratchpad_diff_easy">🟢 Dễ (Easy)</option>
+          <option value="medium" data-i18n="scratchpad_diff_medium">🟡 Trung bình (Medium)</option>
+          <option value="hard" data-i18n="scratchpad_diff_hard">🔴 Khó (Hard)</option>
         </select>
         <button type="button" class="scratchpad-pin-btn" id="scratchpad-btn-pin" title="Ghim ghi chú" data-i18n-title="scratchpad_pin_note">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.89A2 2 0 0 1 15 10.77V6h1a1 1 0 0 0 0-2H8a1 1 0 0 0 0 2h1v4.77a2 2 0 0 1-1.11 1.79l-1.78.89A2 2 0 0 0 5 15.24V17z"></path></svg>
@@ -3969,22 +4026,33 @@
         <div class="scratchpad-tool-group">
           <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-bold" title="In đậm (Ctrl+B)" data-i18n-title="scratchpad_tip_bold"><b>B</b></button>
           <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-italic" title="In nghiêng (Ctrl+I)" data-i18n-title="scratchpad_tip_italic"><i>I</i></button>
+          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-strike" title="Gạch ngang" data-i18n-title="scratchpad_tip_strike"><s>S</s></button>
+          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-highlight" title="Đánh dấu / Tô sáng" data-i18n-title="scratchpad_tip_highlight"><span class="scratchpad-hl-glyph">H</span></button>
           <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-heading" title="Tiêu đề" data-i18n-title="scratchpad_tip_heading">H</button>
           <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-quote" title="Khối trích dẫn" data-i18n-title="scratchpad_tip_quote">”</button>
           <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-list" title="Danh sách" data-i18n-title="scratchpad_tip_list">•</button>
-          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-task" title="Việc cần làm" data-i18n-title="scratchpad_tip_task">☑</button>
+          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-task" title="Việc cần làm" data-i18n-title="scratchpad_tip_task"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></button>
+          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-code-inline" title="Mã nội dòng (`...`)" data-i18n-title="scratchpad_tip_code_inline">`c`</button>
           <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-code-block" title="Chèn khối mã lệnh (Code block)" data-i18n-title="scratchpad_tip_code_block">&lt;/&gt;</button>
           <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-math" title="Chèn công thức toán / Big-O ($...$)" data-i18n-title="scratchpad_tip_math">ƒ(x)</button>
-          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-table" title="Chèn bảng Markdown" data-i18n-title="scratchpad_tip_table">▦</button>
-          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-template" title="Mẫu ghi chú LeetCode / Bài toán" data-i18n-title="scratchpad_tip_template">📋</button>
-          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-timestamp" title="Chèn dấu thời gian hiện tại" data-i18n-title="scratchpad_tip_timestamp">⏱</button>
+          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-link" title="Chèn liên kết Markdown" data-i18n-title="scratchpad_tip_link"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></button>
+          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-hr" title="Đường kẻ ngang" data-i18n-title="scratchpad_tip_hr">—</button>
+          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-table" title="Chèn bảng Markdown" data-i18n-title="scratchpad_tip_table"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line></svg></button>
+          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-align-left" title="Căn lề trái" data-i18n-title="scratchpad_tip_align_left"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="21" y1="6" x2="3" y2="6"></line><line x1="15" y1="12" x2="3" y2="12"></line><line x1="18" y1="18" x2="3" y2="18"></line></svg></button>
+          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-align-center" title="Căn lề giữa" data-i18n-title="scratchpad_tip_align_center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="6"></line><line x1="21" y1="12" x2="3" y2="12"></line><line x1="18" y1="18" x2="6" y2="18"></line></svg></button>
+          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-align-right" title="Căn lề phải" data-i18n-title="scratchpad_tip_align_right"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="12" x2="9" y2="12"></line><line x1="21" y1="18" x2="6" y2="18"></line></svg></button>
+          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-align-justify" title="Căn lề đều hai bên" data-i18n-title="scratchpad_tip_align_justify"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="12" x2="3" y2="12"></line><line x1="21" y1="18" x2="3" y2="18"></line></svg></button>
+          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-dsa-menu" title="Mẫu thuật toán &amp; cấu trúc dữ liệu DSA" data-i18n-title="scratchpad_tip_dsa_menu">DSA</button>
+          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-complexity" title="Chèn độ phức tạp Big-O nhanh" data-i18n-title="scratchpad_tip_complexity">O(n)</button>
+          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-trace-table" title="Chèn bảng Dry-Run từng bước" data-i18n-title="scratchpad_tip_trace_table">Trace</button>
+          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-timestamp" title="Chèn dấu thời gian hiện tại" data-i18n-title="scratchpad_tip_timestamp"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></button>
         </div>
 
         <div class="scratchpad-tool-group">
           <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-preview" title="Chế độ xem trước Markdown" data-i18n-title="scratchpad_tip_preview">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
           </button>
-          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-font" title="Kiểu chữ (Code Monospace / Sans)" data-i18n-title="scratchpad_tip_font">Aa</button>
+          <button type="button" class="scratchpad-tool-btn" id="scratchpad-btn-font" title="Kiểu chữ &amp; Cỡ chữ hệ thống" data-i18n-title="scratchpad_font_menu_title">Aa</button>
           <button type="button" class="scratchpad-tool-btn btn-accent" id="scratchpad-btn-cite" title="Chèn trích dẫn trang hiện tại" data-i18n-title="scratchpad_tip_insert_cite">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
           </button>
@@ -4039,31 +4107,31 @@
   <div id="tab-userscripts" class="tab-section">
     <div class="sf-card">
       <div class="sf-card-header">
-        <h2 style="font-size: 13px; margin: 0; display: flex; align-items: center; gap: 6px;">
+        <h2 class="us-tab-header">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
           <span data-i18n="userscripts_title">Quản lý Script</span>
         </h2>
       </div>
-      <div class="sf-card-body" style="padding: 10px;">
+      <div class="sf-card-body us-card-body">
         
         <!-- Engine/permission status. Populated by _checkPermissions() only when
              something is genuinely wrong, so a visible box always means a real
              problem. See _renderStatus() in OS/js/tabs/userscripts.js. -->
-        <div id="us-ff-perm-box" class="us-alert" style="display: none; border-left: 3px solid #ef4444; padding: 8px; border-radius: 4px; margin-bottom: 12px;"></div>
+        <div id="us-ff-perm-box" class="us-alert us-alert-danger" style="display: none;"></div>
 
-        <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;" data-i18n="userscripts_desc">Thêm và chạy các kịch bản Javascript tùy chỉnh trên bất kỳ trang web nào.</p>
+        <p class="us-desc-text" data-i18n="userscripts_desc">Thêm và chạy các kịch bản Javascript tùy chỉnh trên bất kỳ trang web nào.</p>
 
         <!-- Script List -->
         <div id="us-list-container">
           <!-- Search & Filter -->
-          <div style="display: flex; gap: 6px; margin-bottom: 8px; align-items: center;">
-            <div style="position: relative; flex: 1;">
-              <input id="us-search" type="text" class="form-control" style="font-size: 11px; padding: 5px 8px 5px 26px; border-radius: 6px;" placeholder="Tìm kiếm script..." data-i18n-placeholder="us_search_placeholder">
-              <span class="us-icon" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: #64748b; pointer-events: none;">
+          <div class="us-search-row">
+            <div class="us-search-input-wrap">
+              <input id="us-search" type="text" class="form-control us-search-input" placeholder="Tìm kiếm script..." data-i18n-placeholder="us_search_placeholder">
+              <span class="us-icon us-search-icon">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
               </span>
             </div>
-            <select id="us-filter-status" class="form-control" style="font-size: 11px; padding: 5px 8px; width: auto; border-radius: 6px;">
+            <select id="us-filter-status" class="form-control us-filter-select">
               <option value="" data-i18n="us_filter_all">Tất cả</option>
               <option value="current_page" data-i18n="us_filter_current_page">Trang này</option>
               <option value="active" data-i18n="us_filter_active">Đang bật</option>
@@ -4071,54 +4139,54 @@
             </select>
           </div>
 
-          <div style="display: flex; gap: 6px; margin-bottom: 8px;">
-            <button id="btn-us-add" class="us-btn us-btn-primary" style="flex: 1; height: 30px;">
+          <div class="us-row-actions">
+            <button id="btn-us-add" class="us-btn us-btn-primary us-flex-1 us-btn-h30">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
               <span data-i18n="us_btn_add">Thêm Script Mới</span>
             </button>
-            <button id="btn-us-template" class="us-btn" style="height: 30px;" title="Chọn mẫu script có sẵn" data-i18n-title="tip_us_template">
+            <button id="btn-us-template" class="us-btn us-btn-h30" title="Chọn mẫu script có sẵn" data-i18n-title="tip_us_template">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
               <span data-i18n="us_btn_template">Mẫu code</span>
             </button>
           </div>
 
-          <div id="us-diag-bar" style="display: flex; gap: 6px; align-items: center; margin-bottom: 6px; font-size: 10.5px; color: var(--text-muted);">
+          <div id="us-diag-bar" class="us-diag-bar">
    <span id="us-diag-counts"></span>
    <button type="button" id="us-diag-btn" class="us-hidden-clear" data-i18n="us_diag_btn">Chẩn đoán</button>
 </div>
-<ul id="us-list" class="us-list" style="list-style: none; padding: 0; margin: 0; margin-bottom: 8px;">
+<ul id="us-list" class="us-list us-list-wrap">
             <!-- Rendered by JS -->
           </ul>
 
           <!-- Secondary utility actions -->
-          <div style="display: flex; gap: 6px; margin-bottom: 8px;">
-            <button id="btn-us-import" class="us-btn us-btn-sm" style="flex: 1;" title="Nhập script từ file máy tính" data-i18n-title="tip_us_import_file">
+          <div class="us-row-actions">
+            <button id="btn-us-import" class="us-btn us-btn-sm us-flex-1" title="Nhập script từ file máy tính" data-i18n-title="tip_us_import_file">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
               <span data-i18n="us_btn_import">Nhập file</span>
             </button>
-            <button id="btn-us-import-url" class="us-btn us-btn-sm" style="flex: 1;" title="Tải script từ liên kết GreasyFork / GitHub" data-i18n-title="tip_us_import_url">
+            <button id="btn-us-import-url" class="us-btn us-btn-sm us-flex-1" title="Tải script từ liên kết GreasyFork / GitHub" data-i18n-title="tip_us_import_url">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
               <span data-i18n="us_btn_import_url">Tải URL</span>
             </button>
-            <button id="btn-us-check-updates" class="us-btn us-btn-sm" style="flex: 1;" title="Kiểm tra phiên bản mới cho các script" data-i18n-title="tip_us_check_updates">
+            <button id="btn-us-check-updates" class="us-btn us-btn-sm us-flex-1" title="Kiểm tra phiên bản mới cho các script" data-i18n-title="tip_us_check_updates">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
               <span data-i18n="us_btn_check_updates">Cập nhật</span>
             </button>
-            <button id="btn-us-export" class="us-btn us-btn-sm" style="flex: 1;" title="Sao lưu toàn bộ script ra file JSON" data-i18n-title="tip_us_export_all">
+            <button id="btn-us-export" class="us-btn us-btn-sm us-flex-1" title="Sao lưu toàn bộ script ra file JSON" data-i18n-title="tip_us_export_all">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
               <span data-i18n="us_btn_export">Sao lưu</span>
             </button>
           </div>
 
           <!-- Batch Action Strip -->
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 4px 8px; background: rgba(0,0,0,0.25); border-radius: 6px; border: 1px solid rgba(255,255,255,0.06);">
-            <span style="font-size: 10px; color: var(--text-muted);" data-i18n="us_batch_actions_label">Thao tác nhanh:</span>
+          <div class="us-batch-strip">
+            <span class="us-batch-label" data-i18n="us_batch_actions_label">Thao tác nhanh:</span>
             <div class="us-btn-group">
-              <button id="btn-us-enable-all" class="us-btn us-btn-sm" style="height: 22px; font-size: 10px;" title="Bật tất cả script" data-i18n-title="tip_us_enable_all">
+              <button id="btn-us-enable-all" class="us-btn us-btn-sm us-btn-h22" title="Bật tất cả script" data-i18n-title="tip_us_enable_all">
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                 <span data-i18n="us_btn_enable_all">Bật hết</span>
               </button>
-              <button id="btn-us-disable-all" class="us-btn us-btn-sm" style="height: 22px; font-size: 10px;" title="Tắt tất cả script" data-i18n-title="tip_us_disable_all">
+              <button id="btn-us-disable-all" class="us-btn us-btn-sm us-btn-h22" title="Tắt tất cả script" data-i18n-title="tip_us_disable_all">
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 <span data-i18n="us_btn_disable_all">Tắt hết</span>
               </button>
@@ -4133,13 +4201,13 @@
           <!-- ── Metadata info bar (parsed from GM header) ── -->
           <div id="us-meta-bar" class="us-meta-inspector" style="display:none;">
             <div class="us-meta-title-row">
-              <div style="display:flex; align-items:center; gap:6px; min-width:0;">
-                <span class="us-icon" style="color:var(--primary);">
+              <div class="us-modal-title-left">
+                <span class="us-icon us-primary-icon">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
                 </span>
-                <span id="us-meta-name" style="font-weight:700; color:#f1f5f9; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
+                <span id="us-meta-name" class="us-meta-title-text"></span>
               </div>
-              <span id="us-meta-version" class="us-pill" style="color:var(--primary); border-color:rgba(var(--primary-rgb),0.3);"></span>
+              <span id="us-meta-version" class="us-pill us-pill-primary"></span>
             </div>
             <div id="us-meta-desc" class="us-meta-desc"></div>
             <div class="us-meta-details-row">
@@ -4149,74 +4217,74 @@
           </div>
 
           <!-- ── Keyboard shortcut hint ── -->
-          <div style="font-size:9.5px; color:#64748b; margin-bottom:8px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-            <span><kbd style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:3px;padding:1px 5px;font-family:monospace;color:#cbd5e1;">Ctrl+S</kbd> <span data-i18n="us_hint_save">Lưu</span></span>
-            <span><kbd style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:3px;padding:1px 5px;font-family:monospace;color:#cbd5e1;">Ctrl+Enter</kbd> <span data-i18n="us_hint_run">Chạy thử</span></span>
-            <span><kbd style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:3px;padding:1px 5px;font-family:monospace;color:#cbd5e1;">Ctrl+H</kbd> <span data-i18n="us_hint_find">Tìm &amp; Thay</span></span>
+          <div class="us-shortcuts-bar">
+            <span><kbd class="us-kbd">Ctrl+S</kbd> <span data-i18n="us_hint_save">Lưu</span></span>
+            <span><kbd class="us-kbd">Ctrl+Enter</kbd> <span data-i18n="us_hint_run">Chạy thử</span></span>
+            <span><kbd class="us-kbd">Ctrl+H</kbd> <span data-i18n="us_hint_find">Tìm &amp; Thay</span></span>
           </div>
 
           <!-- ── Find & Replace bar ── -->
-          <div id="us-find-bar" style="display:none; background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.12); border-radius:6px; padding:6px; margin-bottom:8px;">
-            <div style="display:flex; gap:4px; align-items:center; margin-bottom:4px;">
-              <input id="us-find-input" class="form-control" placeholder="Tìm..." style="flex:1; font-size:11px; padding:3px 6px; font-family:monospace;" data-i18n-placeholder="us_find_placeholder">
-              <input id="us-replace-input" class="form-control" placeholder="Thay bằng..." style="flex:1; font-size:11px; padding:3px 6px; font-family:monospace;" data-i18n-placeholder="us_replace_placeholder">
+          <div id="us-find-bar" class="us-find-bar" style="display:none;">
+            <div class="us-find-row">
+              <input id="us-find-input" class="form-control us-find-input" placeholder="Tìm..." data-i18n-placeholder="us_find_placeholder">
+              <input id="us-replace-input" class="form-control us-find-input" placeholder="Thay bằng..." data-i18n-placeholder="us_replace_placeholder">
             </div>
-            <div style="display:flex; gap:4px; align-items:center;">
-              <button id="btn-us-find-prev" class="us-btn us-btn-sm" style="padding:2px 6px;" data-i18n="us_btn_find_prev">Trước</button>
-              <button id="btn-us-find-next" class="us-btn us-btn-sm" style="padding:2px 6px;" data-i18n="us_btn_find_next">Sau</button>
-              <button id="btn-us-replace-one" class="us-btn us-btn-sm" style="padding:2px 6px;" data-i18n="us_btn_replace_one">Thay 1</button>
-              <button id="btn-us-replace-all" class="us-btn us-btn-sm" style="padding:2px 6px;" data-i18n="us_btn_replace_all">Thay hết</button>
-              <span id="us-find-count" style="font-size:10px; color:var(--text-muted); padding:3px 4px; margin-left:auto;"></span>
+            <div class="us-row-flex">
+              <button id="btn-us-find-prev" class="us-btn us-btn-sm" data-i18n="us_btn_find_prev">Trước</button>
+              <button id="btn-us-find-next" class="us-btn us-btn-sm" data-i18n="us_btn_find_next">Sau</button>
+              <button id="btn-us-replace-one" class="us-btn us-btn-sm" data-i18n="us_btn_replace_one">Thay 1</button>
+              <button id="btn-us-replace-all" class="us-btn us-btn-sm" data-i18n="us_btn_replace_all">Thay hết</button>
+              <span id="us-find-count" class="us-find-count"></span>
             </div>
           </div>
 
           <!-- ── Basic metadata fields ── -->
-          <div style="margin-bottom: 8px;">
-            <label style="font-size: 11px; font-weight: 500;" data-i18n="us_label_name">Tên Script</label>
-            <input type="text" id="us-edit-name" class="form-control" style="width: 100%; font-size: 12px; padding: 5px 8px;" placeholder="VD: Bỏ qua quảng cáo YT" data-i18n-placeholder="us_name_placeholder">
+          <div class="us-form-group">
+            <label class="us-form-label" data-i18n="us_label_name">Tên Script</label>
+            <input type="text" id="us-edit-name" class="form-control us-name-input" placeholder="VD: Bỏ qua quảng cáo YT" data-i18n-placeholder="us_name_placeholder">
           </div>
 
           <!-- ── Collapsible Advanced Settings ── -->
-          <details id="us-advanced-details" style="margin-bottom:8px;">
-            <summary style="font-size:11px; font-weight:600; cursor:pointer; color:var(--text-secondary); padding:4px 0; user-select:none; display:inline-flex; align-items:center; gap:5px;">
+          <details id="us-advanced-details" class="us-advanced-details">
+            <summary class="us-advanced-summary">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
               <span data-i18n="us_advanced_toggle">Cài đặt nâng cao ▸</span>
             </summary>
-            <div style="padding-top:8px;">
+            <div class="us-advanced-body">
 
-              <div style="margin-bottom: 8px;">
-                <label style="font-size: 11px; font-weight: 500;" data-i18n="us_label_matches">URL Áp dụng (Matches)</label>
-                <textarea id="us-edit-matches" class="form-control" style="width: 100%; height: 40px; font-size: 11px; padding: 4px; font-family: monospace;" placeholder="*://*.youtube.com/*"></textarea>
+              <div class="us-form-group">
+                <label class="us-form-label" data-i18n="us_label_matches">URL Áp dụng (Matches)</label>
+                <textarea id="us-edit-matches" class="form-control us-textarea-sm" placeholder="*://*.youtube.com/*"></textarea>
                 <div style="font-size: 9px; color: var(--text-muted); margin-top: 2px;" data-i18n="us_matches_hint">Mỗi URL một dòng.</div>
               </div>
 
-              <div style="margin-bottom: 8px;">
-                <label style="font-size: 11px; font-weight: 500;" data-i18n="us_label_excludes">URL Loại trừ (Excludes)</label>
-                <textarea id="us-edit-excludes" class="form-control" style="width: 100%; height: 40px; font-size: 11px; padding: 4px; font-family: monospace;" placeholder="*://music.youtube.com/*"></textarea>
+              <div class="us-form-group">
+                <label class="us-form-label" data-i18n="us_label_excludes">URL Loại trừ (Excludes)</label>
+                <textarea id="us-edit-excludes" class="form-control us-textarea-sm" placeholder="*://music.youtube.com/*"></textarea>
                 <div style="font-size: 9px; color: var(--text-muted); margin-top: 2px;" data-i18n="us_excludes_hint">Mỗi URL một dòng.</div>
               </div>
 
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+              <div class="us-grid-2col">
                 <div>
-                  <label style="font-size: 11px; font-weight: 500;" data-i18n="us_label_runat">Thời điểm chạy</label>
-                  <select id="us-edit-runat" class="form-control" style="width: 100%; font-size: 11px; padding: 4px;">
+                  <label class="us-form-label" data-i18n="us_label_runat">Thời điểm chạy</label>
+                  <select id="us-edit-runat" class="form-control us-select-sm">
                     <option value="document_start" data-i18n="us_runat_start">document_start (Sớm nhất)</option>
                     <option value="document_idle" selected data-i18n="us_runat_idle">document_idle (Mặc định)</option>
                     <option value="document_end" data-i18n="us_runat_end">document_end (Sau DOM)</option>
                   </select>
                 </div>
                 <div>
-                  <label style="font-size: 11px; font-weight: 500;" title="MAIN: chạy trong ngữ cảnh trang web (truy cập biến window). ISOLATED: an toàn hơn, không chia sẻ scope với trang." data-i18n-title="tip_us_execution_world">Execution World <span style="color:var(--text-muted);">(?)</span></label>
-                  <select id="us-edit-world" class="form-control" style="width: 100%; font-size: 11px; padding: 4px;">
+                  <label class="us-form-label" title="MAIN: chạy trong ngữ cảnh trang web (truy cập biến window). ISOLATED: an toàn hơn, không chia sẻ scope với trang." data-i18n-title="tip_us_execution_world">Execution World <span style="color:var(--text-muted);">(?)</span></label>
+                  <select id="us-edit-world" class="form-control us-select-sm">
                     <option value="MAIN" selected data-i18n="us_world_main">MAIN (truy cập window)</option>
                     <option value="ISOLATED" data-i18n="us_world_isolated">ISOLATED (an toàn hơn)</option>
                   </select>
                 </div>
               </div>
 
-              <div style="margin-bottom: 8px;">
-                <label style="font-size: 11px; font-weight: 500;" data-i18n="us_label_update_url">URL Tự động cập nhật</label>
-                <input type="text" id="us-edit-update-url" class="form-control" style="width: 100%; font-size: 11px; padding: 4px; font-family: monospace;" placeholder="https://update.greasyfork.org/...">
+              <div class="us-form-group">
+                <label class="us-form-label" data-i18n="us_label_update_url">URL Tự động cập nhật</label>
+                <input type="text" id="us-edit-update-url" class="form-control us-url-input" placeholder="https://update.greasyfork.org/...">
                 <div style="font-size: 9px; color: var(--text-muted); margin-top: 2px;" data-i18n="us_update_hint">Script sẽ tự làm mới từ link này.</div>
               </div>
 
@@ -4224,7 +4292,7 @@
           </details>
 
           <!-- ── Code Editor with toolbar ── -->
-          <div style="margin-bottom: 8px;">
+          <div class="us-form-group">
             <div class="us-editor-toolbar">
               <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
                 <label style="font-size: 11px; font-weight: 600; color: #cbd5e1; display:flex; align-items:center; gap:5px;" data-i18n="us_label_code">
@@ -4262,33 +4330,33 @@
             </div>
 
             <!-- Code editor with line numbers (Constrained container) -->
-            <div style="position:relative; display:flex; height:250px; max-height:250px; border:1px solid rgba(255,255,255,0.12); border-radius:6px 6px 0 0; overflow:hidden; background:#080c14;">
-              <div id="us-line-numbers" style="height:100%; max-height:100%; padding:6px 6px; background:#0d131f; color:#475569; font-family:'JetBrains Mono', Consolas, monospace; font-size:11px; line-height:1.5; text-align:right; min-width:36px; user-select:none; overflow:hidden; white-space:pre; flex-shrink:0; box-sizing:border-box; border-right:1px solid #1e293b;">1</div>
-              <textarea id="us-edit-code" class="form-control" style="flex:1; height:100%; max-height:100%; font-family:'JetBrains Mono', Consolas, monospace; font-size:11px; padding:6px 10px; white-space:pre; resize:none; border:none; border-radius:0; background:transparent; color:#e2e8f0; line-height:1.5; tab-size:2; overflow-y:auto; overflow-x:auto; box-sizing:border-box;" placeholder="console.log('Hello World!');"></textarea>
+            <div class="us-editor-wrap">
+              <div id="us-line-numbers" class="us-editor-gutter">1</div>
+              <textarea id="us-edit-code" class="form-control us-editor-textarea" placeholder="console.log('Hello World!');"></textarea>
             </div>
             <!-- Statusbar -->
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 8px; font-size:9.5px; color:#64748b; background:#090d16; border:1px solid rgba(255,255,255,0.12); border-top:none; border-radius:0 0 6px 6px;">
-              <div style="display:flex; gap:10px;">
+            <div class="us-editor-statusbar">
+              <div class="us-editor-statusbar-info">
                 <span id="us-cursor-pos" data-i18n="us_cursor_pos_initial">Dòng 1, Cột 1</span>
                 <span id="us-char-count" data-i18n="us_char_count_initial">0 ký tự</span>
               </div>
-              <div style="display:flex; gap:8px;">
+              <div class="us-editor-statusbar-lang">
                 <span>JavaScript (ES6+)</span>
               </div>
             </div>
           </div>
 
           <!-- ── Action buttons ── -->
-          <div style="display: flex; gap: 6px; flex-wrap:wrap;">
-            <button id="btn-us-save" class="us-btn us-btn-primary" style="flex: 1; height: 32px; font-size: 11.5px;">
+          <div class="us-row-wrap">
+            <button id="btn-us-save" class="us-btn us-btn-primary us-flex-1 us-btn-h32">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
               <span data-i18n="us_btn_save">Lưu script</span>
             </button>
-            <button id="btn-us-test" class="us-btn us-btn-secondary" style="flex: 1; height: 32px; font-size: 11.5px;">
+            <button id="btn-us-test" class="us-btn us-btn-secondary us-flex-1 us-btn-h32">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 21"></polygon></svg>
               <span data-i18n="us_btn_test_run">Chạy thử</span>
             </button>
-            <button id="btn-us-cancel" class="us-btn us-btn-secondary" style="height: 32px; font-size: 11.5px;">
+            <button id="btn-us-cancel" class="us-btn us-btn-secondary us-btn-h32">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
               <span data-i18n="us_btn_cancel">Đóng</span>
             </button>
@@ -4297,18 +4365,18 @@
           <!-- ── Console Output ── -->
           <div id="us-console-panel" class="us-drawer" style="display:none;">
             <div class="us-drawer-header">
-              <div style="display:flex; gap:6px; align-items:center;">
+              <div class="us-console-header-title">
                 <span class="us-icon">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
                 </span>
                 <span>Console Output</span>
-                <span id="us-console-count" style="font-size:9px; color:#64748b;"></span>
+                <span id="us-console-count" class="us-console-count"></span>
               </div>
               <div class="us-btn-group">
-                <button id="btn-us-copy-console" class="us-btn us-btn-icon" style="width:20px; height:20px;" title="Sao chép output" data-i18n-title="tip_us_copy_console">
+                <button id="btn-us-copy-console" class="us-btn us-btn-icon us-btn-icon-sm" title="Sao chép output" data-i18n-title="tip_us_copy_console">
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                 </button>
-                <button id="btn-us-clear-console" class="us-btn us-btn-icon" style="width:20px; height:20px;" title="Xóa logs" data-i18n-title="tip_us_clear_console">
+                <button id="btn-us-clear-console" class="us-btn us-btn-icon us-btn-icon-sm" title="Xóa logs" data-i18n-title="tip_us_clear_console">
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
               </div>
@@ -4319,52 +4387,52 @@
           <!-- ── GM Storage Viewer & Editor ── -->
           <div id="us-storage-panel" class="us-drawer" style="display:none;">
             <div class="us-drawer-header">
-              <div style="display:flex; gap:6px; align-items:center;">
+              <div class="us-storage-header-title">
                 <span class="us-icon">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
                 </span>
                 <span>GM Storage</span>
               </div>
               <div class="us-btn-group">
-                <button id="btn-us-add-key-toggle" class="us-btn us-btn-icon" style="width:20px; height:20px;" title="Thêm key mới" data-i18n-title="tip_us_add_key">
+                <button id="btn-us-add-key-toggle" class="us-btn us-btn-icon us-btn-icon-sm" title="Thêm key mới" data-i18n-title="tip_us_add_key">
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                 </button>
-                <button id="btn-us-refresh-storage" class="us-btn us-btn-icon" style="width:20px; height:20px;" title="Làm mới" data-i18n-title="tip_us_refresh_storage">
+                <button id="btn-us-refresh-storage" class="us-btn us-btn-icon us-btn-icon-sm" title="Làm mới" data-i18n-title="tip_us_refresh_storage">
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
                 </button>
-                <button id="btn-us-clear-storage" class="us-btn us-btn-icon us-danger" style="width:20px; height:20px;" title="Xóa toàn bộ GM Storage trang này" data-i18n-title="tip_us_clear_storage">
+                <button id="btn-us-clear-storage" class="us-btn us-btn-icon us-danger us-btn-icon-sm" title="Xóa toàn bộ GM Storage trang này" data-i18n-title="tip_us_clear_storage">
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                 </button>
-                <button id="btn-us-close-storage" class="us-btn us-btn-icon" style="width:20px; height:20px;" title="Đóng panel GM Storage" data-i18n-title="tip_us_close_storage">
+                <button id="btn-us-close-storage" class="us-btn us-btn-icon us-btn-icon-sm" title="Đóng panel GM Storage" data-i18n-title="tip_us_close_storage">
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
               </div>
             </div>
             <!-- Add key input box (collapsed by default) -->
-            <div id="us-storage-add-box" style="display:none; padding:6px 8px; background:#0c111c; border-bottom:1px solid #1f2937; gap:4px; flex-direction:column;">
-              <input id="us-new-gm-key" type="text" class="form-control" style="font-size:10.5px; padding:3px 6px; font-family:monospace;" placeholder="Key (VD: config_theme)">
-              <div style="display:flex; gap:4px;">
-                <input id="us-new-gm-val" type="text" class="form-control" style="flex:1; font-size:10.5px; padding:3px 6px; font-family:monospace;" placeholder='Value (VD: "dark")'>
+            <div id="us-storage-add-box" class="us-storage-add-box">
+              <input id="us-new-gm-key" type="text" class="form-control us-storage-input" placeholder="Key (VD: config_theme)">
+              <div class="us-row-flex">
+                <input id="us-new-gm-val" type="text" class="form-control us-storage-input us-flex-1" placeholder='Value (VD: "dark")'>
                 <button id="btn-us-save-gm-key" class="us-btn us-btn-primary us-btn-sm" style="height:24px; font-size:10px;" data-i18n="us_btn_save_key">Lưu</button>
               </div>
             </div>
-            <div id="us-storage-output" class="us-drawer-body" style="max-height:120px;"></div>
+            <div id="us-storage-output" class="us-drawer-body us-storage-body-scroll"></div>
           </div>
 
           <!-- ── Snippet Picker Modal ── -->
-          <div id="us-snippets-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:90%; max-width:390px; max-height:80vh; background:#0f172a; border:1px solid rgba(var(--primary-rgb),0.4); border-radius:8px; box-shadow:0 12px 36px rgba(0,0,0,0.85); z-index:99999; flex-direction:column; overflow:hidden;">
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:#1e293b; border-bottom:1px solid #334155;">
-              <div style="display:flex; align-items:center; gap:6px;">
-                <span class="us-icon" style="color:var(--primary);">
+          <div id="us-snippets-modal" class="us-snippets-dialog">
+            <div class="us-snippets-dialog-header">
+              <div class="us-snippets-dialog-title">
+                <span class="us-icon us-primary-icon">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
                 </span>
-                <span style="font-size:12px; font-weight:700; color:#f1f5f9;" data-i18n="us_snippets_modal_title">Thư viện Mẫu GM_*</span>
+                <span data-i18n="us_snippets_modal_title">Thư viện Mẫu GM_*</span>
               </div>
-              <button id="btn-us-close-snippets" class="us-btn us-btn-icon" style="width:22px; height:22px;" title="Đóng" data-i18n-title="tip_close">
+              <button id="btn-us-close-snippets" class="us-btn us-btn-icon us-btn-icon-sm" title="Đóng" data-i18n-title="tip_close">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
               </button>
             </div>
-            <div id="us-snippets-list" style="padding:10px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:8px;">
+            <div id="us-snippets-list" class="us-snippets-dialog-list">
               <!-- Populated by JS -->
             </div>
           </div>
@@ -4374,7 +4442,6 @@
       </div>
     </div>
   </div>
-
 
   
   <div class="footer-trust-bar">
