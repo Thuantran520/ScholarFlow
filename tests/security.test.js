@@ -105,7 +105,8 @@ const ALLOWED_HOSTS = new Set([
    "teams.microsoft.com",
    "discord.gg",
    "ipwho.is",
-   "freeipapi.com"
+   "freeipapi.com",
+   "api.bigdatacloud.net"
    ]);
 
 function walk(dir, out = []) {

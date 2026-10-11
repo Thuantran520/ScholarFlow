@@ -1228,7 +1228,6 @@ function calRenderWeatherUI() {
   const humidLabel = (window.i18n ? window.i18n.t("cal_weather_humidity") : "Độ ẩm");
   const rainLabel = (window.i18n ? window.i18n.t("cal_weather_rain_chance") : "Khả năng mưa");
   const heroCityLabel = calGetActiveCityLabel();
-  const heroCitySuffix = heroCityLabel ? (" • " + heroCityLabel) : "";
 
   // Calendar tab Weather Hero Card
   const heroCard = document.getElementById("cal-weather-hero-card");
@@ -1253,7 +1252,16 @@ function calRenderWeatherUI() {
     }
     const heroDesc = document.getElementById("cal-weather-hero-desc");
     if (heroDesc) {
-      heroDesc.textContent = reportWmo.text + " • " + humidLabel + " " + humidVal + "%" + heroCitySuffix;
+      heroDesc.textContent = reportWmo.text + " • " + humidLabel + " " + humidVal + "%";
+    }
+    const heroLoc = document.getElementById("cal-weather-hero-location");
+    if (heroLoc) {
+      if (heroCityLabel) {
+        heroLoc.textContent = heroCityLabel;
+        heroLoc.style.display = "flex";
+      } else {
+        heroLoc.style.display = "none";
+      }
     }
     const heroHumid = document.getElementById("cal-weather-hero-humidity");
     if (heroHumid) {
@@ -1302,8 +1310,15 @@ function calRenderWeatherUI() {
 
     const heroDesc = document.createElement("div");
     heroDesc.className = "cal-weather-hero-desc";
-    heroDesc.textContent = reportWmo.text + " • " + humidLabel + " " + humidVal + "%" + heroCitySuffix;
+    heroDesc.textContent = reportWmo.text + " • " + humidLabel + " " + humidVal + "%";
     titleCol.appendChild(heroDesc);
+
+    if (heroCityLabel) {
+      const heroLocModal = document.createElement("div");
+      heroLocModal.className = "cal-weather-hero-location";
+      heroLocModal.textContent = heroCityLabel;
+      titleCol.appendChild(heroLocModal);
+    }
 
     mainCol.appendChild(titleCol);
     hero.appendChild(mainCol);
@@ -1597,6 +1612,62 @@ function calFetchWeather(lat, lon, silent) {
 
 let calDetectedIpCity = "";
 
+function calReverseGeocodeDetails(lat, lon, fallbackName, callback) {
+  const fetchFn = (typeof fetch === "function") ? fetch : (typeof window !== "undefined" && typeof window.fetch === "function" ? window.fetch : (typeof globalThis !== "undefined" && typeof globalThis.fetch === "function" ? globalThis.fetch : null));
+  if (!fetchFn) {
+    if (typeof callback === "function") callback(fallbackName);
+    return;
+  }
+  const opts = {};
+  if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function") {
+    opts.signal = AbortSignal.timeout(5000);
+  }
+
+  const lang = (window.i18n && window.i18n.currentLang) || "vi";
+  const geoUrl = "https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=" + lat + "&longitude=" + lon + "&localityLanguage=" + encodeURIComponent(lang);
+
+  fetchFn(geoUrl, opts)
+    .then(function (res) {
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.json();
+    })
+    .then(function (geo) {
+      if (!geo) throw new Error("Empty geo response");
+      let ward = "";
+      let district = "";
+      let province = geo.principalSubdivision || geo.city || "";
+
+      // Extract admin levels: adminLevel 6 (phường/xã/quận), adminLevel 4 (tỉnh/thành/bang)
+      if (geo.localityInfo && Array.isArray(geo.localityInfo.administrative)) {
+        const admins = geo.localityInfo.administrative;
+        for (let i = admins.length - 1; i >= 0; i--) {
+          const item = admins[i];
+          if (!item || !item.name) continue;
+          if (item.adminLevel === 6 && !ward) {
+            ward = item.name;
+          } else if (item.adminLevel === 5 && !district) {
+            district = item.name;
+          }
+        }
+      }
+      if (!ward && geo.locality) {
+        ward = geo.locality;
+      }
+
+      // Build hierarchical label: e.g. "Phường Tây Thạnh, TP. Hồ Chí Minh" or "Quận Tân Phú, TP. Hồ Chí Minh"
+      const parts = [];
+      if (ward) parts.push(ward);
+      if (district && district !== ward) parts.push(district);
+      if (province && province !== ward && province !== district) parts.push(province);
+
+      const fullName = parts.length > 0 ? parts.join(", ") : fallbackName;
+      if (typeof callback === "function") callback(fullName);
+    })
+    .catch(function () {
+      if (typeof callback === "function") callback(fallbackName);
+    });
+}
+
 function calDetectLocationByIp(callback) {
   const fetchFn = (typeof fetch === "function") ? fetch : (typeof window !== "undefined" && typeof window.fetch === "function" ? window.fetch : (typeof globalThis !== "undefined" && typeof globalThis.fetch === "function" ? globalThis.fetch : null));
   if (!fetchFn) {
@@ -1609,6 +1680,23 @@ function calDetectLocationByIp(callback) {
     opts.signal = AbortSignal.timeout(6000);
   }
 
+  const handleCoords = function (lat, lon, initialName) {
+    calReverseGeocodeDetails(lat, lon, initialName, function (detailedName) {
+      calDetectedIpCity = detailedName || initialName;
+      storSet({
+        sf_cal_weather_ip_cache: {
+          lat: lat,
+          lon: lon,
+          city: calDetectedIpCity,
+          fetchedAt: Date.now()
+        }
+      });
+      if (typeof callback === "function") {
+        callback({ lat: lat, lon: lon, city: calDetectedIpCity });
+      }
+    });
+  };
+
   // Primary: ipwho.is (fast, HTTPS, free, accurate city and coordinates)
   fetchFn("https://ipwho.is/", opts)
     .then(function (res) {
@@ -1618,18 +1706,7 @@ function calDetectLocationByIp(callback) {
     .then(function (data) {
       if (data && data.success && typeof data.latitude === "number" && typeof data.longitude === "number") {
         const cityName = data.city || data.region || data.country || "IP Location";
-        calDetectedIpCity = cityName;
-        storSet({
-          sf_cal_weather_ip_cache: {
-            lat: data.latitude,
-            lon: data.longitude,
-            city: cityName,
-            fetchedAt: Date.now()
-          }
-        });
-        if (typeof callback === "function") {
-          callback({ lat: data.latitude, lon: data.longitude, city: cityName });
-        }
+        handleCoords(data.latitude, data.longitude, cityName);
         return;
       }
       throw new Error("Invalid response from ipwho.is");
@@ -1644,18 +1721,7 @@ function calDetectLocationByIp(callback) {
         .then(function (data2) {
           if (data2 && typeof data2.latitude === "number" && typeof data2.longitude === "number") {
             const cityName2 = data2.cityName || data2.regionName || data2.countryName || "IP Location";
-            calDetectedIpCity = cityName2;
-            storSet({
-              sf_cal_weather_ip_cache: {
-                lat: data2.latitude,
-                lon: data2.longitude,
-                city: cityName2,
-                fetchedAt: Date.now()
-              }
-            });
-            if (typeof callback === "function") {
-              callback({ lat: data2.latitude, lon: data2.longitude, city: cityName2 });
-            }
+            handleCoords(data2.latitude, data2.longitude, cityName2);
           } else {
             if (typeof callback === "function") callback(null);
           }
