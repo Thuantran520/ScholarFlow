@@ -1191,6 +1191,9 @@ function calRenderWeatherUI() {
   if (previewTxt) {
     previewTxt.textContent = "";
     previewTxt.appendChild(calCreateWeatherIconEl(cur.weather_code, cur.is_day, "preview", wmo.icon, tempVal));
+    const cityLabel = calGetActiveCityLabel();
+    const cityPrefix = cityLabel ? (cityLabel + " • ") : "";
+
     const pSpan = document.createElement("span");
     pSpan.textContent = "";
       if (typeof window.sfWeatherIconSvg === "function") {
@@ -1198,9 +1201,9 @@ function calRenderWeatherUI() {
         pSpan.appendChild(window.sfWeatherIconSvg(26, "inline-weather-icon"));
         pSpan.appendChild(document.createTextNode(" " + tempVal + "°C | "));
         pSpan.appendChild(window.sfWeatherIconSvg(25, "inline-weather-icon"));
-        pSpan.appendChild(document.createTextNode(" " + humidVal + "% (" + wmo.text + ")"));
+        pSpan.appendChild(document.createTextNode(" " + humidVal + "% (" + cityPrefix + wmo.text + ")"));
       } else {
-        pSpan.textContent = " " + tempVal + "°C | 💧 " + humidVal + "% (" + wmo.text + ")";
+        pSpan.textContent = " " + tempVal + "°C | 💧 " + humidVal + "% (" + cityPrefix + wmo.text + ")";
       }
     previewTxt.appendChild(pSpan);
   }
@@ -1224,6 +1227,8 @@ function calRenderWeatherUI() {
   const isHighRain = todayRainProb >= 70;
   const humidLabel = (window.i18n ? window.i18n.t("cal_weather_humidity") : "Độ ẩm");
   const rainLabel = (window.i18n ? window.i18n.t("cal_weather_rain_chance") : "Khả năng mưa");
+  const heroCityLabel = calGetActiveCityLabel();
+  const heroCitySuffix = heroCityLabel ? (" • " + heroCityLabel) : "";
 
   // Calendar tab Weather Hero Card
   const heroCard = document.getElementById("cal-weather-hero-card");
@@ -1248,7 +1253,7 @@ function calRenderWeatherUI() {
     }
     const heroDesc = document.getElementById("cal-weather-hero-desc");
     if (heroDesc) {
-      heroDesc.textContent = reportWmo.text + " • " + humidLabel + " " + humidVal + "%";
+      heroDesc.textContent = reportWmo.text + " • " + humidLabel + " " + humidVal + "%" + heroCitySuffix;
     }
     const heroHumid = document.getElementById("cal-weather-hero-humidity");
     if (heroHumid) {
@@ -1297,7 +1302,7 @@ function calRenderWeatherUI() {
 
     const heroDesc = document.createElement("div");
     heroDesc.className = "cal-weather-hero-desc";
-    heroDesc.textContent = reportWmo.text + " • " + humidLabel + " " + humidVal + "%";
+    heroDesc.textContent = reportWmo.text + " • " + humidLabel + " " + humidVal + "%" + heroCitySuffix;
     titleCol.appendChild(heroDesc);
 
     mainCol.appendChild(titleCol);
@@ -1588,6 +1593,87 @@ function calFetchWeather(lat, lon, silent) {
         previewTxt.textContent = window.i18n ? window.i18n.t("cal_weather_error") : "Không thể tải thời tiết";
       }
     });
+}
+
+let calDetectedIpCity = "";
+
+function calDetectLocationByIp(callback) {
+  const fetchFn = (typeof fetch === "function") ? fetch : (typeof window !== "undefined" && typeof window.fetch === "function" ? window.fetch : (typeof globalThis !== "undefined" && typeof globalThis.fetch === "function" ? globalThis.fetch : null));
+  if (!fetchFn) {
+    if (typeof callback === "function") callback(null);
+    return;
+  }
+
+  const opts = {};
+  if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function") {
+    opts.signal = AbortSignal.timeout(6000);
+  }
+
+  // Primary: ipwho.is (fast, HTTPS, free, accurate city and coordinates)
+  fetchFn("https://ipwho.is/", opts)
+    .then(function (res) {
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.json();
+    })
+    .then(function (data) {
+      if (data && data.success && typeof data.latitude === "number" && typeof data.longitude === "number") {
+        const cityName = data.city || data.region || data.country || "IP Location";
+        calDetectedIpCity = cityName;
+        storSet({
+          sf_cal_weather_ip_cache: {
+            lat: data.latitude,
+            lon: data.longitude,
+            city: cityName,
+            fetchedAt: Date.now()
+          }
+        });
+        if (typeof callback === "function") {
+          callback({ lat: data.latitude, lon: data.longitude, city: cityName });
+        }
+        return;
+      }
+      throw new Error("Invalid response from ipwho.is");
+    })
+    .catch(function () {
+      // Fallback: freeipapi.com
+      fetchFn("https://freeipapi.com/api/json", opts)
+        .then(function (r2) {
+          if (!r2.ok) throw new Error("HTTP " + r2.status);
+          return r2.json();
+        })
+        .then(function (data2) {
+          if (data2 && typeof data2.latitude === "number" && typeof data2.longitude === "number") {
+            const cityName2 = data2.cityName || data2.regionName || data2.countryName || "IP Location";
+            calDetectedIpCity = cityName2;
+            storSet({
+              sf_cal_weather_ip_cache: {
+                lat: data2.latitude,
+                lon: data2.longitude,
+                city: cityName2,
+                fetchedAt: Date.now()
+              }
+            });
+            if (typeof callback === "function") {
+              callback({ lat: data2.latitude, lon: data2.longitude, city: cityName2 });
+            }
+          } else {
+            if (typeof callback === "function") callback(null);
+          }
+        })
+        .catch(function () {
+          if (typeof callback === "function") callback(null);
+        });
+    });
+}
+
+function calGetActiveCityLabel() {
+  const citySel = document.getElementById("cal-weather-city-select");
+  if (!citySel) return "";
+  if (citySel.value === "auto_ip") {
+    return calDetectedIpCity ? ("📍 " + calDetectedIpCity) : (window.i18n ? window.i18n.t("cal_weather_city_auto_ip") : "📍 Vị trí mạng IP");
+  }
+  const opt = citySel.options[citySel.selectedIndex];
+  return opt ? opt.textContent.trim() : "";
 }
 
 // ----------------------------------------------------------------------------
@@ -2141,15 +2227,56 @@ function calInit() {
 
   const calLoadWeatherFromCity = function (silent) {
     if (!citySelect) return;
-    const parts = (citySelect.value || "21.0285,105.8542").split(",");
+    const selectedVal = citySelect.value || "auto_ip";
+    storSet({ sf_cal_weather_coords: selectedVal });
+
+    if (selectedVal === "auto_ip") {
+      const previewTxt = document.getElementById("cal-weather-preview-text");
+      if (previewTxt && !calWeatherData) {
+        previewTxt.textContent = window.i18n ? window.i18n.t("cal_weather_ip_detecting") : "Đang định vị mạng IP...";
+      }
+
+      storGet(["sf_cal_weather_ip_cache"], function (ipRes) {
+        const ipCache = ipRes && ipRes.sf_cal_weather_ip_cache;
+        // Use cached IP location if fresher than 2 hours and not an explicit refresh
+        if (ipCache && typeof ipCache.lat === "number" && typeof ipCache.lon === "number" && (Date.now() - ipCache.fetchedAt < 2 * 60 * 60 * 1000) && silent) {
+          calDetectedIpCity = ipCache.city || "";
+          calFetchWeather(ipCache.lat, ipCache.lon, silent);
+          return;
+        }
+
+        calDetectLocationByIp(function (loc) {
+          if (loc && typeof loc.lat === "number" && typeof loc.lon === "number") {
+            calDetectedIpCity = loc.city || "";
+            calFetchWeather(loc.lat, loc.lon, silent);
+          } else if (ipCache && typeof ipCache.lat === "number" && typeof ipCache.lon === "number") {
+            // Fallback to previous cached IP location if available
+            calDetectedIpCity = ipCache.city || "";
+            calFetchWeather(ipCache.lat, ipCache.lon, silent);
+          } else {
+            // Ultimate fallback: Hanoi
+            calDetectedIpCity = "Hà Nội";
+            calFetchWeather(21.0285, 105.8542, silent);
+            if (!silent) {
+              showToast(window.i18n ? window.i18n.t("cal_weather_ip_failed") : "Không thể định vị mạng IP", "error");
+            }
+          }
+        });
+      });
+      return;
+    }
+
+    const parts = selectedVal.split(",");
     const lat = parseFloat(parts[0]);
     const lon = parseFloat(parts[1]);
-    storSet({ sf_cal_weather_coords: citySelect.value });
     calFetchWeather(lat, lon, silent);
   };
 
   if (citySelect) {
-    storGet(["sf_cal_weather_coords", "sf_cal_weather_cache"], function (res) {
+    storGet(["sf_cal_weather_coords", "sf_cal_weather_cache", "sf_cal_weather_ip_cache"], function (res) {
+      if (res && res.sf_cal_weather_ip_cache && res.sf_cal_weather_ip_cache.city) {
+        calDetectedIpCity = res.sf_cal_weather_ip_cache.city;
+      }
       if (res && res.sf_cal_weather_coords) {
         citySelect.value = res.sf_cal_weather_coords;
       }

@@ -103,7 +103,9 @@ const ALLOWED_HOSTS = new Set([
    "meet.google.com",
    "zoom.us",
    "teams.microsoft.com",
-   "discord.gg"
+   "discord.gg",
+   "ipwho.is",
+   "freeipapi.com"
    ]);
 
 function walk(dir, out = []) {
