@@ -28,12 +28,22 @@
     return currentMode === 'global' ? 'sf_scratchpad_global' : ('sf_scratchpad_page_' + host);
   }
 
-  function updateWordCount(textarea, counterEl) {
+  var wordCountRafId = null;
+
+  function updateWordCountImmediate(textarea, counterEl) {
     if (!textarea || !counterEl) return;
     var val = textarea.value || '';
     var chars = val.length;
     var words = val.trim() ? val.trim().split(/\s+/).length : 0;
     counterEl.textContent = words + ' từ • ' + chars + ' ký tự';
+  }
+
+  function updateWordCount(textarea, counterEl) {
+    if (wordCountRafId) cancelAnimationFrame(wordCountRafId);
+    wordCountRafId = requestAnimationFrame(function () {
+      wordCountRafId = null;
+      updateWordCountImmediate(textarea, counterEl);
+    });
   }
 
   function loadNote(textarea, counterEl) {

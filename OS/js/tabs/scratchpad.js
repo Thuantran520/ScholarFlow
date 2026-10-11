@@ -47,15 +47,36 @@
 
   var LINE_HEIGHT = 20;
   var isGutterScheduled = false;
+  var lastGutterLineCount = -1;
+  var lastGutterTop = -1;
+  var previewDebounceTimer = null;
+  var counterRafId = null;
 
-  function updateLineNumbers() {
+  function countLines(str) {
+    if (!str) return 1;
+    var count = 1;
+    for (var i = 0; i < str.length; i++) {
+      if (str.charCodeAt(i) === 10) count++;
+    }
+    return count;
+  }
+
+  function updateLineNumbers(force) {
     var editor = document.getElementById('scratchpad-editor');
     var gutter = document.getElementById('scratchpad-line-numbers');
     var linesBadge = document.getElementById('scratchpad-lines-badge');
     if (!editor || !gutter) return;
 
     var val = editor.value || '';
-    var linesCount = val ? val.split('\n').length : 1;
+    var linesCount = countLines(val);
+    var scrollTop = editor.scrollTop;
+
+    // Avoid redundant gutter DOM reflows if line count and scroll bucket did not change
+    if (!force && linesCount === lastGutterLineCount && Math.abs(scrollTop - lastGutterTop) < 10) {
+      return;
+    }
+    lastGutterLineCount = linesCount;
+    lastGutterTop = scrollTop;
 
     // 1. Dynamic Gutter Width: cleanly scales for 1 digit up to 100,000+ lines
     var digits = Math.max(2, String(linesCount).length);
@@ -74,7 +95,6 @@
       gutter.textContent = lineNums.join('\n');
     } else {
       // Virtual window: only renders visible lines in the viewport with buffer
-      var scrollTop = editor.scrollTop;
       var clientH = editor.clientHeight || 300;
       var firstLine = Math.max(1, Math.floor(scrollTop / LINE_HEIGHT) - 8);
       var lastLine = Math.min(linesCount, Math.ceil((scrollTop + clientH) / LINE_HEIGHT) + 12);
@@ -88,7 +108,7 @@
       gutter.textContent = nums.join('\n');
     }
 
-    gutter.scrollTop = editor.scrollTop;
+    gutter.scrollTop = scrollTop;
 
     if (linesBadge) {
       var template = tText('scratchpad_lines_counter') || '{0} dòng';
@@ -103,20 +123,16 @@
 
     gutter.scrollTop = editor.scrollTop;
 
-    var val = editor.value || '';
-    var linesCount = val ? val.split('\n').length : 1;
-    if (linesCount > 1000) {
-      if (!isGutterScheduled) {
-        isGutterScheduled = true;
-        requestAnimationFrame(function () {
-          isGutterScheduled = false;
-          updateLineNumbers();
-        });
-      }
+    if (!isGutterScheduled) {
+      isGutterScheduled = true;
+      requestAnimationFrame(function () {
+        isGutterScheduled = false;
+        updateLineNumbers(false);
+      });
     }
   }
 
-  function updateCounters() {
+  function updateCountersImmediate() {
     var editor = document.getElementById('scratchpad-editor');
     var counter = document.getElementById('scratchpad-counter');
     if (!editor || !counter) return;
@@ -127,10 +143,22 @@
     var template = tText('scratchpad_words_counter') || '{0} từ • {1} ký tự';
     counter.textContent = template.replace('{0}', String(words)).replace('{1}', String(chars));
 
-    updateLineNumbers();
+    updateLineNumbers(false);
+
     if (currentViewMode === 'preview' || currentViewMode === 'split') {
-      renderMarkdownPreview();
+      clearTimeout(previewDebounceTimer);
+      previewDebounceTimer = setTimeout(function () {
+        renderMarkdownPreview();
+      }, 120);
     }
+  }
+
+  function updateCounters() {
+    if (counterRafId) cancelAnimationFrame(counterRafId);
+    counterRafId = requestAnimationFrame(function () {
+      counterRafId = null;
+      updateCountersImmediate();
+    });
   }
 
   function getLegacyStorageKey() {
