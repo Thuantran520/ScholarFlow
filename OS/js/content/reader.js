@@ -15,6 +15,7 @@
   var originalBodyDisplay = "";
   var readerContainer = null;
   var scrollbarStyleEl = null;
+  var onWindowResize = null;
 
   // Reading Preferences State (persisted)
   
@@ -901,6 +902,11 @@
       var existingPopup = document.getElementById("sf-reader-appearance-popup");
       if (existingPopup) existingPopup.remove();
 
+      if (onWindowResize) {
+        window.removeEventListener("resize", onWindowResize);
+        onWindowResize = null;
+      }
+
       if (readerContainer) {
         readerContainer.remove();
         readerContainer = null;
@@ -1620,6 +1626,68 @@
       #sf-cyber-reader #sf-reader-topbar {
         background: var(--sf-bar-bg) !important;
         border-bottom-color: var(--sf-border) !important;
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        height: 44px !important;
+        min-height: 44px !important;
+        max-height: 44px !important;
+        padding: 6px 12px !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        scrollbar-width: none !important;
+        -ms-overflow-style: none !important;
+        box-sizing: border-box !important;
+      }
+      #sf-cyber-reader #sf-reader-topbar::-webkit-scrollbar {
+        display: none !important;
+        width: 0 !important;
+        height: 0 !important;
+      }
+
+      /* Responsive toolbar collapsing on window resize */
+      @media (max-width: 1350px) {
+        #sf-cyber-reader .sf-theme-btn[data-active="false"] {
+          display: none !important;
+        }
+      }
+
+      @media (max-width: 1150px) {
+        #sf-cyber-reader #sf-reader-font-select {
+          display: none !important;
+        }
+        #sf-cyber-reader .sf-dict-text {
+          display: none !important;
+        }
+      }
+
+      @media (max-width: 980px) {
+        #sf-cyber-reader .sf-font-btn {
+          display: none !important;
+        }
+        #sf-cyber-reader #sf-reader-voice-search {
+          display: none !important;
+        }
+      }
+
+      @media (max-width: 820px) {
+        #sf-cyber-reader .sf-brand-text {
+          display: none !important;
+        }
+        #sf-cyber-reader #sf-close-reader span {
+          display: none !important;
+        }
+        #sf-cyber-reader #sf-close-reader {
+          padding: 0 8px !important;
+          min-width: 28px !important;
+        }
+      }
+
+      @media (max-width: 720px) {
+        #sf-cyber-reader #sf-reader-voice-select {
+          max-width: 110px !important;
+        }
       }
       #sf-cyber-reader h1 {
         color: var(--sf-title) !important;
@@ -1828,21 +1896,28 @@
       background: ${currentTheme.barBg};
       backdrop-filter: blur(14px);
       border-bottom: 1px solid ${currentTheme.border};
-      padding: 6px 14px;
+      padding: 6px 12px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 6px 10px;
+      flex-wrap: nowrap;
+      height: 44px;
+      min-height: 44px;
+      max-height: 44px;
+      gap: 6px 8px;
       z-index: 1000;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
       transition: background 0.25s ease, border-color 0.25s ease;
+      overflow-x: auto;
+      overflow-y: hidden;
+      box-sizing: border-box;
     `;
 
     var barLeft = document.createElement("div");
-    barLeft.style.cssText = "display: flex; align-items: center; gap: 6px; flex-wrap: wrap;";
+    barLeft.style.cssText = "display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; flex-shrink: 1; min-width: 0;";
 
     var brandPill = document.createElement("span");
+    brandPill.id = "sf-reader-brand-pill";
     brandPill.style.cssText = `
       font-size: 11.5px;
       font-weight: 800;
@@ -1856,6 +1931,7 @@
       gap: 6px;
       white-space: nowrap;
       user-select: none;
+      flex-shrink: 0;
     `;
     if (CHIBI_READER_GIF) {
       var topChibi = document.createElement("img");
@@ -1865,6 +1941,7 @@
       brandPill.appendChild(topChibi);
     }
     var brandTextSpan = document.createElement("span");
+    brandTextSpan.className = "sf-brand-text";
     brandTextSpan.textContent = "Cyber-Reader";
     brandPill.appendChild(brandTextSpan);
     barLeft.appendChild(brandPill);
@@ -2222,6 +2299,7 @@
       btnDictation.appendChild(btnDictEmoji);
     }
     var btnDictText = document.createElement("span");
+    btnDictText.className = "sf-dict-text";
     btnDictText.textContent = window.tContent ? window.tContent("reader_dictation_mode") : "Dictation";
     btnDictation.appendChild(btnDictText);
     barLeft.appendChild(btnDictation);
@@ -2230,7 +2308,7 @@
 
     // Right Controls: Font sizing, Theme toggling & Close
     var barRight = document.createElement("div");
-    barRight.style.cssText = "display: flex; align-items: center; gap: 5px; flex-shrink: 0; margin-left: auto;";
+    barRight.style.cssText = "display: flex; align-items: center; gap: 4px; flex-shrink: 0; margin-left: auto; flex-wrap: nowrap;";
 
     var btnFontDec = document.createElement("button");
     btnFontDec.type = "button";
@@ -2305,10 +2383,11 @@
 
       appearancePopup = document.createElement("div");
       appearancePopup.id = "sf-reader-appearance-popup";
+      var topOffset = (topBar ? Math.round(topBar.getBoundingClientRect().bottom + 4) : 50);
       appearancePopup.style.cssText = `
         position: fixed;
-        top: 44px;
-        right: 18px;
+        top: ${topOffset}px;
+        right: 14px;
         width: 310px;
         background: var(--sf-card-bg);
         border: 1px solid var(--sf-border);
@@ -2669,6 +2748,7 @@
 
       themeBtns.forEach(function (tb) {
         var active = tb.dataset.themeId === thId;
+        tb.dataset.active = active ? "true" : "false";
         tb.style.background = active ? s.playBtnBg : s.btnBg;
         tb.style.color = active ? s.playBtnText : s.btnText;
         tb.style.borderColor = active ? s.brandBorder : s.btnBorder;
@@ -2707,6 +2787,7 @@
       tBtn.title = th.title;
       tBtn.dataset.themeId = th.id;
       var isThActive = (readerPrefs.theme || "dark") === th.id;
+      tBtn.dataset.active = isThActive ? "true" : "false";
       tBtn.style.cssText = `
         background: ${isThActive ? currentTheme.playBtnBg : currentTheme.btnBg};
         color: ${isThActive ? currentTheme.playBtnText : currentTheme.btnText};
@@ -2761,7 +2842,10 @@
       box-shadow: 0 2px 6px rgba(239, 68, 68, 0.35);
       transition: background 0.15s ease, transform 0.15s ease;
     `;
-    closeBtn.textContent = "✕ " + (window.tContent ? window.tContent("reader_mode_close") : "Close");
+    closeBtn.textContent = "✕ ";
+    var closeSpan = document.createElement("span");
+    closeSpan.textContent = (window.tContent ? window.tContent("reader_mode_close") : "Close");
+    closeBtn.appendChild(closeSpan);
     closeBtn.onclick = function () { toggleReaderMode(); };
     barRight.appendChild(closeBtn);
 
@@ -3950,6 +4034,20 @@
         if (dictationBox) { dictationBox.remove(); dictationBox = null; }
       }
     });
+
+    onWindowResize = function () {
+      if (appearancePopup && topBar) {
+        var r = topBar.getBoundingClientRect();
+        appearancePopup.style.top = Math.round(r.bottom + 4) + "px";
+      }
+      if (progressBar && readerContainer) {
+        var st = readerContainer.scrollTop;
+        var sh = readerContainer.scrollHeight - readerContainer.clientHeight;
+        var pct = sh > 0 ? Math.min(100, Math.round((st / sh) * 100)) : 0;
+        progressBar.style.width = pct + "%";
+      }
+    };
+    window.addEventListener("resize", onWindowResize);
 
     document.documentElement.appendChild(readerContainer);
   }
