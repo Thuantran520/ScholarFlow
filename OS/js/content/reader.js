@@ -22,6 +22,14 @@
     ? chrome.runtime.getURL("OS/assest/doctintuc.gif")
     : ((typeof browser !== "undefined" && browser.runtime && browser.runtime.getURL) ? browser.runtime.getURL("OS/assest/doctintuc.gif") : "");
 
+  var MC_NAM_ICON = (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.getURL)
+    ? chrome.runtime.getURL("OS/assest/chibinews/Panadolce/MC nam — Đọc tin tức.png")
+    : ((typeof browser !== "undefined" && browser.runtime && browser.runtime.getURL) ? browser.runtime.getURL("OS/assest/chibinews/Panadolce/MC nam — Đọc tin tức.png") : "");
+
+  var MC_NU_ICON = (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.getURL)
+    ? chrome.runtime.getURL("OS/assest/chibinews/Panadolce/MC nữ — Đọc tin tức.png")
+    : ((typeof browser !== "undefined" && browser.runtime && browser.runtime.getURL) ? browser.runtime.getURL("OS/assest/chibinews/Panadolce/MC nữ — Đọc tin tức.png") : "");
+
   var readerPrefs = {
     theme: (function () { try { return localStorage.getItem("sf_reader_theme") || "dark"; } catch (e) { return "dark"; } })(),
     fontSize: (function () { try { return parseInt(localStorage.getItem("sf_reader_fontsize"), 10) || 19; } catch (e) { return 19; } })(),
@@ -37,6 +45,8 @@
     rate: 0.95,
     voice: null,
     activeUtterance: null,
+    speechSeq: 0,
+    isSwitchingVoice: false,
     keepAliveTimer: null,
     watchdogTimer: null
   };
@@ -223,6 +233,7 @@
     }
 
     clearSpeechTimers();
+    var currentSeq = ++readerAudio.speechSeq;
 
     try {
       window.speechSynthesis.cancel();
@@ -243,8 +254,13 @@
         if (hasFinished) return;
         hasFinished = true;
         clearSpeechTimers();
-        readerAudio.activeUtterance = null;
-        if (typeof onEndCallback === "function") onEndCallback();
+        if (readerAudio.activeUtterance === u) {
+          readerAudio.activeUtterance = null;
+        }
+        // Only trigger onEnd if this utterance belongs to the active speech sequence
+        if (readerAudio.speechSeq === currentSeq && !readerAudio.isSwitchingVoice) {
+          if (typeof onEndCallback === "function") onEndCallback();
+        }
       }
 
       u.onend = function () {
@@ -266,19 +282,25 @@
       var wordsCount = (text || "").trim().split(/\s+/).length;
       var maxWaitMs = Math.max(4500, Math.round(((wordsCount * 700) / (rate || 0.95)) + 4000));
       readerAudio.watchdogTimer = setTimeout(function () {
-        console.warn("Reader speech watchdog triggered fallback advance after", maxWaitMs, "ms");
-        finishSpeech();
+        if (readerAudio.speechSeq === currentSeq) {
+          console.warn("Reader speech watchdog triggered fallback advance after", maxWaitMs, "ms");
+          finishSpeech();
+        }
       }, maxWaitMs);
 
       // Microtask delay for cancel cleanup
       setTimeout(function () {
-        try { window.speechSynthesis.speak(u); } catch (e) { finishSpeech(); }
+        if (readerAudio.speechSeq === currentSeq && !readerAudio.isSwitchingVoice) {
+          try { window.speechSynthesis.speak(u); } catch (e) { finishSpeech(); }
+        }
       }, 40);
 
     } catch (e) {
       clearSpeechTimers();
       readerAudio.activeUtterance = null;
-      if (typeof onEndCallback === "function") onEndCallback();
+      if (readerAudio.speechSeq === currentSeq && typeof onEndCallback === "function") {
+        onEndCallback();
+      }
     }
   }
 
@@ -992,7 +1014,45 @@
     btnPlay.textContent = "▶ " + (window.tContent ? window.tContent("reader_listen_play") : "Read");
     barLeft.appendChild(btnPlay);
 
-    // Voice Selection Dropdown with Edge Natural Voices
+    // Voice Selection Dropdown with Edge Natural Voices & MC Avatar
+    var voiceWrapper = document.createElement("div");
+    voiceWrapper.style.cssText = "display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;";
+
+    var mcAvatar = document.createElement("img");
+    mcAvatar.id = "sf-reader-mc-avatar";
+    mcAvatar.alt = "MC Voice";
+    mcAvatar.style.cssText = `
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      object-fit: cover;
+      flex-shrink: 0;
+      border: 1.5px solid ${currentTheme.brandBorder};
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+      transition: transform 0.2s ease, border-color 0.25s ease;
+      display: inline-block;
+      vertical-align: middle;
+    `;
+
+    function updateMcAvatar(voiceName) {
+      var g = detectVoiceGender(voiceName || "");
+      if (g === "male" && MC_NAM_ICON) {
+        mcAvatar.src = MC_NAM_ICON;
+        mcAvatar.title = "MC Nam - Voice";
+        mcAvatar.style.display = "inline-block";
+      } else if (g === "female" && MC_NU_ICON) {
+        mcAvatar.src = MC_NU_ICON;
+        mcAvatar.title = "MC Nữ - Voice";
+        mcAvatar.style.display = "inline-block";
+      } else if (MC_NU_ICON || MC_NAM_ICON) {
+        mcAvatar.src = MC_NU_ICON || MC_NAM_ICON;
+        mcAvatar.title = "MC - Voice";
+        mcAvatar.style.display = "inline-block";
+      } else {
+        mcAvatar.style.display = "none";
+      }
+    }
+
     var voiceSelect = document.createElement("select");
     voiceSelect.id = "sf-reader-voice-select";
     voiceSelect.title = window.tContent ? window.tContent("reader_listen_voice") : "Voice";
@@ -1016,18 +1076,17 @@
     `;
 
     function detectVoiceGender(voiceName) {
-      if (/\b(female|woman|nu)\b/i.test(voiceName)) return "[Nữ]";
-      if (/\b(male|man|nam)\b/i.test(voiceName)) return "[Nam]";
+      if (/\b(female|woman|nu)\b/i.test(voiceName)) return "female";
+      if (/\b(male|man|nam)\b/i.test(voiceName)) return "male";
       var maleNames = /\b(guy|christopher|eric|ryan|william|liam|prabhat|steffan|david|mark|george|alex|fred|daniel|rishi|tom|thomas|james|oliver|arthur|charles|john|brian|tony|steve|kevin)\b/i;
       var femaleNames = /\b(jenny|aria|sonia|natasha|clara|neerja|libby|michelle|ana|zira|samantha|victoria|karen|ava|emma|sophia|olivia|charlotte|mia|hazel|susan|catherine|mary|lisa|sarah|emily)\b/i;
-      if (maleNames.test(voiceName)) return "[Nam]";
-      if (femaleNames.test(voiceName)) return "[Nữ]";
+      if (maleNames.test(voiceName)) return "male";
+      if (femaleNames.test(voiceName)) return "female";
       return "";
     }
 
     function formatVoiceLabel(v) {
       var rawName = v.name || "";
-      var gender = detectVoiceGender(rawName);
       var isNat = /natural|neural|online/i.test(rawName);
 
       var cleanName = rawName
@@ -1051,7 +1110,6 @@
       var tag = region ? (isNat ? region + " - Tự nhiên" : region) : (isNat ? "Tự nhiên" : "");
 
       var parts = [];
-      if (gender) parts.push(gender);
       if (cleanName) parts.push(cleanName);
       if (tag) parts.push("(" + tag + ")");
 
@@ -1068,6 +1126,7 @@
         opt.value = "";
         opt.textContent = "Default Voice";
         voiceSelect.appendChild(opt);
+        updateMcAvatar("");
         return;
       }
 
@@ -1082,6 +1141,9 @@
         }
         voiceSelect.appendChild(opt);
       });
+      if (defaultChoice) {
+        updateMcAvatar(defaultChoice.name);
+      }
     }
 
     populateVoiceDropdown();
@@ -1098,12 +1160,31 @@
         readerAudio.voice = selected;
         readerPrefs.preferredVoice = selected.name;
         try { localStorage.setItem("sf_reader_preferred_voice", selected.name); } catch (e) {}
+        updateMcAvatar(selected.name);
+
         if (readerAudio.isPlaying && readerAudio.currentIndex >= 0) {
-          playSentenceAt(readerAudio.currentIndex);
+          var targetSentenceIdx = readerAudio.currentIndex;
+          // Invalidate previous speech generation and cancel speech synthesis
+          readerAudio.speechSeq++;
+          readerAudio.isSwitchingVoice = true;
+          clearSpeechTimers();
+          if (window.speechSynthesis) {
+            try { window.speechSynthesis.cancel(); } catch (e) {}
+          }
+          // Smooth transition: resume speaking at current sentence without skipping index
+          setTimeout(function () {
+            readerAudio.isSwitchingVoice = false;
+            if (readerAudio.isPlaying && readerAudio.currentIndex === targetSentenceIdx) {
+              playSentenceAt(targetSentenceIdx);
+            }
+          }, 80);
         }
       }
     });
-    barLeft.appendChild(voiceSelect);
+
+    voiceWrapper.appendChild(mcAvatar);
+    voiceWrapper.appendChild(voiceSelect);
+    barLeft.appendChild(voiceWrapper);
 
     // Rate select (fixed compact width: 72px)
     var selSpeed = document.createElement("select");
@@ -1239,6 +1320,8 @@
 
       btnPlay.style.background = s.playBtnBg;
       btnPlay.style.color = s.playBtnText;
+
+      mcAvatar.style.borderColor = s.brandBorder;
 
       voiceSelect.style.background = s.selectBg;
       voiceSelect.style.color = s.selectText;
