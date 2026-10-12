@@ -985,7 +985,7 @@
         registerCaption(sc.textContent);
       });
 
-      var elements = Array.from(mainContainer.querySelectorAll("h1, h2, h3, h4, h5, p, figure, img, blockquote, ul, ol, table, pre, video, iframe, [data-component='video-block'], [data-e2e='media-player'], .media-player, .video-container, .box_embed_video, [data-video-src]"));
+      var elements = Array.from(mainContainer.querySelectorAll("h1, h2, h3, h4, h5, p, figure, img, blockquote, cite, footer, ul, ol, table, pre, video, iframe, [data-component='video-block'], [data-e2e='media-player'], .media-player, .video-container, .box_embed_video, [data-video-src]"));
       var paragraphCount = 0;
 
       for (var i = 0; i < elements.length; i++) {
@@ -1083,6 +1083,25 @@
           continue;
         }
 
+        // 3.5. Citations and Source Attributions (<cite>, <footer>)
+        if (tag === "cite" || tag === "footer") {
+          if (el.closest("nav, aside, header, body > footer, #footer, .site-footer, .comment-box")) continue;
+          var citeRaw = (el.textContent || "").replace(/\s+/g, " ").trim();
+          if (citeRaw.length >= 3 && citeRaw.length <= 180) {
+            var formattedCite = citeRaw.startsWith("[") ? citeRaw : ("[" + citeRaw + "]");
+            if (articleItems.length > 0) {
+              var lastItem = articleItems[articleItems.length - 1];
+              if (lastItem.type === "paragraph" || lastItem.type === "quote") {
+                lastItem.citation = formattedCite;
+                lastItem.isQuote = true;
+                continue;
+              }
+            }
+            articleItems.push({ type: "citation", text: formattedCite });
+            continue;
+          }
+        }
+
         // 4. Paragraphs or Blockquotes
         if (tag === "p" || tag === "blockquote") {
           // Exclude if it is part of a figure or marked as caption
@@ -1109,6 +1128,22 @@
           }
 
           var rawPText = (el.textContent || "").replace(/\s+/g, " ").trim();
+
+          // Check if paragraph is purely a citation line: [Source, Date] or (Source, Date) or — Author
+          var isPureCitation = /^\s*(\[[^\]]{3,160}\]|\([^\)]{3,160}\)|[-–—]\s*[^,\n]{3,60}(?:,\s*[^\n]{3,60})?)\s*$/.test(rawPText);
+          if (isPureCitation) {
+            if (articleItems.length > 0) {
+              var lastP = articleItems[articleItems.length - 1];
+              if (lastP.type === "paragraph" || lastP.type === "quote") {
+                lastP.citation = rawPText;
+                lastP.isQuote = true;
+                continue;
+              }
+            }
+            articleItems.push({ type: "citation", text: rawPText });
+            continue;
+          }
+
           if (rawPText.length < 20) continue;
 
           // Check if paragraph is just a promotional link or related article recommendation
@@ -1150,6 +1185,48 @@
             continue;
           }
 
+          // Check if blockquote contains an inner cite/footer/source attribution
+          if (tag === "blockquote") {
+            var bqCiteEl = el.querySelector("cite, footer, .citation, .quote-source, .attribution, [class*='citation'], [class*='source']");
+            var bqCiteText = bqCiteEl ? (bqCiteEl.textContent || "").trim() : "";
+            var bqText = rawPText;
+            if (bqCiteText && bqText.endsWith(bqCiteText)) {
+              bqText = bqText.slice(0, bqText.length - bqCiteText.length).trim();
+            }
+            if (bqCiteText && !bqCiteText.startsWith("[")) {
+              bqCiteText = "[" + bqCiteText + "]";
+            }
+            var cleanBq = cleanParagraphText(bqText);
+            if (cleanBq.length >= 12) {
+              paragraphCount++;
+              articleItems.push({
+                type: "paragraph",
+                text: cleanBq,
+                citation: bqCiteText || undefined,
+                isQuote: true
+              });
+              continue;
+            }
+          }
+
+          // Check if paragraph contains quote text followed by a trailing citation in brackets [Source, Date]
+          var trailingCiteMatch = rawPText.match(/^(.*?)\s*(\[[^\]]{3,160}\]|\([A-Za-z0-9][^\)]{3,120}\d{4}[^\)]*\))\s*$/);
+          if (trailingCiteMatch && trailingCiteMatch[1].trim().length >= 15) {
+            var quoteBody = trailingCiteMatch[1].trim();
+            var citeBody = trailingCiteMatch[2].trim();
+            var cleanQuotePart = cleanParagraphText(quoteBody);
+            if (cleanQuotePart.length >= 12) {
+              paragraphCount++;
+              articleItems.push({
+                type: "paragraph",
+                text: cleanQuotePart,
+                citation: citeBody,
+                isQuote: true
+              });
+              continue;
+            }
+          }
+
           var cleanP = cleanParagraphText(rawPText);
           if (cleanP.length < 15) continue;
 
@@ -1172,8 +1249,23 @@
           if (seenTextHashes.has(hash)) continue;
           seenTextHashes.add(hash);
 
+          // Check if paragraph is primarily italic (e.g. <em>...</em> or <i>...</i>)
+          var isItalic = (function () {
+            if (el.tagName.toLowerCase() === "em" || el.tagName.toLowerCase() === "i") return true;
+            var ems = el.querySelectorAll("em, i");
+            if (ems.length === 0) return false;
+            var emLen = 0;
+            ems.forEach(function (e) { emLen += (e.textContent || "").trim().length; });
+            return emLen >= rawPText.length * 0.7;
+          })();
+
           paragraphCount++;
-          articleItems.push({ type: "paragraph", text: cleanP, isQuote: tag === "blockquote" });
+          articleItems.push({
+            type: "paragraph",
+            text: cleanP,
+            isQuote: tag === "blockquote" || isItalic,
+            isItalic: isItalic
+          });
           continue;
         }
 
@@ -2884,10 +2976,87 @@
         if (item.type === "paragraph") {
           var sents = splitTextIntoSentences(item.text);
           if (sents.length > 0) {
+            // Attributed Quote Block with Source Citation (Matching screenshot: Italic quote + [Source, Date] line)
+            if (item.citation) {
+              var quoteWrap = document.createElement("div");
+              quoteWrap.className = "sf-reader-quote-block";
+              quoteWrap.style.cssText = "margin: 24px 0 32px 0;";
+
+              var pQuote = document.createElement("p");
+              pQuote.className = "sf-reader-quote-text";
+              pQuote.style.cssText = "font-style: italic; color: var(--sf-text); margin-bottom: 8px; line-height: inherit; font-size: inherit;";
+
+              sents.forEach(function (sText) {
+                var sIdx = readerAudio.sentences.length;
+                readerAudio.sentences.push(sText);
+
+                var sSpan = document.createElement("span");
+                sSpan.className = "sf-reader-sentence";
+                sSpan.style.cssText = "cursor: pointer; padding: 2px 2px; border-radius: 4px; transition: background 0.2s;";
+                sSpan.title = "Click to listen";
+                sSpan.textContent = sText + " ";
+
+                sSpan.addEventListener("mouseenter", function () {
+                  if (readerAudio.currentIndex !== sIdx) sSpan.style.background = "rgba(56, 189, 248, 0.15)";
+                });
+                sSpan.addEventListener("mouseleave", function () {
+                  if (readerAudio.currentIndex !== sIdx) sSpan.style.background = "transparent";
+                });
+                sSpan.addEventListener("click", function () {
+                  playSentenceAt(sIdx);
+                  if (readerAudio.isDictationMode) {
+                    openDictationBox(sIdx);
+                  }
+                });
+
+                sentenceElements.push(sSpan);
+                pQuote.appendChild(sSpan);
+              });
+              quoteWrap.appendChild(pQuote);
+
+              // Source citation line in brackets [Source, Date]
+              var citeDiv = document.createElement("div");
+              citeDiv.className = "sf-reader-citation";
+              citeDiv.style.cssText = "font-style: normal; font-size: 14.5px; color: var(--sf-caption); line-height: 1.5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; cursor: pointer; padding-left: 2px;";
+
+              var cIdx = readerAudio.sentences.length;
+              readerAudio.sentences.push(item.citation);
+
+              var citeSpan = document.createElement("span");
+              citeSpan.className = "sf-reader-sentence";
+              citeSpan.textContent = item.citation;
+              citeSpan.title = "Click to listen citation";
+              citeSpan.style.cssText = "cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: background 0.2s;";
+
+              citeSpan.addEventListener("mouseenter", function () {
+                if (readerAudio.currentIndex !== cIdx) citeSpan.style.background = "rgba(56, 189, 248, 0.15)";
+              });
+              citeSpan.addEventListener("mouseleave", function () {
+                if (readerAudio.currentIndex !== cIdx) citeSpan.style.background = "transparent";
+              });
+              citeSpan.addEventListener("click", function () {
+                playSentenceAt(cIdx);
+                if (readerAudio.isDictationMode) {
+                  openDictationBox(cIdx);
+                }
+              });
+
+              sentenceElements.push(citeSpan);
+              citeDiv.appendChild(citeSpan);
+              quoteWrap.appendChild(citeDiv);
+
+              contentWrapper.appendChild(quoteWrap);
+              return;
+            }
+
+            // Normal paragraph or blockquote
             var pBlock = document.createElement(item.isQuote ? "blockquote" : "p");
             pBlock.style.cssText = item.isQuote
-              ? "margin: 24px 0; color: var(--sf-caption); font-style: italic; border-left: 4px solid var(--sf-quote-border); padding: 12px 18px; background: var(--sf-card-bg); border-radius: 0 8px 8px 0; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);"
+              ? "margin: 24px 0; color: var(--sf-text); font-style: italic; border-left: 3.5px solid var(--sf-quote-border); padding: 10px 18px; background: rgba(56, 189, 248, 0.04); border-radius: 0 8px 8px 0;"
               : "margin-bottom: 24px;";
+            if (item.isItalic) {
+              pBlock.style.fontStyle = "italic";
+            }
 
             sents.forEach(function (sText) {
               var sIdx = readerAudio.sentences.length;
@@ -2919,6 +3088,39 @@
 
             contentWrapper.appendChild(pBlock);
           }
+          return;
+        }
+
+        if (item.type === "citation") {
+          var citeBlock = document.createElement("div");
+          citeBlock.className = "sf-reader-citation";
+          citeBlock.style.cssText = "font-style: normal; font-size: 14.5px; color: var(--sf-caption); margin: -16px 0 26px 0; line-height: 1.5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding-left: 2px;";
+
+          var cIdx = readerAudio.sentences.length;
+          readerAudio.sentences.push(item.text);
+
+          var cSpan = document.createElement("span");
+          cSpan.className = "sf-reader-sentence";
+          cSpan.textContent = item.text;
+          cSpan.title = "Click to listen citation";
+          cSpan.style.cssText = "cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: background 0.2s;";
+
+          cSpan.addEventListener("mouseenter", function () {
+            if (readerAudio.currentIndex !== cIdx) cSpan.style.background = "rgba(56, 189, 248, 0.15)";
+          });
+          cSpan.addEventListener("mouseleave", function () {
+            if (readerAudio.currentIndex !== cIdx) cSpan.style.background = "transparent";
+          });
+          cSpan.addEventListener("click", function () {
+            playSentenceAt(cIdx);
+            if (readerAudio.isDictationMode) {
+              openDictationBox(cIdx);
+            }
+          });
+
+          sentenceElements.push(cSpan);
+          citeBlock.appendChild(cSpan);
+          contentWrapper.appendChild(citeBlock);
           return;
         }
 
