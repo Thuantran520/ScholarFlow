@@ -254,7 +254,30 @@
     return "en";
   }
 
-  function getVoicesForArticle(targetLang, searchQuery) {
+  // Language-name hints used only when a voice reports no usable `lang`.
+  var VOICE_LANG_NAME_HINTS = {
+    vi: /\b(vietnamese|vietnam)\b/i,
+    en: /\benglish\b/i,
+    zh: /\b(chinese|mandarin|cantonese)\b/i,
+    ja: /\bjapanese\b/i,
+    ru: /\brussian\b/i,
+    fr: /\bfrench\b/i,
+    de: /\bgerman\b/i,
+    es: /\bspanish\b/i,
+    ko: /\bkorean\b/i
+  };
+
+  function voiceMatchesLang(v, targetLang) {
+    var vl = String(v.lang || "").toLowerCase().replace("_", "-");
+    var primary = vl.split("-")[0];
+    if (primary === "cmn" || primary === "yue") primary = "zh";
+    if (primary) return primary === targetLang;
+    // No lang tag: fall back to an explicit language name in the voice name.
+    var hint = VOICE_LANG_NAME_HINTS[targetLang];
+    return !!(hint && hint.test(v.name || ""));
+  }
+
+  function getVoicesForArticle(targetLang, searchQuery, strict) {
     if (typeof window === "undefined" || !window.speechSynthesis) return [];
     var allVoices = window.speechSynthesis.getVoices() || [];
     if (!targetLang) targetLang = readerAudio.articleLang || "all";
@@ -264,41 +287,12 @@
 
     if (targetLang !== "all") {
       matched = allVoices.filter(function (v) {
-        if (!v.lang) return false;
-        var vl = v.lang.toLowerCase();
-        var vn = (v.name || "").toLowerCase();
-
-        if (targetLang === "vi") {
-          return /^vi/i.test(vl) || /vietnam/i.test(vn) || /hoaimy|namminh|linh|an/i.test(vn);
-        }
-        if (targetLang === "en") {
-          return /^en/i.test(vl) || /english/i.test(vn);
-        }
-        if (targetLang === "zh") {
-          return /^zh/i.test(vl) || /chinese|mandarin|taiwan|cantonese/i.test(vn);
-        }
-        if (targetLang === "ja") {
-          return /^ja/i.test(vl) || /japan/i.test(vn);
-        }
-        if (targetLang === "ru") {
-          return /^ru/i.test(vl) || /russia/i.test(vn);
-        }
-        if (targetLang === "fr") {
-          return /^fr/i.test(vl) || /french/i.test(vn);
-        }
-        if (targetLang === "de") {
-          return /^de/i.test(vl) || /german/i.test(vn);
-        }
-        if (targetLang === "es") {
-          return /^es/i.test(vl) || /spanish/i.test(vn);
-        }
-        if (targetLang === "ko") {
-          return /^ko/i.test(vl) || /korean/i.test(vn);
-        }
-        return vl.startsWith(targetLang);
+        return voiceMatchesLang(v, targetLang);
       });
 
-      if (matched.length === 0) {
+      // Only the speech engine may fall back to any voice; the filtered
+      // dropdown must never leak voices from other languages.
+      if (matched.length === 0 && !strict) {
         matched = allVoices;
       }
     }
@@ -1625,11 +1619,11 @@
       }
       var filterLang = voiceLangFilter ? voiceLangFilter.value : readerAudio.articleLang;
       var q = voiceSearchInput ? voiceSearchInput.value : "";
-      var voices = getVoicesForArticle(filterLang, q);
+      var voices = getVoicesForArticle(filterLang, q, true);
       if (voices.length === 0) {
         var opt = document.createElement("option");
         opt.value = "";
-        opt.textContent = "Không có giọng";
+        opt.textContent = q ? "Không tìm thấy giọng" : "Không có giọng cho ngôn ngữ này";
         voiceSelect.appendChild(opt);
         updateMcAvatar("");
         return;
@@ -1679,7 +1673,7 @@
     voiceSelect.addEventListener("change", function () {
       var filterLang = voiceLangFilter ? voiceLangFilter.value : readerAudio.articleLang;
       var q = voiceSearchInput ? voiceSearchInput.value : "";
-      var voices = getVoicesForArticle(filterLang, q);
+      var voices = getVoicesForArticle(filterLang, q, true);
       var selected = voices.find(function (v) { return v.name === voiceSelect.value; });
       if (selected) {
         readerAudio.voice = selected;
