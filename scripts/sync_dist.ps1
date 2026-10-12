@@ -34,6 +34,6 @@ function Sync-Flavor($name, $manifestSrc) {
 }
 
 Sync-Flavor "load_unpacked_chrome" "manifest_chrome.json"
+Sync-Flavor "load_unpacked_edge" "manifest_chrome.json"
 if ($Firefox) { Sync-Flavor "load_unpacked_firefox" "manifest_firefox.json" }
-if ($Edge) { Sync-Flavor "load_unpacked_edge" "manifest_chrome.json" }
 Write-Host ">> Done. Now click RELOAD on the extension in chrome://extensions / edge://extensions / about:addons, then F5 the page." -ForegroundColor Cyan
