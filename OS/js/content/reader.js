@@ -1,6 +1,7 @@
 // ---------------------------------------------------------------------------
 // ScholarFlow Cyber-Reader Mode (News Reader & Dictation Listening Coach)
-// Clean Article View with Images, Text-To-Speech with Natural Voices, and Dictation
+// Clean Article View with Images, Anti-hang Text-To-Speech with Edge Natural Voices,
+// Single-Row Topbar, Theme Contrast Optimization & Custom Scrollbar
 // 100% Local processing - Secure DOM APIs only (No dynamic innerHTML)
 // ---------------------------------------------------------------------------
 
@@ -13,6 +14,7 @@
   var isReaderMode = false;
   var originalBodyDisplay = "";
   var readerContainer = null;
+  var scrollbarStyleEl = null;
 
   // Reading Preferences State (persisted)
   var readerPrefs = {
@@ -29,8 +31,21 @@
     isDictationMode: false,
     rate: 0.95,
     voice: null,
-    activeUtterance: null
+    activeUtterance: null,
+    keepAliveTimer: null,
+    watchdogTimer: null
   };
+
+  function clearSpeechTimers() {
+    if (readerAudio.keepAliveTimer) {
+      clearInterval(readerAudio.keepAliveTimer);
+      readerAudio.keepAliveTimer = null;
+    }
+    if (readerAudio.watchdogTimer) {
+      clearTimeout(readerAudio.watchdogTimer);
+      readerAudio.watchdogTimer = null;
+    }
+  }
 
   function splitTextIntoSentences(text) {
     if (!text) return [];
@@ -111,21 +126,25 @@
       if (match) return match;
     }
 
-    // Default to first natural voice (Microsoft Natural on Edge)
     var natural = voices.find(function (v) { return /natural|neural|online/i.test(v.name); });
     return natural || voices[0] || null;
   }
 
+  // Anti-hang speak sentence implementation
   function speakReaderSentence(text, rate, onEndCallback) {
     if (typeof window === "undefined" || !window.speechSynthesis) {
       if (typeof onEndCallback === "function") onEndCallback();
       return;
     }
+
+    clearSpeechTimers();
+
     try {
       window.speechSynthesis.cancel();
       if (window.speechSynthesis.paused) {
         window.speechSynthesis.resume();
       }
+
       var u = new SpeechSynthesisUtterance(String(text || ""));
       var v = readerAudio.voice || findBestEnglishVoice();
       if (v) u.voice = v;
@@ -134,17 +153,45 @@
 
       readerAudio.activeUtterance = u;
 
-      u.onend = function () {
+      var hasFinished = false;
+      function finishSpeech() {
+        if (hasFinished) return;
+        hasFinished = true;
+        clearSpeechTimers();
         readerAudio.activeUtterance = null;
         if (typeof onEndCallback === "function") onEndCallback();
+      }
+
+      u.onend = function () {
+        finishSpeech();
       };
       u.onerror = function () {
-        readerAudio.activeUtterance = null;
-        if (typeof onEndCallback === "function") onEndCallback();
+        finishSpeech();
       };
 
-      window.speechSynthesis.speak(u);
+      // Keep-alive interval for Chromium/Edge: pause/resume every 9s prevents browser sleep
+      readerAudio.keepAliveTimer = setInterval(function () {
+        if (window.speechSynthesis && window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
+          window.speechSynthesis.pause();
+          window.speechSynthesis.resume();
+        }
+      }, 9000);
+
+      // Watchdog timer: if engine fails to trigger onend, automatically advance
+      var wordsCount = (text || "").trim().split(/\s+/).length;
+      var maxWaitMs = Math.max(4500, Math.round(((wordsCount * 700) / (rate || 0.95)) + 4000));
+      readerAudio.watchdogTimer = setTimeout(function () {
+        console.warn("Reader speech watchdog triggered fallback advance after", maxWaitMs, "ms");
+        finishSpeech();
+      }, maxWaitMs);
+
+      // Microtask delay for cancel cleanup
+      setTimeout(function () {
+        try { window.speechSynthesis.speak(u); } catch (e) { finishSpeech(); }
+      }, 40);
+
     } catch (e) {
+      clearSpeechTimers();
       readerAudio.activeUtterance = null;
       if (typeof onEndCallback === "function") onEndCallback();
     }
@@ -170,7 +217,7 @@
     '[aria-hidden="true"]'
   ];
 
-  var JUNK_TEXT_RE = /^(advertisement|sponsored|read more|also read|xem thêm|bài viết liên quan|tin liên quan|ảnh:|photo:|nguồn:|theo\s|theo dõi chúng tôi|follow us|sign up|subscribe|all rights reserved|bản quyền thuộc|chia sẻ qua|đăng ký nhận tin)/i;
+  var JUNK_TEXT_RE = /^(advertisement|sponsored|read more|also read|xem thêm|bài viết liên quan|tin liên quan|ảnh:|photo:|nguồn:|theo\s|theo dõi chúng tôi|follow us|sign up|subscribe|all rights reserved|bản quyền thuộc|chia sẻ qua|đăng ký nhận tin|photo courtesy of|reporting by|editing by|image caption:|getty images|ap photo|reuters\/|afp photo|download the app|listen to this article)/i;
 
   function isNoiseNode(el) {
     if (!el || el.nodeType !== Node.ELEMENT_NODE) return false;
@@ -316,6 +363,7 @@
 
   function toggleReaderMode() {
     if (isReaderMode) {
+      clearSpeechTimers();
       if (typeof window !== "undefined" && window.speechSynthesis) {
         window.speechSynthesis.cancel();
       }
@@ -327,6 +375,10 @@
       if (readerContainer) {
         readerContainer.remove();
         readerContainer = null;
+      }
+      if (scrollbarStyleEl) {
+        scrollbarStyleEl.remove();
+        scrollbarStyleEl = null;
       }
       if (document.body) {
         document.body.style.display = originalBodyDisplay;
@@ -419,14 +471,115 @@
       document.body.style.display = "none";
     }
 
-    // Themes Color Palette
+    // Themes Color Palette (Optimized contrast for light/sepia theme)
     var THEME_STYLES = {
-      dark: { bg: "#090d16", barBg: "rgba(15, 23, 42, 0.94)", text: "#cbd5e1", title: "#f8fafc", heading: "#38bdf8", border: "rgba(56, 189, 248, 0.25)", cardBg: "#0f172a" },
-      sepia: { bg: "#f5edd6", barBg: "rgba(238, 227, 204, 0.95)", text: "#3c3226", title: "#261d14", heading: "#854d0e", border: "rgba(133, 77, 14, 0.2)", cardBg: "#eedfbf" },
-      oled: { bg: "#000000", barBg: "rgba(10, 10, 10, 0.96)", text: "#d4d4d8", title: "#ffffff", heading: "#0ea5e9", border: "rgba(255, 255, 255, 0.15)", cardBg: "#121212" }
+      dark: {
+        bg: "#090d16",
+        barBg: "rgba(15, 23, 42, 0.96)",
+        text: "#cbd5e1",
+        title: "#f8fafc",
+        heading: "#38bdf8",
+        border: "rgba(56, 189, 248, 0.25)",
+        cardBg: "#0f172a",
+        navText: "#f8fafc",
+        btnBg: "rgba(30, 41, 59, 0.85)",
+        btnText: "#f8fafc",
+        btnBorder: "rgba(255, 255, 255, 0.18)",
+        playBtnBg: "linear-gradient(135deg, #0284c7, #0369a1)",
+        playBtnText: "#ffffff",
+        dictBtnActiveBg: "#0284c7",
+        dictBtnActiveText: "#ffffff",
+        brandBg: "rgba(56, 189, 248, 0.12)",
+        brandText: "#38bdf8",
+        brandBorder: "rgba(56, 189, 248, 0.3)",
+        selectBg: "#1e293b",
+        selectText: "#f8fafc",
+        selectBorder: "rgba(255, 255, 255, 0.2)",
+        quoteBorder: "#38bdf8",
+        scrollThumb: "#38bdf8",
+        scrollTrack: "#090d16"
+      },
+      sepia: {
+        bg: "#f7f1e3",
+        barBg: "rgba(235, 224, 201, 0.98)",
+        text: "#292524", // High contrast dark-brown text
+        title: "#1c1917", // Bold dark title
+        heading: "#9a3412", // Earthy orange heading
+        border: "rgba(120, 80, 40, 0.25)",
+        cardBg: "#ede1c7",
+        navText: "#1c1917", // Sharp dark nav text (fixes light-on-light bug!)
+        btnBg: "rgba(220, 206, 180, 0.95)",
+        btnText: "#1c1917", // Sharp dark button text
+        btnBorder: "rgba(120, 80, 40, 0.35)",
+        playBtnBg: "linear-gradient(135deg, #b45309, #78350f)",
+        playBtnText: "#ffffff",
+        dictBtnActiveBg: "#b45309",
+        dictBtnActiveText: "#ffffff",
+        brandBg: "rgba(180, 83, 9, 0.12)",
+        brandText: "#9a3412",
+        brandBorder: "rgba(180, 83, 9, 0.35)",
+        selectBg: "#dfd3ba",
+        selectText: "#1c1917",
+        selectBorder: "rgba(120, 80, 40, 0.35)",
+        quoteBorder: "#b45309",
+        scrollThumb: "#a88a68",
+        scrollTrack: "#f2ebd9"
+      },
+      oled: {
+        bg: "#000000",
+        barBg: "rgba(10, 10, 10, 0.98)",
+        text: "#e4e4e7",
+        title: "#ffffff",
+        heading: "#0ea5e9",
+        border: "rgba(255, 255, 255, 0.2)",
+        cardBg: "#121212",
+        navText: "#ffffff",
+        btnBg: "rgba(39, 39, 42, 0.9)",
+        btnText: "#ffffff",
+        btnBorder: "rgba(255, 255, 255, 0.2)",
+        playBtnBg: "linear-gradient(135deg, #0284c7, #0369a1)",
+        playBtnText: "#ffffff",
+        dictBtnActiveBg: "#0284c7",
+        dictBtnActiveText: "#ffffff",
+        brandBg: "rgba(56, 189, 248, 0.12)",
+        brandText: "#38bdf8",
+        brandBorder: "rgba(56, 189, 248, 0.3)",
+        selectBg: "#27272a",
+        selectText: "#ffffff",
+        selectBorder: "rgba(255, 255, 255, 0.2)",
+        quoteBorder: "#0ea5e9",
+        scrollThumb: "#52525b",
+        scrollTrack: "#000000"
+      }
     };
 
     var currentTheme = THEME_STYLES[readerPrefs.theme] || THEME_STYLES.dark;
+
+    // Apply scrollbar style
+    if (!scrollbarStyleEl) {
+      scrollbarStyleEl = document.createElement("style");
+      scrollbarStyleEl.id = "sf-reader-scrollbar-style";
+      document.head.appendChild(scrollbarStyleEl);
+    }
+    function updateScrollbarStyle(themeStyle) {
+      scrollbarStyleEl.textContent = `
+        #sf-cyber-reader::-webkit-scrollbar {
+          width: 7px;
+          height: 7px;
+        }
+        #sf-cyber-reader::-webkit-scrollbar-track {
+          background: ${themeStyle.scrollTrack};
+        }
+        #sf-cyber-reader::-webkit-scrollbar-thumb {
+          background: ${themeStyle.scrollThumb};
+          border-radius: 99px;
+        }
+        #sf-cyber-reader::-webkit-scrollbar-thumb:hover {
+          filter: brightness(1.25);
+        }
+      `;
+    }
+    updateScrollbarStyle(currentTheme);
 
     readerContainer = document.createElement("div");
     readerContainer.id = "sf-cyber-reader";
@@ -440,7 +593,7 @@
       padding: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       font-size: ${readerPrefs.fontSize}px;
-      line-height: 1.8;
+      line-height: 1.85;
       box-sizing: border-box;
       transition: background 0.25s ease, color 0.25s ease;
     `;
@@ -448,7 +601,7 @@
     // Reading Progress Indicator Bar
     var progressBar = document.createElement("div");
     progressBar.id = "sf-reader-progress-bar";
-    progressBar.style.cssText = "position: fixed; top: 0; left: 0; width: 0%; height: 3.5px; background: linear-gradient(90deg, #38bdf8, #0284c7); z-index: 2000; transition: width 0.1s ease-out;";
+    progressBar.style.cssText = "position: fixed; top: 0; left: 0; width: 0%; height: 3px; background: linear-gradient(90deg, #38bdf8, #0284c7); z-index: 2000; transition: width 0.1s ease-out;";
     readerContainer.appendChild(progressBar);
 
     readerContainer.addEventListener("scroll", function () {
@@ -458,7 +611,7 @@
       progressBar.style.width = pct + "%";
     });
 
-    // Top Header & Controls Bar
+    // Top Header & Controls Bar (Strict single row flexbox!)
     var topBar = document.createElement("div");
     topBar.id = "sf-reader-topbar";
     topBar.style.cssText = `
@@ -469,36 +622,78 @@
       background: ${currentTheme.barBg};
       backdrop-filter: blur(14px);
       border-bottom: 1px solid ${currentTheme.border};
-      padding: 8px 18px;
+      padding: 8px 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       gap: 8px;
+      overflow-x: auto;
       z-index: 1000;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+      transition: background 0.25s ease, border-color 0.25s ease;
     `;
 
     var barLeft = document.createElement("div");
-    barLeft.style.cssText = "display: flex; align-items: center; gap: 8px; flex-wrap: wrap;";
+    barLeft.style.cssText = "display: flex; align-items: center; gap: 6px; flex-shrink: 0;";
 
     var brandPill = document.createElement("span");
-    brandPill.style.cssText = "font-size: 11.5px; font-weight: 800; color: #38bdf8; background: rgba(56, 189, 248, 0.12); padding: 4px 9px; border-radius: 6px; border: 1px solid rgba(56, 189, 248, 0.3); display: inline-flex; align-items: center; gap: 4px;";
-    brandPill.textContent = "🎧 ScholarFlow Reader";
+    brandPill.style.cssText = `
+      font-size: 11.5px;
+      font-weight: 800;
+      color: ${currentTheme.brandText};
+      background: ${currentTheme.brandBg};
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid ${currentTheme.brandBorder};
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+    `;
+    brandPill.textContent = "🎧 Reader";
     barLeft.appendChild(brandPill);
 
     var btnPlay = document.createElement("button");
     btnPlay.type = "button";
     btnPlay.id = "sf-reader-btn-play";
-    btnPlay.style.cssText = "background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 8px rgba(2, 132, 199, 0.4);";
-    btnPlay.textContent = "▶ " + (window.tContent ? window.tContent("reader_listen_play") : "Read Aloud");
+    btnPlay.style.cssText = `
+      background: ${currentTheme.playBtnBg};
+      color: ${currentTheme.playBtnText};
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);
+    `;
+    btnPlay.textContent = "▶ " + (window.tContent ? window.tContent("reader_listen_play") : "Read");
     barLeft.appendChild(btnPlay);
 
     // Voice Selection Dropdown with Edge Natural Voices
     var voiceSelect = document.createElement("select");
     voiceSelect.id = "sf-reader-voice-select";
     voiceSelect.title = window.tContent ? window.tContent("reader_listen_voice") : "Voice";
-    voiceSelect.style.cssText = "background: rgba(30, 41, 59, 0.85); color: #f8fafc; border: 1px solid rgba(255, 255, 255, 0.2); padding: 5px 8px; border-radius: 6px; font-size: 11.5px; max-width: 175px; outline: none; cursor: pointer;";
+    voiceSelect.style.cssText = `
+      background: ${currentTheme.selectBg};
+      color: ${currentTheme.selectText};
+      border: 1px solid ${currentTheme.selectBorder};
+      padding: 5px 6px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      width: 145px;
+      max-width: 145px;
+      outline: none;
+      cursor: pointer;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+    `;
 
     function populateVoiceDropdown() {
       while (voiceSelect.firstChild) {
@@ -508,7 +703,7 @@
       if (voices.length === 0) {
         var opt = document.createElement("option");
         opt.value = "";
-        opt.textContent = "Default System Voice";
+        opt.textContent = "Default Voice";
         voiceSelect.appendChild(opt);
         return;
       }
@@ -549,10 +744,22 @@
     });
     barLeft.appendChild(voiceSelect);
 
-    // Rate select
+    // Rate select (fixed compact width: 72px)
     var selSpeed = document.createElement("select");
     selSpeed.title = window.tContent ? window.tContent("reader_listen_speed") : "Speed";
-    selSpeed.style.cssText = "background: rgba(30, 41, 59, 0.85); color: #f8fafc; border: 1px solid rgba(255, 255, 255, 0.2); padding: 5px 8px; border-radius: 6px; font-size: 11.5px; outline: none; cursor: pointer;";
+    selSpeed.style.cssText = `
+      background: ${currentTheme.selectBg};
+      color: ${currentTheme.selectText};
+      border: 1px solid ${currentTheme.selectBorder};
+      padding: 5px 6px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      width: 72px;
+      min-width: 72px;
+      max-width: 72px;
+      outline: none;
+      cursor: pointer;
+    `;
     var speeds = [
       { v: "0.75", label: "0.75x" },
       { v: "0.9", label: "0.9x" },
@@ -579,7 +786,20 @@
     var btnDictation = document.createElement("button");
     btnDictation.type = "button";
     btnDictation.id = "sf-reader-btn-dictation";
-    btnDictation.style.cssText = "background: rgba(30, 41, 59, 0.8); color: #cbd5e1; border: 1px solid rgba(255, 255, 255, 0.2); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px;";
+    btnDictation.style.cssText = `
+      background: ${currentTheme.btnBg};
+      color: ${currentTheme.btnText};
+      border: 1px solid ${currentTheme.btnBorder};
+      padding: 6px 11px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 11.5px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+    `;
     btnDictation.textContent = "✍️ " + (window.tContent ? window.tContent("reader_dictation_mode") : "Dictation");
     barLeft.appendChild(btnDictation);
 
@@ -587,13 +807,22 @@
 
     // Right Controls: Font sizing, Theme toggling & Close
     var barRight = document.createElement("div");
-    barRight.style.cssText = "display: flex; align-items: center; gap: 6px; flex-wrap: wrap;";
+    barRight.style.cssText = "display: flex; align-items: center; gap: 5px; flex-shrink: 0;";
 
-    // Font size controls
     var btnFontDec = document.createElement("button");
     btnFontDec.type = "button";
     btnFontDec.title = "Decrease font size";
-    btnFontDec.style.cssText = "background: rgba(30, 41, 59, 0.7); color: #cbd5e1; border: 1px solid rgba(255, 255, 255, 0.15); width: 28px; height: 28px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 700;";
+    btnFontDec.style.cssText = `
+      background: ${currentTheme.btnBg};
+      color: ${currentTheme.btnText};
+      border: 1px solid ${currentTheme.btnBorder};
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 700;
+    `;
     btnFontDec.textContent = "A-";
     btnFontDec.onclick = function () {
       readerPrefs.fontSize = Math.max(15, readerPrefs.fontSize - 1.5);
@@ -605,7 +834,17 @@
     var btnFontInc = document.createElement("button");
     btnFontInc.type = "button";
     btnFontInc.title = "Increase font size";
-    btnFontInc.style.cssText = "background: rgba(30, 41, 59, 0.7); color: #cbd5e1; border: 1px solid rgba(255, 255, 255, 0.15); width: 28px; height: 28px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 700;";
+    btnFontInc.style.cssText = `
+      background: ${currentTheme.btnBg};
+      color: ${currentTheme.btnText};
+      border: 1px solid ${currentTheme.btnBorder};
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12.5px;
+      font-weight: 700;
+    `;
     btnFontInc.textContent = "A+";
     btnFontInc.onclick = function () {
       readerPrefs.fontSize = Math.min(27, readerPrefs.fontSize + 1.5);
@@ -615,33 +854,107 @@
     barRight.appendChild(btnFontInc);
 
     // Theme Switchers
+    var themeBtns = [];
     var themes = [
       { id: "dark", label: "🌙", title: "Dark Theme" },
-      { id: "sepia", label: "📜", title: "Sepia Theme" },
-      { id: "oled", label: "🖤", title: "OLED Black" }
+      { id: "sepia", label: "📜", title: "Sepia (Light) Theme" },
+      { id: "oled", label: "🖤", title: "OLED Black Theme" }
     ];
+
+    function applyThemePalette(thId) {
+      readerPrefs.theme = thId;
+      try { localStorage.setItem("sf_reader_theme", thId); } catch (e) {}
+      var s = THEME_STYLES[thId] || THEME_STYLES.dark;
+      currentTheme = s;
+
+      readerContainer.style.background = s.bg;
+      readerContainer.style.color = s.text;
+      topBar.style.background = s.barBg;
+      topBar.style.borderBottomColor = s.border;
+
+      brandPill.style.color = s.brandText;
+      brandPill.style.background = s.brandBg;
+      brandPill.style.borderColor = s.brandBorder;
+
+      btnPlay.style.background = s.playBtnBg;
+      btnPlay.style.color = s.playBtnText;
+
+      voiceSelect.style.background = s.selectBg;
+      voiceSelect.style.color = s.selectText;
+      voiceSelect.style.borderColor = s.selectBorder;
+
+      selSpeed.style.background = s.selectBg;
+      selSpeed.style.color = s.selectText;
+      selSpeed.style.borderColor = s.selectBorder;
+
+      if (!readerAudio.isDictationMode) {
+        btnDictation.style.background = s.btnBg;
+        btnDictation.style.color = s.btnText;
+        btnDictation.style.borderColor = s.btnBorder;
+      } else {
+        btnDictation.style.background = s.dictBtnActiveBg;
+        btnDictation.style.color = s.dictBtnActiveText;
+      }
+
+      btnFontDec.style.background = s.btnBg;
+      btnFontDec.style.color = s.btnText;
+      btnFontDec.style.borderColor = s.btnBorder;
+
+      btnFontInc.style.background = s.btnBg;
+      btnFontInc.style.color = s.btnText;
+      btnFontInc.style.borderColor = s.btnBorder;
+
+      themeBtns.forEach(function (tb) {
+        tb.style.background = s.btnBg;
+        tb.style.color = s.btnText;
+        tb.style.borderColor = s.btnBorder;
+      });
+
+      // Update heading & title if present
+      var h1El = contentWrapper.querySelector("h1");
+      if (h1El) h1El.style.color = s.title;
+      contentWrapper.querySelectorAll("h2, h3, h4").forEach(function (h) {
+        h.style.color = s.heading;
+      });
+      contentWrapper.querySelectorAll("blockquote").forEach(function (bq) {
+        bq.style.borderLeftColor = s.quoteBorder;
+      });
+
+      updateScrollbarStyle(s);
+
+      // If dictation dock is currently open, restyle it
+      if (dictationBox) {
+        dictationBox.style.background = s.cardBg;
+        dictationBox.style.borderColor = s.border;
+      }
+    }
+
     themes.forEach(function (th) {
       var tBtn = document.createElement("button");
       tBtn.type = "button";
       tBtn.title = th.title;
-      tBtn.style.cssText = "background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.15); width: 28px; height: 28px; border-radius: 6px; cursor: pointer; font-size: 12px;";
+      tBtn.style.cssText = `
+        background: ${currentTheme.btnBg};
+        color: ${currentTheme.btnText};
+        border: 1px solid ${currentTheme.btnBorder};
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+      `;
       tBtn.textContent = th.label;
       tBtn.onclick = function () {
-        readerPrefs.theme = th.id;
-        try { localStorage.setItem("sf_reader_theme", th.id); } catch (e) {}
-        var s = THEME_STYLES[th.id] || THEME_STYLES.dark;
-        readerContainer.style.background = s.bg;
-        readerContainer.style.color = s.text;
-        topBar.style.background = s.barBg;
-        topBar.style.borderBottomColor = s.border;
+        applyThemePalette(th.id);
       };
+      themeBtns.push(tBtn);
       barRight.appendChild(tBtn);
     });
 
     var closeBtn = document.createElement("button");
     closeBtn.id = "sf-close-reader";
     closeBtn.type = "button";
-    closeBtn.style.cssText = "background: #ef4444; color: #fff; border: none; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-family: sans-serif; font-size: 12px; font-weight: 700; margin-left: 4px;";
+    closeBtn.style.cssText = "background: #ef4444; color: #fff; border: none; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-family: sans-serif; font-size: 11.5px; font-weight: 700; margin-left: 4px; white-space: nowrap;";
     closeBtn.textContent = "✕ " + (window.tContent ? window.tContent("reader_mode_close") : "Close");
     closeBtn.onclick = function () { toggleReaderMode(); };
     barRight.appendChild(closeBtn);
@@ -679,9 +992,10 @@
 
     function playSentenceAt(idx) {
       if (idx < 0 || idx >= readerAudio.sentences.length) {
+        clearSpeechTimers();
         readerAudio.isPlaying = false;
         readerAudio.currentIndex = -1;
-        btnPlay.textContent = "▶ " + (window.tContent ? window.tContent("reader_listen_play") : "Read Aloud");
+        btnPlay.textContent = "▶ " + (window.tContent ? window.tContent("reader_listen_play") : "Read");
         highlightSentence(-1);
         return;
       }
@@ -700,9 +1014,10 @@
 
     btnPlay.addEventListener("click", function () {
       if (readerAudio.isPlaying) {
+        clearSpeechTimers();
         if (window.speechSynthesis) window.speechSynthesis.cancel();
         readerAudio.isPlaying = false;
-        btnPlay.textContent = "▶ " + (window.tContent ? window.tContent("reader_listen_play") : "Read Aloud");
+        btnPlay.textContent = "▶ " + (window.tContent ? window.tContent("reader_listen_play") : "Read");
       } else {
         var nextIdx = readerAudio.currentIndex >= 0 ? readerAudio.currentIndex : 0;
         playSentenceAt(nextIdx);
@@ -713,14 +1028,14 @@
       articleItems.forEach(function (item) {
         if (item.type === "image") {
           var figure = document.createElement("figure");
-          figure.style.cssText = "margin: 30px 0; text-align: center;";
+          figure.style.cssText = "margin: 30px auto; max-width: 100%; text-align: center;";
 
           var img = document.createElement("img");
           img.setAttribute("src", item.src);
           img.setAttribute("alt", item.caption || "Article image");
           img.setAttribute("loading", "lazy");
           img.setAttribute("referrerpolicy", "no-referrer");
-          img.style.cssText = "max-width: 100%; height: auto; border-radius: 12px; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.08); display: block; margin: 0 auto;";
+          img.style.cssText = "max-width: 100%; height: auto; border-radius: 12px; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.08); display: block; margin: 0 auto; object-fit: contain;";
           figure.appendChild(img);
 
           if (item.caption) {
@@ -735,7 +1050,7 @@
 
         if (item.type === "heading") {
           var hEl = document.createElement(item.level || "h2");
-          hEl.style.cssText = "font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #38bdf8; font-size: 22px; font-weight: 700; margin: 32px 0 14px 0;";
+          hEl.style.cssText = "font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: " + currentTheme.heading + "; font-size: 22px; font-weight: 700; margin: 32px 0 14px 0;";
           hEl.textContent = item.text;
           contentWrapper.appendChild(hEl);
           return;
@@ -746,7 +1061,7 @@
           if (sents.length > 0) {
             var pBlock = document.createElement("p");
             pBlock.style.cssText = item.isQuote
-              ? "margin-bottom: 24px; color: #94a3b8; font-style: italic; border-left: 3.5px solid #38bdf8; padding-left: 16px;"
+              ? "margin-bottom: 24px; color: #94a3b8; font-style: italic; border-left: 3.5px solid " + currentTheme.quoteBorder + "; padding-left: 16px;"
               : "margin-bottom: 24px;";
 
             sents.forEach(function (sText) {
@@ -760,7 +1075,7 @@
               sSpan.textContent = sText + " ";
 
               sSpan.addEventListener("mouseenter", function () {
-                if (readerAudio.currentIndex !== sIdx) sSpan.style.background = "rgba(255, 255, 255, 0.1)";
+                if (readerAudio.currentIndex !== sIdx) sSpan.style.background = "rgba(56, 189, 248, 0.15)";
               });
               sSpan.addEventListener("mouseleave", function () {
                 if (readerAudio.currentIndex !== sIdx) sSpan.style.background = "transparent";
@@ -796,7 +1111,7 @@
       var targetSentence = readerAudio.sentences[sIdx];
       if (!targetSentence) return;
 
-      var currentBoxTheme = THEME_STYLES[readerPrefs.theme] || THEME_STYLES.dark;
+      var currentBoxTheme = currentTheme;
 
       dictationBox = document.createElement("div");
       dictationBox.id = "sf-dictation-drawer";
@@ -808,7 +1123,8 @@
         width: 92%;
         max-width: 740px;
         background: ${currentBoxTheme.cardBg};
-        border: 1px solid rgba(56, 189, 248, 0.45);
+        color: ${currentBoxTheme.text};
+        border: 1px solid ${currentBoxTheme.border};
         box-shadow: 0 12px 35px rgba(0, 0, 0, 0.65);
         border-radius: 14px;
         padding: 16px 22px;
@@ -831,9 +1147,9 @@
       dClose.onclick = function () {
         if (dictationBox) { dictationBox.remove(); dictationBox = null; }
         readerAudio.isDictationMode = false;
-        btnDictation.style.background = "rgba(30, 41, 59, 0.8)";
-        btnDictation.style.color = "#cbd5e1";
-        btnDictation.style.borderColor = "rgba(255, 255, 255, 0.2)";
+        btnDictation.style.background = currentTheme.btnBg;
+        btnDictation.style.color = currentTheme.btnText;
+        btnDictation.style.borderColor = currentTheme.btnBorder;
       };
       dHeader.appendChild(dClose);
       dictationBox.appendChild(dHeader);
@@ -847,7 +1163,19 @@
       dInput.id = "sf-dictation-input";
       dInput.rows = 3;
       dInput.placeholder = "Type sentence here...";
-      dInput.style.cssText = "width: 100%; box-sizing: border-box; background: rgba(30, 41, 59, 0.8); color: #f8fafc; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 10px 12px; font-size: 14.5px; font-family: inherit; resize: vertical; outline: none;";
+      dInput.style.cssText = `
+        width: 100%;
+        box-sizing: border-box;
+        background: ${currentBoxTheme.selectBg};
+        color: ${currentBoxTheme.selectText};
+        border: 1px solid ${currentBoxTheme.selectBorder};
+        border-radius: 8px;
+        padding: 10px 12px;
+        font-size: 14.5px;
+        font-family: inherit;
+        resize: vertical;
+        outline: none;
+      `;
       dictationBox.appendChild(dInput);
 
       var dActions = document.createElement("div");
@@ -951,14 +1279,14 @@
     btnDictation.addEventListener("click", function () {
       readerAudio.isDictationMode = !readerAudio.isDictationMode;
       if (readerAudio.isDictationMode) {
-        btnDictation.style.background = "#0284c7";
-        btnDictation.style.color = "#ffffff";
-        btnDictation.style.borderColor = "#38bdf8";
+        btnDictation.style.background = currentTheme.dictBtnActiveBg;
+        btnDictation.style.color = currentTheme.dictBtnActiveText;
+        btnDictation.style.borderColor = currentTheme.border;
         openDictationBox(readerAudio.currentIndex >= 0 ? readerAudio.currentIndex : 0);
       } else {
-        btnDictation.style.background = "rgba(30, 41, 59, 0.8)";
-        btnDictation.style.color = "#cbd5e1";
-        btnDictation.style.borderColor = "rgba(255, 255, 255, 0.2)";
+        btnDictation.style.background = currentTheme.btnBg;
+        btnDictation.style.color = currentTheme.btnText;
+        btnDictation.style.borderColor = currentTheme.btnBorder;
         if (dictationBox) { dictationBox.remove(); dictationBox = null; }
       }
     });

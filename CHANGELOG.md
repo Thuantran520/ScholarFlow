@@ -21,9 +21,11 @@ Tất cả thay đổi đáng chú ý của dự án đều được ghi tại �
   - Thêm 4 chế độ căn lề khối (Trái, Giữa, Phải, Đều 2 bên) và hỗ trợ căn lề cột bảng chuẩn GFM (`:---`, `:---:`, `---:`).
   - Tích hợp menu đổi phông chữ hệ thống (System UI, Monospace, Academic Serif, Modern Round, Clean, Handwriting) và chỉnh cỡ chữ trực quan, tự động lưu cấu hình.
 - **Chế độ Đọc Báo & Luyện Nghe Chép Chính Tả Tiếng Anh (News Reader & Dictation Practice)**:
-  - Bóc tách nội dung chính xác từ các trang báo & tin tức (BBC, CNN, Tuổi Trẻ, VnExpress...), tự động loại bỏ triệt để quảng cáo, header/footer, menu điều hướng, hộp bài viết liên quan, widget đề xuất và bình luận rác bằng thuật toán Heuristic scoring và `closest()` noise pruning.
-  - Giữ lại và hiển thị các **hình ảnh minh họa chất lượng cao** của bài báo xen kẽ tự nhiên giữa các đoạn văn, hỗ trợ ảnh lazy-load (`data-src`, `srcset`) và chú thích ảnh (`figcaption`) trang nhã.
-  - Thiết kế lại toàn diện giao diện đọc báo (Editorial Reader UI): thanh điều khiển kính mờ (Glassmorphism), vạch đo tiến độ đọc neon (Reading Progress Bar), 3 chế độ màu sắc (Dark, Sepia giấy cổ điển, OLED Black), nút chỉnh cỡ chữ linh hoạt (A- / A+) có lưu cấu hình.
+  - Chuyển công cụ kích hoạt Cyber-Reader Mode sang **tab Lingua (Lingua Lab)** để phục vụ tốt nhất việc đọc báo học ngoại ngữ và luyện phát âm.
+  - Sửa triệt để lỗi **treo/đơ giọng đọc** (Chromium/Edge Web Speech engine timeout) bằng cơ chế keep-alive định kỳ và watchdog timer thông minh.
+  - Bóc tách nội dung chính xác từ các trang báo & tin tức (BBC, CNN, Tuổi Trẻ, VnExpress...), lọc sạch thêm rác (credit ảnh, dòng tác giả, đăng ký tin/chia sẻ) mà không làm thiếu nội dung chính.
+  - Bảo toàn vị trí **hình ảnh minh họa chất lượng cao** xen kẽ chuẩn xác giữa các đoạn văn theo đúng thứ tự bài báo gốc, hỗ trợ ảnh lazy-load (`data-src`, `srcset`) và chú thích ảnh (`figcaption`) trang nhã.
+  - Thiết kế lại thanh điều khiển kính mờ (Glassmorphism) thành **1 hàng ngang gọn gàng (Single-row flexbox)** không bị tràn/rớt dòng; tối ưu độ tương phản văn bản sắc nét trên **theme Sepia/Sáng** và tùy biến thanh cuộn (Custom Scrollbar) đổi màu đồng bộ theo từng chủ đề (Dark, Sepia, OLED).
   - Tích hợp kho **giọng đọc tự nhiên phong phú (Microsoft Natural / Online Neural Voices trên Edge)**: tự động quét và đưa các giọng chuẩn cao cấp (Microsoft Guy, Jenny, Aria, Sonia, Christopher, Natasha...) lên đầu bảng, có dropdown chọn giọng thân thiện và lưu giọng đọc yêu thích.
   - Ngăn **Luyện nghe chép chính tả (Dictation Dock)** hiện đại: nghe phát âm câu tiếng Anh, nghe chậm 0.7x, phím tắt `Enter` để kiểm tra kết quả ngay lập tức, đo tỷ lệ % từ đúng trực quan và đối chiếu đáp án gốc.
   - Tuân thủ 100% xử lý an toàn cục bộ (Local-Only), bảo đảm tính tương thích đa ngôn ngữ (5 thứ tiếng) và an toàn mã DOM tuyệt đối.
