@@ -245,6 +245,38 @@
     return linkLen / textLen;
   }
 
+
+  function cleanCaptionText(text) {
+    if (!text) return "";
+    var str = String(text).replace(/\s+/g, " ").trim();
+
+    if (/^[\(\[]?(?:photo|ảnh|image|credit|nguồn|courtesy|source)\s*[:\/\-–\s]/i.test(str)) {
+      if (str.length < 50) return "";
+    }
+    if (/^[\(\[]?(?:afp|reuters|ap|getty\s*images|ttxvn|vna|epa|bloomberg|kyodo|shutterstock)[\)\]]?$/i.test(str)) {
+      return "";
+    }
+
+    str = str.replace(/\s*[\(\[]\s*(?:photo|ảnh|image|credit|nguồn|courtesy|source)\s*(?:by|:|of|\/|-|–)\s*[^)\]]+[\)\]]\s*$/i, "");
+    str = str.replace(/\s*[\(\[]\s*(?:afp|reuters|ap|getty\s*images|ttxvn|vna|epa|bloomberg|ap\s*photo)\s*[^)\]]*[\)\]]\s*$/i, "");
+    str = str.replace(/[\s\.\,\;\|\-]+(?:photo|ảnh|image|credit|nguồn|courtesy)\s*(?:by|:|of|\/|-|–)\s*[^.\n]+$/i, "");
+    str = str.replace(/[\s\.\,\;\|\-]+(?:photo\s+by\s+[^\n]+)$/i, "");
+    str = str.replace(/[\s\.\,\;\|\-]+(?:ảnh\s*:\s*[^\n]+)$/i, "");
+    str = str.replace(/[\s\.\,\;\|\-]+(?:photo\s*:\s*[^\n]+)$/i, "");
+
+    return str.trim();
+  }
+
+  function cleanParagraphText(text) {
+    if (!text) return "";
+    var str = String(text).replace(/\s+/g, " ").trim();
+    str = str.replace(/\s*[\(\[]\s*(?:photo|ảnh|image|credit|nguồn|courtesy)\s*(?:by|:|of|\/|-|–)\s*[^)\]]+[\)\]]\s*$/i, "");
+    str = str.replace(/[\s\.\,\;\|\-]+(?:photo\s+by\s+[^\n]+)$/i, "");
+    str = str.replace(/[\s\.\,\;\|\-]+(?:ảnh\s*:\s*[^\n]+)$/i, "");
+    str = str.replace(/[\s\.\,\;\|\-]+(?:photo\s*:\s*[^\n]+)$/i, "");
+    return str.trim();
+  }
+
   function extractImageInfo(imgEl) {
     if (!imgEl || imgEl.tagName !== "IMG") return null;
     var src = imgEl.getAttribute("data-src") ||
@@ -282,10 +314,19 @@
     }
 
     var caption = "";
-    var fig = imgEl.closest("figure");
+    var fig = imgEl.closest("figure, .image-container, .img-container, .photo-box, .media-block, .detail-image");
     if (fig) {
-      var figCap = fig.querySelector("figcaption, .caption, .image-caption");
+      var figCap = fig.querySelector("figcaption, .caption, .image-caption, .photo-caption, .media-caption, .desc");
       if (figCap) caption = (figCap.textContent || "").trim();
+    }
+    if (!caption) {
+      var nextEl = imgEl.nextElementSibling;
+      if (nextEl && /^(p|figcaption|div|span)$/i.test(nextEl.tagName)) {
+        var nClass = ((nextEl.className || "") + " " + (nextEl.id || "")).toLowerCase();
+        if (/(caption|desc|photo)/i.test(nClass)) {
+          caption = (nextEl.textContent || "").trim();
+        }
+      }
     }
     if (!caption) {
       caption = (imgEl.getAttribute("alt") || imgEl.getAttribute("title") || "").trim();
@@ -406,8 +447,36 @@
     var articleItems = [];
     var seenImages = new Set();
     var seenTextHashes = new Set();
+    var seenCaptionElements = new Set();
+    var knownCaptions = new Set();
 
     if (mainContainer) {
+      // Pre-scan all figure / image containers to mark their caption elements and texts
+      var allFigures = mainContainer.querySelectorAll("figure, .image-container, .img-container, .photo-box, .media-block, .detail-image");
+      allFigures.forEach(function (fig) {
+        var capEls = fig.querySelectorAll("figcaption, .caption, .image-caption, .photo-caption, .media-caption, .desc, p, span, i, em");
+        capEls.forEach(function (c) {
+          seenCaptionElements.add(c);
+          var cTxt = (c.textContent || "").trim();
+          if (cTxt) {
+            knownCaptions.add(cTxt.toLowerCase());
+            var cleaned = cleanCaptionText(cTxt);
+            if (cleaned) knownCaptions.add(cleaned.toLowerCase());
+          }
+        });
+      });
+
+      var standaloneCaps = mainContainer.querySelectorAll(".caption, .image-caption, .photo-caption, .media-caption, .fig-caption, [itemprop='caption']");
+      standaloneCaps.forEach(function (sc) {
+        seenCaptionElements.add(sc);
+        var scTxt = (sc.textContent || "").trim();
+        if (scTxt) {
+          knownCaptions.add(scTxt.toLowerCase());
+          var cleaned = cleanCaptionText(scTxt);
+          if (cleaned) knownCaptions.add(cleaned.toLowerCase());
+        }
+      });
+
       var elements = Array.from(mainContainer.querySelectorAll("h1, h2, h3, h4, p, figure, img, blockquote"));
       elements.forEach(function (el) {
         if (isNoiseNode(el)) return;
@@ -420,7 +489,14 @@
           if (img && !seenImages.has(img)) {
             seenImages.add(img);
             var info = extractImageInfo(img);
-            if (info) articleItems.push({ type: "image", src: info.src, caption: info.caption });
+            if (info) {
+              var cleanCap = cleanCaptionText(info.caption);
+              if (cleanCap) {
+                knownCaptions.add(cleanCap.toLowerCase());
+                if (info.caption) knownCaptions.add(info.caption.toLowerCase());
+              }
+              articleItems.push({ type: "image", src: info.src, caption: cleanCap });
+            }
           }
           return;
         }
@@ -429,7 +505,14 @@
           if (!seenImages.has(el)) {
             seenImages.add(el);
             var imgInfo = extractImageInfo(el);
-            if (imgInfo) articleItems.push({ type: "image", src: imgInfo.src, caption: imgInfo.caption });
+            if (imgInfo) {
+              var cleanCap2 = cleanCaptionText(imgInfo.caption);
+              if (cleanCap2) {
+                knownCaptions.add(cleanCap2.toLowerCase());
+                if (imgInfo.caption) knownCaptions.add(imgInfo.caption.toLowerCase());
+              }
+              articleItems.push({ type: "image", src: imgInfo.src, caption: cleanCap2 });
+            }
           }
           return;
         }
@@ -445,23 +528,49 @@
 
         // Paragraphs or Blockquotes
         if (tag === "p" || tag === "blockquote") {
+          // Exclude if it is part of a figure or marked as caption
+          if (seenCaptionElements.has(el) || el.closest("figure, figcaption")) return;
+
+          var pClass = ((el.className || "") + " " + (el.id || "")).toLowerCase();
+          if (/(caption|image-desc|photo-desc|fig-cap|media-credit|pic-caption|art-credit|photocaption)/i.test(pClass)) {
+            return;
+          }
+
           var innerImg = el.querySelector("img");
           if (innerImg && !seenImages.has(innerImg)) {
             seenImages.add(innerImg);
             var pImgInfo = extractImageInfo(innerImg);
-            if (pImgInfo) articleItems.push({ type: "image", src: pImgInfo.src, caption: pImgInfo.caption });
+            if (pImgInfo) {
+              var cleanPImgCap = cleanCaptionText(pImgInfo.caption);
+              if (cleanPImgCap) knownCaptions.add(cleanPImgCap.toLowerCase());
+              articleItems.push({ type: "image", src: pImgInfo.src, caption: cleanPImgCap });
+            }
           }
 
-          var pText = (el.textContent || "").replace(/\s+/g, " ").trim();
-          if (pText.length < 20) return;
+          var rawPText = (el.textContent || "").replace(/\s+/g, " ").trim();
+          if (rawPText.length < 20) return;
           if (getLinkDensity(el) > 0.45) return;
-          if (JUNK_TEXT_RE.test(pText)) return;
+          if (JUNK_TEXT_RE.test(rawPText)) return;
 
-          var hash = pText.slice(0, 45);
+          var cleanP = cleanParagraphText(rawPText);
+          if (cleanP.length < 15) return;
+
+          // Prevent caption text from appearing as a paragraph
+          var lowP = cleanP.toLowerCase();
+          var isCapDupe = false;
+          knownCaptions.forEach(function (cap) {
+            if (!cap || cap.length < 15) return;
+            if (lowP === cap || lowP.includes(cap) || cap.includes(lowP)) {
+              isCapDupe = true;
+            }
+          });
+          if (isCapDupe) return;
+
+          var hash = cleanP.slice(0, 45);
           if (seenTextHashes.has(hash)) return;
           seenTextHashes.add(hash);
 
-          articleItems.push({ type: "paragraph", text: pText, isQuote: tag === "blockquote" });
+          articleItems.push({ type: "paragraph", text: cleanP, isQuote: tag === "blockquote" });
         }
       });
     }
@@ -497,7 +606,8 @@
         selectBorder: "rgba(255, 255, 255, 0.2)",
         quoteBorder: "#38bdf8",
         scrollThumb: "#38bdf8",
-        scrollTrack: "#090d16"
+        scrollTrack: "#090d16",
+        captionColor: "#94a3b8"
       },
       sepia: {
         bg: "#f7f1e3",
@@ -523,7 +633,8 @@
         selectBorder: "rgba(120, 80, 40, 0.35)",
         quoteBorder: "#b45309",
         scrollThumb: "#a88a68",
-        scrollTrack: "#f2ebd9"
+        scrollTrack: "#f2ebd9",
+        captionColor: "#6b5d52"
       },
       oled: {
         bg: "#000000",
@@ -549,7 +660,8 @@
         selectBorder: "rgba(255, 255, 255, 0.2)",
         quoteBorder: "#0ea5e9",
         scrollThumb: "#52525b",
-        scrollTrack: "#000000"
+        scrollTrack: "#000000",
+        captionColor: "#a1a1aa"
       }
     };
 
@@ -920,6 +1032,7 @@
         bq.style.borderLeftColor = s.quoteBorder;
       });
 
+      contentWrapper.querySelectorAll("figcaption").forEach(function (fc) { fc.style.color = s.captionColor; });
       updateScrollbarStyle(s);
 
       // If dictation dock is currently open, restyle it
@@ -1040,7 +1153,7 @@
 
           if (item.caption) {
             var figCap = document.createElement("figcaption");
-            figCap.style.cssText = "font-size: 13px; color: #94a3b8; font-style: italic; margin-top: 10px; line-height: 1.5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;";
+            figCap.style.cssText = "font-size: 13.5px; color: " + currentTheme.captionColor + "; font-style: italic; margin-top: 10px; line-height: 1.5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 92%; margin-left: auto; margin-right: auto;";
             figCap.textContent = item.caption;
             figure.appendChild(figCap);
           }
