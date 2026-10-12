@@ -817,13 +817,160 @@
     return null;
   }
 
+  function extractAudioInfo(el) {
+    if (!el) return null;
+    var audioEl = el.tagName.toLowerCase() === "audio" ? el : el.querySelector("audio");
+    var src = "";
+    if (audioEl) {
+      src = audioEl.getAttribute("src") || (audioEl.querySelector("source") ? audioEl.querySelector("source").getAttribute("src") : "") || audioEl.currentSrc || "";
+    } else if (el.tagName.toLowerCase() === "a" && el.hasAttribute("href")) {
+      var href = el.getAttribute("href") || "";
+      if (/\.(mp3|ogg|wav|m4a)(\?.*)?$/i.test(href)) {
+        src = href;
+      }
+    } else if (el.hasAttribute("data-audio-src")) {
+      src = el.getAttribute("data-audio-src") || "";
+    }
+    if (!src || src.startsWith("blob:")) return null;
+    try {
+      src = new URL(src, window.location.href).href;
+    } catch (e) {}
+
+    var title = "";
+    var prev = el.previousElementSibling;
+    if (prev && /^(p|h3|h4|h5|div|span)$/i.test(prev.tagName)) {
+      var pTxt = (prev.textContent || "").replace(/\s+/g, " ").trim();
+      if (pTxt.length > 0 && pTxt.length < 80 && !/^(audio|listen)$/i.test(pTxt)) title = pTxt;
+    }
+    if (!title && audioEl && audioEl.title) title = audioEl.title;
+    return {
+      type: "audio",
+      src: src,
+      title: title || (window.tContent ? window.tContent("reader_audio_player") : "Audio Narration")
+    };
+  }
+
+  function splitParagraphByBreaks(el) {
+    var paragraphs = [];
+    var currentParts = [];
+    var consecutiveBrs = 0;
+
+    for (var i = 0; i < el.childNodes.length; i++) {
+      var node = el.childNodes[i];
+      if (node.nodeType === Node.ELEMENT_NODE && node.tagName.toLowerCase() === "br") {
+        consecutiveBrs++;
+        if (consecutiveBrs >= 2) {
+          var chunk = currentParts.join("").replace(/\s+/g, " ").trim();
+          if (chunk.length >= 15) {
+            paragraphs.push(chunk);
+          }
+          currentParts = [];
+        }
+      } else {
+        consecutiveBrs = 0;
+        currentParts.push(node.textContent || "");
+      }
+    }
+    var finalChunk = currentParts.join("").replace(/\s+/g, " ").trim();
+    if (finalChunk.length >= 15) {
+      paragraphs.push(finalChunk);
+    }
+    return paragraphs;
+  }
+
+  function extractSourcesFromList(listEl) {
+    if (!listEl) return null;
+    var lis = Array.from(listEl.querySelectorAll(":scope > li, li"));
+    if (lis.length === 0) return null;
+
+    var isSourcesContext = false;
+    var prev = listEl.previousElementSibling;
+    if (prev) {
+      var pTxt = (prev.textContent || "").trim();
+      if (/^(sources|references|nguồn|tài liệu tham khảo|tư liệu|bibliography)[\s:–—\-]?$/i.test(pTxt)) {
+        isSourcesContext = true;
+      }
+    }
+    if (!isSourcesContext && listEl.closest(".sources, .references, .footnotes, .bibliography")) {
+      isSourcesContext = true;
+    }
+
+    var items = [];
+    var urlCount = 0;
+
+    for (var i = 0; i < lis.length; i++) {
+      var li = lis[i];
+      var raw = (li.textContent || "").trim();
+      var linkEl = li.querySelector("a[href]");
+      var url = linkEl ? linkEl.getAttribute("href") : "";
+      if (!url) {
+        var m = raw.match(/https?:\/\/[^\s]+/i);
+        if (m) url = m[0];
+      }
+      if (url) {
+        urlCount++;
+        var domain = "";
+        try {
+          var uObj = new URL(url, window.location.href);
+          domain = uObj.hostname.replace(/^www\./i, "");
+        } catch (e) {
+          domain = "Web";
+        }
+        var title = (linkEl ? (linkEl.textContent || "").trim() : "") || domain;
+        items.push({ url: url, domain: domain, title: title });
+      }
+    }
+
+    if (isSourcesContext || (items.length >= 1 && urlCount / lis.length >= 0.6)) {
+      return { type: "sources", items: items };
+    }
+    return null;
+  }
+
+  function extractReadingLevels(container, titleText) {
+    var currentLevel = "";
+    var tMatch = (titleText || "").match(/(?:level|grade|cấp độ)\s*([0-9]+|[a-z]+)/i);
+    if (tMatch) currentLevel = "Level " + tMatch[1];
+    if (!currentLevel && typeof window !== "undefined" && window.location) {
+      var urlMatch = window.location.href.match(/-([0-9])\.html/i);
+      if (urlMatch) currentLevel = "Level " + urlMatch[1];
+    }
+
+    if (!container) return currentLevel ? { current: currentLevel, levels: [] } : null;
+
+    var levelLinks = [];
+    var seenUrls = new Set();
+    var allLinks = container.querySelectorAll("a[href]");
+    for (var i = 0; i < allLinks.length; i++) {
+      var a = allLinks[i];
+      var aText = (a.textContent || "").trim();
+      var lMatch = aText.match(/(?:level|grade|cấp độ)\s*([0-9]+|[a-z]+)/i);
+      if (lMatch) {
+        var href = a.getAttribute("href");
+        if (href && !seenUrls.has(href)) {
+          seenUrls.add(href);
+          try {
+            var fullUrl = new URL(href, window.location.href).href;
+            levelLinks.push({ label: "Level " + lMatch[1], url: fullUrl });
+          } catch (e) {}
+        }
+      }
+    }
+
+    if (currentLevel || levelLinks.length > 0) {
+      return { current: currentLevel, levels: levelLinks };
+    }
+    return null;
+  }
+
   function pickBestArticleContainer() {
     var selectors = [
       "article", "[itemprop='articleBody']", "[itemprop='article']",
       ".article-body", ".article__body", ".story-body", ".post-content",
       ".entry-content", ".content-detail", ".detail-content", ".fck_detail",
-      ".content_detail", "#article-body", "main", "[role='main']",
-      "#main-content", ".main-content"
+      ".content_detail", "#article-body", ".lesson-excerpt", ".lesson-archive",
+      ".article-content", ".story-content", "#primary .content-container",
+      "main", "[role='main']", "#main-content", ".main-content"
     ];
 
     var candidates = [];
@@ -847,7 +994,7 @@
 
     var bestEl = null;
     var bestScore = -100;
-    var GOOD_RE = /(article|entry|post|story|body|content|text|paratext)/i;
+    var GOOD_RE = /(article|entry|post|story|body|content|text|paratext|lesson)/i;
     var NOISE_RE = /(comment|sidebar|related|popular|widget|advert|banner|promo|social|share|cookie|popup|modal|dialog|footer|nav|header)/i;
 
     for (var j = 0; j < candidates.length; j++) {
@@ -881,7 +1028,14 @@
       }
     }
 
-    return (bestScore > 15 && bestEl) ? bestEl : (document.querySelector("article") || document.querySelector("main") || document.body);
+    var chosen = (bestScore > 15 && bestEl) ? bestEl : (document.querySelector("article") || document.querySelector("main") || document.body);
+    if (chosen && chosen.tagName === "ARTICLE" && chosen.parentElement) {
+      var pCls = (chosen.parentElement.className || "") + " " + (chosen.parentElement.id || "");
+      if (/lesson-excerpt|content-area|content-container|article-content|story-content/i.test(pCls)) {
+        chosen = chosen.parentElement;
+      }
+    }
+    return chosen;
   }
 
   function toggleReaderMode() {
@@ -938,24 +1092,72 @@
 
     // Extract Title (prefer specific article title selectors, avoid site logo/header h1)
     var articleTitle = "";
-    var h1Candidate = (mainContainer && (mainContainer.querySelector("h1.title-detail, h1.title-news, h1.article-title, h1.singular-title, h1.detail-title, h1:not(.logo):not(.site-logo)") || mainContainer.querySelector("h1"))) || document.querySelector("article h1, h1.title-detail, h1.title-news, h1.article-title, h1:not(.logo):not(.site-logo), h1");
-    if (h1Candidate && !isNoiseNode(h1Candidate)) {
-      articleTitle = (h1Candidate.textContent || "").trim();
+    var articleDate = "";
+
+    // 1. Pristine OpenGraph or Twitter Title
+    var ogTitle = "";
+    var metaOg = document.querySelector("meta[property='og:title'], meta[name='twitter:title']");
+    if (metaOg) {
+      var mContent = (metaOg.getAttribute("content") || "").trim();
+      if (mContent && !/^(home|index|trang chủ)$/i.test(mContent)) {
+        ogTitle = mContent;
+      }
     }
+
+    var h1Candidate = (mainContainer && (mainContainer.querySelector("h1.title-detail, h1.title-news, h1.article-title, h1.singular-title, h1.detail-title, h1:not(.site-title):not(.logo):not(.site-logo)") || mainContainer.querySelector("h1, h2, h3"))) || document.querySelector("article h1, h1.title-detail, h1.title-news, h1.article-title, h1:not(.site-title):not(.logo):not(.site-logo), h1");
+    if (h1Candidate && !isNoiseNode(h1Candidate)) {
+      var candText = (h1Candidate.textContent || "").trim();
+      if (candText && !candText.toLowerCase().includes("breaking news english lesson")) {
+        articleTitle = candText;
+      }
+    }
+
+    if (!articleTitle || (ogTitle && articleTitle.length < 15)) {
+      var secHeader = document.querySelector("#link-menu header h3, .section-header header h3, header h3, header h2");
+      if (secHeader) {
+        articleTitle = (secHeader.textContent || "").trim();
+      }
+    }
+
+    if (ogTitle && (!articleTitle || ogTitle.length > articleTitle.length || articleTitle.includes("ESL Lesson Plan"))) {
+      articleTitle = ogTitle;
+    }
+
     if (!articleTitle) {
       articleTitle = (document.title || "").split(/[-|–—]/)[0].trim();
+    }
+
+    // Extract Date / Byline if present
+    var dateCandidate = document.querySelector(".font_small, time, .date, .publish-date, [itemprop='datePublished'], meta[property='article:published_time']");
+    if (dateCandidate) {
+      var dText = dateCandidate.getAttribute("content") || dateCandidate.textContent || "";
+      var dateMatch = dText.match(/(\d{1,2}(?:st|nd|rd|th)?\s+[A-Za-z]+\s+\d{4}|\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4})/);
+      if (dateMatch) {
+        articleDate = dateMatch[1];
+      }
     }
 
     // Detect language of the article (Vietnamese, English, Chinese, Japanese, Russian, etc.)
     readerAudio.articleLang = detectArticleLanguage(articleTitle, mainContainer ? mainContainer.textContent : "");
 
-    // Extract Article Items in Natural Flow (Headings, Paragraphs, Images)
+    // Extract Article Items in Natural Flow (Headings, Paragraphs, Images, Audio, Levels, Sources)
     var articleItems = [];
     var seenImages = new Set();
     var seenVideos = new Set();
+    var seenAudios = new Set();
     var seenTextHashes = new Set();
     var seenCaptionElements = new Set();
     var knownCaptions = new Set();
+
+    // Check reading levels on educational / graded reading sites
+    var readingLevels = extractReadingLevels(mainContainer, articleTitle);
+    if (readingLevels && (readingLevels.current || (readingLevels.levels && readingLevels.levels.length > 0))) {
+      articleItems.push({
+        type: "levels",
+        current: readingLevels.current,
+        levels: readingLevels.levels
+      });
+    }
 
     if (mainContainer) {
       function registerCaption(txt) {
@@ -991,7 +1193,7 @@
         registerCaption(sc.textContent);
       });
 
-      var elements = Array.from(mainContainer.querySelectorAll("h1, h2, h3, h4, h5, p, figure, img, blockquote, cite, footer, ul, ol, table, pre, video, iframe, [data-component='video-block'], [data-e2e='media-player'], .media-player, .video-container, .box_embed_video, [data-video-src]"));
+      var elements = Array.from(mainContainer.querySelectorAll("h1, h2, h3, h4, h5, p, figure, img, audio, blockquote, cite, footer, ul, ol, dl, table, pre, video, iframe, [data-component='video-block'], [data-e2e='media-player'], .media-player, .video-container, .box_embed_video, [data-video-src], [data-audio-src], .audio"));
       var paragraphCount = 0;
 
       for (var i = 0; i < elements.length; i++) {
@@ -1038,7 +1240,15 @@
           break;
         }
 
-        // 2. Figure (check for video first, then image)
+        // 2. Audio Player (e.g. Native audio, narration tracks, podcast)
+        var audioInfo = extractAudioInfo(el);
+        if (audioInfo && !seenAudios.has(audioInfo.src)) {
+          seenAudios.add(audioInfo.src);
+          articleItems.push(audioInfo);
+          continue;
+        }
+
+        // 3. Figure (check for video first, then image)
         if (tag === "figure") {
           var figVidInfo = extractVideoInfo(el);
           var figCapEl = el.querySelector("figcaption, .caption, .desc, .desc_cation");
@@ -1066,7 +1276,7 @@
           continue;
         }
 
-        // 3. Embedded Video / Iframe / Video wrappers
+        // 4. Embedded Video / Iframe / Video wrappers
         var directVidInfo = extractVideoInfo(el);
         if (directVidInfo && !seenVideos.has(directVidInfo.src)) {
           seenVideos.add(directVidInfo.src);
@@ -1074,7 +1284,7 @@
           continue;
         }
 
-        // 4. Standalone Image
+        // 5. Standalone Image
         if (tag === "img") {
           if (!seenImages.has(el)) {
             seenImages.add(el);
@@ -1089,7 +1299,7 @@
           continue;
         }
 
-        // 3.5. Citations and Source Attributions (<cite>, <footer>)
+        // 6. Citations and Source Attributions (<cite>, <footer>)
         if (tag === "cite" || tag === "footer") {
           if (el.closest("nav, aside, header, body > footer, #footer, .site-footer, .comment-box")) continue;
           var citeRaw = (el.textContent || "").replace(/\s+/g, " ").trim();
@@ -1108,7 +1318,26 @@
           }
         }
 
-        // 4. Paragraphs or Blockquotes
+        // 7. Definition List / Glossary (<dl>)
+        if (tag === "dl") {
+          if (el.closest("nav, aside, .footer")) continue;
+          var dts = el.querySelectorAll("dt");
+          var dds = el.querySelectorAll("dd");
+          if (dts.length > 0 && dds.length > 0) {
+            var gItems = [];
+            for (var di = 0; di < dts.length && di < dds.length; di++) {
+              var tTxt = (dts[di].textContent || "").trim();
+              var dTxt = (dds[di].textContent || "").trim();
+              if (tTxt && dTxt) gItems.push({ term: tTxt, def: dTxt });
+            }
+            if (gItems.length > 0) {
+              articleItems.push({ type: "glossary", items: gItems });
+              continue;
+            }
+          }
+        }
+
+        // 8. Paragraphs or Blockquotes
         if (tag === "p" || tag === "blockquote") {
           // Exclude if it is part of a figure or marked as caption
           if (seenCaptionElements.has(el) || el.closest("figure, figcaption, table.tplCaption, .tplCaption, .fig-picture, .desc_cation, .image-container, .img-container, .photo-box")) continue;
@@ -1134,6 +1363,11 @@
           }
 
           var rawPText = (el.textContent || "").replace(/\s+/g, " ").trim();
+
+          // Skip levels prompt if already captured as dedicated interactive level bar
+          if (/^try the same news story at these (easier|harder)? levels/i.test(rawPText) || /^(sources|nguồn|references)[\s:–—\-]?$/i.test(rawPText)) {
+            continue;
+          }
 
           // Check if paragraph is purely a citation line: [Source, Date] or (Source, Date) or — Author
           var isPureCitation = /^\s*(\[[^\]]{3,160}\]|\([^\)]{3,160}\)|[-–—]\s*[^,\n]{3,60}(?:,\s*[^\n]{3,60})?)\s*$/.test(rawPText);
@@ -1191,93 +1425,125 @@
             continue;
           }
 
-          // Check if blockquote contains an inner cite/footer/source attribution
-          if (tag === "blockquote") {
-            var bqCiteEl = el.querySelector("cite, footer, .citation, .quote-source, .attribution, [class*='citation'], [class*='source']");
-            var bqCiteText = bqCiteEl ? (bqCiteEl.textContent || "").trim() : "";
-            var bqText = rawPText;
-            if (bqCiteText && bqText.endsWith(bqCiteText)) {
-              bqText = bqText.slice(0, bqText.length - bqCiteText.length).trim();
+          // Split multi-paragraph blocks divided by <br><br>
+          var pChunks = splitParagraphByBreaks(el);
+          if (pChunks.length === 0) pChunks = [ rawPText ];
+
+          for (var ci = 0; ci < pChunks.length; ci++) {
+            var chunkText = pChunks[ci];
+            if (chunkText.length < 15) continue;
+
+            // Check if callout / tip / note / highlight box
+            var isCallout = el.classList.contains("bg-peach") || el.classList.contains("bg-yellow") || el.classList.contains("callout") || el.classList.contains("info-box") || el.classList.contains("tip") || el.classList.contains("note") || /^(lưu ý|ghi chú|note|tip|mẹo|important|chú ý|takeaways|key points|tóm tắt|make sure you try)[\s:–—\-]/i.test(chunkText);
+            if (isCallout) {
+              var cleanC = cleanParagraphText(chunkText);
+              if (cleanC.length >= 15) {
+                paragraphCount++;
+                articleItems.push({
+                  type: "callout",
+                  text: cleanC,
+                  icon: /make sure|tip|mẹo/i.test(chunkText) ? "💡" : "📌"
+                });
+                continue;
+              }
             }
-            if (bqCiteText && !bqCiteText.startsWith("[")) {
-              bqCiteText = "[" + bqCiteText + "]";
+
+            // Check if blockquote contains an inner cite/footer/source attribution
+            if (tag === "blockquote") {
+              var bqCiteEl = el.querySelector("cite, footer, .citation, .quote-source, .attribution, [class*='citation'], [class*='source']");
+              var bqCiteText = bqCiteEl ? (bqCiteEl.textContent || "").trim() : "";
+              var bqText = chunkText;
+              if (bqCiteText && bqText.endsWith(bqCiteText)) {
+                bqText = bqText.slice(0, bqText.length - bqCiteText.length).trim();
+              }
+              if (bqCiteText && !bqCiteText.startsWith("[")) {
+                bqCiteText = "[" + bqCiteText + "]";
+              }
+              var cleanBq = cleanParagraphText(bqText);
+              if (cleanBq.length >= 12) {
+                paragraphCount++;
+                articleItems.push({
+                  type: "paragraph",
+                  text: cleanBq,
+                  citation: bqCiteText || undefined,
+                  isQuote: true
+                });
+                continue;
+              }
             }
-            var cleanBq = cleanParagraphText(bqText);
-            if (cleanBq.length >= 12) {
-              paragraphCount++;
-              articleItems.push({
-                type: "paragraph",
-                text: cleanBq,
-                citation: bqCiteText || undefined,
-                isQuote: true
-              });
-              continue;
+
+            // Check if paragraph contains quote text followed by a trailing citation in brackets [Source, Date]
+            var trailingCiteMatch = chunkText.match(/^(.*?)\s*(\[[^\]]{3,160}\]|\([A-Za-z0-9][^\)]{3,120}\d{4}[^\)]*\))\s*$/);
+            if (trailingCiteMatch && trailingCiteMatch[1].trim().length >= 15) {
+              var quoteBody = trailingCiteMatch[1].trim();
+              var citeBody = trailingCiteMatch[2].trim();
+              var cleanQuotePart = cleanParagraphText(quoteBody);
+              if (cleanQuotePart.length >= 12) {
+                paragraphCount++;
+                articleItems.push({
+                  type: "paragraph",
+                  text: cleanQuotePart,
+                  citation: citeBody,
+                  isQuote: true
+                });
+                continue;
+              }
             }
+
+            var cleanP = cleanParagraphText(chunkText);
+            if (cleanP.length < 15) continue;
+
+            // Prevent caption text from appearing as a paragraph
+            var lowP = cleanP.toLowerCase();
+            var normP = normalizeTextForComparison(cleanP);
+            var isCapDupe = false;
+            knownCaptions.forEach(function (cap) {
+              if (!cap || cap.length < 15) return;
+              if (lowP === cap || lowP.includes(cap) || cap.includes(lowP)) {
+                isCapDupe = true;
+              }
+              if (normP && (normP === cap || normP.includes(cap) || cap.includes(normP))) {
+                isCapDupe = true;
+              }
+            });
+            if (isCapDupe) continue;
+
+            var hash = cleanP.slice(0, 45);
+            if (seenTextHashes.has(hash)) continue;
+            seenTextHashes.add(hash);
+
+            // Check if paragraph is primarily italic (e.g. <em>...</em> or <i>...</i>)
+            var isItalic = (function () {
+              if (el.tagName.toLowerCase() === "em" || el.tagName.toLowerCase() === "i") return true;
+              var ems = el.querySelectorAll("em, i");
+              if (ems.length === 0) return false;
+              var emLen = 0;
+              ems.forEach(function (e) { emLen += (e.textContent || "").trim().length; });
+              return emLen >= chunkText.length * 0.7;
+            })();
+
+            paragraphCount++;
+            articleItems.push({
+              type: "paragraph",
+              text: cleanP,
+              isQuote: tag === "blockquote" || isItalic,
+              isItalic: isItalic
+            });
           }
-
-          // Check if paragraph contains quote text followed by a trailing citation in brackets [Source, Date]
-          var trailingCiteMatch = rawPText.match(/^(.*?)\s*(\[[^\]]{3,160}\]|\([A-Za-z0-9][^\)]{3,120}\d{4}[^\)]*\))\s*$/);
-          if (trailingCiteMatch && trailingCiteMatch[1].trim().length >= 15) {
-            var quoteBody = trailingCiteMatch[1].trim();
-            var citeBody = trailingCiteMatch[2].trim();
-            var cleanQuotePart = cleanParagraphText(quoteBody);
-            if (cleanQuotePart.length >= 12) {
-              paragraphCount++;
-              articleItems.push({
-                type: "paragraph",
-                text: cleanQuotePart,
-                citation: citeBody,
-                isQuote: true
-              });
-              continue;
-            }
-          }
-
-          var cleanP = cleanParagraphText(rawPText);
-          if (cleanP.length < 15) continue;
-
-          // Prevent caption text from appearing as a paragraph
-          var lowP = cleanP.toLowerCase();
-          var normP = normalizeTextForComparison(cleanP);
-          var isCapDupe = false;
-          knownCaptions.forEach(function (cap) {
-            if (!cap || cap.length < 15) return;
-            if (lowP === cap || lowP.includes(cap) || cap.includes(lowP)) {
-              isCapDupe = true;
-            }
-            if (normP && (normP === cap || normP.includes(cap) || cap.includes(normP))) {
-              isCapDupe = true;
-            }
-          });
-          if (isCapDupe) continue;
-
-          var hash = cleanP.slice(0, 45);
-          if (seenTextHashes.has(hash)) continue;
-          seenTextHashes.add(hash);
-
-          // Check if paragraph is primarily italic (e.g. <em>...</em> or <i>...</i>)
-          var isItalic = (function () {
-            if (el.tagName.toLowerCase() === "em" || el.tagName.toLowerCase() === "i") return true;
-            var ems = el.querySelectorAll("em, i");
-            if (ems.length === 0) return false;
-            var emLen = 0;
-            ems.forEach(function (e) { emLen += (e.textContent || "").trim().length; });
-            return emLen >= rawPText.length * 0.7;
-          })();
-
-          paragraphCount++;
-          articleItems.push({
-            type: "paragraph",
-            text: cleanP,
-            isQuote: tag === "blockquote" || isItalic,
-            isItalic: isItalic
-          });
           continue;
         }
 
-        // 5. Lists (Bullet & Numbered Lists)
+        // 9. Lists (Bullet & Numbered Lists, or Sources & References)
         if (tag === "ul" || tag === "ol") {
           if (el.closest("nav, aside, .menu, .header, .footer, .sidebar, .related, .box-tinlienquan, .tags, .social-share, .share-box, .breadcrumbs, .news-list, .article-list")) continue;
+
+          // Check if list represents external sources / bibliography
+          var sourcesInfo = extractSourcesFromList(el);
+          if (sourcesInfo) {
+            articleItems.push(sourcesInfo);
+            continue;
+          }
+
           var lis = Array.from(el.querySelectorAll(":scope > li"));
           if (lis.length === 0) lis = Array.from(el.querySelectorAll("li"));
           var listItems = [];
@@ -2929,6 +3195,14 @@
 
       sentenceElements.push(h1El);
       contentWrapper.appendChild(h1El);
+
+      if (articleDate) {
+        var metaDateEl = document.createElement("div");
+        metaDateEl.className = "sf-reader-date-byline";
+        metaDateEl.style.cssText = "font-size: 13.5px; color: var(--sf-caption); margin: -16px 0 22px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; gap: 6px;";
+        metaDateEl.textContent = "📅 " + articleDate;
+        contentWrapper.appendChild(metaDateEl);
+      }
     }
 
     function highlightSentence(idx) {
@@ -2984,6 +3258,228 @@
 
     if (articleItems.length > 0) {
       articleItems.forEach(function (item) {
+        if (item.type === "levels") {
+          var levelsBar = document.createElement("div");
+          levelsBar.className = "sf-reader-levels-bar";
+          levelsBar.style.cssText = "margin: 18px 0 28px 0; padding: 12px 16px; border-radius: 10px; background: rgba(56, 189, 248, 0.05); border: 1px solid var(--sf-border); display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 13.5px;";
+
+          var lvlTitle = document.createElement("span");
+          lvlTitle.style.cssText = "font-weight: 700; color: var(--sf-heading); display: inline-flex; align-items: center; gap: 6px;";
+          lvlTitle.textContent = "🎯 " + (window.tContent ? window.tContent("reader_reading_level") : "Reading Level") + ":";
+          levelsBar.appendChild(lvlTitle);
+
+          if (item.current) {
+            var curPill = document.createElement("span");
+            curPill.style.cssText = "padding: 3px 10px; border-radius: 12px; background: #0284c7; color: #ffffff; font-weight: 700; font-size: 12px;";
+            curPill.textContent = item.current;
+            levelsBar.appendChild(curPill);
+          }
+
+          if (item.levels && item.levels.length > 0) {
+            var otherLabel = document.createElement("span");
+            otherLabel.style.cssText = "color: var(--sf-caption); margin-left: 6px; font-size: 12.5px;";
+            otherLabel.textContent = (window.tContent ? window.tContent("reader_other_levels") : "Other levels:");
+            levelsBar.appendChild(otherLabel);
+
+            item.levels.forEach(function (lvl) {
+              var lvlLink = document.createElement("a");
+              lvlLink.href = lvl.url;
+              lvlLink.textContent = lvl.label;
+              lvlLink.style.cssText = "padding: 3px 10px; border-radius: 12px; background: var(--sf-btn-bg); color: var(--sf-btn-text); border: 1px solid var(--sf-border); text-decoration: none; font-weight: 600; font-size: 12px; transition: background 0.15s, border-color 0.15s;";
+              lvlLink.addEventListener("mouseenter", function () {
+                lvlLink.style.borderColor = "#38bdf8";
+                lvlLink.style.background = "rgba(56, 189, 248, 0.15)";
+              });
+              lvlLink.addEventListener("mouseleave", function () {
+                lvlLink.style.borderColor = "var(--sf-border)";
+                lvlLink.style.background = "var(--sf-btn-bg)";
+              });
+              levelsBar.appendChild(lvlLink);
+            });
+          }
+          contentWrapper.appendChild(levelsBar);
+          return;
+        }
+
+        if (item.type === "audio") {
+          var audioCard = document.createElement("div");
+          audioCard.className = "sf-reader-audio-card";
+          audioCard.style.cssText = "margin: 24px 0 32px 0; padding: 16px 20px; border-radius: 12px; background: var(--sf-card-bg); border: 1px solid var(--sf-border); box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);";
+
+          var audioHeader = document.createElement("div");
+          audioHeader.style.cssText = "display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 8px;";
+
+          var audioTitleWrap = document.createElement("div");
+          audioTitleWrap.style.cssText = "display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--sf-heading); font-size: 14.5px;";
+
+          var audioIcon = document.createElement("span");
+          audioIcon.textContent = "🎧";
+          audioTitleWrap.appendChild(audioIcon);
+
+          var audioTitleSpan = document.createElement("span");
+          audioTitleSpan.textContent = item.title;
+          audioTitleWrap.appendChild(audioTitleSpan);
+          audioHeader.appendChild(audioTitleWrap);
+
+          var audioBadge = document.createElement("span");
+          audioBadge.style.cssText = "font-size: 11px; padding: 2px 8px; border-radius: 10px; background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-weight: 600; text-transform: uppercase;";
+          audioBadge.textContent = "Audio Narration";
+          audioHeader.appendChild(audioBadge);
+
+          audioCard.appendChild(audioHeader);
+
+          var audioPlayer = document.createElement("audio");
+          audioPlayer.setAttribute("controls", "true");
+          audioPlayer.setAttribute("preload", "metadata");
+          audioPlayer.setAttribute("src", item.src);
+          audioPlayer.style.cssText = "width: 100%; height: 38px; border-radius: 8px; outline: none;";
+          audioCard.appendChild(audioPlayer);
+
+          // Speed presets (0.75x, 1.0x, 1.25x, 1.5x)
+          var speedWrap = document.createElement("div");
+          speedWrap.style.cssText = "display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 12px; color: var(--sf-caption);";
+
+          var speedLabel = document.createElement("span");
+          speedLabel.textContent = (window.tContent ? window.tContent("reader_listen_speed") : "Speed") + ":";
+          speedWrap.appendChild(speedLabel);
+
+          [0.75, 1.0, 1.25, 1.5].forEach(function (spd) {
+            var sBtn = document.createElement("button");
+            sBtn.type = "button";
+            sBtn.textContent = spd + "x";
+            sBtn.style.cssText = "padding: 2px 8px; border-radius: 6px; border: 1px solid var(--sf-border); background: var(--sf-btn-bg); color: var(--sf-btn-text); cursor: pointer; font-size: 11.5px; transition: background 0.15s;";
+            sBtn.addEventListener("click", function () {
+              audioPlayer.playbackRate = spd;
+            });
+            speedWrap.appendChild(sBtn);
+          });
+          audioCard.appendChild(speedWrap);
+          contentWrapper.appendChild(audioCard);
+          return;
+        }
+
+        if (item.type === "sources") {
+          var srcCard = document.createElement("div");
+          srcCard.className = "sf-reader-sources-card";
+          srcCard.style.cssText = "margin: 32px 0 28px 0; padding: 16px 20px; border-radius: 12px; background: var(--sf-card-bg); border: 1px solid var(--sf-border); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);";
+
+          var srcTitle = document.createElement("div");
+          srcTitle.style.cssText = "font-weight: 700; color: var(--sf-heading); font-size: 14.5px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;";
+          var srcIcon = document.createElement("span");
+          srcIcon.textContent = "📚";
+          srcTitle.appendChild(srcIcon);
+          var srcText = document.createElement("span");
+          srcText.textContent = (window.tContent ? window.tContent("reader_sources_references") : "Sources & References");
+          srcTitle.appendChild(srcText);
+          srcCard.appendChild(srcTitle);
+
+          var srcList = document.createElement("div");
+          srcList.style.cssText = "display: flex; flex-direction: column; gap: 8px;";
+
+          item.items.forEach(function (s) {
+            var sItem = document.createElement("div");
+            sItem.style.cssText = "display: flex; align-items: center; gap: 8px; font-size: 13.5px;";
+
+            var sBadge = document.createElement("span");
+            sBadge.style.cssText = "padding: 2px 8px; border-radius: 6px; background: rgba(56, 189, 248, 0.12); color: #38bdf8; font-weight: 600; font-size: 11.5px;";
+            sBadge.textContent = s.domain || "Web";
+            sItem.appendChild(sBadge);
+
+            var sLink = document.createElement("a");
+            sLink.href = s.url;
+            sLink.target = "_blank";
+            sLink.rel = "noopener noreferrer";
+            sLink.textContent = s.title || s.url;
+            sLink.style.cssText = "color: var(--sf-text); text-decoration: none; word-break: break-all; transition: color 0.15s;";
+            sLink.addEventListener("mouseenter", function () { sLink.style.color = "#38bdf8"; });
+            sLink.addEventListener("mouseleave", function () { sLink.style.color = "var(--sf-text)"; });
+            sItem.appendChild(sLink);
+
+            srcList.appendChild(sItem);
+          });
+          srcCard.appendChild(srcList);
+          contentWrapper.appendChild(srcCard);
+          return;
+        }
+
+        if (item.type === "callout") {
+          var calloutBox = document.createElement("div");
+          calloutBox.className = "sf-reader-callout";
+          calloutBox.style.cssText = "margin: 24px 0 28px 0; padding: 14px 18px; border-radius: 10px; background: rgba(245, 158, 11, 0.08); border-left: 4px solid #f59e0b; border-top: 1px solid var(--sf-border); border-right: 1px solid var(--sf-border); border-bottom: 1px solid var(--sf-border); display: flex; align-items: flex-start; gap: 12px; font-size: inherit; line-height: inherit;";
+
+          var calloutIcon = document.createElement("span");
+          calloutIcon.style.cssText = "font-size: 18px; flex-shrink: 0; line-height: 1.4;";
+          calloutIcon.textContent = item.icon || "💡";
+          calloutBox.appendChild(calloutIcon);
+
+          var calloutText = document.createElement("div");
+          calloutText.style.cssText = "flex-grow: 1; color: var(--sf-text);";
+
+          var cSents = splitTextIntoSentences(item.text);
+          if (cSents.length > 0) {
+            cSents.forEach(function (sText) {
+              var sIdx = readerAudio.sentences.length;
+              readerAudio.sentences.push(sText);
+
+              var sSpan = document.createElement("span");
+              sSpan.className = "sf-reader-sentence";
+              sSpan.style.cssText = "cursor: pointer; padding: 2px 2px; border-radius: 4px; transition: background 0.2s;";
+              sSpan.title = "Click to listen";
+              sSpan.textContent = sText + " ";
+
+              sSpan.addEventListener("mouseenter", function () {
+                if (readerAudio.currentIndex !== sIdx) sSpan.style.background = "rgba(245, 158, 11, 0.18)";
+              });
+              sSpan.addEventListener("mouseleave", function () {
+                if (readerAudio.currentIndex !== sIdx) sSpan.style.background = "transparent";
+              });
+              sSpan.addEventListener("click", function () {
+                playSentenceAt(sIdx);
+                if (readerAudio.isDictationMode) {
+                  openDictationBox(sIdx);
+                }
+              });
+
+              sentenceElements.push(sSpan);
+              calloutText.appendChild(sSpan);
+            });
+          } else {
+            calloutText.textContent = item.text;
+          }
+          calloutBox.appendChild(calloutText);
+          contentWrapper.appendChild(calloutBox);
+          return;
+        }
+
+        if (item.type === "glossary") {
+          var gWrap = document.createElement("div");
+          gWrap.className = "sf-reader-glossary-card";
+          gWrap.style.cssText = "margin: 28px 0; padding: 16px 20px; border-radius: 12px; background: var(--sf-card-bg); border: 1px solid var(--sf-border);";
+
+          var gTitle = document.createElement("div");
+          gTitle.style.cssText = "font-weight: 700; color: var(--sf-heading); font-size: 14.5px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;";
+          gTitle.textContent = "📖 Vocabulary & Glossary";
+          gWrap.appendChild(gTitle);
+
+          var dl = document.createElement("dl");
+          dl.style.cssText = "margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; font-size: 14px;";
+
+          item.items.forEach(function (it) {
+            var dt = document.createElement("dt");
+            dt.style.cssText = "font-weight: 700; color: #38bdf8;";
+            dt.textContent = it.term;
+            dl.appendChild(dt);
+
+            var dd = document.createElement("dd");
+            dd.style.cssText = "margin: 0; color: var(--sf-text);";
+            dd.textContent = it.def;
+            dl.appendChild(dd);
+          });
+          gWrap.appendChild(dl);
+          contentWrapper.appendChild(gWrap);
+          return;
+        }
+
         if (item.type === "image") {
           var figure = document.createElement("figure");
           figure.style.cssText = "margin: 30px auto; max-width: 100%; text-align: center;";
