@@ -129,7 +129,8 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "OS/html/gamble-block.html"
+        "OS/html/gamble-block.html",
+        "OS/assest/doctintuc.gif"
       ],
       "matches": [
         "<all_urls>"

@@ -2293,6 +2293,13 @@ document.getElementById("btn-quick-swap-tabs")?.addEventListener("click", swapDu
       }
     });
   }
+  if (tabsApi?.onRemoved) {
+    tabsApi.onRemoved.addListener((closedTabId) => {
+      if (activeTabId === closedTabId) {
+        activeTabId = null;
+      }
+    });
+  }
   const windowsApi = (typeof browser !== "undefined" && browser.windows) ? browser.windows : (typeof chrome !== "undefined" ? chrome.windows : null);
   if (windowsApi?.onFocusChanged) {
     windowsApi.onFocusChanged.addListener((windowId) => {

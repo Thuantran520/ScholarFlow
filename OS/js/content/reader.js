@@ -17,6 +17,11 @@
   var scrollbarStyleEl = null;
 
   // Reading Preferences State (persisted)
+  
+  var CHIBI_READER_GIF = (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.getURL)
+    ? chrome.runtime.getURL("OS/assest/doctintuc.gif")
+    : ((typeof browser !== "undefined" && browser.runtime && browser.runtime.getURL) ? browser.runtime.getURL("OS/assest/doctintuc.gif") : "");
+
   var readerPrefs = {
     theme: (function () { try { return localStorage.getItem("sf_reader_theme") || "dark"; } catch (e) { return "dark"; } })(),
     fontSize: (function () { try { return parseInt(localStorage.getItem("sf_reader_fontsize"), 10) || 19; } catch (e) { return 19; } })(),
@@ -800,15 +805,25 @@
       font-weight: 800;
       color: ${currentTheme.brandText};
       background: ${currentTheme.brandBg};
-      padding: 4px 8px;
-      border-radius: 6px;
+      padding: 3px 8px 3px 4px;
+      border-radius: 99px;
       border: 1px solid ${currentTheme.brandBorder};
       display: inline-flex;
       align-items: center;
-      gap: 4px;
+      gap: 6px;
       white-space: nowrap;
+      user-select: none;
     `;
-    brandPill.textContent = "🎧 Reader";
+    if (CHIBI_READER_GIF) {
+      var topChibi = document.createElement("img");
+      topChibi.src = CHIBI_READER_GIF;
+      topChibi.alt = "Reading Chibi";
+      topChibi.style.cssText = "width: 22px; height: 22px; border-radius: 50%; object-fit: cover; vertical-align: middle; flex-shrink: 0; box-shadow: 0 1px 4px rgba(0,0,0,0.25);";
+      brandPill.appendChild(topChibi);
+    }
+    var brandTextSpan = document.createElement("span");
+    brandTextSpan.textContent = "Cyber-Reader";
+    brandPill.appendChild(brandTextSpan);
     barLeft.appendChild(brandPill);
 
     var btnPlay = document.createElement("button");
@@ -1078,6 +1093,17 @@
       });
 
       contentWrapper.querySelectorAll("figcaption").forEach(function (fc) { fc.style.color = s.captionColor; });
+      var heroCard = contentWrapper.querySelector("#sf-reader-hero-chibi");
+      if (heroCard) {
+        heroCard.style.background = s.cardBg;
+        heroCard.style.borderColor = s.border;
+        var hImg = heroCard.querySelector("img");
+        if (hImg) hImg.style.borderColor = s.heading;
+        var hTitle = heroCard.querySelector("span:first-child");
+        if (hTitle) hTitle.style.color = s.heading;
+        var hSub = heroCard.querySelector("span:last-child");
+        if (hSub) hSub.style.color = s.captionColor;
+      }
       updateScrollbarStyle(s);
 
       // If dictation dock is currently open, restyle it
@@ -1123,6 +1149,46 @@
     // Main Article Content Container
     var contentWrapper = document.createElement("div");
     contentWrapper.style.cssText = "max-width: 820px; margin: 34px auto; padding: 0 24px 80px 24px; font-family: Georgia, 'Times New Roman', serif; line-height: 1.85;";
+
+    // Reading Assistant Chibi Hero Badge
+    if (CHIBI_READER_GIF) {
+      var heroChibiCard = document.createElement("div");
+      heroChibiCard.id = "sf-reader-hero-chibi";
+      heroChibiCard.style.cssText = `
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+        padding: 6px 16px 6px 8px;
+        background: ${currentTheme.cardBg};
+        border: 1px solid ${currentTheme.border};
+        border-radius: 99px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+        transition: background 0.25s ease, border-color 0.25s ease;
+      `;
+
+      var heroChibiImg = document.createElement("img");
+      heroChibiImg.src = CHIBI_READER_GIF;
+      heroChibiImg.alt = "ScholarFlow Reading Buddy";
+      heroChibiImg.style.cssText = "width: 44px; height: 44px; border-radius: 50%; object-fit: cover; box-shadow: 0 3px 10px rgba(0,0,0,0.25); flex-shrink: 0; border: 2px solid " + currentTheme.heading + ";";
+
+      var heroChibiMeta = document.createElement("div");
+      heroChibiMeta.style.cssText = "display: flex; flex-direction: column; text-align: left;";
+
+      var heroChibiTitle = document.createElement("span");
+      heroChibiTitle.style.cssText = "font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px; font-weight: 800; color: " + currentTheme.heading + "; line-height: 1.25;";
+      heroChibiTitle.textContent = "ScholarFlow Reading Buddy ✨";
+
+      var heroChibiSub = document.createElement("span");
+      heroChibiSub.style.cssText = "font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 11px; color: " + currentTheme.captionColor + "; line-height: 1.3;";
+      heroChibiSub.textContent = window.tContent ? window.tContent("reader_mode_active") : "Trợ lý luyện nghe & đọc báo tiếng Anh";
+
+      heroChibiMeta.appendChild(heroChibiTitle);
+      heroChibiMeta.appendChild(heroChibiSub);
+      heroChibiCard.appendChild(heroChibiImg);
+      heroChibiCard.appendChild(heroChibiMeta);
+      contentWrapper.appendChild(heroChibiCard);
+    }
 
     // Headline
     if (articleTitle) {
@@ -1294,8 +1360,17 @@
       dHeader.style.cssText = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;";
 
       var dTitle = document.createElement("span");
-      dTitle.style.cssText = "font-size: 13.5px; font-weight: 700; color: #38bdf8;";
-      dTitle.textContent = "🎧 " + (window.tContent ? window.tContent("reader_dictation_mode") : "Dictation Practice") + " (" + (sIdx + 1) + "/" + readerAudio.sentences.length + ")";
+      dTitle.style.cssText = "font-size: 13.5px; font-weight: 700; color: #38bdf8; display: inline-flex; align-items: center; gap: 6px;";
+      if (CHIBI_READER_GIF) {
+        var dChibi = document.createElement("img");
+        dChibi.src = CHIBI_READER_GIF;
+        dChibi.alt = "Dictation Buddy";
+        dChibi.style.cssText = "width: 24px; height: 24px; border-radius: 50%; object-fit: cover; vertical-align: middle;";
+        dTitle.appendChild(dChibi);
+      }
+      var dTitleText = document.createElement("span");
+      dTitleText.textContent = (window.tContent ? window.tContent("reader_dictation_mode") : "Dictation Practice") + " (" + (sIdx + 1) + "/" + readerAudio.sentences.length + ")";
+      dTitle.appendChild(dTitleText);
       dHeader.appendChild(dTitle);
 
       var dClose = document.createElement("button");

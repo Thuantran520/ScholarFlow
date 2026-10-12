@@ -18,7 +18,7 @@ async function safeSendTabMessage(tabId, message, timeoutMs) {
       return await new Promise((resolve) => {
         let responded = false;
         try {
-          chrome.tabs.sendMessage(tabId, message, (res) => {
+          const p = chrome.tabs.sendMessage(tabId, message, (res) => {
             responded = true;
             if (chrome.runtime?.lastError) {
               resolve(null);
@@ -26,6 +26,11 @@ async function safeSendTabMessage(tabId, message, timeoutMs) {
               resolve(res || null);
             }
           });
+          if (p && typeof p.catch === "function") {
+            p.catch(() => {
+              if (!responded) resolve(null);
+            });
+          }
         } catch (e) {
           resolve(null);
         }
