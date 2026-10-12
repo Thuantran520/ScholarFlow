@@ -68,7 +68,40 @@ function storRemove(key, cb) {
       p.then(() => { if (!callbackFired && cb) cb(); }).catch(() => { if (!callbackFired && cb) cb(); });
     }
   } catch (e) {
-    try { _storLocal.remove(key, () => { if (cb) cb(); }); } catch(err) { if (cb) cb(); }
+    try { _storLocal.remove(key, () => { if (cb) cb(); }); } catch(err) { if (cb) cb({}); }
   }
 }
 
+// Universal check if a tab exists and is alive (prevents "No tab with id" errors)
+function isTabAlive(tabId) {
+  return new Promise((resolve) => {
+    if (!tabId || typeof tabId !== "number") return resolve(false);
+    try {
+      const api = (typeof chrome !== "undefined" && chrome.tabs) ? chrome.tabs : ((typeof browser !== "undefined" && browser.tabs) ? browser.tabs : null);
+      if (!api || !api.get) return resolve(true);
+      const p = api.get(tabId, (t) => {
+        if (chrome?.runtime?.lastError || !t) resolve(false);
+        else resolve(true);
+      });
+      if (p && typeof p.catch === "function") {
+        p.then((t) => resolve(!!t)).catch(() => resolve(false));
+      }
+    } catch (e) {
+      resolve(false);
+    }
+  });
+}
+
+// Suppress benign unhandled promise rejections from closed or navigating tabs
+if (typeof window !== "undefined") {
+  window.addEventListener("unhandledrejection", function (event) {
+    if (event && event.reason) {
+      const msg = String(event.reason.message || event.reason);
+      if (/No tab with id|Receiving end does not exist|Could not establish connection/i.test(msg)) {
+        if (typeof event.preventDefault === "function") {
+          event.preventDefault();
+        }
+      }
+    }
+  });
+}

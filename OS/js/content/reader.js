@@ -909,17 +909,63 @@
       background: ${currentTheme.selectBg};
       color: ${currentTheme.selectText};
       border: 1px solid ${currentTheme.selectBorder};
-      padding: 5px 6px;
-      border-radius: 6px;
+      padding: 5px 8px;
+      border-radius: 8px;
       font-size: 11.5px;
-      width: 145px;
-      max-width: 145px;
+      font-weight: 500;
+      width: 180px;
+      max-width: 185px;
       outline: none;
       cursor: pointer;
       white-space: nowrap;
       text-overflow: ellipsis;
       overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
     `;
+
+    function detectVoiceGender(voiceName) {
+      if (/\b(female|woman|nu)\b/i.test(voiceName)) return "[Nữ]";
+      if (/\b(male|man|nam)\b/i.test(voiceName)) return "[Nam]";
+      var maleNames = /\b(guy|christopher|eric|ryan|william|liam|prabhat|steffan|david|mark|george|alex|fred|daniel|rishi|tom|thomas|james|oliver|arthur|charles|john|brian|tony|steve|kevin)\b/i;
+      var femaleNames = /\b(jenny|aria|sonia|natasha|clara|neerja|libby|michelle|ana|zira|samantha|victoria|karen|ava|emma|sophia|olivia|charlotte|mia|hazel|susan|catherine|mary|lisa|sarah|emily)\b/i;
+      if (maleNames.test(voiceName)) return "[Nam]";
+      if (femaleNames.test(voiceName)) return "[Nữ]";
+      return "";
+    }
+
+    function formatVoiceLabel(v) {
+      var rawName = v.name || "";
+      var gender = detectVoiceGender(rawName);
+      var isNat = /natural|neural|online/i.test(rawName);
+
+      var cleanName = rawName
+        .replace(/^Microsoft\s+/i, "")
+        .replace(/^Google\s+/i, "Google ")
+        .replace(/Online\s*\(Natural\)\s*-\s*/i, "")
+        .replace(/\s*\(Natural\)/i, "")
+        .replace(/English\s*\([^)]+\)/i, "")
+        .replace(/\s*-\s*English.*$/i, "")
+        .replace(/\s+(Female|Male)$/i, "")
+        .trim();
+
+      var region = "";
+      if (/US|United States/i.test(v.lang) || /United States/i.test(rawName)) region = "US";
+      else if (/GB|UK|United Kingdom/i.test(v.lang) || /United Kingdom/i.test(rawName)) region = "UK";
+      else if (/AU|Australia/i.test(v.lang) || /Australia/i.test(rawName)) region = "AU";
+      else if (/CA|Canada/i.test(v.lang) || /Canada/i.test(rawName)) region = "CA";
+      else if (/IN|India/i.test(v.lang) || /India/i.test(rawName)) region = "IN";
+      else if (v.lang) region = v.lang.split("-")[0].toUpperCase();
+
+      var tag = region ? (isNat ? region + " - Tự nhiên" : region) : (isNat ? "Tự nhiên" : "");
+
+      var parts = [];
+      if (gender) parts.push(gender);
+      if (cleanName) parts.push(cleanName);
+      if (tag) parts.push("(" + tag + ")");
+
+      return parts.join(" ") || rawName;
+    }
 
     function populateVoiceDropdown() {
       while (voiceSelect.firstChild) {
@@ -938,9 +984,7 @@
       voices.forEach(function (v) {
         var opt = document.createElement("option");
         opt.value = v.name;
-        var isNat = /natural|neural|online/i.test(v.name);
-        var label = v.name.replace(/Microsoft |English \(|Online \(Natural\) - /g, "").replace(/\)/g, "");
-        opt.textContent = (isNat ? "✨ " : "🗣️ ") + label + " (" + v.lang + ")";
+        opt.textContent = formatVoiceLabel(v);
         if (defaultChoice && v.name === defaultChoice.name) {
           opt.selected = true;
           readerAudio.voice = v;

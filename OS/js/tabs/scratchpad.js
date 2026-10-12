@@ -2204,36 +2204,42 @@
           }
 
           function sendToggleMsg(isRetry) {
-            browserApi.tabs.sendMessage(activeTab.id, { command: 'toggleScratchpad' }, function (res) {
-              var lastErr = browserApi.runtime && browserApi.runtime.lastError;
-              if (lastErr) {
-                if (!isRetry && browserApi.scripting && browserApi.scripting.executeScript) {
-                  // Content script was not yet injected into this tab (e.g. tab opened before extension load/reload)
-                  browserApi.scripting.executeScript({
-                    target: { tabId: activeTab.id },
-                    files: ['OS/js/content/i18n.js', 'OS/js/content/scratchpad.js']
-                  }).then(function () {
-                    setTimeout(function () {
-                      sendToggleMsg(true);
-                    }, 80);
-                  }).catch(function () {
+            if (!activeTab || !activeTab.id) return;
+            try {
+              var msgP = browserApi.tabs.sendMessage(activeTab.id, { command: 'toggleScratchpad' }, function (res) {
+                var lastErr = browserApi.runtime && browserApi.runtime.lastError;
+                if (lastErr) {
+                  if (!isRetry && browserApi.scripting && browserApi.scripting.executeScript) {
+                    // Content script was not yet injected into this tab (e.g. tab opened before extension load/reload)
+                    browserApi.scripting.executeScript({
+                      target: { tabId: activeTab.id },
+                      files: ['OS/js/content/i18n.js', 'OS/js/content/scratchpad.js']
+                    }).then(function () {
+                      setTimeout(function () {
+                        sendToggleMsg(true);
+                      }, 80);
+                    }).catch(function () {
+                      if (typeof window.showToast === 'function') {
+                        window.showToast(tText('scratchpad_reload_page_toast') || 'Vui lòng F5 tải lại trang web để kết nối cửa sổ nổi!');
+                      }
+                    });
+                  } else {
                     if (typeof window.showToast === 'function') {
                       window.showToast(tText('scratchpad_reload_page_toast') || 'Vui lòng F5 tải lại trang web để kết nối cửa sổ nổi!');
                     }
-                  });
-                } else {
-                  if (typeof window.showToast === 'function') {
-                    window.showToast(tText('scratchpad_reload_page_toast') || 'Vui lòng F5 tải lại trang web để kết nối cửa sổ nổi!');
                   }
+                } else if (typeof window.showToast === 'function') {
+                  var isClosed = (res && res.state === 'closed');
+                  var msg = isClosed ?
+                    (tText('scratchpad_floating_closed') || 'Đã ẩn cửa sổ nổi trên trang') :
+                    (tText('scratchpad_floating_opened') || 'Đã mở cửa sổ ghi chú nổi trên trang!');
+                  window.showToast(msg);
                 }
-              } else if (typeof window.showToast === 'function') {
-                var isClosed = (res && res.state === 'closed');
-                var msg = isClosed ?
-                  (tText('scratchpad_floating_closed') || 'Đã ẩn cửa sổ nổi trên trang') :
-                  (tText('scratchpad_floating_opened') || 'Đã mở cửa sổ ghi chú nổi trên trang!');
-                window.showToast(msg);
+              });
+              if (msgP && typeof msgP.catch === 'function') {
+                msgP.catch(function () {});
               }
-            });
+            } catch (e) {}
           }
 
           sendToggleMsg(false);

@@ -2335,7 +2335,8 @@ function _tabmgrMediaFocusTab(tabId) {
 function _tabmgrMediaCloseTab(tabId) {
   if (!tabId) return;
   try {
-    chrome.tabs.remove(tabId);
+    const p = chrome.tabs.remove(tabId);
+    if (p && typeof p.catch === "function") p.catch(() => {});
     _tabmgrMediaEvRemoved(tabId);
     _tabmgrMediaRenderPlayer();
   } catch (e) {}

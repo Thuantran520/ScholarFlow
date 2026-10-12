@@ -50,6 +50,10 @@ async function safeSendTabMessage(tabId, message, timeoutMs) {
 // attempts (previously it always returned true, silently masking failures).
 async function ensureContentScriptInjected(tabId) {
   if (!tabId) return false;
+  if (typeof isTabAlive === "function") {
+    const alive = await isTabAlive(tabId);
+    if (!alive) return false;
+  }
 
   const pingNow = () => Promise.race([
     safeSendTabMessage(tabId, { action: "PING" }),

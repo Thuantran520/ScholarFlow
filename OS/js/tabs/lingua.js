@@ -668,18 +668,25 @@ onReady(function () {
     readerTriggerBtn.addEventListener("click", () => {
       const bApi = (typeof chrome !== "undefined" && chrome.tabs) ? chrome : (typeof browser !== "undefined" && browser.tabs) ? browser : null;
       if (!bApi) return;
-      if (!bApi) return;
       const getTargetTab = typeof ensureActiveTab === "function"
         ? ensureActiveTab
         : () => new Promise((resolve) => {
             bApi.tabs.query({ active: true, currentWindow: true }, (tabs) => resolve(tabs?.[0] || null));
           });
 
-      getTargetTab().then((activeTab) => {
+      getTargetTab().then(async (activeTab) => {
         if (!activeTab || !activeTab.id) {
           const failMsg = (typeof t === "function" ? t("sec_reader_cannot_inject") : null) || "Không tìm thấy tab trang web nào đang mở để bật Chế độ đọc!";
           if (typeof showToast === "function") showToast(failMsg, "warning");
           return;
+        }
+        if (typeof isTabAlive === "function") {
+          const alive = await isTabAlive(activeTab.id);
+          if (!alive) {
+            const failMsg = (typeof t === "function" ? t("sec_reader_cannot_inject") : null) || "Tab trang web đã đóng hoặc không khả dụng!";
+            if (typeof showToast === "function") showToast(failMsg, "warning");
+            return;
+          }
         }
         const tabUrl = activeTab.url || "";
         if (/^(edge|chrome|about|chrome-extension|moz-extension|view-source):/i.test(tabUrl)) {
@@ -689,8 +696,12 @@ onReady(function () {
           return;
         }
 
-        function triggerReader(isRetry) {
+        async function triggerReader(isRetry) {
           try {
+            if (typeof isTabAlive === "function") {
+              const alive = await isTabAlive(activeTab.id);
+              if (!alive) return;
+            }
             const maybePromise = bApi.tabs.sendMessage(activeTab.id, { command: "toggleReaderMode" }, (response) => {
               const err = bApi.runtime && bApi.runtime.lastError;
               if (err) {
