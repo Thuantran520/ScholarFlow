@@ -131,8 +131,9 @@
       "resources": [
         "OS/html/gamble-block.html",
         "OS/assest/doctintuc.gif",
-        "OS/assest/chibinews/Panadolce/MC nam — Đọc tin tức.png",
-        "OS/assest/chibinews/Panadolce/MC nữ — Đọc tin tức.png"
+        "OS/assest/writting.png",
+        "OS/assest/chibinews/Panadolce/MCnam.png",
+        "OS/assest/chibinews/Panadolce/MCnu.png"
       ],
       "matches": [
         "<all_urls>"

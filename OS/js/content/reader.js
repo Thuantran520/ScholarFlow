@@ -23,12 +23,16 @@
     : ((typeof browser !== "undefined" && browser.runtime && browser.runtime.getURL) ? browser.runtime.getURL("OS/assest/doctintuc.gif") : "");
 
   var MC_NAM_ICON = (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.getURL)
-    ? chrome.runtime.getURL("OS/assest/chibinews/Panadolce/MC nam — Đọc tin tức.png")
-    : ((typeof browser !== "undefined" && browser.runtime && browser.runtime.getURL) ? browser.runtime.getURL("OS/assest/chibinews/Panadolce/MC nam — Đọc tin tức.png") : "");
+    ? chrome.runtime.getURL("OS/assest/chibinews/Panadolce/MCnam.png")
+    : ((typeof browser !== "undefined" && browser.runtime && browser.runtime.getURL) ? browser.runtime.getURL("OS/assest/chibinews/Panadolce/MCnam.png") : "");
 
   var MC_NU_ICON = (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.getURL)
-    ? chrome.runtime.getURL("OS/assest/chibinews/Panadolce/MC nữ — Đọc tin tức.png")
-    : ((typeof browser !== "undefined" && browser.runtime && browser.runtime.getURL) ? browser.runtime.getURL("OS/assest/chibinews/Panadolce/MC nữ — Đọc tin tức.png") : "");
+    ? chrome.runtime.getURL("OS/assest/chibinews/Panadolce/MCnu.png")
+    : ((typeof browser !== "undefined" && browser.runtime && browser.runtime.getURL) ? browser.runtime.getURL("OS/assest/chibinews/Panadolce/MCnu.png") : "");
+
+  var WRITING_ICON = (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.getURL)
+    ? chrome.runtime.getURL("OS/assest/writting.png")
+    : ((typeof browser !== "undefined" && browser.runtime && browser.runtime.getURL) ? browser.runtime.getURL("OS/assest/writting.png") : "");
 
   var readerPrefs = {
     theme: (function () { try { return localStorage.getItem("sf_reader_theme") || "dark"; } catch (e) { return "dark"; } })(),
@@ -597,6 +601,7 @@
     // Extract Article Items in Natural Flow (Headings, Paragraphs, Images)
     var articleItems = [];
     var seenImages = new Set();
+    var seenVideos = new Set();
     var seenTextHashes = new Set();
     var seenCaptionElements = new Set();
     var knownCaptions = new Set();
@@ -635,7 +640,7 @@
         registerCaption(sc.textContent);
       });
 
-      var elements = Array.from(mainContainer.querySelectorAll("h1, h2, h3, h4, h5, p, figure, img, blockquote"));
+      var elements = Array.from(mainContainer.querySelectorAll("h1, h2, h3, h4, h5, p, figure, img, blockquote, video, iframe"));
       var paragraphCount = 0;
 
       for (var i = 0; i < elements.length; i++) {
@@ -708,7 +713,27 @@
           continue;
         }
 
-        // 3. Paragraphs or Blockquotes
+        // 3. Embedded Video or Video Iframe
+        if (tag === "video") {
+          var vSrc = el.getAttribute("src") || (el.querySelector("source") ? el.querySelector("source").getAttribute("src") : "");
+          if (vSrc && !seenVideos.has(vSrc)) {
+            seenVideos.add(vSrc);
+            var poster = el.getAttribute("poster") || "";
+            articleItems.push({ type: "video", src: vSrc, poster: poster });
+          }
+          continue;
+        }
+
+        if (tag === "iframe") {
+          var iSrc = el.getAttribute("src") || el.getAttribute("data-src") || "";
+          if (iSrc && /youtube|vimeo|dailymotion|embed|player|video|stream/i.test(iSrc) && !seenVideos.has(iSrc)) {
+            seenVideos.add(iSrc);
+            articleItems.push({ type: "iframe", src: iSrc });
+          }
+          continue;
+        }
+
+        // 4. Paragraphs or Blockquotes
         if (tag === "p" || tag === "blockquote") {
           // Exclude if it is part of a figure or marked as caption
           if (seenCaptionElements.has(el) || el.closest("figure, figcaption, table.tplCaption, .tplCaption, .fig-picture, .desc_cation, .image-container, .img-container, .photo-box")) continue;
@@ -1232,17 +1257,30 @@
       background: ${currentTheme.btnBg};
       color: ${currentTheme.btnText};
       border: 1px solid ${currentTheme.btnBorder};
-      padding: 6px 11px;
+      padding: 5px 10px;
       border-radius: 6px;
       cursor: pointer;
       font-size: 11.5px;
       font-weight: 600;
       display: inline-flex;
       align-items: center;
-      gap: 4px;
+      gap: 5px;
       white-space: nowrap;
     `;
-    btnDictation.textContent = "✍️ " + (window.tContent ? window.tContent("reader_dictation_mode") : "Dictation");
+    if (WRITING_ICON) {
+      var btnDictIcon = document.createElement("img");
+      btnDictIcon.src = WRITING_ICON;
+      btnDictIcon.alt = "Dictation";
+      btnDictIcon.style.cssText = "width: 15px; height: 15px; object-fit: contain; vertical-align: middle;";
+      btnDictation.appendChild(btnDictIcon);
+    } else {
+      var btnDictEmoji = document.createElement("span");
+      btnDictEmoji.textContent = "✍️";
+      btnDictation.appendChild(btnDictEmoji);
+    }
+    var btnDictText = document.createElement("span");
+    btnDictText.textContent = window.tContent ? window.tContent("reader_dictation_mode") : "Dictation";
+    btnDictation.appendChild(btnDictText);
     barLeft.appendChild(btnDictation);
 
     topBar.appendChild(barLeft);
@@ -1378,10 +1416,10 @@
       }
       updateScrollbarStyle(s);
 
-      // If dictation dock is currently open, restyle it
-      if (dictationBox) {
-        dictationBox.style.background = s.cardBg;
-        dictationBox.style.borderColor = s.border;
+      // If dictation dock is currently open, seamlessly refresh it with new theme palette
+      if (dictationBox && readerAudio.isDictationMode) {
+        var activeIdx = readerAudio.currentIndex >= 0 ? readerAudio.currentIndex : 0;
+        openDictationBox(activeIdx);
       }
     }
 
@@ -1544,6 +1582,34 @@
           return;
         }
 
+        if (item.type === "video") {
+          var vBox = document.createElement("div");
+          vBox.style.cssText = "margin: 28px auto; max-width: 100%; text-align: center;";
+          var vEl = document.createElement("video");
+          vEl.setAttribute("src", item.src);
+          if (item.poster) vEl.setAttribute("poster", item.poster);
+          vEl.setAttribute("controls", "true");
+          vEl.setAttribute("preload", "metadata");
+          vEl.style.cssText = "max-width: 100%; width: 100%; border-radius: 12px; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.08); display: block; margin: 0 auto;";
+          vBox.appendChild(vEl);
+          contentWrapper.appendChild(vBox);
+          return;
+        }
+
+        if (item.type === "iframe") {
+          var ifBox = document.createElement("div");
+          ifBox.style.cssText = "margin: 28px auto; max-width: 100%; position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 12px; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.08);";
+          var ifEl = document.createElement("iframe");
+          ifEl.setAttribute("src", item.src);
+          ifEl.setAttribute("frameborder", "0");
+          ifEl.setAttribute("allowfullscreen", "true");
+          ifEl.setAttribute("allow", "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture");
+          ifEl.style.cssText = "position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;";
+          ifBox.appendChild(ifEl);
+          contentWrapper.appendChild(ifBox);
+          return;
+        }
+
         if (item.type === "heading") {
           var hEl = document.createElement(item.level || "h2");
           hEl.style.cssText = "font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: " + currentTheme.heading + "; font-size: 22px; font-weight: 700; margin: 32px 0 14px 0;";
@@ -1643,12 +1709,18 @@
       dHeader.style.cssText = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;";
 
       var dTitle = document.createElement("span");
-      dTitle.style.cssText = "font-size: 13.5px; font-weight: 700; color: #38bdf8; display: inline-flex; align-items: center; gap: 6px;";
-      if (CHIBI_READER_GIF) {
+      dTitle.style.cssText = `font-size: 13.5px; font-weight: 700; color: ${currentBoxTheme.heading}; display: inline-flex; align-items: center; gap: 6px;`;
+      if (WRITING_ICON) {
+        var dWritingImg = document.createElement("img");
+        dWritingImg.src = WRITING_ICON;
+        dWritingImg.alt = "Dictation Practice";
+        dWritingImg.style.cssText = "width: 20px; height: 20px; object-fit: contain; vertical-align: middle;";
+        dTitle.appendChild(dWritingImg);
+      } else if (CHIBI_READER_GIF) {
         var dChibi = document.createElement("img");
         dChibi.src = CHIBI_READER_GIF;
         dChibi.alt = "Dictation Buddy";
-        dChibi.style.cssText = "width: 24px; height: 24px; border-radius: 50%; object-fit: cover; vertical-align: middle;";
+        dChibi.style.cssText = "width: 22px; height: 22px; border-radius: 50%; object-fit: cover; vertical-align: middle;";
         dTitle.appendChild(dChibi);
       }
       var dTitleText = document.createElement("span");
@@ -1658,7 +1730,7 @@
 
       var dClose = document.createElement("button");
       dClose.type = "button";
-      dClose.style.cssText = "background: none; border: none; color: #94a3b8; font-size: 16px; cursor: pointer;";
+      dClose.style.cssText = `background: none; border: none; color: ${currentBoxTheme.captionColor}; font-size: 16px; cursor: pointer; padding: 2px 6px; line-height: 1;`;
       dClose.textContent = "✕";
       dClose.onclick = function () {
         if (dictationBox) { dictationBox.remove(); dictationBox = null; }
@@ -1673,18 +1745,18 @@
       var readerDictMode = "cloze";
       try { readerDictMode = localStorage.getItem("sf_reader_dict_mode") || "cloze"; } catch (e) {}
 
-      // Mode Selector Bar
+      // Mode Selector Bar (Harmonized with current theme)
       var dModeBar = document.createElement("div");
-      dModeBar.style.cssText = "display: flex; gap: 4px; margin-bottom: 10px; background: rgba(0, 0, 0, 0.28); padding: 3px; border-radius: 7px; border: 1px solid rgba(255, 255, 255, 0.08); width: fit-content;";
+      dModeBar.style.cssText = `display: flex; gap: 4px; margin-bottom: 10px; background: ${currentBoxTheme.brandBg}; padding: 3px; border-radius: 7px; border: 1px solid ${currentBoxTheme.brandBorder}; width: fit-content;`;
 
       var btnModeCloze = document.createElement("button");
       btnModeCloze.type = "button";
-      btnModeCloze.style.cssText = "padding: 3px 10px; font-size: 11px; font-weight: 600; border: none; border-radius: 5px; cursor: pointer; transition: all 0.15s ease; color: " + (readerDictMode === "cloze" ? "#38bdf8" : "#94a3b8") + "; background: " + (readerDictMode === "cloze" ? "rgba(56, 189, 248, 0.2)" : "transparent") + ";";
+      btnModeCloze.style.cssText = `padding: 3px 10px; font-size: 11px; font-weight: 600; border: none; border-radius: 5px; cursor: pointer; transition: all 0.15s ease; color: ${readerDictMode === "cloze" ? (currentBoxTheme.playBtnText || "#ffffff") : currentBoxTheme.captionColor}; background: ${readerDictMode === "cloze" ? currentBoxTheme.dictBtnActiveBg : "transparent"};`;
       btnModeCloze.textContent = "✏️ " + (window.tContent ? window.tContent("reader_dictation_mode_cloze") : "Đục lỗ");
 
       var btnModeFull = document.createElement("button");
       btnModeFull.type = "button";
-      btnModeFull.style.cssText = "padding: 3px 10px; font-size: 11px; font-weight: 600; border: none; border-radius: 5px; cursor: pointer; transition: all 0.15s ease; color: " + (readerDictMode === "full" ? "#38bdf8" : "#94a3b8") + "; background: " + (readerDictMode === "full" ? "rgba(56, 189, 248, 0.2)" : "transparent") + ";";
+      btnModeFull.style.cssText = `padding: 3px 10px; font-size: 11px; font-weight: 600; border: none; border-radius: 5px; cursor: pointer; transition: all 0.15s ease; color: ${readerDictMode === "full" ? (currentBoxTheme.playBtnText || "#ffffff") : currentBoxTheme.captionColor}; background: ${readerDictMode === "full" ? currentBoxTheme.dictBtnActiveBg : "transparent"};`;
       btnModeFull.textContent = "📝 " + (window.tContent ? window.tContent("reader_dictation_mode_full") : "Toàn câu");
 
       dModeBar.appendChild(btnModeCloze);
@@ -1702,21 +1774,21 @@
 
       var btnReplay = document.createElement("button");
       btnReplay.type = "button";
-      btnReplay.style.cssText = "background: #334155; color: #f8fafc; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;";
+      btnReplay.style.cssText = `background: ${currentBoxTheme.playBtnBg}; color: ${currentBoxTheme.playBtnText}; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;`;
       btnReplay.textContent = "🔊 Replay";
       btnReplay.onclick = function () { speakReaderSentence(targetSentence, readerAudio.rate); };
       dLeftBtns.appendChild(btnReplay);
 
       var btnSlow = document.createElement("button");
       btnSlow.type = "button";
-      btnSlow.style.cssText = "background: rgba(30, 41, 59, 0.9); color: #94a3b8; border: 1px solid #475569; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11.5px;";
+      btnSlow.style.cssText = `background: ${currentBoxTheme.btnBg}; color: ${currentBoxTheme.btnText}; border: 1px solid ${currentBoxTheme.btnBorder}; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11.5px;`;
       btnSlow.textContent = "🐢 0.7x";
       btnSlow.onclick = function () { speakReaderSentence(targetSentence, 0.7); };
       dLeftBtns.appendChild(btnSlow);
 
       var btnPrev = document.createElement("button");
       btnPrev.type = "button";
-      btnPrev.style.cssText = "background: rgba(30, 41, 59, 0.9); color: #94a3b8; border: 1px solid #475569; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11.5px;";
+      btnPrev.style.cssText = `background: ${currentBoxTheme.btnBg}; color: ${currentBoxTheme.btnText}; border: 1px solid ${currentBoxTheme.btnBorder}; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11.5px;`;
       btnPrev.textContent = "◀ Prev";
       btnPrev.disabled = sIdx <= 0;
       btnPrev.onclick = function () {
@@ -1729,7 +1801,7 @@
 
       var btnNext = document.createElement("button");
       btnNext.type = "button";
-      btnNext.style.cssText = "background: rgba(30, 41, 59, 0.9); color: #94a3b8; border: 1px solid #475569; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11.5px;";
+      btnNext.style.cssText = `background: ${currentBoxTheme.btnBg}; color: ${currentBoxTheme.btnText}; border: 1px solid ${currentBoxTheme.btnBorder}; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11.5px;`;
       btnNext.textContent = "Next ▶";
       btnNext.disabled = sIdx >= readerAudio.sentences.length - 1;
       btnNext.onclick = function () {
@@ -1751,7 +1823,7 @@
 
       var btnReveal = document.createElement("button");
       btnReveal.type = "button";
-      btnReveal.style.cssText = "background:transparent; color:#94a3b8; border:1px solid #475569; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:12px;";
+      btnReveal.style.cssText = `background: ${currentBoxTheme.btnBg}; color: ${currentBoxTheme.btnText}; border: 1px solid ${currentBoxTheme.btnBorder}; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;`;
       btnReveal.textContent = window.tContent ? window.tContent("reader_dictation_reveal") : "Show Answer";
 
       dRightBtns.appendChild(btnReveal);
@@ -1769,7 +1841,7 @@
 
         if (readerDictMode === "cloze") {
           var dHint = document.createElement("p");
-          dHint.style.cssText = "font-size: 12px; color: #94a3b8; margin: 0 0 8px 0;";
+          dHint.style.cssText = `font-size: 12px; color: ${currentBoxTheme.captionColor}; margin: 0 0 8px 0;`;
           dHint.textContent = window.tContent ? window.tContent("reader_dictation_cloze_hint") : "Listen and fill in the missing words below:";
           dExerciseArea.appendChild(dHint);
 
@@ -1783,7 +1855,7 @@
             padding: 12px 14px;
             font-size: 14.5px;
             line-height: 2.2;
-            box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.15);
           `;
 
           var clozeInputs = [];
@@ -1797,9 +1869,9 @@
               cInp.autocomplete = "off";
               cInp.spellcheck = false;
               cInp.style.cssText = `
-                background: rgba(15, 23, 42, 0.6);
-                color: ${currentBoxTheme.selectText};
-                border: 1.5px solid #0284c7;
+                background: ${currentBoxTheme.bg};
+                color: ${currentBoxTheme.text};
+                border: 1.5px solid ${currentBoxTheme.heading};
                 border-radius: 5px;
                 padding: 2px 6px;
                 font-size: 14px;
@@ -1811,7 +1883,7 @@
                 display: inline-block;
                 vertical-align: baseline;
                 width: ${Math.max(48, tok.answer.length * 10)}px;
-                transition: border-color 0.2s, background-color 0.2s;
+                transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
               `;
 
               var currIdx = clozeInputs.length;
@@ -1851,18 +1923,18 @@
                 correctCount++;
                 inp.style.borderColor = "#10b981";
                 inp.style.background = "rgba(16, 185, 129, 0.15)";
-                inp.style.color = "#34d399";
+                inp.style.color = "#10b981";
                 inp.disabled = true;
               } else {
                 inp.style.borderColor = "#ef4444";
                 inp.style.background = "rgba(239, 68, 68, 0.15)";
-                inp.style.color = "#f87171";
+                inp.style.color = "#ef4444";
 
                 var corr = inp.nextElementSibling;
                 if (!corr || !corr.classList.contains("sf-cloze-corr")) {
                   corr = document.createElement("span");
                   corr.className = "sf-cloze-corr";
-                  corr.style.cssText = "font-size:11px; color:#38bdf8; font-weight:700; margin:0 3px;";
+                  corr.style.cssText = `font-size:11px; color:${currentBoxTheme.heading}; font-weight:700; margin:0 3px;`;
                   inp.parentNode.insertBefore(corr, inp.nextSibling);
                 }
                 corr.textContent = "→ " + origAns;
@@ -1874,7 +1946,7 @@
             dResult.style.display = "block";
             var scoreStr = (window.tContent ? window.tContent("reader_dictation_score", [score, correctCount, total]) : ("Accuracy: " + score + "% (" + correctCount + "/" + total + " words correct)"));
             dResult.textContent = (score >= 80 ? "🎉 " : "💡 ") + scoreStr;
-            dResult.style.color = score >= 80 ? "#34d399" : "#fbbf24";
+            dResult.style.color = score >= 80 ? "#10b981" : "#f59e0b";
             if (score < 100) speakReaderSentence(targetSentence, 0.85);
           }
 
@@ -1883,8 +1955,8 @@
           btnReveal.onclick = function () {
             clozeInputs.forEach(function (inp) {
               inp.value = inp.dataset.answer;
-              inp.style.color = "#fbbf24";
-              inp.style.borderColor = "#f59e0b";
+              inp.style.color = currentBoxTheme.heading;
+              inp.style.borderColor = currentBoxTheme.heading;
             });
           };
 
@@ -1895,7 +1967,7 @@
         } else {
           // Full sentence mode
           var dHintFull = document.createElement("p");
-          dHintFull.style.cssText = "font-size: 12px; color: #94a3b8; margin: 0 0 8px 0;";
+          dHintFull.style.cssText = `font-size: 12px; color: ${currentBoxTheme.captionColor}; margin: 0 0 8px 0;`;
           dHintFull.textContent = window.tContent ? window.tContent("reader_dictation_hint") : "Listen and type what you hear below (Press Enter to Check):";
           dExerciseArea.appendChild(dHintFull);
 
@@ -1906,8 +1978,8 @@
           dInput.style.cssText = `
             width: 100%;
             box-sizing: border-box;
-            background: ${currentBoxTheme.selectBg};
-            color: ${currentBoxTheme.selectText};
+            background: ${currentBoxTheme.bg};
+            color: ${currentBoxTheme.text};
             border: 1px solid ${currentBoxTheme.selectBorder};
             border-radius: 8px;
             padding: 10px 12px;
@@ -1923,7 +1995,7 @@
             dResult.style.display = "block";
             var scoreStr = (window.tContent ? window.tContent("reader_dictation_score", [match.score, match.correct, match.total]) : ("Accuracy: " + match.score + "% (" + match.correct + "/" + match.total + " words correct)"));
             dResult.textContent = (match.score >= 80 ? "🎉 " : "💡 ") + scoreStr;
-            dResult.style.color = match.score >= 80 ? "#34d399" : "#fbbf24";
+            dResult.style.color = match.score >= 80 ? "#10b981" : "#f59e0b";
             if (match.score < 100) speakReaderSentence(targetSentence, 0.85);
           }
 
@@ -1938,7 +2010,7 @@
 
           btnReveal.onclick = function () {
             dResult.style.display = "block";
-            dResult.style.color = "#38bdf8";
+            dResult.style.color = currentBoxTheme.heading;
             dResult.textContent = "📖 Target: " + targetSentence;
           };
 
@@ -1950,9 +2022,9 @@
         if (readerDictMode === "cloze") return;
         readerDictMode = "cloze";
         try { localStorage.setItem("sf_reader_dict_mode", "cloze"); } catch (e) {}
-        btnModeCloze.style.color = "#38bdf8";
-        btnModeCloze.style.background = "rgba(56, 189, 248, 0.2)";
-        btnModeFull.style.color = "#94a3b8";
+        btnModeCloze.style.color = currentBoxTheme.playBtnText || "#ffffff";
+        btnModeCloze.style.background = currentBoxTheme.dictBtnActiveBg;
+        btnModeFull.style.color = currentBoxTheme.captionColor;
         btnModeFull.style.background = "transparent";
         renderDockExercise();
       };
@@ -1961,9 +2033,9 @@
         if (readerDictMode === "full") return;
         readerDictMode = "full";
         try { localStorage.setItem("sf_reader_dict_mode", "full"); } catch (e) {}
-        btnModeFull.style.color = "#38bdf8";
-        btnModeFull.style.background = "rgba(56, 189, 248, 0.2)";
-        btnModeCloze.style.color = "#94a3b8";
+        btnModeFull.style.color = currentBoxTheme.playBtnText || "#ffffff";
+        btnModeFull.style.background = currentBoxTheme.dictBtnActiveBg;
+        btnModeCloze.style.color = currentBoxTheme.captionColor;
         btnModeCloze.style.background = "transparent";
         renderDockExercise();
       };
