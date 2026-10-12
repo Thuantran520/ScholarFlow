@@ -205,17 +205,31 @@
     '.ad', '.ads', '.advert', '.advertisement', '.advertising', '.ad-box', '.ad-wrapper',
     '.banner', '.banner-ad', '.sponsor', '.sponsored',
     '.share', '.sharing', '.social-share', '.share-bar', '.share-buttons', '.social-links',
-    '.related', '.related-posts', '.related-news', '.related-articles', '.box-tin-lien-quan',
-    '.more-news', '.recommend', '.recommendation', '.suggested', '.trending', '.popular',
-    '.tags', '.tag-list', '.article-tags', '.topic-tags',
+    // Related & News List Selectors
+    '.related', '.related-posts', '.related-news', '.related-articles', '.related-stories', '.related-links', '.related-content', '.related-topics', '.related-box', '.related-items', '.related-stream', '.related-section',
+    '.box-tin-lien-quan', '.tin-lien-quan', '.tin-cung-chuyen-muc', '.tin-khac', '.bai-lien-quan', '.cung-chuyen-muc', '.box-category', '.tin-noi-bat', '.tin-moi-nhat',
+    '.more-news', '.more-stories', '.more-articles', '.more-from', '.more-posts', '.more-content', '.more-top-stories',
+    '.read-next', '.read-more-box', '.read-more-list', '.next-stories', '.next-up', '.up-next', '.read-next-container',
+    '.latest-news', '.latest-stories', '.latest-articles', '.latest-posts', '.latest-updates',
+    '.top-stories', '.top-news', '.trending-news', '.trending-articles', '.trending-stories', '.most-read', '.popular-posts', '.popular-news',
+    '.recommend', '.recommendation', '.recommendations', '.suggested', '.suggested-stories', '.suggested-articles', '.recommended', '.recommended-stories', '.recommend-box',
+    '.news-list', '.article-list', '.story-list', '.post-list', '.listing-news', '.list-news', '.news-stream', '.river-news', '.box-listing', '.feed-grid',
+    '.tags', '.tag-list', '.article-tags', '.topic-tags', '.tags-container', '.keywords',
     '.newsletter', '.subscribe-box', '.subscription', '.signup-box',
     '.breadcrumb', '.breadcrumbs',
     '.author-bio', '.author-box', '.about-author', '.author-info',
     '.modal', '.popup', '.dialog', '.overlay',
+    // Outbrain, Taboola, Recommender widgets
+    '.outbrain', '.taboola', '.mgid', '.zemanta', '.content-recommender', '.sponsored-stories',
     'ytd-comments', 'ytd-watch-next-secondary-results-renderer', 'ytd-masthead', 'ytd-live-chat-frame',
     '[role="complementary"]', '[role="navigation"]', '[role="banner"]', '[role="dialog"]',
+    '[data-component="related"]', '[data-component="recommendations"]', '[data-component="top-stories"]',
+    '[data-testid="related-topics"]', '[data-testid="latest-news"]', '[data-testid="most-read"]', '[data-testid="read-next"]',
+    '[aria-label*="related" i]', '[aria-label*="recommend" i]', '[aria-label*="more stories" i]',
     '[aria-hidden="true"]'
   ];
+
+  var RELATED_SECTION_RE = /^(related\s*(stories|articles|news|topics|content|links|posts|coverage)?|more\s*(stories|from|news|articles|posts|content|on\s*this)?|read\s*next|up\s*next|next\s*stories|recommended\s*(for\s*you|stories|articles|reading)?|top\s*stories|most\s*(popular|read|viewed)|latest\s*(news|stories|articles|updates)|don't\s*miss|around\s*the\s*web|trending\s*(now|stories|news)?|you\s*may\s*(also\s*)?like|what\s*to\s*read\s*next|tin\s*(liên\s*quan|cùng\s*chuyên\s*mục|khác|mới\s*nhất|nổi\s*bật|tương\s*tự)|bài\s*(viết\s*)?(liên\s*quan|cùng\s*chủ\s*đề)|xem\s*thêm|đọc\s*(thêm|tiếp)|cùng\s*chuyên\s*mục|có\s*thể\s*bạn\s*quan\s*tâm|tiêu\s*điểm|đáng\s*chú\s*ý|bài\s*cùng\s*tác\s*giả|tin\s*vắn|相关(新闻|文章|推荐)|推荐阅读|最新(资讯|新闻)|猜你喜欢|热门推荐|関連記事|おすすめ記事|最新ニュース|こちらもおすすめ|関連トピック|похожие\s*статьи|читайте\s*также|другие\s*новости|новости\s*по\s*теме)[\s:–—\-]*$/i;
 
   var JUNK_TEXT_RE = /^(advertisement|sponsored|read more|also read|xem thêm|bài viết liên quan|tin liên quan|ảnh:|photo:|nguồn:|theo\s|theo dõi chúng tôi|follow us|sign up|subscribe|all rights reserved|bản quyền thuộc|chia sẻ qua|đăng ký nhận tin|photo courtesy of|reporting by|editing by|image caption:|getty images|ap photo|reuters\/|afp photo|download the app|listen to this article)/i;
 
@@ -228,7 +242,7 @@
     } catch (e) {}
 
     var idClass = ((el.id || "") + " " + (el.className || "")).toLowerCase();
-    if (/(comment|sidebar|related|popular|advert|banner|promo|social|share|cookie|popup|modal|sponsor|recommend|newsletter|breadcrumb|tag-list|author-bio|read-more|also-read|inline-ad)/i.test(idClass)) {
+    if (/(comment|sidebar|related|popular|advert|banner|promo|social|share|cookie|popup|modal|sponsor|recommend|suggested|newsletter|breadcrumb|tag-list|author-bio|read-more|also-read|inline-ad|more-news|more-stories|read-next|latest-news|top-stories|most-read|outbrain|taboola|mgid|news-list|story-list|box-category)/i.test(idClass)) {
       return true;
     }
     return false;
@@ -477,13 +491,34 @@
         }
       });
 
-      var elements = Array.from(mainContainer.querySelectorAll("h1, h2, h3, h4, p, figure, img, blockquote"));
-      elements.forEach(function (el) {
-        if (isNoiseNode(el)) return;
+      var elements = Array.from(mainContainer.querySelectorAll("h1, h2, h3, h4, h5, p, figure, img, blockquote"));
+      var paragraphCount = 0;
+
+      for (var i = 0; i < elements.length; i++) {
+        var el = elements[i];
+        if (isNoiseNode(el)) continue;
 
         var tag = el.tagName.toLowerCase();
 
-        // Figure or Img
+        // 1. Check for end-of-article boundary (Related / More News / Read Next section)
+        if (tag === "h1" || tag === "h2" || tag === "h3" || tag === "h4" || tag === "h5") {
+          var hText = (el.textContent || "").trim();
+          if (paragraphCount >= 2 && RELATED_SECTION_RE.test(hText)) {
+            // Once the main article content is read and a 'Related Stories' / 'More News' header is reached, STOP!
+            break;
+          }
+          if (hText.length > 5 && hText !== articleTitle && !JUNK_TEXT_RE.test(hText)) {
+            articleItems.push({ type: "heading", level: tag, text: hText });
+          }
+          continue;
+        }
+
+        // If after 2+ paragraphs we enter a related/recommendations container, STOP!
+        if (paragraphCount >= 2 && el.closest(".related, .related-posts, .related-news, .related-articles, .related-stories, .more-news, .more-stories, .read-next, .read-next-container, .box-tin-lien-quan, .tin-lien-quan, .box-category, .outbrain, .taboola, .content-recommender")) {
+          break;
+        }
+
+        // 2. Figure or Img
         if (tag === "figure") {
           var img = el.querySelector("img");
           if (img && !seenImages.has(img)) {
@@ -498,7 +533,7 @@
               articleItems.push({ type: "image", src: info.src, caption: cleanCap });
             }
           }
-          return;
+          continue;
         }
 
         if (tag === "img") {
@@ -514,26 +549,20 @@
               articleItems.push({ type: "image", src: imgInfo.src, caption: cleanCap2 });
             }
           }
-          return;
+          continue;
         }
 
-        // Headings
-        if (tag === "h1" || tag === "h2" || tag === "h3" || tag === "h4") {
-          var hText = (el.textContent || "").trim();
-          if (hText.length > 5 && hText !== articleTitle && !JUNK_TEXT_RE.test(hText)) {
-            articleItems.push({ type: "heading", level: tag, text: hText });
-          }
-          return;
-        }
-
-        // Paragraphs or Blockquotes
+        // 3. Paragraphs or Blockquotes
         if (tag === "p" || tag === "blockquote") {
           // Exclude if it is part of a figure or marked as caption
-          if (seenCaptionElements.has(el) || el.closest("figure, figcaption")) return;
+          if (seenCaptionElements.has(el) || el.closest("figure, figcaption")) continue;
+
+          // Exclude if inside list containers (navigation or article listings)
+          if (el.closest("ul, ol, nav, aside, .news-list, .article-list, .story-list, .box-listing, .listing-news")) continue;
 
           var pClass = ((el.className || "") + " " + (el.id || "")).toLowerCase();
           if (/(caption|image-desc|photo-desc|fig-cap|media-credit|pic-caption|art-credit|photocaption)/i.test(pClass)) {
-            return;
+            continue;
           }
 
           var innerImg = el.querySelector("img");
@@ -547,13 +576,28 @@
             }
           }
 
+          // Single-link or link-heavy paragraph filter (typically another article link / clickbait)
+          var link = el.querySelector("a");
+          if (link) {
+            var linkText = (link.textContent || "").trim();
+            var fullElText = (el.textContent || "").trim();
+            if (linkText.length > 0 && (linkText === fullElText || (linkText.length / fullElText.length) > 0.75)) {
+              continue; // Drop paragraphs that are just links to other stories
+            }
+          }
+
           var rawPText = (el.textContent || "").replace(/\s+/g, " ").trim();
-          if (rawPText.length < 20) return;
-          if (getLinkDensity(el) > 0.45) return;
-          if (JUNK_TEXT_RE.test(rawPText)) return;
+          if (rawPText.length < 20) continue;
+          if (getLinkDensity(el) > 0.35) continue;
+          if (JUNK_TEXT_RE.test(rawPText)) continue;
+
+          // Prompt phrase filter (e.g., 'Xem thêm:', 'Read also:')
+          if (/^(xem thêm|đọc thêm|bài viết liên quan|tin liên quan|cùng chủ đề|read also|see also|related|also read|read more|more on this|continue reading)[\s:–—\-]/i.test(rawPText)) {
+            continue;
+          }
 
           var cleanP = cleanParagraphText(rawPText);
-          if (cleanP.length < 15) return;
+          if (cleanP.length < 15) continue;
 
           // Prevent caption text from appearing as a paragraph
           var lowP = cleanP.toLowerCase();
@@ -564,15 +608,16 @@
               isCapDupe = true;
             }
           });
-          if (isCapDupe) return;
+          if (isCapDupe) continue;
 
           var hash = cleanP.slice(0, 45);
-          if (seenTextHashes.has(hash)) return;
+          if (seenTextHashes.has(hash)) continue;
           seenTextHashes.add(hash);
 
+          paragraphCount++;
           articleItems.push({ type: "paragraph", text: cleanP, isQuote: tag === "blockquote" });
         }
-      });
+      }
     }
 
     // Hide original body, show reader container
