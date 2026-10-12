@@ -34,9 +34,18 @@
     ? chrome.runtime.getURL("OS/assest/writting.png")
     : ((typeof browser !== "undefined" && browser.runtime && browser.runtime.getURL) ? browser.runtime.getURL("OS/assest/writting.png") : "");
 
+  var FONT_FAMILIES = {
+    serif: "Georgia, 'Times New Roman', Cambria, serif",
+    sans: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+    bookish: "'Palatino Linotype', 'Book Antiqua', Palatino, serif",
+    verdana: "Verdana, Geneva, sans-serif",
+    mono: "'Consolas', 'Courier New', Courier, monospace"
+  };
+
   var readerPrefs = {
     theme: (function () { try { return localStorage.getItem("sf_reader_theme") || "dark"; } catch (e) { return "dark"; } })(),
     fontSize: (function () { try { return parseInt(localStorage.getItem("sf_reader_fontsize"), 10) || 19; } catch (e) { return 19; } })(),
+    fontFamily: (function () { try { return localStorage.getItem("sf_reader_font_family") || "serif"; } catch (e) { return "serif"; } })(),
     preferredVoice: (function () { try { return localStorage.getItem("sf_reader_preferred_voice") || ""; } catch (e) { return ""; } })()
   };
 
@@ -48,6 +57,7 @@
     isDictationMode: false,
     rate: 0.95,
     voice: null,
+    articleLang: "en",
     activeUtterance: null,
     speechSeq: 0,
     isSwitchingVoice: false,
@@ -192,32 +202,112 @@
     } catch (e) {}
   }
 
-  function getAvailableEnglishVoices() {
+  function detectArticleLanguage(title, sampleContent) {
+    var fullSample = String((title || "") + " " + (sampleContent || "")).slice(0, 1500);
+
+    // 1. Vietnamese detection (diacritics unique to Vietnamese)
+    if (/[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/i.test(fullSample)) {
+      return "vi";
+    }
+
+    // 2. Chinese (CJK characters without Kana)
+    if (/[\u4e00-\u9fa5]/.test(fullSample) && !/[\u3040-\u30ff]/.test(fullSample)) {
+      return "zh";
+    }
+
+    // 3. Japanese (Hiragana/Katakana)
+    if (/[\u3040-\u30ff]/.test(fullSample)) {
+      return "ja";
+    }
+
+    // 4. Russian / Cyrillic
+    if (/[\u0400-\u04ff]/.test(fullSample)) {
+      return "ru";
+    }
+
+    // 5. Korean (Hangul)
+    if (/[\uac00-\ud7af]/.test(fullSample)) {
+      return "ko";
+    }
+
+    // 6. Check document lang attribute
+    var docLang = "";
+    try {
+      docLang = (document.documentElement.lang || (document.body && document.body.getAttribute("lang")) || "").toLowerCase().slice(0, 2);
+    } catch (e) {}
+
+    if (docLang && ["vi", "en", "zh", "ja", "ru", "fr", "de", "es", "ko", "it"].includes(docLang)) {
+      return docLang;
+    }
+
+    return "en";
+  }
+
+  function getVoicesForArticle(targetLang) {
     if (typeof window === "undefined" || !window.speechSynthesis) return [];
     var allVoices = window.speechSynthesis.getVoices() || [];
-    var enVoices = allVoices.filter(function (v) {
-      return v.lang && /^en/i.test(v.lang);
-    });
-    if (enVoices.length === 0) enVoices = allVoices;
+    if (!targetLang) targetLang = readerAudio.articleLang || "en";
+    targetLang = targetLang.toLowerCase();
 
-    // Prioritize Edge Natural / Online neural voices, then high quality voices
-    enVoices.sort(function (a, b) {
+    var matched = allVoices.filter(function (v) {
+      if (!v.lang) return false;
+      var vl = v.lang.toLowerCase();
+      var vn = (v.name || "").toLowerCase();
+
+      if (targetLang === "vi") {
+        return /^vi/i.test(vl) || /vietnam/i.test(vn) || /hoaimy|namminh|linh|an/i.test(vn);
+      }
+      if (targetLang === "zh") {
+        return /^zh/i.test(vl) || /chinese|mandarin|taiwan|cantonese/i.test(vn);
+      }
+      if (targetLang === "ja") {
+        return /^ja/i.test(vl) || /japan/i.test(vn);
+      }
+      if (targetLang === "ru") {
+        return /^ru/i.test(vl) || /russia/i.test(vn);
+      }
+      if (targetLang === "fr") {
+        return /^fr/i.test(vl) || /french/i.test(vn);
+      }
+      if (targetLang === "de") {
+        return /^de/i.test(vl) || /german/i.test(vn);
+      }
+      if (targetLang === "es") {
+        return /^es/i.test(vl) || /spanish/i.test(vn);
+      }
+      if (targetLang === "ko") {
+        return /^ko/i.test(vl) || /korean/i.test(vn);
+      }
+      return vl.startsWith(targetLang);
+    });
+
+    if (matched.length === 0) {
+      matched = allVoices.filter(function (v) {
+        return v.lang && /^en/i.test(v.lang);
+      });
+      if (matched.length === 0) matched = allVoices;
+    }
+
+    // Sort: Natural/Neural/Online voices first, then regional priority
+    matched.sort(function (a, b) {
       var aNat = /natural|neural|online/i.test(a.name) ? 1 : 0;
       var bNat = /natural|neural|online/i.test(b.name) ? 1 : 0;
       if (aNat !== bNat) return bNat - aNat;
 
-      var aUS = /en[-_]US/i.test(a.lang) ? 1 : 0;
-      var bUS = /en[-_]US/i.test(b.lang) ? 1 : 0;
-      if (aUS !== bUS) return bUS - aUS;
+      if (targetLang === "en") {
+        var aUS = /en[-_]US/i.test(a.lang) ? 1 : 0;
+        var bUS = /en[-_]US/i.test(b.lang) ? 1 : 0;
+        if (aUS !== bUS) return bUS - aUS;
+      }
 
       return a.name.localeCompare(b.name);
     });
 
-    return enVoices;
+    return matched;
   }
 
-  function findBestEnglishVoice() {
-    var voices = getAvailableEnglishVoices();
+  function findBestVoiceForArticle(targetLang) {
+    var voices = getVoicesForArticle(targetLang);
     if (voices.length === 0) return null;
 
     if (readerPrefs.preferredVoice) {
@@ -246,7 +336,7 @@
       }
 
       var u = new SpeechSynthesisUtterance(String(text || ""));
-      var v = readerAudio.voice || findBestEnglishVoice();
+      var v = readerAudio.voice || findBestVoiceForArticle(readerAudio.articleLang);
       if (v) u.voice = v;
       u.lang = (v && v.lang) ? v.lang : "en-US";
       u.rate = rate || readerAudio.rate || 0.95;
@@ -647,6 +737,9 @@
     if (!articleTitle) {
       articleTitle = (document.title || "").split(/[-|–—]/)[0].trim();
     }
+
+    // Detect language of the article (Vietnamese, English, Chinese, Japanese, Russian, etc.)
+    readerAudio.articleLang = detectArticleLanguage(articleTitle, mainContainer ? mainContainer.textContent : "");
 
     // Extract Article Items in Natural Flow (Headings, Paragraphs, Images)
     var articleItems = [];
@@ -1093,6 +1186,26 @@
         color: var(--sf-select-text) !important;
         border-color: var(--sf-select-border) !important;
       }
+      #sf-cyber-reader textarea#sf-dictation-input {
+        background: var(--sf-bg) !important;
+        color: var(--sf-text) !important;
+        border-color: var(--sf-select-border) !important;
+        transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+      }
+      #sf-cyber-reader textarea#sf-dictation-input:focus {
+        border-color: var(--sf-heading) !important;
+        box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25) !important;
+      }
+      #sf-cyber-reader textarea#sf-dictation-input.is-correct {
+        border-color: #10b981 !important;
+        background: rgba(16, 185, 129, 0.12) !important;
+        box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.28) !important;
+      }
+      #sf-cyber-reader textarea#sf-dictation-input.is-wrong {
+        border-color: #ef4444 !important;
+        background: rgba(239, 68, 68, 0.12) !important;
+        box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.28) !important;
+      }
 
       /* Container custom scrollbar */
       #sf-cyber-reader::-webkit-scrollbar {
@@ -1302,10 +1415,10 @@
     `;
 
     function detectVoiceGender(voiceName) {
-      if (/\b(female|woman|nu)\b/i.test(voiceName)) return "female";
+      if (/\b(female|woman|nu|nữ)\b/i.test(voiceName)) return "female";
       if (/\b(male|man|nam)\b/i.test(voiceName)) return "male";
-      var maleNames = /\b(guy|christopher|eric|ryan|william|liam|prabhat|steffan|david|mark|george|alex|fred|daniel|rishi|tom|thomas|james|oliver|arthur|charles|john|brian|tony|steve|kevin)\b/i;
-      var femaleNames = /\b(jenny|aria|sonia|natasha|clara|neerja|libby|michelle|ana|zira|samantha|victoria|karen|ava|emma|sophia|olivia|charlotte|mia|hazel|susan|catherine|mary|lisa|sarah|emily)\b/i;
+      var maleNames = /\b(guy|christopher|eric|ryan|william|liam|prabhat|steffan|david|mark|george|alex|fred|daniel|rishi|tom|thomas|james|oliver|arthur|charles|john|brian|tony|steve|kevin|namminh|trung|minh|duc|duy|tuan|hoang|long|huy|khoa|viet)\b/i;
+      var femaleNames = /\b(jenny|aria|sonia|natasha|clara|neerja|libby|michelle|ana|zira|samantha|victoria|karen|ava|emma|sophia|olivia|charlotte|mia|hazel|susan|catherine|mary|lisa|sarah|emily|hoaimy|lan|linh|huong|mai|hoa|thao|ngoc|phuong|trang|an)\b/i;
       if (maleNames.test(voiceName)) return "male";
       if (femaleNames.test(voiceName)) return "female";
       return "";
@@ -1322,11 +1435,14 @@
         .replace(/\s*\(Natural\)/i, "")
         .replace(/English\s*\([^)]+\)/i, "")
         .replace(/\s*-\s*English.*$/i, "")
+        .replace(/Vietnamese\s*\([^)]+\)/i, "")
+        .replace(/\s*-\s*Vietnamese.*$/i, "")
         .replace(/\s+(Female|Male)$/i, "")
         .trim();
 
       var region = "";
-      if (/US|United States/i.test(v.lang) || /United States/i.test(rawName)) region = "US";
+      if (/VN|Vietnam|Vietnamese/i.test(v.lang) || /Vietnam/i.test(rawName)) region = "VN";
+      else if (/US|United States/i.test(v.lang) || /United States/i.test(rawName)) region = "US";
       else if (/GB|UK|United Kingdom/i.test(v.lang) || /United Kingdom/i.test(rawName)) region = "UK";
       else if (/AU|Australia/i.test(v.lang) || /Australia/i.test(rawName)) region = "AU";
       else if (/CA|Canada/i.test(v.lang) || /Canada/i.test(rawName)) region = "CA";
@@ -1346,7 +1462,7 @@
       while (voiceSelect.firstChild) {
         voiceSelect.removeChild(voiceSelect.firstChild);
       }
-      var voices = getAvailableEnglishVoices();
+      var voices = getVoicesForArticle(readerAudio.articleLang);
       if (voices.length === 0) {
         var opt = document.createElement("option");
         opt.value = "";
@@ -1356,7 +1472,7 @@
         return;
       }
 
-      var defaultChoice = findBestEnglishVoice();
+      var defaultChoice = findBestVoiceForArticle(readerAudio.articleLang);
       voices.forEach(function (v) {
         var opt = document.createElement("option");
         opt.value = v.name;
@@ -1380,7 +1496,7 @@
     }
 
     voiceSelect.addEventListener("change", function () {
-      var voices = getAvailableEnglishVoices();
+      var voices = getVoicesForArticle(readerAudio.articleLang);
       var selected = voices.find(function (v) { return v.name === voiceSelect.value; });
       if (selected) {
         readerAudio.voice = selected;
@@ -1536,6 +1652,56 @@
     };
     barRight.appendChild(btnFontInc);
 
+    // Font Family Selector Dropdown
+    var fontSelect = document.createElement("select");
+    fontSelect.id = "sf-reader-font-select";
+    fontSelect.title = "Font Family";
+    fontSelect.style.cssText = `
+      background: ${currentTheme.selectBg};
+      color: ${currentTheme.selectText};
+      border: 1px solid ${currentTheme.selectBorder};
+      padding: 4px 6px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      outline: none;
+      cursor: pointer;
+      width: 105px;
+      height: 28px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    `;
+
+    var fontOptions = [
+      { id: "serif", label: "📖 Serif" },
+      { id: "sans", label: "🔤 Sans-serif" },
+      { id: "bookish", label: "📜 Bookish" },
+      { id: "verdana", label: "👁️ Verdana" },
+      { id: "mono", label: "💻 Monospace" }
+    ];
+
+    fontOptions.forEach(function (fo) {
+      var opt = document.createElement("option");
+      opt.value = fo.id;
+      opt.textContent = fo.label;
+      if (readerPrefs.fontFamily === fo.id) {
+        opt.selected = true;
+      }
+      fontSelect.appendChild(opt);
+    });
+
+    fontSelect.addEventListener("change", function () {
+      var chosenFontKey = fontSelect.value;
+      if (FONT_FAMILIES[chosenFontKey]) {
+        readerPrefs.fontFamily = chosenFontKey;
+        try { localStorage.setItem("sf_reader_font_family", chosenFontKey); } catch (e) {}
+        if (contentWrapper) {
+          contentWrapper.style.fontFamily = FONT_FAMILIES[chosenFontKey];
+        }
+      }
+    });
+
+    barRight.appendChild(fontSelect);
+
     // Theme Switchers
     var themeBtns = [];
     var themes = [
@@ -1577,6 +1743,10 @@
       selSpeed.style.background = s.selectBg;
       selSpeed.style.color = s.selectText;
       selSpeed.style.borderColor = s.selectBorder;
+
+      fontSelect.style.background = s.selectBg;
+      fontSelect.style.color = s.selectText;
+      fontSelect.style.borderColor = s.selectBorder;
 
       if (!readerAudio.isDictationMode) {
         btnDictation.style.background = s.btnBg;
@@ -1663,8 +1833,9 @@
     readerContainer.appendChild(topBar);
 
     // Main Article Content Container
+    var currentFontFamily = FONT_FAMILIES[readerPrefs.fontFamily] || FONT_FAMILIES.serif;
     var contentWrapper = document.createElement("div");
-    contentWrapper.style.cssText = "max-width: 820px; margin: 34px auto; padding: 0 24px 80px 24px; font-family: Georgia, 'Times New Roman', serif; line-height: 1.85;";
+    contentWrapper.style.cssText = `max-width: 820px; margin: 34px auto; padding: 0 24px 80px 24px; font-family: ${currentFontFamily}; line-height: 1.85;`;
 
     // Reading Assistant Chibi Hero Badge
     if (CHIBI_READER_GIF) {
@@ -1706,16 +1877,36 @@
       contentWrapper.appendChild(heroChibiCard);
     }
 
-    // Headline
-    if (articleTitle) {
-      var h1El = document.createElement("h1");
-      h1El.style.cssText = "font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 29px; line-height: 1.35; color: " + currentTheme.title + "; font-weight: 800; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.1);";
-      h1El.textContent = articleTitle;
-      contentWrapper.appendChild(h1El);
-    }
-
     readerAudio.sentences = [];
     var sentenceElements = [];
+
+    // Headline (Clickable & playable sentence #0)
+    if (articleTitle) {
+      var h1Idx = readerAudio.sentences.length;
+      readerAudio.sentences.push(articleTitle);
+
+      var h1El = document.createElement("h1");
+      h1El.className = "sf-reader-sentence";
+      h1El.style.cssText = "font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 29px; line-height: 1.35; color: " + currentTheme.title + "; font-weight: 800; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: pointer; border-radius: 6px; transition: background 0.2s;";
+      h1El.title = "Click to listen";
+      h1El.textContent = articleTitle;
+
+      h1El.addEventListener("mouseenter", function () {
+        if (readerAudio.currentIndex !== h1Idx) h1El.style.background = "rgba(56, 189, 248, 0.12)";
+      });
+      h1El.addEventListener("mouseleave", function () {
+        if (readerAudio.currentIndex !== h1Idx) h1El.style.background = "transparent";
+      });
+      h1El.addEventListener("click", function () {
+        playSentenceAt(h1Idx);
+        if (readerAudio.isDictationMode) {
+          openDictationBox(h1Idx);
+        }
+      });
+
+      sentenceElements.push(h1El);
+      contentWrapper.appendChild(h1El);
+    }
 
     function highlightSentence(idx) {
       sentenceElements.forEach(function (el, i) {
@@ -2217,10 +2408,22 @@
             var scoreStr = (window.tContent ? window.tContent("reader_dictation_score", [match.score, match.correct, match.total]) : ("Accuracy: " + match.score + "% (" + match.correct + "/" + match.total + " words correct)"));
             dResult.textContent = (match.score >= 80 ? "🎉 " : "💡 ") + scoreStr;
             dResult.style.color = match.score >= 80 ? "#10b981" : "#f59e0b";
+            if (match.score >= 80) {
+              dInput.classList.remove("is-wrong");
+              dInput.classList.add("is-correct");
+            } else {
+              dInput.classList.remove("is-correct");
+              dInput.classList.add("is-wrong");
+            }
             if (match.score < 100) speakReaderSentence(targetSentence, 0.85);
           }
 
           btnCheck.onclick = doCheckFull;
+
+          dInput.addEventListener("input", function () {
+            dInput.classList.remove("is-correct");
+            dInput.classList.remove("is-wrong");
+          });
 
           dInput.addEventListener("keydown", function (e) {
             if (e.key === "Enter" && !e.shiftKey) {
@@ -2233,6 +2436,9 @@
             dResult.style.display = "block";
             dResult.style.color = currentBoxTheme.heading;
             dResult.textContent = "📖 Target: " + targetSentence;
+            dInput.value = targetSentence;
+            dInput.classList.remove("is-wrong");
+            dInput.classList.add("is-correct");
           };
 
           setTimeout(function () { dInput.focus(); }, 100);
