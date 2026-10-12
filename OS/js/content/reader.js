@@ -98,6 +98,86 @@
     return { score: score, correct: matched, total: targetWords.length };
   }
 
+  function generateClozeExercise(sentence) {
+    if (!sentence) return { tokens: [], clozeCount: 0 };
+    var rawTokens = String(sentence).split(/(\s+|[.,;:!?'"()[\]{}–—])/).filter(Boolean);
+    var stopWords = new Set([
+      "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with",
+      "is", "are", "was", "were", "be", "been", "being", "it", "its", "he", "she", "they",
+      "his", "her", "their", "that", "this", "these", "those", "from", "as", "by", "into",
+      "had", "has", "have", "do", "does", "did", "not", "so", "up", "out", "if", "than", "too"
+    ]);
+
+    var candidates = [];
+    for (var i = 0; i < rawTokens.length; i++) {
+      var tok = rawTokens[i];
+      if (/^[a-zA-ZÀ-ỹ0-9_]{3,}$/.test(tok) && !stopWords.has(tok.toLowerCase())) {
+        candidates.push({ idx: i, text: tok, clean: tok.toLowerCase() });
+      }
+    }
+
+    if (candidates.length === 0) {
+      for (var j = 0; j < rawTokens.length; j++) {
+        if (/^[a-zA-ZÀ-ỹ0-9_]{3,}$/.test(rawTokens[j])) {
+          candidates.push({ idx: j, text: rawTokens[j], clean: rawTokens[j].toLowerCase() });
+        }
+      }
+    }
+
+    var targetCount = Math.max(1, Math.min(5, Math.round(candidates.length * 0.35)));
+    var chosenIndices = new Set();
+    var step = Math.max(1, Math.floor(candidates.length / targetCount));
+
+    for (var k = 0; k < candidates.length && chosenIndices.size < targetCount; k += step) {
+      chosenIndices.add(candidates[k].idx);
+    }
+    for (var m = 0; m < candidates.length && chosenIndices.size < targetCount; m++) {
+      chosenIndices.add(candidates[m].idx);
+    }
+
+    var tokens = [];
+    var cIdx = 0;
+    for (var n = 0; n < rawTokens.length; n++) {
+      var t = rawTokens[n];
+      if (chosenIndices.has(n)) {
+        tokens.push({
+          isCloze: true,
+          clozeIdx: cIdx++,
+          answer: t,
+          cleanAnswer: t.replace(/[.,;:!?'"()[\]{}–—]/g, "").trim().toLowerCase()
+        });
+      } else {
+        tokens.push({ isCloze: false, text: t });
+      }
+    }
+
+    return { tokens: tokens, clozeCount: cIdx };
+  }
+
+  function syncLinguaError(wrongWord, correctWord) {
+    if (!wrongWord || !correctWord) return;
+    try {
+      var api = (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) ? chrome.storage.local : null;
+      if (!api) return;
+      var errKey = "sf_lingua_errors_en";
+      api.get(errKey, function (res) {
+        var errs = (res && res[errKey]) || { counts: {}, samples: [] };
+        if (!errs.counts) errs.counts = {};
+        if (!Array.isArray(errs.samples)) errs.samples = [];
+        var cat = "spelling";
+        errs.counts[cat] = (errs.counts[cat] || 0) + 1;
+        var d = new Date();
+        var dateStr = d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
+        if (errs.samples.length < 200) {
+          errs.samples.push({ cat: cat, o: wrongWord, f: correctWord, n: "reader_dictation", d: dateStr });
+        }
+        var saveObj = {};
+        saveObj[errKey] = errs;
+        api.set(saveObj, function () {});
+      });
+    } catch (e) {}
+  }
+
   function getAvailableEnglishVoices() {
     if (typeof window === "undefined" || !window.speechSynthesis) return [];
     var allVoices = window.speechSynthesis.getVoices() || [];
@@ -1465,8 +1545,19 @@
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       `;
 
+      // Sync current sentence to recent sentences storage for Lingua tab practice
+      try {
+        var recents = JSON.parse(localStorage.getItem("sf_reader_recent_sentences") || "[]");
+        if (!Array.isArray(recents)) recents = [];
+        if (!recents.includes(targetSentence)) {
+          recents.unshift(targetSentence);
+          if (recents.length > 30) recents.pop();
+          localStorage.setItem("sf_reader_recent_sentences", JSON.stringify(recents));
+        }
+      } catch (e) {}
+
       var dHeader = document.createElement("div");
-      dHeader.style.cssText = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;";
+      dHeader.style.cssText = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;";
 
       var dTitle = document.createElement("span");
       dTitle.style.cssText = "font-size: 13.5px; font-weight: 700; color: #38bdf8; display: inline-flex; align-items: center; gap: 6px;";
@@ -1496,29 +1587,29 @@
       dHeader.appendChild(dClose);
       dictationBox.appendChild(dHeader);
 
-      var dHint = document.createElement("p");
-      dHint.style.cssText = "font-size: 12px; color: #94a3b8; margin: 0 0 8px 0;";
-      dHint.textContent = window.tContent ? window.tContent("reader_dictation_hint") : "Listen and type what you hear below (Press Enter to Check):";
-      dictationBox.appendChild(dHint);
+      var readerDictMode = "cloze";
+      try { readerDictMode = localStorage.getItem("sf_reader_dict_mode") || "cloze"; } catch (e) {}
 
-      var dInput = document.createElement("textarea");
-      dInput.id = "sf-dictation-input";
-      dInput.rows = 3;
-      dInput.placeholder = "Type sentence here...";
-      dInput.style.cssText = `
-        width: 100%;
-        box-sizing: border-box;
-        background: ${currentBoxTheme.selectBg};
-        color: ${currentBoxTheme.selectText};
-        border: 1px solid ${currentBoxTheme.selectBorder};
-        border-radius: 8px;
-        padding: 10px 12px;
-        font-size: 14.5px;
-        font-family: inherit;
-        resize: vertical;
-        outline: none;
-      `;
-      dictationBox.appendChild(dInput);
+      // Mode Selector Bar
+      var dModeBar = document.createElement("div");
+      dModeBar.style.cssText = "display: flex; gap: 4px; margin-bottom: 10px; background: rgba(0, 0, 0, 0.28); padding: 3px; border-radius: 7px; border: 1px solid rgba(255, 255, 255, 0.08); width: fit-content;";
+
+      var btnModeCloze = document.createElement("button");
+      btnModeCloze.type = "button";
+      btnModeCloze.style.cssText = "padding: 3px 10px; font-size: 11px; font-weight: 600; border: none; border-radius: 5px; cursor: pointer; transition: all 0.15s ease; color: " + (readerDictMode === "cloze" ? "#38bdf8" : "#94a3b8") + "; background: " + (readerDictMode === "cloze" ? "rgba(56, 189, 248, 0.2)" : "transparent") + ";";
+      btnModeCloze.textContent = "✏️ " + (window.tContent ? window.tContent("reader_dictation_mode_cloze") : "Đục lỗ");
+
+      var btnModeFull = document.createElement("button");
+      btnModeFull.type = "button";
+      btnModeFull.style.cssText = "padding: 3px 10px; font-size: 11px; font-weight: 600; border: none; border-radius: 5px; cursor: pointer; transition: all 0.15s ease; color: " + (readerDictMode === "full" ? "#38bdf8" : "#94a3b8") + "; background: " + (readerDictMode === "full" ? "rgba(56, 189, 248, 0.2)" : "transparent") + ";";
+      btnModeFull.textContent = "📝 " + (window.tContent ? window.tContent("reader_dictation_mode_full") : "Toàn câu");
+
+      dModeBar.appendChild(btnModeCloze);
+      dModeBar.appendChild(btnModeFull);
+      dictationBox.appendChild(dModeBar);
+
+      var dExerciseArea = document.createElement("div");
+      dictationBox.appendChild(dExerciseArea);
 
       var dActions = document.createElement("div");
       dActions.style.cssText = "display: flex; justify-content: space-between; align-items: center; margin-top: 10px; flex-wrap: wrap; gap: 8px;";
@@ -1565,7 +1656,6 @@
         }
       };
       dLeftBtns.appendChild(btnNext);
-
       dActions.appendChild(dLeftBtns);
 
       var dRightBtns = document.createElement("div");
@@ -1584,38 +1674,219 @@
       dRightBtns.appendChild(btnReveal);
       dRightBtns.appendChild(btnCheck);
       dActions.appendChild(dRightBtns);
-
       dictationBox.appendChild(dActions);
 
       var dResult = document.createElement("div");
       dResult.style.cssText = "margin-top:12px; font-size:13px; display:none;";
       dictationBox.appendChild(dResult);
 
-      function doCheck() {
-        var match = calculateWordMatch(targetSentence, dInput.value);
-        dResult.style.display = "block";
-        var scoreStr = (window.tContent ? window.tContent("reader_dictation_score", [match.score, match.correct, match.total]) : ("Accuracy: " + match.score + "% (" + match.correct + "/" + match.total + " words correct)"));
-        dResult.textContent = (match.score >= 80 ? "🎉 " : "💡 ") + scoreStr;
-        dResult.style.color = match.score >= 80 ? "#34d399" : "#fbbf24";
+      function renderDockExercise() {
+        dExerciseArea.textContent = "";
+        dResult.style.display = "none";
+
+        if (readerDictMode === "cloze") {
+          var dHint = document.createElement("p");
+          dHint.style.cssText = "font-size: 12px; color: #94a3b8; margin: 0 0 8px 0;";
+          dHint.textContent = window.tContent ? window.tContent("reader_dictation_cloze_hint") : "Listen and fill in the missing words below:";
+          dExerciseArea.appendChild(dHint);
+
+          var clozeData = generateClozeExercise(targetSentence);
+          var box = document.createElement("div");
+          box.style.cssText = `
+            background: ${currentBoxTheme.selectBg};
+            color: ${currentBoxTheme.selectText};
+            border: 1px solid ${currentBoxTheme.selectBorder};
+            border-radius: 8px;
+            padding: 12px 14px;
+            font-size: 14.5px;
+            line-height: 2.2;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+          `;
+
+          var clozeInputs = [];
+          clozeData.tokens.forEach(function (tok) {
+            if (tok.isCloze) {
+              var cInp = document.createElement("input");
+              cInp.type = "text";
+              cInp.dataset.answer = tok.answer;
+              cInp.dataset.cleanAnswer = tok.cleanAnswer;
+              cInp.placeholder = "___";
+              cInp.autocomplete = "off";
+              cInp.spellcheck = false;
+              cInp.style.cssText = `
+                background: rgba(15, 23, 42, 0.6);
+                color: ${currentBoxTheme.selectText};
+                border: 1.5px solid #0284c7;
+                border-radius: 5px;
+                padding: 2px 6px;
+                font-size: 14px;
+                font-family: inherit;
+                font-weight: 600;
+                text-align: center;
+                outline: none;
+                margin: 0 3px;
+                display: inline-block;
+                vertical-align: baseline;
+                width: ${Math.max(48, tok.answer.length * 10)}px;
+                transition: border-color 0.2s, background-color 0.2s;
+              `;
+
+              var currIdx = clozeInputs.length;
+              clozeInputs.push(cInp);
+
+              cInp.addEventListener("keydown", function (e) {
+                if (e.key === "Enter" || e.key === "Tab") {
+                  if (currIdx < clozeInputs.length - 1) {
+                    e.preventDefault();
+                    clozeInputs[currIdx + 1].focus();
+                  } else if (e.key === "Enter") {
+                    e.preventDefault();
+                    doCheckCloze();
+                  }
+                }
+              });
+
+              box.appendChild(cInp);
+            } else {
+              var sSpan = document.createElement("span");
+              sSpan.textContent = tok.text;
+              box.appendChild(sSpan);
+            }
+          });
+
+          dExerciseArea.appendChild(box);
+
+          function doCheckCloze() {
+            var correctCount = 0;
+            var total = clozeInputs.length;
+            clozeInputs.forEach(function (inp) {
+              var userVal = inp.value.trim().toLowerCase().replace(/[.,;:!?'"()[\]{}–—]/g, "");
+              var cleanAns = inp.dataset.cleanAnswer;
+              var origAns = inp.dataset.answer;
+
+              if (userVal === cleanAns && cleanAns.length > 0) {
+                correctCount++;
+                inp.style.borderColor = "#10b981";
+                inp.style.background = "rgba(16, 185, 129, 0.15)";
+                inp.style.color = "#34d399";
+                inp.disabled = true;
+              } else {
+                inp.style.borderColor = "#ef4444";
+                inp.style.background = "rgba(239, 68, 68, 0.15)";
+                inp.style.color = "#f87171";
+
+                var corr = inp.nextElementSibling;
+                if (!corr || !corr.classList.contains("sf-cloze-corr")) {
+                  corr = document.createElement("span");
+                  corr.className = "sf-cloze-corr";
+                  corr.style.cssText = "font-size:11px; color:#38bdf8; font-weight:700; margin:0 3px;";
+                  inp.parentNode.insertBefore(corr, inp.nextSibling);
+                }
+                corr.textContent = "→ " + origAns;
+                syncLinguaError(inp.value.trim() || "Ø", origAns);
+              }
+            });
+
+            var score = total ? Math.round((correctCount / total) * 100) : 0;
+            dResult.style.display = "block";
+            var scoreStr = (window.tContent ? window.tContent("reader_dictation_score", [score, correctCount, total]) : ("Accuracy: " + score + "% (" + correctCount + "/" + total + " words correct)"));
+            dResult.textContent = (score >= 80 ? "🎉 " : "💡 ") + scoreStr;
+            dResult.style.color = score >= 80 ? "#34d399" : "#fbbf24";
+            if (score < 100) speakReaderSentence(targetSentence, 0.85);
+          }
+
+          btnCheck.onclick = doCheckCloze;
+
+          btnReveal.onclick = function () {
+            clozeInputs.forEach(function (inp) {
+              inp.value = inp.dataset.answer;
+              inp.style.color = "#fbbf24";
+              inp.style.borderColor = "#f59e0b";
+            });
+          };
+
+          setTimeout(function () {
+            if (clozeInputs[0]) clozeInputs[0].focus();
+          }, 100);
+
+        } else {
+          // Full sentence mode
+          var dHintFull = document.createElement("p");
+          dHintFull.style.cssText = "font-size: 12px; color: #94a3b8; margin: 0 0 8px 0;";
+          dHintFull.textContent = window.tContent ? window.tContent("reader_dictation_hint") : "Listen and type what you hear below (Press Enter to Check):";
+          dExerciseArea.appendChild(dHintFull);
+
+          var dInput = document.createElement("textarea");
+          dInput.id = "sf-dictation-input";
+          dInput.rows = 3;
+          dInput.placeholder = "Type sentence here...";
+          dInput.style.cssText = `
+            width: 100%;
+            box-sizing: border-box;
+            background: ${currentBoxTheme.selectBg};
+            color: ${currentBoxTheme.selectText};
+            border: 1px solid ${currentBoxTheme.selectBorder};
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 14.5px;
+            font-family: inherit;
+            resize: vertical;
+            outline: none;
+          `;
+          dExerciseArea.appendChild(dInput);
+
+          function doCheckFull() {
+            var match = calculateWordMatch(targetSentence, dInput.value);
+            dResult.style.display = "block";
+            var scoreStr = (window.tContent ? window.tContent("reader_dictation_score", [match.score, match.correct, match.total]) : ("Accuracy: " + match.score + "% (" + match.correct + "/" + match.total + " words correct)"));
+            dResult.textContent = (match.score >= 80 ? "🎉 " : "💡 ") + scoreStr;
+            dResult.style.color = match.score >= 80 ? "#34d399" : "#fbbf24";
+            if (match.score < 100) speakReaderSentence(targetSentence, 0.85);
+          }
+
+          btnCheck.onclick = doCheckFull;
+
+          dInput.addEventListener("keydown", function (e) {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              doCheckFull();
+            }
+          });
+
+          btnReveal.onclick = function () {
+            dResult.style.display = "block";
+            dResult.style.color = "#38bdf8";
+            dResult.textContent = "📖 Target: " + targetSentence;
+          };
+
+          setTimeout(function () { dInput.focus(); }, 100);
+        }
       }
 
-      btnCheck.onclick = doCheck;
-
-      dInput.addEventListener("keydown", function (e) {
-        if (e.key === "Enter" && !e.shiftKey) {
-          e.preventDefault();
-          doCheck();
-        }
-      });
-
-      btnReveal.onclick = function () {
-        dResult.style.display = "block";
-        dResult.style.color = "#38bdf8";
-        dResult.textContent = "📖 Target: " + targetSentence;
+      btnModeCloze.onclick = function () {
+        if (readerDictMode === "cloze") return;
+        readerDictMode = "cloze";
+        try { localStorage.setItem("sf_reader_dict_mode", "cloze"); } catch (e) {}
+        btnModeCloze.style.color = "#38bdf8";
+        btnModeCloze.style.background = "rgba(56, 189, 248, 0.2)";
+        btnModeFull.style.color = "#94a3b8";
+        btnModeFull.style.background = "transparent";
+        renderDockExercise();
       };
 
+      btnModeFull.onclick = function () {
+        if (readerDictMode === "full") return;
+        readerDictMode = "full";
+        try { localStorage.setItem("sf_reader_dict_mode", "full"); } catch (e) {}
+        btnModeFull.style.color = "#38bdf8";
+        btnModeFull.style.background = "rgba(56, 189, 248, 0.2)";
+        btnModeCloze.style.color = "#94a3b8";
+        btnModeCloze.style.background = "transparent";
+        renderDockExercise();
+      };
+
+      renderDockExercise();
       readerContainer.appendChild(dictationBox);
-      setTimeout(function () { dInput.focus(); }, 100);
     }
 
     btnDictation.addEventListener("click", function () {

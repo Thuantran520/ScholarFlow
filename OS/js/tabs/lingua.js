@@ -468,8 +468,71 @@ function lingWordDiff(target, typed) {
   const okc = cells.filter(function (x) { return x.ok; }).length;
   return { cells: cells, score: T.length ? Math.round(okc * 100 / T.length) : 0 };
 }
+function lngGenerateCloze(sentence) {
+  if (!sentence) return { tokens: [], clozeCount: 0 };
+  const rawTokens = String(sentence).split(/(\s+|[.,;:!?'"()[\]{}–—])/).filter(Boolean);
+  const stopWords = new Set([
+    "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with",
+    "is", "are", "was", "were", "be", "been", "being", "it", "its", "he", "she", "they",
+    "his", "her", "their", "that", "this", "these", "those", "from", "as", "by", "into",
+    "had", "has", "have", "do", "does", "did", "not", "so", "up", "out", "if", "than", "too"
+  ]);
+
+  const candidates = [];
+  for (let i = 0; i < rawTokens.length; i++) {
+    const tok = rawTokens[i];
+    if (/^[a-zA-ZÀ-ỹ0-9_]{3,}$/.test(tok) && !stopWords.has(tok.toLowerCase())) {
+      candidates.push({ idx: i, text: tok, clean: tok.toLowerCase() });
+    }
+  }
+
+  if (candidates.length === 0) {
+    for (let i = 0; i < rawTokens.length; i++) {
+      if (/^[a-zA-ZÀ-ỹ0-9_]{3,}$/.test(rawTokens[i])) {
+        candidates.push({ idx: i, text: rawTokens[i], clean: rawTokens[i].toLowerCase() });
+      }
+    }
+  }
+
+  const targetCount = Math.max(1, Math.min(5, Math.round(candidates.length * 0.35)));
+  const chosenIndices = new Set();
+  const step = Math.max(1, Math.floor(candidates.length / targetCount));
+
+  for (let i = 0; i < candidates.length && chosenIndices.size < targetCount; i += step) {
+    chosenIndices.add(candidates[i].idx);
+  }
+  for (let i = 0; i < candidates.length && chosenIndices.size < targetCount; i++) {
+    chosenIndices.add(candidates[i].idx);
+  }
+
+  const tokens = [];
+  let cIdx = 0;
+  for (let i = 0; i < rawTokens.length; i++) {
+    const t = rawTokens[i];
+    if (chosenIndices.has(i)) {
+      tokens.push({
+        isCloze: true,
+        clozeIdx: cIdx++,
+        answer: t,
+        cleanAnswer: t.replace(/[.,;:!?'"()[\]{}–—]/g, "").trim().toLowerCase()
+      });
+    } else {
+      tokens.push({ isCloze: false, text: t });
+    }
+  }
+
+  return { tokens: tokens, clozeCount: cIdx };
+}
+
 function lngDictSentence() {
   const pool = [];
+  try {
+    const recents = JSON.parse(localStorage.getItem("sf_reader_recent_sentences") || "[]");
+    if (Array.isArray(recents)) {
+      recents.forEach(function (s) { if (s && typeof s === "string" && s.length > 20) pool.push(s.trim()); });
+    }
+  } catch (e) {}
+
   lngCards.forEach(function (c) {
     if (c.kind === "gram" && c.fixed) pool.push(c.fixed);
     else if (c.cloze && c.cloze.q) pool.push(String(c.cloze.q).replace("____", c.cloze.a || c.term || "___"));
@@ -478,62 +541,292 @@ function lngDictSentence() {
   (LINGUA_BANK[lngProfile.target] || []).forEach(function (it) { pool.push(it.ex.replace("____", it.w)); });
   return pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
 }
+
 function lngDictStart(slow) {
   const area = document.getElementById("lng-dict-area");
   if (!area) return;
   const sentence = lngDictSentence();
   if (!sentence) { showToast(t("lng_dict_none")); return; }
   area.textContent = "";
+
+  let dictMode = "cloze";
+  try { dictMode = localStorage.getItem("sf_lng_dict_mode") || "cloze"; } catch (e) {}
+
+  // Mode segmented switch
+  const modeBar = document.createElement("div");
+  modeBar.className = "lng-dict-mode-bar";
+
+  const btnModeCloze = document.createElement("button");
+  btnModeCloze.type = "button";
+  btnModeCloze.className = "lng-dict-mode-btn" + (dictMode === "cloze" ? " active" : "");
+  btnModeCloze.textContent = "✏️ " + (t("lng_dict_mode_cloze") || "Điền đục lỗ");
+
+  const btnModeFull = document.createElement("button");
+  btnModeFull.type = "button";
+  btnModeFull.className = "lng-dict-mode-btn" + (dictMode === "full" ? " active" : "");
+  btnModeFull.textContent = "📝 " + (t("lng_dict_mode_full") || "Chép toàn câu");
+
+  modeBar.appendChild(btnModeCloze);
+  modeBar.appendChild(btnModeFull);
+  area.appendChild(modeBar);
+
+  // Transport and control actions
   const row = document.createElement("div");
   row.className = "us-row-wrap";
+  row.style.marginBottom = "8px";
+
   const play = document.createElement("button");
-  play.type = "button"; play.className = "btn-text-small";
-  play.textContent = (slow ? "\ud83d\udca2 " : "\ud83d\udd0a ") + t("lng_dict_play");
-  play.addEventListener("click", function () { lngSpeak(sentence, slow ? 0.6 : 0.95); });
+  play.type = "button";
+  play.className = "btn-text-small";
+  play.textContent = (slow ? "🐢 " : "🔊 ") + t("lng_dict_play");
+  play.addEventListener("click", function () { lngSpeak(sentence, slow ? 0.65 : 0.95); });
+
+  const slowBtn = document.createElement("button");
+  slowBtn.type = "button";
+  slowBtn.className = "btn-text-small";
+  slowBtn.textContent = "🐢 0.65x";
+  slowBtn.addEventListener("click", function () { lngSpeak(sentence, 0.65); });
+
   const next = document.createElement("button");
-  next.type = "button"; next.className = "btn-text-small"; next.textContent = t("lng_dict_again");
+  next.type = "button";
+  next.className = "btn-text-small";
+  next.textContent = "🔄 " + t("lng_dict_again");
   next.addEventListener("click", function () { lngDictStart(slow); });
-  row.appendChild(play); row.appendChild(next);
+
+  const btnReveal = document.createElement("button");
+  btnReveal.type = "button";
+  btnReveal.className = "btn-text-small";
+  btnReveal.textContent = "👁️ " + (t("lng_dict_reveal") || "Xem đáp án");
+
+  row.appendChild(play);
+  row.appendChild(slowBtn);
+  row.appendChild(btnReveal);
+  row.appendChild(next);
   area.appendChild(row);
-  const inp = document.createElement("input");
-  inp.type = "text"; inp.className = "form-control";
-  inp.placeholder = t("lng_dict_ph");
-  inp.className = "form-control lng-eval-input";
-  area.appendChild(inp);
+
+  const exerciseContainer = document.createElement("div");
+  area.appendChild(exerciseContainer);
+
+  const bottomActions = document.createElement("div");
+  bottomActions.style.cssText = "display:flex; justify-content:space-between; align-items:center; margin-top:8px;";
+
   const chk = document.createElement("button");
-  chk.type = "button"; chk.className = "btn-text-small"; chk.textContent = t("lng_check");
-  const finish = function () {
-    const d = lingWordDiff(sentence, inp.value);
-    const out = document.createElement("div");
-    out.className = "lng-eval-out";
-    d.cells.forEach(function (c) {
-      const w = document.createElement("span");
-      w.className = "lng-eval-word";
-      w.style.color = c.ok ? "#34d399" : "#f87171";
-      w.style.background = c.ok ? "rgba(52,211,153,0.08)" : "rgba(248,113,113,0.1)";
-      w.textContent = c.ok ? c.w : (c.extra ? (c.got + "\u2715") : (c.got || "\u2205") + "\u2192" + c.w);
-      if (!c.ok && !c.extra) {
-        const cat = "spelling";
-        lngErrors.counts[cat] = (lngErrors.counts[cat] || 0) + 1;
-        if (lngErrors.samples.length < 200) lngErrors.samples.push({ cat: cat, o: c.got, f: c.w, n: "dictation", d: lngToday() });
+  chk.type = "button";
+  chk.className = "btn-text-small";
+  chk.style.cssText = "background:rgba(16,185,129,0.15); border-color:rgba(16,185,129,0.5); color:#34d399; font-weight:700;";
+  chk.textContent = "✓ " + t("lng_check");
+
+  bottomActions.appendChild(chk);
+  area.appendChild(bottomActions);
+
+  const resultArea = document.createElement("div");
+  resultArea.style.marginTop = "8px";
+  area.appendChild(resultArea);
+
+  function renderExercise() {
+    exerciseContainer.textContent = "";
+    resultArea.textContent = "";
+
+    if (dictMode === "cloze") {
+      const hint = document.createElement("p");
+      hint.style.cssText = "font-size:11px; color:#94a3b8; margin:0 0 6px 0;";
+      hint.textContent = t("lng_dict_cloze_hint") || "Nghe và điền các từ còn thiếu vào ô trống:";
+      exerciseContainer.appendChild(hint);
+
+      const clozeData = lngGenerateCloze(sentence);
+      const box = document.createElement("div");
+      box.className = "lng-cloze-box";
+
+      const inputs = [];
+      clozeData.tokens.forEach(function (tok) {
+        if (tok.isCloze) {
+          const inp = document.createElement("input");
+          inp.type = "text";
+          inp.className = "lng-cloze-input";
+          inp.dataset.answer = tok.answer;
+          inp.dataset.cleanAnswer = tok.cleanAnswer;
+          inp.placeholder = "___";
+          inp.autocomplete = "off";
+          inp.spellcheck = false;
+          inp.style.width = Math.max(45, tok.answer.length * 9.5) + "px";
+
+          const currentIdx = inputs.length;
+          inputs.push(inp);
+
+          inp.addEventListener("keydown", function (e) {
+            if (e.key === "Enter" || e.key === "Tab") {
+              if (currentIdx < inputs.length - 1) {
+                e.preventDefault();
+                inputs[currentIdx + 1].focus();
+              } else if (e.key === "Enter") {
+                e.preventDefault();
+                finishCloze();
+              }
+            }
+          });
+
+          box.appendChild(inp);
+        } else {
+          const sp = document.createElement("span");
+          sp.textContent = tok.text;
+          box.appendChild(sp);
+        }
+      });
+
+      exerciseContainer.appendChild(box);
+
+      function finishCloze() {
+        resultArea.textContent = "";
+        let correctCount = 0;
+        const total = inputs.length;
+
+        inputs.forEach(function (inp) {
+          const userVal = inp.value.trim().toLowerCase().replace(/[.,;:!?'"()[\]{}–—]/g, "");
+          const cleanAns = inp.dataset.cleanAnswer;
+          const origAns = inp.dataset.answer;
+
+          if (userVal === cleanAns && cleanAns.length > 0) {
+            correctCount++;
+            inp.classList.remove("is-wrong");
+            inp.classList.add("is-correct");
+            inp.disabled = true;
+          } else {
+            inp.classList.remove("is-correct");
+            inp.classList.add("is-wrong");
+
+            let corrSpan = inp.nextElementSibling;
+            if (!corrSpan || !corrSpan.classList.contains("lng-cloze-correction")) {
+              corrSpan = document.createElement("span");
+              corrSpan.className = "lng-cloze-correction";
+              inp.parentNode.insertBefore(corrSpan, inp.nextSibling);
+            }
+            corrSpan.textContent = "→ " + origAns;
+
+            const cat = "spelling";
+            lngErrors.counts[cat] = (lngErrors.counts[cat] || 0) + 1;
+            if (lngErrors.samples.length < 200) {
+              lngErrors.samples.push({ cat: cat, o: inp.value.trim() || "Ø", f: origAns, n: "cloze_dictation", d: lngToday() });
+            }
+          }
+        });
+
+        const score = total ? Math.round(correctCount * 100 / total) : 0;
+        const sc = document.createElement("div");
+        sc.className = "lng-eval-score";
+        sc.style.color = score >= 80 ? "#34d399" : "#fbbf24";
+        sc.textContent = (score >= 80 ? "🎉 " : "💡 ") + t("lng_dict_score").replace("{0}", String(score)) + " (" + correctCount + "/" + total + ")";
+        resultArea.appendChild(sc);
+
+        lngSave("errors", lngErrors);
+        lngRenderErr();
+        lngAddLog();
+        lngRenderStats();
+        if (score < 100) lngSpeak(sentence, 0.85);
       }
-      out.appendChild(w);
-    });
-    const sc = document.createElement("div");
-    sc.className = "lng-eval-score";
-    sc.style.color = d.score >= 80 ? "#34d399" : "#fbbf24";
-    sc.textContent = t("lng_dict_score").replace("{0}", String(d.score)) + " \u00b7 " + d.cells.length + " \u00b7";
-    out.appendChild(sc);
-    area.appendChild(out);
-    lngSave("errors", lngErrors); lngRenderErr();
-    lngAddLog(); lngRenderStats();
-    if (d.score < 100) lngSpeak(sentence, 0.85);
+
+      chk.onclick = finishCloze;
+
+      btnReveal.onclick = function () {
+        inputs.forEach(function (inp) {
+          inp.value = inp.dataset.answer;
+          inp.style.color = "#fbbf24";
+          inp.style.borderColor = "#f59e0b";
+        });
+      };
+
+      setTimeout(function () {
+        if (inputs[0]) inputs[0].focus();
+        lngSpeak(sentence, slow ? 0.65 : 0.95);
+      }, 350);
+
+    } else {
+      // Full dictation mode
+      const inp = document.createElement("textarea");
+      inp.rows = 3;
+      inp.className = "form-control lng-eval-input";
+      inp.placeholder = t("lng_dict_ph") || "Gõ lại toàn bộ những gì bạn nghe thấy...";
+      exerciseContainer.appendChild(inp);
+
+      function finishFull() {
+        resultArea.textContent = "";
+        const d = lingWordDiff(sentence, inp.value);
+        const out = document.createElement("div");
+        out.className = "lng-eval-out";
+
+        d.cells.forEach(function (c) {
+          const w = document.createElement("span");
+          w.className = "lng-eval-word";
+          w.style.color = c.ok ? "#34d399" : "#f87171";
+          w.style.background = c.ok ? "rgba(52,211,153,0.08)" : "rgba(248,113,113,0.1)";
+          w.textContent = c.ok ? c.w : (c.extra ? (c.got + "✕") : (c.got || "∅") + "→" + c.w);
+          if (!c.ok && !c.extra) {
+            const cat = "spelling";
+            lngErrors.counts[cat] = (lngErrors.counts[cat] || 0) + 1;
+            if (lngErrors.samples.length < 200) {
+              lngErrors.samples.push({ cat: cat, o: c.got, f: c.w, n: "full_dictation", d: lngToday() });
+            }
+          }
+          out.appendChild(w);
+        });
+
+        const sc = document.createElement("div");
+        sc.className = "lng-eval-score";
+        sc.style.color = d.score >= 80 ? "#34d399" : "#fbbf24";
+        sc.textContent = (d.score >= 80 ? "🎉 " : "💡 ") + t("lng_dict_score").replace("{0}", String(d.score)) + " · " + d.cells.length + " từ";
+        out.appendChild(sc);
+        resultArea.appendChild(out);
+
+        lngSave("errors", lngErrors);
+        lngRenderErr();
+        lngAddLog();
+        lngRenderStats();
+        if (d.score < 100) lngSpeak(sentence, 0.85);
+      }
+
+      chk.onclick = finishFull;
+      inp.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          finishFull();
+        }
+      });
+
+      btnReveal.onclick = function () {
+        resultArea.textContent = "";
+        const rev = document.createElement("div");
+        rev.style.cssText = "color:#38bdf8; font-size:12px; margin-top:4px;";
+        rev.textContent = "📖 " + sentence;
+        resultArea.appendChild(rev);
+      };
+
+      setTimeout(function () {
+        inp.focus();
+        lngSpeak(sentence, slow ? 0.65 : 0.95);
+      }, 350);
+    }
+  }
+
+  btnModeCloze.onclick = function () {
+    if (dictMode === "cloze") return;
+    dictMode = "cloze";
+    try { localStorage.setItem("sf_lng_dict_mode", "cloze"); } catch (e) {}
+    btnModeCloze.classList.add("active");
+    btnModeFull.classList.remove("active");
+    renderExercise();
   };
-  chk.addEventListener("click", finish);
-  inp.addEventListener("keydown", function (e) { if (e.key === "Enter") finish(); });
-  area.appendChild(chk);
-  setTimeout(function () { inp.focus(); lngSpeak(sentence, slow ? 0.6 : 0.95); }, 350);
+
+  btnModeFull.onclick = function () {
+    if (dictMode === "full") return;
+    dictMode = "full";
+    try { localStorage.setItem("sf_lng_dict_mode", "full"); } catch (e) {}
+    btnModeFull.classList.add("active");
+    btnModeCloze.classList.remove("active");
+    renderExercise();
+  };
+
+  renderExercise();
 }
+
 
 // ── P1b: linking-words rewriter ───────────────────────────────────────────
 function lngLinkPrompt(text) {
