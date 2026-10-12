@@ -129,8 +129,9 @@
     return { score: score, correct: matched, total: targetWords.length };
   }
 
-  function generateClozeExercise(sentence) {
+  function generateClozeExercise(sentence, difficulty) {
     if (!sentence) return { tokens: [], clozeCount: 0 };
+    difficulty = difficulty || "medium";
     var cleanSentence = cleanVietnameseAccents ? cleanVietnameseAccents(sentence) : String(sentence);
     var rawTokens = cleanSentence.match(/[\p{L}\p{N}]+|[^\p{L}\p{N}\s]+|\s+/gu) || [];
     var stopWords = new Set([
@@ -152,7 +153,8 @@
       if (/^\p{N}+$/u.test(tok)) continue; // numbers are not listening practice
       if (!/^\p{L}{2,}$/u.test(tok)) continue;
       if (stopWords.has(tok.toLowerCase())) continue;
-      if (/^\p{Lu}/u.test(tok)) continue; // proper nouns / sentence start: poor listening targets
+      // In hard mode allow capitalized words (except at the very start of the sentence) for compound proper/title terms
+      if (/^\p{Lu}/u.test(tok) && (difficulty !== "hard" || w === 0)) continue;
       candidates.push({ idx: i, word: w, text: tok, clean: tok.toLowerCase() });
     }
 
@@ -167,27 +169,101 @@
       }
     }
 
-    var targetCount = Math.max(1, Math.min(5, Math.round(candidates.length * 0.35)));
+    var targetCount;
+    if (difficulty === "easy") {
+      targetCount = Math.max(1, Math.min(3, Math.round(candidates.length * 0.22)));
+    } else if (difficulty === "hard") {
+      targetCount = Math.max(2, Math.min(10, Math.round(candidates.length * 0.55)));
+    } else {
+      targetCount = Math.max(1, Math.min(5, Math.round(candidates.length * 0.35)));
+    }
+
     var chosenIndices = new Set();
     var chosenWords = new Set();
-    function canPick(c) {
-      // Never blank two neighbouring words: the learner needs context to anchor.
-      return !chosenWords.has(c.word - 1) && !chosenWords.has(c.word + 1) && !chosenWords.has(c.word);
-    }
     function pick(c) {
       chosenIndices.add(c.idx);
       chosenWords.add(c.word);
     }
-    // Spread blanks evenly across the sentence.
-    for (var k = 0; k < targetCount && candidates.length; k++) {
-      var pos = Math.min(candidates.length - 1, Math.floor((k + 0.5) * candidates.length / targetCount));
-      if (canPick(candidates[pos])) { pick(candidates[pos]); continue; }
-      for (var d = 1; d < candidates.length; d++) {
-        var a = candidates[pos + d], b = candidates[pos - d];
-        if (a && canPick(a)) { pick(a); break; }
-        if (b && canPick(b)) { pick(b); break; }
+
+    function areConsecutive(c1, c2) {
+      if (!c1 || !c2) return false;
+      if (c2.word !== c1.word + 1) return false;
+      for (var t = c1.idx + 1; t < c2.idx; t++) {
+        if (!/^\s+$/.test(rawTokens[t])) return false;
+      }
+      return true;
+    }
+
+    if (difficulty === "hard") {
+      // Advanced Hard mode: blank more words and group by phrases / compound words
+      var phrasePairs = [];
+      for (var p = 0; p < candidates.length - 1; p++) {
+        if (areConsecutive(candidates[p], candidates[p + 1])) {
+          phrasePairs.push([candidates[p], candidates[p + 1]]);
+        }
+      }
+
+      // Select phrase pairs first across the sentence
+      var desiredPairs = Math.min(phrasePairs.length, Math.floor(targetCount / 2));
+      if (desiredPairs > 0) {
+        var pairStep = phrasePairs.length / desiredPairs;
+        for (var pi = 0; pi < desiredPairs; pi++) {
+          var pPos = Math.min(phrasePairs.length - 1, Math.floor(pi * pairStep));
+          var candidatePair = phrasePairs[pPos];
+          if (!chosenWords.has(candidatePair[0].word) && !chosenWords.has(candidatePair[1].word)) {
+            pick(candidatePair[0]);
+            pick(candidatePair[1]);
+          }
+        }
+      }
+
+      // Fill remaining target count with additional single candidates
+      for (var hi = 0; hi < candidates.length && chosenIndices.size < targetCount; hi++) {
+        var hc = candidates[hi];
+        if (!chosenWords.has(hc.word)) {
+          pick(hc);
+        }
+      }
+    } else if (difficulty === "easy") {
+      // Easy mode: fewer blanks, wider spacing between blanks (distance >= 2 words)
+      function canPickEasy(c) {
+        return !chosenWords.has(c.word - 2) && !chosenWords.has(c.word - 1) &&
+               !chosenWords.has(c.word) &&
+               !chosenWords.has(c.word + 1) && !chosenWords.has(c.word + 2);
+      }
+      for (var ke = 0; ke < targetCount && candidates.length; ke++) {
+        var posE = Math.min(candidates.length - 1, Math.floor((ke + 0.5) * candidates.length / targetCount));
+        if (canPickEasy(candidates[posE])) { pick(candidates[posE]); continue; }
+        for (var de = 1; de < candidates.length; de++) {
+          var ae = candidates[posE + de], be = candidates[posE - de];
+          if (ae && canPickEasy(ae)) { pick(ae); break; }
+          if (be && canPickEasy(be)) { pick(be); break; }
+        }
+      }
+      if (chosenIndices.size < targetCount) {
+        function canPickNorm(c) {
+          return !chosenWords.has(c.word - 1) && !chosenWords.has(c.word + 1) && !chosenWords.has(c.word);
+        }
+        for (var kf = 0; kf < candidates.length && chosenIndices.size < targetCount; kf++) {
+          if (canPickNorm(candidates[kf])) pick(candidates[kf]);
+        }
+      }
+    } else {
+      // Medium mode (default): isolated blanks spaced evenly
+      function canPickMed(c) {
+        return !chosenWords.has(c.word - 1) && !chosenWords.has(c.word + 1) && !chosenWords.has(c.word);
+      }
+      for (var km = 0; km < targetCount && candidates.length; km++) {
+        var posM = Math.min(candidates.length - 1, Math.floor((km + 0.5) * candidates.length / targetCount));
+        if (canPickMed(candidates[posM])) { pick(candidates[posM]); continue; }
+        for (var dm = 1; dm < candidates.length; dm++) {
+          var am = candidates[posM + dm], bm = candidates[posM - dm];
+          if (am && canPickMed(am)) { pick(am); break; }
+          if (bm && canPickMed(bm)) { pick(bm); break; }
+        }
       }
     }
+
     if (chosenIndices.size === 0 && candidates.length) pick(candidates[0]);
 
     var tokens = [];
@@ -2497,6 +2573,7 @@
       dClose.style.cssText = `background: none; border: none; color: ${currentBoxTheme.captionColor}; font-size: 16px; cursor: pointer; padding: 2px 6px; line-height: 1;`;
       dClose.textContent = "✕";
       dClose.onclick = function () {
+        if (autoNextTimer) { clearTimeout(autoNextTimer); autoNextTimer = null; }
         if (dictationBox) { dictationBox.remove(); dictationBox = null; }
         readerAudio.isDictationMode = false;
         btnDictation.style.background = currentTheme.btnBg;
@@ -2506,12 +2583,23 @@
       dHeader.appendChild(dClose);
       dictationBox.appendChild(dHeader);
 
+      var autoNextTimer = null;
+      var isClozeComplete = false;
+      var isFullComplete = false;
+
       var readerDictMode = "cloze";
       try { readerDictMode = localStorage.getItem("sf_reader_dict_mode") || "cloze"; } catch (e) {}
 
+      var readerDictDifficulty = "medium";
+      try { readerDictDifficulty = localStorage.getItem("sf_reader_dict_difficulty") || "medium"; } catch (e) {}
+
+      // Top Toolbar: Mode Selector + Difficulty Selector
+      var dToolbarsRow = document.createElement("div");
+      dToolbarsRow.style.cssText = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;";
+
       // Mode Selector Bar (Harmonized with current theme)
       var dModeBar = document.createElement("div");
-      dModeBar.style.cssText = `display: flex; gap: 4px; margin-bottom: 10px; background: ${currentBoxTheme.brandBg}; padding: 3px; border-radius: 7px; border: 1px solid ${currentBoxTheme.brandBorder}; width: fit-content;`;
+      dModeBar.style.cssText = `display: flex; gap: 4px; background: ${currentBoxTheme.brandBg}; padding: 3px; border-radius: 7px; border: 1px solid ${currentBoxTheme.brandBorder}; width: fit-content;`;
 
       var btnModeCloze = document.createElement("button");
       btnModeCloze.type = "button";
@@ -2525,7 +2613,69 @@
 
       dModeBar.appendChild(btnModeCloze);
       dModeBar.appendChild(btnModeFull);
-      dictationBox.appendChild(dModeBar);
+      dToolbarsRow.appendChild(dModeBar);
+
+      // Difficulty Selector Bar
+      var dDiffBar = document.createElement("div");
+      dDiffBar.style.cssText = `display: ${readerDictMode === "cloze" ? "flex" : "none"}; gap: 3px; align-items: center; background: ${currentBoxTheme.brandBg}; padding: 3px; border-radius: 7px; border: 1px solid ${currentBoxTheme.brandBorder}; width: fit-content;`;
+
+      var btnDiffEasy = document.createElement("button");
+      btnDiffEasy.type = "button";
+      btnDiffEasy.style.cssText = `padding: 3px 9px; font-size: 11px; font-weight: 600; border: none; border-radius: 5px; cursor: pointer; transition: all 0.15s ease;`;
+      btnDiffEasy.textContent = "🟢 " + (window.tContent ? window.tContent("reader_dictation_diff_easy") : "Dễ");
+
+      var btnDiffMedium = document.createElement("button");
+      btnDiffMedium.type = "button";
+      btnDiffMedium.style.cssText = `padding: 3px 9px; font-size: 11px; font-weight: 600; border: none; border-radius: 5px; cursor: pointer; transition: all 0.15s ease;`;
+      btnDiffMedium.textContent = "🟡 " + (window.tContent ? window.tContent("reader_dictation_diff_medium") : "Vừa");
+
+      var btnDiffHard = document.createElement("button");
+      btnDiffHard.type = "button";
+      btnDiffHard.style.cssText = `padding: 3px 9px; font-size: 11px; font-weight: 600; border: none; border-radius: 5px; cursor: pointer; transition: all 0.15s ease;`;
+      btnDiffHard.textContent = "🔴 " + (window.tContent ? window.tContent("reader_dictation_diff_hard") : "Khó");
+
+      function updateDiffButtons() {
+        var diffList = [
+          { btn: btnDiffEasy, val: "easy" },
+          { btn: btnDiffMedium, val: "medium" },
+          { btn: btnDiffHard, val: "hard" }
+        ];
+        diffList.forEach(function (item) {
+          var isAct = (readerDictDifficulty === item.val);
+          item.btn.style.color = isAct ? (currentBoxTheme.playBtnText || "#ffffff") : currentBoxTheme.captionColor;
+          item.btn.style.background = isAct ? currentBoxTheme.dictBtnActiveBg : "transparent";
+        });
+      }
+      updateDiffButtons();
+
+      btnDiffEasy.onclick = function () {
+        if (readerDictDifficulty === "easy") return;
+        readerDictDifficulty = "easy";
+        try { localStorage.setItem("sf_reader_dict_difficulty", "easy"); } catch (e) {}
+        updateDiffButtons();
+        renderDockExercise();
+      };
+      btnDiffMedium.onclick = function () {
+        if (readerDictDifficulty === "medium") return;
+        readerDictDifficulty = "medium";
+        try { localStorage.setItem("sf_reader_dict_difficulty", "medium"); } catch (e) {}
+        updateDiffButtons();
+        renderDockExercise();
+      };
+      btnDiffHard.onclick = function () {
+        if (readerDictDifficulty === "hard") return;
+        readerDictDifficulty = "hard";
+        try { localStorage.setItem("sf_reader_dict_difficulty", "hard"); } catch (e) {}
+        updateDiffButtons();
+        renderDockExercise();
+      };
+
+      dDiffBar.appendChild(btnDiffEasy);
+      dDiffBar.appendChild(btnDiffMedium);
+      dDiffBar.appendChild(btnDiffHard);
+      dToolbarsRow.appendChild(dDiffBar);
+
+      dictationBox.appendChild(dToolbarsRow);
 
       var dExerciseArea = document.createElement("div");
       dictationBox.appendChild(dExerciseArea);
@@ -2556,6 +2706,7 @@
       btnPrev.textContent = "◀ Prev";
       btnPrev.disabled = sIdx <= 0;
       btnPrev.onclick = function () {
+        if (autoNextTimer) { clearTimeout(autoNextTimer); autoNextTimer = null; }
         if (sIdx > 0) {
           playSentenceAt(sIdx - 1);
           openDictationBox(sIdx - 1);
@@ -2569,6 +2720,7 @@
       btnNext.textContent = "Next ▶";
       btnNext.disabled = sIdx >= readerAudio.sentences.length - 1;
       btnNext.onclick = function () {
+        if (autoNextTimer) { clearTimeout(autoNextTimer); autoNextTimer = null; }
         if (sIdx < readerAudio.sentences.length - 1) {
           playSentenceAt(sIdx + 1);
           openDictationBox(sIdx + 1);
@@ -2600,6 +2752,9 @@
       dictationBox.appendChild(dResult);
 
       function renderDockExercise() {
+        if (autoNextTimer) { clearTimeout(autoNextTimer); autoNextTimer = null; }
+        isClozeComplete = false;
+        isFullComplete = false;
         dExerciseArea.textContent = "";
         dResult.style.display = "none";
 
@@ -2609,10 +2764,7 @@
           dHint.textContent = window.tContent ? window.tContent("reader_dictation_cloze_hint") : "Listen and fill in the missing words below:";
           dExerciseArea.appendChild(dHint);
 
-          var clozeData = generateClozeExercise(targetSentence);
-          // Host news pages style bare `input`/`span` (float, height, display…),
-          // which used to pull every blank to the start of its line. Force every
-          // layout-critical declaration inline with !important.
+          var clozeData = generateClozeExercise(targetSentence, readerDictDifficulty);
           var important = function (css) {
             return css.split(";").map(function (d) { return d.trim(); }).filter(Boolean)
               .map(function (d) { return d + " !important"; }).join("; ") + ";";
@@ -2671,14 +2823,67 @@
               var currIdx = clozeInputs.length;
               clozeInputs.push(cInp);
 
+              cInp.addEventListener("input", function () {
+                isClozeComplete = false;
+                if (autoNextTimer) { clearTimeout(autoNextTimer); autoNextTimer = null; }
+                cInp.style.removeProperty("border-color");
+                cInp.style.removeProperty("background");
+                cInp.style.removeProperty("color");
+                var corr = cInp.nextElementSibling;
+                if (corr && corr.classList.contains("sf-cloze-corr")) {
+                  corr.remove();
+                }
+                // Distribute multi-word input (e.g. phrases) into subsequent blanks
+                var val = cInp.value;
+                if (val.includes(" ") && currIdx < clozeInputs.length - 1) {
+                  var parts = val.trim().split(/\s+/);
+                  if (parts.length > 1) {
+                    cInp.value = parts[0];
+                    var remaining = parts.slice(1);
+                    var remIdx = 0;
+                    for (var r = currIdx + 1; r < clozeInputs.length && remIdx < remaining.length; r++) {
+                      if (!clozeInputs[r].disabled) {
+                        clozeInputs[r].value = remaining[remIdx++];
+                      }
+                    }
+                    if (currIdx + 1 < clozeInputs.length) {
+                      clozeInputs[currIdx + 1].focus();
+                    }
+                  }
+                }
+              });
+
               cInp.addEventListener("keydown", function (e) {
-                if (e.key === "Enter" || e.key === "Tab") {
-                  if (currIdx < clozeInputs.length - 1) {
+                if (e.key === "Enter") {
+                  if (isClozeComplete) {
                     e.preventDefault();
-                    clozeInputs[currIdx + 1].focus();
-                  } else if (e.key === "Enter") {
+                    if (autoNextTimer) { clearTimeout(autoNextTimer); autoNextTimer = null; }
+                    if (!btnNext.disabled) btnNext.click();
+                    return;
+                  }
+                  var allFilled = clozeInputs.every(function (i) { return i.disabled || i.value.trim().length > 0; });
+                  if (allFilled || currIdx === clozeInputs.length - 1) {
                     e.preventDefault();
                     doCheckCloze();
+                  } else {
+                    e.preventDefault();
+                    var nextInp = clozeInputs.slice(currIdx + 1).find(function (inp) { return !inp.disabled; });
+                    if (nextInp) nextInp.focus();
+                    else doCheckCloze();
+                  }
+                } else if (e.key === "Tab") {
+                  if (currIdx < clozeInputs.length - 1) {
+                    var nextInpTab = clozeInputs.slice(currIdx + 1).find(function (inp) { return !inp.disabled; });
+                    if (nextInpTab) {
+                      e.preventDefault();
+                      nextInpTab.focus();
+                    }
+                  }
+                } else if (e.key === " " || e.code === "Space") {
+                  if (cInp.value.trim().length > 0 && currIdx < clozeInputs.length - 1) {
+                    e.preventDefault();
+                    var nextBlank = clozeInputs.slice(currIdx + 1).find(function (inp) { return !inp.disabled; });
+                    if (nextBlank) nextBlank.focus();
                   }
                 }
               });
@@ -2695,6 +2900,7 @@
           dExerciseArea.appendChild(box);
 
           function doCheckCloze() {
+            if (autoNextTimer) { clearTimeout(autoNextTimer); autoNextTimer = null; }
             var correctCount = 0;
             var total = clozeInputs.length;
             clozeInputs.forEach(function (inp) {
@@ -2708,6 +2914,10 @@
                 inp.style.setProperty("background", "rgba(16, 185, 129, 0.15)", "important");
                 inp.style.setProperty("color", "#10b981", "important");
                 inp.disabled = true;
+                var existingCorr = inp.nextElementSibling;
+                if (existingCorr && existingCorr.classList.contains("sf-cloze-corr")) {
+                  existingCorr.remove();
+                }
               } else {
                 inp.style.setProperty("border-color", "#ef4444", "important");
                 inp.style.setProperty("background", "rgba(239, 68, 68, 0.15)", "important");
@@ -2730,12 +2940,26 @@
             var scoreStr = (window.tContent ? window.tContent("reader_dictation_score", [score, correctCount, total]) : ("Accuracy: " + score + "% (" + correctCount + "/" + total + " words correct)"));
             dResult.textContent = (score >= 80 ? "🎉 " : "💡 ") + scoreStr;
             dResult.style.color = score >= 80 ? "#10b981" : "#f59e0b";
-            if (score < 100) speakReaderSentence(targetSentence, 0.85);
+
+            if (total > 0 && correctCount === total) {
+              isClozeComplete = true;
+              if (!btnNext.disabled) {
+                autoNextTimer = setTimeout(function () {
+                  btnNext.click();
+                }, 800);
+              } else {
+                dResult.textContent = "🎉 " + scoreStr + " — " + (window.tContent ? window.tContent("reader_dictation_completed_all") : "Đã hoàn thành tất cả các câu!");
+              }
+            } else {
+              isClozeComplete = false;
+              speakReaderSentence(targetSentence, 0.85);
+            }
           }
 
           btnCheck.onclick = doCheckCloze;
 
           btnReveal.onclick = function () {
+            if (autoNextTimer) { clearTimeout(autoNextTimer); autoNextTimer = null; }
             clozeInputs.forEach(function (inp) {
               inp.value = inp.dataset.answer;
               inp.style.setProperty("color", currentBoxTheme.heading, "important");
@@ -2777,6 +3001,7 @@
           dExerciseArea.appendChild(dInput);
 
           function doCheckFull() {
+            if (autoNextTimer) { clearTimeout(autoNextTimer); autoNextTimer = null; }
             var match = calculateWordMatch(targetSentence, dInput.value);
             dResult.style.display = "block";
             var scoreStr = (window.tContent ? window.tContent("reader_dictation_score", [match.score, match.correct, match.total]) : ("Accuracy: " + match.score + "% (" + match.correct + "/" + match.total + " words correct)"));
@@ -2789,12 +3014,27 @@
               dInput.classList.remove("is-correct");
               dInput.classList.add("is-wrong");
             }
-            if (match.score < 100) speakReaderSentence(targetSentence, 0.85);
+
+            if (match.score === 100 || (match.total > 0 && match.correct === match.total)) {
+              isFullComplete = true;
+              if (!btnNext.disabled) {
+                autoNextTimer = setTimeout(function () {
+                  btnNext.click();
+                }, 800);
+              } else {
+                dResult.textContent = "🎉 " + scoreStr + " — " + (window.tContent ? window.tContent("reader_dictation_completed_all") : "Đã hoàn thành tất cả các câu!");
+              }
+            } else {
+              isFullComplete = false;
+              speakReaderSentence(targetSentence, 0.85);
+            }
           }
 
           btnCheck.onclick = doCheckFull;
 
           dInput.addEventListener("input", function () {
+            isFullComplete = false;
+            if (autoNextTimer) { clearTimeout(autoNextTimer); autoNextTimer = null; }
             dInput.classList.remove("is-correct");
             dInput.classList.remove("is-wrong");
           });
@@ -2802,11 +3042,17 @@
           dInput.addEventListener("keydown", function (e) {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
-              doCheckFull();
+              if (isFullComplete) {
+                if (autoNextTimer) { clearTimeout(autoNextTimer); autoNextTimer = null; }
+                if (!btnNext.disabled) btnNext.click();
+              } else {
+                doCheckFull();
+              }
             }
           });
 
           btnReveal.onclick = function () {
+            if (autoNextTimer) { clearTimeout(autoNextTimer); autoNextTimer = null; }
             dResult.style.display = "block";
             dResult.style.color = currentBoxTheme.heading;
             dResult.textContent = "📖 Target: " + targetSentence;
@@ -2827,6 +3073,7 @@
         btnModeCloze.style.background = currentBoxTheme.dictBtnActiveBg;
         btnModeFull.style.color = currentBoxTheme.captionColor;
         btnModeFull.style.background = "transparent";
+        dDiffBar.style.display = "flex";
         renderDockExercise();
       };
 
@@ -2838,6 +3085,7 @@
         btnModeFull.style.background = currentBoxTheme.dictBtnActiveBg;
         btnModeCloze.style.color = currentBoxTheme.captionColor;
         btnModeCloze.style.background = "transparent";
+        dDiffBar.style.display = "none";
         renderDockExercise();
       };
 
@@ -2845,6 +3093,14 @@
 
       // Keyboard shortcuts for seamless dictation workflow
       dictationBox.addEventListener("keydown", function (e) {
+        // Enter when completed: immediately advance to next sentence
+        if (e.key === "Enter" && !e.shiftKey && (isClozeComplete || isFullComplete)) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (autoNextTimer) { clearTimeout(autoNextTimer); autoNextTimer = null; }
+          if (!btnNext.disabled) btnNext.click();
+          return;
+        }
         // Ctrl+Space or Alt+R: Replay sentence
         if ((e.ctrlKey && (e.code === "Space" || e.key === " ")) || (e.altKey && (e.key === "r" || e.key === "R"))) {
           e.preventDefault();
@@ -2891,10 +3147,30 @@
           }
           return;
         }
+        // Alt+1 / Alt+2 / Alt+3: Switch Difficulty
+        if (e.altKey && (e.key === "1" || e.code === "Digit1")) {
+          e.preventDefault();
+          e.stopPropagation();
+          btnDiffEasy.click();
+          return;
+        }
+        if (e.altKey && (e.key === "2" || e.code === "Digit2")) {
+          e.preventDefault();
+          e.stopPropagation();
+          btnDiffMedium.click();
+          return;
+        }
+        if (e.altKey && (e.key === "3" || e.code === "Digit3")) {
+          e.preventDefault();
+          e.stopPropagation();
+          btnDiffHard.click();
+          return;
+        }
         // Escape: Close drawer
         if (e.key === "Escape") {
           e.preventDefault();
           e.stopPropagation();
+          if (autoNextTimer) { clearTimeout(autoNextTimer); autoNextTimer = null; }
           dictationBox.remove();
           dictationBox = null;
           return;
@@ -2919,7 +3195,8 @@
       `;
       var hotkeyShortcuts = [
         { k: "Ctrl+Space", label: "Nghe lại" },
-        { k: "Ctrl+Enter", label: "Kiểm tra" },
+        { k: "Enter", label: "Kiểm tra / Tiếp" },
+        { k: "Alt+1..3", label: "Độ khó" },
         { k: "Alt+→", label: "Câu tiếp" },
         { k: "Alt+←", label: "Câu trước" },
         { k: "Alt+S", label: "Đáp án" },
