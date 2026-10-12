@@ -1299,9 +1299,59 @@
       }
       #sf-cyber-reader .sf-theme-btn,
       #sf-cyber-reader .sf-font-btn {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 28px !important;
+        height: 28px !important;
+        min-width: 28px !important;
+        min-height: 28px !important;
+        padding: 0 !important;
+        line-height: 1 !important;
+        text-align: center !important;
+        vertical-align: middle !important;
+        box-sizing: border-box !important;
+        border-radius: 6px !important;
         background: var(--sf-btn-bg) !important;
         color: var(--sf-btn-text) !important;
-        border-color: var(--sf-btn-border) !important;
+        border: 1px solid var(--sf-btn-border) !important;
+        cursor: pointer !important;
+      }
+      #sf-cyber-reader .sf-theme-btn {
+        font-size: 13.5px !important;
+      }
+      #sf-cyber-reader #sf-close-reader {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        height: 28px !important;
+        min-height: 28px !important;
+        padding: 0 12px !important;
+        border-radius: 6px !important;
+        background: #ef4444 !important;
+        color: #ffffff !important;
+        border: none !important;
+        cursor: pointer !important;
+        font-size: 11.5px !important;
+        font-weight: 700 !important;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+        text-transform: none !important;
+        letter-spacing: normal !important;
+        line-height: 1 !important;
+        box-sizing: border-box !important;
+        white-space: nowrap !important;
+        box-shadow: 0 2px 6px rgba(239, 68, 68, 0.35) !important;
+        transition: background 0.15s ease, transform 0.15s ease !important;
+      }
+      #sf-cyber-reader #sf-close-reader:hover {
+        background: #dc2626 !important;
+        transform: translateY(-1px) !important;
+      }
+      #sf-cyber-reader #sf-reader-font-select {
+        height: 28px !important;
+        min-height: 28px !important;
+        box-sizing: border-box !important;
+        vertical-align: middle !important;
       }
       #sf-cyber-reader #sf-reader-brand-pill {
         background: var(--sf-brand-bg) !important;
@@ -1851,10 +1901,18 @@
       border: 1px solid ${currentTheme.btnBorder};
       width: 28px;
       height: 28px;
+      min-width: 28px;
+      min-height: 28px;
+      padding: 0;
       border-radius: 6px;
       cursor: pointer;
       font-size: 11px;
       font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      box-sizing: border-box;
     `;
     btnFontDec.className = "sf-font-btn";
     btnFontDec.textContent = "A-";
@@ -1875,10 +1933,18 @@
       border: 1px solid ${currentTheme.btnBorder};
       width: 28px;
       height: 28px;
+      min-width: 28px;
+      min-height: 28px;
+      padding: 0;
       border-radius: 6px;
       cursor: pointer;
-      font-size: 12.5px;
+      font-size: 12px;
       font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      box-sizing: border-box;
     `;
     btnFontInc.textContent = "A+";
     btnFontInc.onclick = function () {
@@ -2059,9 +2125,17 @@
         border: 1px solid ${currentTheme.btnBorder};
         width: 28px;
         height: 28px;
+        min-width: 28px;
+        min-height: 28px;
+        padding: 0;
         border-radius: 6px;
         cursor: pointer;
-        font-size: 12px;
+        font-size: 13.5px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+        box-sizing: border-box;
       `;
       tBtn.className = "sf-theme-btn";
       tBtn.textContent = th.label;
@@ -2075,7 +2149,30 @@
     var closeBtn = document.createElement("button");
     closeBtn.id = "sf-close-reader";
     closeBtn.type = "button";
-    closeBtn.style.cssText = "background: #ef4444; color: #fff; border: none; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-family: sans-serif; font-size: 11.5px; font-weight: 700; margin-left: 4px; white-space: nowrap;";
+    closeBtn.style.cssText = `
+      background: #ef4444;
+      color: #fff;
+      border: none;
+      height: 28px;
+      min-height: 28px;
+      padding: 0 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 11.5px;
+      font-weight: 700;
+      margin-left: 4px;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      box-sizing: border-box;
+      text-transform: none;
+      letter-spacing: normal;
+      box-shadow: 0 2px 6px rgba(239, 68, 68, 0.35);
+      transition: background 0.15s ease, transform 0.15s ease;
+    `;
     closeBtn.textContent = "✕ " + (window.tContent ? window.tContent("reader_mode_close") : "Close");
     closeBtn.onclick = function () { toggleReaderMode(); };
     barRight.appendChild(closeBtn);
