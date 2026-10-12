@@ -490,6 +490,56 @@
     return { src: src, caption: caption };
   }
 
+  function extractVideoInfo(el) {
+    if (!el || el.nodeType !== Node.ELEMENT_NODE) return null;
+    var tag = el.tagName ? el.tagName.toLowerCase() : "";
+
+    // 1. Direct <video> tag
+    if (tag === "video") {
+      var vSrc = el.getAttribute("src") || (el.querySelector("source") ? el.querySelector("source").getAttribute("src") : "") || el.currentSrc || "";
+      if (vSrc && !vSrc.startsWith("blob:")) {
+        var poster = el.getAttribute("poster") || "";
+        return { type: "video", src: vSrc, poster: poster };
+      }
+    }
+
+    // 2. Direct <iframe> tag
+    if (tag === "iframe") {
+      var iSrc = el.getAttribute("src") || el.getAttribute("data-src") || "";
+      if (iSrc && /youtube|vimeo|dailymotion|embed|player|video|stream|bbc\.co|cnn\.com|vnexpress|tuoitre|vtv/i.test(iSrc)) {
+        return { type: "iframe", src: iSrc };
+      }
+    }
+
+    // 3. Container holding video or iframe
+    var innerVideo = el.querySelector("video");
+    if (innerVideo) {
+      var ivSrc = innerVideo.getAttribute("src") || (innerVideo.querySelector("source") ? innerVideo.querySelector("source").getAttribute("src") : "") || innerVideo.currentSrc || "";
+      if (ivSrc && !ivSrc.startsWith("blob:")) {
+        return { type: "video", src: ivSrc, poster: innerVideo.getAttribute("poster") || "" };
+      }
+    }
+
+    var innerIframe = el.querySelector("iframe");
+    if (innerIframe) {
+      var iiSrc = innerIframe.getAttribute("src") || innerIframe.getAttribute("data-src") || "";
+      if (iiSrc && /youtube|vimeo|dailymotion|embed|player|video|stream|bbc\.co|cnn\.com|vnexpress|tuoitre|vtv/i.test(iiSrc)) {
+        return { type: "iframe", src: iiSrc };
+      }
+    }
+
+    // 4. Data-attribute video source (e.g. data-video-src, data-src ending in .mp4 or containing video player)
+    var dataSrc = el.getAttribute("data-video-src") || el.getAttribute("data-src") || el.getAttribute("data-url") || "";
+    if (dataSrc && /\.(mp4|webm|m4v)(\?.*)?$/i.test(dataSrc)) {
+      return { type: "video", src: dataSrc, poster: el.getAttribute("data-poster") || "" };
+    }
+    if (dataSrc && /youtube|vimeo|dailymotion|embed|player|video/i.test(dataSrc)) {
+      return { type: "iframe", src: dataSrc };
+    }
+
+    return null;
+  }
+
   function pickBestArticleContainer() {
     var selectors = [
       "article", "[itemprop='articleBody']", "[itemprop='article']",
@@ -640,7 +690,7 @@
         registerCaption(sc.textContent);
       });
 
-      var elements = Array.from(mainContainer.querySelectorAll("h1, h2, h3, h4, h5, p, figure, img, blockquote, video, iframe"));
+      var elements = Array.from(mainContainer.querySelectorAll("h1, h2, h3, h4, h5, p, figure, img, blockquote, video, iframe, [data-component='video-block'], [data-e2e='media-player'], .media-player, .video-container, .box_embed_video, [data-video-src]"));
       var paragraphCount = 0;
 
       for (var i = 0; i < elements.length; i++) {
@@ -683,14 +733,26 @@
           break;
         }
 
-        // 2. Figure or Img
+        // 2. Figure (check for video first, then image)
         if (tag === "figure") {
+          var figVidInfo = extractVideoInfo(el);
+          var figCapEl = el.querySelector("figcaption, .caption, .desc, .desc_cation");
+          var figCapText = figCapEl ? cleanCaptionText(figCapEl.textContent || "") : "";
+
+          if (figVidInfo && !seenVideos.has(figVidInfo.src)) {
+            seenVideos.add(figVidInfo.src);
+            figVidInfo.caption = figCapText;
+            if (figCapText) registerCaption(figCapText);
+            articleItems.push(figVidInfo);
+            continue;
+          }
+
           var img = el.querySelector("img");
           if (img && !seenImages.has(img)) {
             seenImages.add(img);
             var info = extractImageInfo(img);
             if (info) {
-              var cleanCap = cleanCaptionText(info.caption);
+              var cleanCap = cleanCaptionText(info.caption || figCapText);
               registerCaption(info.caption);
               registerCaption(cleanCap);
               articleItems.push({ type: "image", src: info.src, caption: cleanCap });
@@ -699,6 +761,15 @@
           continue;
         }
 
+        // 3. Embedded Video / Iframe / Video wrappers
+        var directVidInfo = extractVideoInfo(el);
+        if (directVidInfo && !seenVideos.has(directVidInfo.src)) {
+          seenVideos.add(directVidInfo.src);
+          articleItems.push(directVidInfo);
+          continue;
+        }
+
+        // 4. Standalone Image
         if (tag === "img") {
           if (!seenImages.has(el)) {
             seenImages.add(el);
@@ -709,26 +780,6 @@
               registerCaption(cleanCap2);
               articleItems.push({ type: "image", src: imgInfo.src, caption: cleanCap2 });
             }
-          }
-          continue;
-        }
-
-        // 3. Embedded Video or Video Iframe
-        if (tag === "video") {
-          var vSrc = el.getAttribute("src") || (el.querySelector("source") ? el.querySelector("source").getAttribute("src") : "");
-          if (vSrc && !seenVideos.has(vSrc)) {
-            seenVideos.add(vSrc);
-            var poster = el.getAttribute("poster") || "";
-            articleItems.push({ type: "video", src: vSrc, poster: poster });
-          }
-          continue;
-        }
-
-        if (tag === "iframe") {
-          var iSrc = el.getAttribute("src") || el.getAttribute("data-src") || "";
-          if (iSrc && /youtube|vimeo|dailymotion|embed|player|video|stream/i.test(iSrc) && !seenVideos.has(iSrc)) {
-            seenVideos.add(iSrc);
-            articleItems.push({ type: "iframe", src: iSrc });
           }
           continue;
         }
@@ -909,39 +960,189 @@
 
     var currentTheme = THEME_STYLES[readerPrefs.theme] || THEME_STYLES.dark;
 
-    // Apply scrollbar style
+    // Apply master theme CSS variables & custom scrollbar styles
     if (!scrollbarStyleEl) {
       scrollbarStyleEl = document.createElement("style");
-      scrollbarStyleEl.id = "sf-reader-scrollbar-style";
+      scrollbarStyleEl.id = "sf-reader-master-styles";
       document.head.appendChild(scrollbarStyleEl);
     }
-    function updateScrollbarStyle(themeStyle) {
-      scrollbarStyleEl.textContent = `
-        #sf-cyber-reader::-webkit-scrollbar {
-          width: 7px;
-          height: 7px;
-        }
-        #sf-cyber-reader::-webkit-scrollbar-track {
-          background: ${themeStyle.scrollTrack};
-        }
-        #sf-cyber-reader::-webkit-scrollbar-thumb {
-          background: ${themeStyle.scrollThumb};
-          border-radius: 99px;
-        }
-        #sf-cyber-reader::-webkit-scrollbar-thumb:hover {
-          filter: brightness(1.25);
-        }
-      `;
-    }
-    updateScrollbarStyle(currentTheme);
+    scrollbarStyleEl.textContent = `
+      #sf-cyber-reader {
+        --sf-bg: #090d16;
+        --sf-bar-bg: rgba(15, 23, 42, 0.96);
+        --sf-text: #cbd5e1;
+        --sf-title: #f8fafc;
+        --sf-heading: #38bdf8;
+        --sf-border: rgba(56, 189, 248, 0.25);
+        --sf-card-bg: #0f172a;
+        --sf-btn-bg: rgba(30, 41, 59, 0.85);
+        --sf-btn-text: #f8fafc;
+        --sf-btn-border: rgba(255, 255, 255, 0.18);
+        --sf-play-bg: linear-gradient(135deg, #0284c7, #0369a1);
+        --sf-play-text: #ffffff;
+        --sf-dict-active-bg: #0284c7;
+        --sf-dict-active-text: #ffffff;
+        --sf-brand-bg: rgba(56, 189, 248, 0.12);
+        --sf-brand-text: #38bdf8;
+        --sf-brand-border: rgba(56, 189, 248, 0.3);
+        --sf-select-bg: #1e293b;
+        --sf-select-text: #f8fafc;
+        --sf-select-border: rgba(255, 255, 255, 0.2);
+        --sf-quote-border: #38bdf8;
+        --sf-scroll-thumb: #38bdf8;
+        --sf-scroll-track: #090d16;
+        --sf-caption: #94a3b8;
+      }
+
+      #sf-cyber-reader[data-theme="sepia"] {
+        --sf-bg: #f7f1e3;
+        --sf-bar-bg: rgba(235, 224, 201, 0.98);
+        --sf-text: #292524;
+        --sf-title: #1c1917;
+        --sf-heading: #9a3412;
+        --sf-border: rgba(120, 80, 40, 0.25);
+        --sf-card-bg: #ede1c7;
+        --sf-btn-bg: rgba(220, 206, 180, 0.95);
+        --sf-btn-text: #1c1917;
+        --sf-btn-border: rgba(120, 80, 40, 0.35);
+        --sf-play-bg: linear-gradient(135deg, #b45309, #78350f);
+        --sf-play-text: #ffffff;
+        --sf-dict-active-bg: #b45309;
+        --sf-dict-active-text: #ffffff;
+        --sf-brand-bg: rgba(180, 83, 9, 0.12);
+        --sf-brand-text: #9a3412;
+        --sf-brand-border: rgba(180, 83, 9, 0.35);
+        --sf-select-bg: #dfd3ba;
+        --sf-select-text: #1c1917;
+        --sf-select-border: rgba(120, 80, 40, 0.35);
+        --sf-quote-border: #b45309;
+        --sf-scroll-thumb: #a88a68;
+        --sf-scroll-track: #f2ebd9;
+        --sf-caption: #6b5d52;
+      }
+
+      #sf-cyber-reader[data-theme="oled"] {
+        --sf-bg: #000000;
+        --sf-bar-bg: rgba(10, 10, 10, 0.98);
+        --sf-text: #e4e4e7;
+        --sf-title: #ffffff;
+        --sf-heading: #0ea5e9;
+        --sf-border: rgba(255, 255, 255, 0.2);
+        --sf-card-bg: #121212;
+        --sf-btn-bg: rgba(39, 39, 42, 0.9);
+        --sf-btn-text: #ffffff;
+        --sf-btn-border: rgba(255, 255, 255, 0.2);
+        --sf-play-bg: linear-gradient(135deg, #0284c7, #0369a1);
+        --sf-play-text: #ffffff;
+        --sf-dict-active-bg: #0284c7;
+        --sf-dict-active-text: #ffffff;
+        --sf-brand-bg: rgba(56, 189, 248, 0.12);
+        --sf-brand-text: #38bdf8;
+        --sf-brand-border: rgba(56, 189, 248, 0.3);
+        --sf-select-bg: #27272a;
+        --sf-select-text: #ffffff;
+        --sf-select-border: rgba(255, 255, 255, 0.2);
+        --sf-quote-border: #0ea5e9;
+        --sf-scroll-thumb: #52525b;
+        --sf-scroll-track: #000000;
+        --sf-caption: #a1a1aa;
+      }
+
+      /* Isolation & Theme rules with !important */
+      #sf-cyber-reader {
+        background: var(--sf-bg) !important;
+        color: var(--sf-text) !important;
+      }
+      #sf-cyber-reader #sf-reader-topbar {
+        background: var(--sf-bar-bg) !important;
+        border-bottom-color: var(--sf-border) !important;
+      }
+      #sf-cyber-reader h1 {
+        color: var(--sf-title) !important;
+      }
+      #sf-cyber-reader h2, #sf-cyber-reader h3, #sf-cyber-reader h4, #sf-cyber-reader h5 {
+        color: var(--sf-heading) !important;
+      }
+      #sf-cyber-reader p, #sf-cyber-reader .sf-reader-sentence {
+        color: var(--sf-text) !important;
+      }
+      #sf-cyber-reader blockquote {
+        border-left-color: var(--sf-quote-border) !important;
+        color: var(--sf-caption) !important;
+      }
+      #sf-cyber-reader figcaption {
+        color: var(--sf-caption) !important;
+      }
+      #sf-cyber-reader .sf-theme-btn,
+      #sf-cyber-reader .sf-font-btn {
+        background: var(--sf-btn-bg) !important;
+        color: var(--sf-btn-text) !important;
+        border-color: var(--sf-btn-border) !important;
+      }
+      #sf-cyber-reader #sf-reader-brand-pill {
+        background: var(--sf-brand-bg) !important;
+        color: var(--sf-brand-text) !important;
+        border-color: var(--sf-brand-border) !important;
+      }
+      #sf-cyber-reader #sf-reader-btn-play {
+        background: var(--sf-play-bg) !important;
+        color: var(--sf-play-text) !important;
+      }
+      #sf-cyber-reader select {
+        background: var(--sf-select-bg) !important;
+        color: var(--sf-select-text) !important;
+        border-color: var(--sf-select-border) !important;
+      }
+
+      /* Container custom scrollbar */
+      #sf-cyber-reader::-webkit-scrollbar {
+        width: 7px;
+        height: 7px;
+      }
+      #sf-cyber-reader::-webkit-scrollbar-track {
+        background: var(--sf-scroll-track);
+      }
+      #sf-cyber-reader::-webkit-scrollbar-thumb {
+        background: var(--sf-scroll-thumb);
+        border-radius: 99px;
+      }
+      #sf-cyber-reader::-webkit-scrollbar-thumb:hover {
+        filter: brightness(1.25);
+      }
+
+      /* Voice select styled scrollbar */
+      #sf-reader-voice-select {
+        scrollbar-width: thin;
+        scrollbar-color: var(--sf-scroll-thumb) var(--sf-scroll-track);
+      }
+      #sf-reader-voice-select::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      #sf-reader-voice-select::-webkit-scrollbar-track {
+        background: var(--sf-scroll-track);
+        border-radius: 6px;
+      }
+      #sf-reader-voice-select::-webkit-scrollbar-thumb {
+        background: var(--sf-scroll-thumb);
+        border-radius: 6px;
+      }
+      #sf-reader-voice-select::-webkit-scrollbar-thumb:hover {
+        filter: brightness(1.25);
+      }
+      #sf-reader-voice-select option {
+        background: var(--sf-card-bg);
+        color: var(--sf-text);
+        padding: 6px 10px;
+      }
+    `;
 
     readerContainer = document.createElement("div");
     readerContainer.id = "sf-cyber-reader";
+    readerContainer.dataset.theme = readerPrefs.theme || "dark";
     readerContainer.style.cssText = `
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: ${currentTheme.bg};
-      color: ${currentTheme.text};
       overflow-y: auto;
       z-index: 2147483647;
       padding: 0;
@@ -949,7 +1150,7 @@
       font-size: ${readerPrefs.fontSize}px;
       line-height: 1.85;
       box-sizing: border-box;
-      transition: background 0.25s ease, color 0.25s ease;
+      transition: background 0.15s ease, color 0.15s ease;
     `;
 
     // Reading Progress Indicator Bar
@@ -1303,6 +1504,7 @@
       font-size: 11px;
       font-weight: 700;
     `;
+    btnFontDec.className = "sf-font-btn";
     btnFontDec.textContent = "A-";
     btnFontDec.onclick = function () {
       readerPrefs.fontSize = Math.max(15, readerPrefs.fontSize - 1.5);
@@ -1314,6 +1516,7 @@
     var btnFontInc = document.createElement("button");
     btnFontInc.type = "button";
     btnFontInc.title = "Increase font size";
+    btnFontInc.className = "sf-font-btn";
     btnFontInc.style.cssText = `
       background: ${currentTheme.btnBg};
       color: ${currentTheme.btnText};
@@ -1341,12 +1544,18 @@
       { id: "oled", label: "🖤", title: "OLED Black Theme" }
     ];
 
+    var themeSwitchRaf = null;
     function applyThemePalette(thId) {
+      if (!THEME_STYLES[thId]) thId = "dark";
       readerPrefs.theme = thId;
       try { localStorage.setItem("sf_reader_theme", thId); } catch (e) {}
-      var s = THEME_STYLES[thId] || THEME_STYLES.dark;
+      var s = THEME_STYLES[thId];
       currentTheme = s;
 
+      // Instant zero-lag CSS Variable switch via dataset
+      readerContainer.dataset.theme = thId;
+
+      // Explicit inline styles for rock-solid cross-browser sync
       readerContainer.style.background = s.bg;
       readerContainer.style.color = s.text;
       topBar.style.background = s.barBg;
@@ -1395,14 +1604,7 @@
       // Update heading & title if present
       var h1El = contentWrapper.querySelector("h1");
       if (h1El) h1El.style.color = s.title;
-      contentWrapper.querySelectorAll("h2, h3, h4").forEach(function (h) {
-        h.style.color = s.heading;
-      });
-      contentWrapper.querySelectorAll("blockquote").forEach(function (bq) {
-        bq.style.borderLeftColor = s.quoteBorder;
-      });
 
-      contentWrapper.querySelectorAll("figcaption").forEach(function (fc) { fc.style.color = s.captionColor; });
       var heroCard = contentWrapper.querySelector("#sf-reader-hero-chibi");
       if (heroCard) {
         heroCard.style.background = s.cardBg;
@@ -1414,12 +1616,15 @@
         var hSub = heroCard.querySelector("span:last-child");
         if (hSub) hSub.style.color = s.captionColor;
       }
-      updateScrollbarStyle(s);
 
-      // If dictation dock is currently open, seamlessly refresh it with new theme palette
+      // Debounced dictation drawer update to ensure smooth rapid clicking
       if (dictationBox && readerAudio.isDictationMode) {
-        var activeIdx = readerAudio.currentIndex >= 0 ? readerAudio.currentIndex : 0;
-        openDictationBox(activeIdx);
+        if (themeSwitchRaf) cancelAnimationFrame(themeSwitchRaf);
+        themeSwitchRaf = requestAnimationFrame(function () {
+          themeSwitchRaf = null;
+          var activeIdx = readerAudio.currentIndex >= 0 ? readerAudio.currentIndex : 0;
+          openDictationBox(activeIdx);
+        });
       }
     }
 
@@ -1437,6 +1642,7 @@
         cursor: pointer;
         font-size: 12px;
       `;
+      tBtn.className = "sf-theme-btn";
       tBtn.textContent = th.label;
       tBtn.onclick = function () {
         applyThemePalette(th.id);
@@ -1590,22 +1796,37 @@
           if (item.poster) vEl.setAttribute("poster", item.poster);
           vEl.setAttribute("controls", "true");
           vEl.setAttribute("preload", "metadata");
-          vEl.style.cssText = "max-width: 100%; width: 100%; border-radius: 12px; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.08); display: block; margin: 0 auto;";
+          vEl.style.cssText = "max-width: 100%; width: 100%; border-radius: 12px; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35); border: 1px solid var(--sf-border); display: block; margin: 0 auto;";
           vBox.appendChild(vEl);
+          if (item.caption) {
+            var vCap = document.createElement("figcaption");
+            vCap.style.cssText = "font-size: 13.5px; color: var(--sf-caption); font-style: italic; margin-top: 10px; line-height: 1.5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 92%; margin-left: auto; margin-right: auto;";
+            vCap.textContent = item.caption;
+            vBox.appendChild(vCap);
+          }
           contentWrapper.appendChild(vBox);
           return;
         }
 
         if (item.type === "iframe") {
           var ifBox = document.createElement("div");
-          ifBox.style.cssText = "margin: 28px auto; max-width: 100%; position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 12px; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.08);";
+          ifBox.style.cssText = "margin: 28px auto; max-width: 100%; text-align: center;";
+          var ifWrap = document.createElement("div");
+          ifWrap.style.cssText = "position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 12px; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35); border: 1px solid var(--sf-border);";
           var ifEl = document.createElement("iframe");
           ifEl.setAttribute("src", item.src);
           ifEl.setAttribute("frameborder", "0");
           ifEl.setAttribute("allowfullscreen", "true");
           ifEl.setAttribute("allow", "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture");
           ifEl.style.cssText = "position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;";
-          ifBox.appendChild(ifEl);
+          ifWrap.appendChild(ifEl);
+          ifBox.appendChild(ifWrap);
+          if (item.caption) {
+            var ifCap = document.createElement("figcaption");
+            ifCap.style.cssText = "font-size: 13.5px; color: var(--sf-caption); font-style: italic; margin-top: 10px; line-height: 1.5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 92%; margin-left: auto; margin-right: auto;";
+            ifCap.textContent = item.caption;
+            ifBox.appendChild(ifCap);
+          }
           contentWrapper.appendChild(ifBox);
           return;
         }
