@@ -14,6 +14,13 @@
   var originalBodyDisplay = "";
   var readerContainer = null;
 
+  // Reading Preferences State (persisted)
+  var readerPrefs = {
+    theme: (function () { try { return localStorage.getItem("sf_reader_theme") || "dark"; } catch (e) { return "dark"; } })(),
+    fontSize: (function () { try { return parseInt(localStorage.getItem("sf_reader_fontsize"), 10) || 19; } catch (e) { return 19; } })(),
+    preferredVoice: (function () { try { return localStorage.getItem("sf_reader_preferred_voice") || ""; } catch (e) { return ""; } })()
+  };
+
   // Speech Synthesis & Dictation State
   var readerAudio = {
     sentences: [],
@@ -71,29 +78,42 @@
     return { score: score, correct: matched, total: targetWords.length };
   }
 
-  function findBestEnglishVoice() {
-    if (typeof window === "undefined" || !window.speechSynthesis) return null;
-    var voices = window.speechSynthesis.getVoices() || [];
-    if (voices.length === 0) return null;
-    var best = voices.find(function (v) {
-      return v.lang && /en[-_]US/i.test(v.lang) && /natural|neural|online/i.test(v.name);
+  function getAvailableEnglishVoices() {
+    if (typeof window === "undefined" || !window.speechSynthesis) return [];
+    var allVoices = window.speechSynthesis.getVoices() || [];
+    var enVoices = allVoices.filter(function (v) {
+      return v.lang && /^en/i.test(v.lang);
     });
-    if (!best) {
-      best = voices.find(function (v) {
-        return v.lang && /en[-_]US/i.test(v.lang);
-      });
+    if (enVoices.length === 0) enVoices = allVoices;
+
+    // Prioritize Edge Natural / Online neural voices, then high quality voices
+    enVoices.sort(function (a, b) {
+      var aNat = /natural|neural|online/i.test(a.name) ? 1 : 0;
+      var bNat = /natural|neural|online/i.test(b.name) ? 1 : 0;
+      if (aNat !== bNat) return bNat - aNat;
+
+      var aUS = /en[-_]US/i.test(a.lang) ? 1 : 0;
+      var bUS = /en[-_]US/i.test(b.lang) ? 1 : 0;
+      if (aUS !== bUS) return bUS - aUS;
+
+      return a.name.localeCompare(b.name);
+    });
+
+    return enVoices;
+  }
+
+  function findBestEnglishVoice() {
+    var voices = getAvailableEnglishVoices();
+    if (voices.length === 0) return null;
+
+    if (readerPrefs.preferredVoice) {
+      var match = voices.find(function (v) { return v.name === readerPrefs.preferredVoice; });
+      if (match) return match;
     }
-    if (!best) {
-      best = voices.find(function (v) {
-        return v.lang && /en[-_]GB/i.test(v.lang);
-      });
-    }
-    if (!best) {
-      best = voices.find(function (v) {
-        return v.lang && /^en/i.test(v.lang);
-      });
-    }
-    return best || voices[0] || null;
+
+    // Default to first natural voice (Microsoft Natural on Edge)
+    var natural = voices.find(function (v) { return /natural|neural|online/i.test(v.name); });
+    return natural || voices[0] || null;
   }
 
   function speakReaderSentence(text, rate, onEndCallback) {
@@ -203,7 +223,6 @@
       return null;
     }
 
-    // Check size if available
     var rect = imgEl.getBoundingClientRect();
     var w = imgEl.naturalWidth || rect.width || parseInt(imgEl.getAttribute("width") || "0", 10);
     var h = imgEl.naturalHeight || rect.height || parseInt(imgEl.getAttribute("height") || "0", 10);
@@ -211,7 +230,6 @@
       return null;
     }
 
-    // Only allow http/https or safe data:image
     if (!/^(https?:|data:image\/)/i.test(src)) {
       return null;
     }
@@ -375,7 +393,6 @@
 
         // Paragraphs or Blockquotes
         if (tag === "p" || tag === "blockquote") {
-          // If paragraph wraps an image
           var innerImg = el.querySelector("img");
           if (innerImg && !seenImages.has(innerImg)) {
             seenImages.add(innerImg);
@@ -388,7 +405,6 @@
           if (getLinkDensity(el) > 0.45) return;
           if (JUNK_TEXT_RE.test(pText)) return;
 
-          // Deduplicate
           var hash = pText.slice(0, 45);
           if (seenTextHashes.has(hash)) return;
           seenTextHashes.add(hash);
@@ -403,21 +419,44 @@
       document.body.style.display = "none";
     }
 
+    // Themes Color Palette
+    var THEME_STYLES = {
+      dark: { bg: "#090d16", barBg: "rgba(15, 23, 42, 0.94)", text: "#cbd5e1", title: "#f8fafc", heading: "#38bdf8", border: "rgba(56, 189, 248, 0.25)", cardBg: "#0f172a" },
+      sepia: { bg: "#f5edd6", barBg: "rgba(238, 227, 204, 0.95)", text: "#3c3226", title: "#261d14", heading: "#854d0e", border: "rgba(133, 77, 14, 0.2)", cardBg: "#eedfbf" },
+      oled: { bg: "#000000", barBg: "rgba(10, 10, 10, 0.96)", text: "#d4d4d8", title: "#ffffff", heading: "#0ea5e9", border: "rgba(255, 255, 255, 0.15)", cardBg: "#121212" }
+    };
+
+    var currentTheme = THEME_STYLES[readerPrefs.theme] || THEME_STYLES.dark;
+
     readerContainer = document.createElement("div");
     readerContainer.id = "sf-cyber-reader";
     readerContainer.style.cssText = `
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: #090d16;
-      color: #e2e8f0;
+      background: ${currentTheme.bg};
+      color: ${currentTheme.text};
       overflow-y: auto;
       z-index: 2147483647;
       padding: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      font-size: 17px;
-      line-height: 1.75;
+      font-size: ${readerPrefs.fontSize}px;
+      line-height: 1.8;
       box-sizing: border-box;
+      transition: background 0.25s ease, color 0.25s ease;
     `;
+
+    // Reading Progress Indicator Bar
+    var progressBar = document.createElement("div");
+    progressBar.id = "sf-reader-progress-bar";
+    progressBar.style.cssText = "position: fixed; top: 0; left: 0; width: 0%; height: 3.5px; background: linear-gradient(90deg, #38bdf8, #0284c7); z-index: 2000; transition: width 0.1s ease-out;";
+    readerContainer.appendChild(progressBar);
+
+    readerContainer.addEventListener("scroll", function () {
+      var st = readerContainer.scrollTop;
+      var sh = readerContainer.scrollHeight - readerContainer.clientHeight;
+      var pct = sh > 0 ? Math.min(100, Math.round((st / sh) * 100)) : 0;
+      progressBar.style.width = pct + "%";
+    });
 
     // Top Header & Controls Bar
     var topBar = document.createElement("div");
@@ -427,45 +466,97 @@
       top: 0;
       left: 0;
       right: 0;
-      background: rgba(15, 23, 42, 0.95);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid rgba(56, 189, 248, 0.25);
-      padding: 10px 20px;
+      background: ${currentTheme.barBg};
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid ${currentTheme.border};
+      padding: 8px 18px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 8px;
       z-index: 1000;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
     `;
 
     var barLeft = document.createElement("div");
     barLeft.style.cssText = "display: flex; align-items: center; gap: 8px; flex-wrap: wrap;";
 
     var brandPill = document.createElement("span");
-    brandPill.style.cssText = "font-size: 12px; font-weight: 800; color: #38bdf8; background: rgba(56, 189, 248, 0.12); padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(56, 189, 248, 0.3);";
-    brandPill.textContent = "🎧 ScholarFlow News Coach";
+    brandPill.style.cssText = "font-size: 11.5px; font-weight: 800; color: #38bdf8; background: rgba(56, 189, 248, 0.12); padding: 4px 9px; border-radius: 6px; border: 1px solid rgba(56, 189, 248, 0.3); display: inline-flex; align-items: center; gap: 4px;";
+    brandPill.textContent = "🎧 ScholarFlow Reader";
     barLeft.appendChild(brandPill);
 
     var btnPlay = document.createElement("button");
     btnPlay.type = "button";
     btnPlay.id = "sf-reader-btn-play";
-    btnPlay.style.cssText = "background: #0284c7; color: #ffffff; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;";
+    btnPlay.style.cssText = "background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 8px rgba(2, 132, 199, 0.4);";
     btnPlay.textContent = "▶ " + (window.tContent ? window.tContent("reader_listen_play") : "Read Aloud");
     barLeft.appendChild(btnPlay);
 
-    var speedLabel = document.createElement("span");
-    speedLabel.style.cssText = "font-size: 11px; color: #94a3b8; font-weight: 600;";
-    speedLabel.textContent = (window.tContent ? window.tContent("reader_listen_speed") : "Speed") + ":";
-    barLeft.appendChild(speedLabel);
+    // Voice Selection Dropdown with Edge Natural Voices
+    var voiceSelect = document.createElement("select");
+    voiceSelect.id = "sf-reader-voice-select";
+    voiceSelect.title = window.tContent ? window.tContent("reader_listen_voice") : "Voice";
+    voiceSelect.style.cssText = "background: rgba(30, 41, 59, 0.85); color: #f8fafc; border: 1px solid rgba(255, 255, 255, 0.2); padding: 5px 8px; border-radius: 6px; font-size: 11.5px; max-width: 175px; outline: none; cursor: pointer;";
 
+    function populateVoiceDropdown() {
+      while (voiceSelect.firstChild) {
+        voiceSelect.removeChild(voiceSelect.firstChild);
+      }
+      var voices = getAvailableEnglishVoices();
+      if (voices.length === 0) {
+        var opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "Default System Voice";
+        voiceSelect.appendChild(opt);
+        return;
+      }
+
+      var defaultChoice = findBestEnglishVoice();
+      voices.forEach(function (v) {
+        var opt = document.createElement("option");
+        opt.value = v.name;
+        var isNat = /natural|neural|online/i.test(v.name);
+        var label = v.name.replace(/Microsoft |English \(|Online \(Natural\) - /g, "").replace(/\)/g, "");
+        opt.textContent = (isNat ? "✨ " : "🗣️ ") + label + " (" + v.lang + ")";
+        if (defaultChoice && v.name === defaultChoice.name) {
+          opt.selected = true;
+          readerAudio.voice = v;
+        }
+        voiceSelect.appendChild(opt);
+      });
+    }
+
+    populateVoiceDropdown();
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.onvoiceschanged = function () {
+        populateVoiceDropdown();
+      };
+    }
+
+    voiceSelect.addEventListener("change", function () {
+      var voices = getAvailableEnglishVoices();
+      var selected = voices.find(function (v) { return v.name === voiceSelect.value; });
+      if (selected) {
+        readerAudio.voice = selected;
+        readerPrefs.preferredVoice = selected.name;
+        try { localStorage.setItem("sf_reader_preferred_voice", selected.name); } catch (e) {}
+        if (readerAudio.isPlaying && readerAudio.currentIndex >= 0) {
+          playSentenceAt(readerAudio.currentIndex);
+        }
+      }
+    });
+    barLeft.appendChild(voiceSelect);
+
+    // Rate select
     var selSpeed = document.createElement("select");
-    selSpeed.style.cssText = "background: #1e293b; color: #f8fafc; border: 1px solid #334155; padding: 4px 8px; border-radius: 6px; font-size: 11.5px;";
+    selSpeed.title = window.tContent ? window.tContent("reader_listen_speed") : "Speed";
+    selSpeed.style.cssText = "background: rgba(30, 41, 59, 0.85); color: #f8fafc; border: 1px solid rgba(255, 255, 255, 0.2); padding: 5px 8px; border-radius: 6px; font-size: 11.5px; outline: none; cursor: pointer;";
     var speeds = [
       { v: "0.75", label: "0.75x" },
       { v: "0.9", label: "0.9x" },
-      { v: "0.95", label: "1.0x (Normal)" },
+      { v: "0.95", label: "1.0x" },
       { v: "1.15", label: "1.15x" },
       { v: "1.3", label: "1.3x" }
     ];
@@ -484,33 +575,88 @@
     });
     barLeft.appendChild(selSpeed);
 
+    // Dictation mode toggle button
     var btnDictation = document.createElement("button");
     btnDictation.type = "button";
     btnDictation.id = "sf-reader-btn-dictation";
-    btnDictation.style.cssText = "background: rgba(30, 41, 59, 0.8); color: #cbd5e1; border: 1px solid rgba(255, 255, 255, 0.15); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px;";
+    btnDictation.style.cssText = "background: rgba(30, 41, 59, 0.8); color: #cbd5e1; border: 1px solid rgba(255, 255, 255, 0.2); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px;";
     btnDictation.textContent = "✍️ " + (window.tContent ? window.tContent("reader_dictation_mode") : "Dictation");
     barLeft.appendChild(btnDictation);
 
     topBar.appendChild(barLeft);
 
+    // Right Controls: Font sizing, Theme toggling & Close
+    var barRight = document.createElement("div");
+    barRight.style.cssText = "display: flex; align-items: center; gap: 6px; flex-wrap: wrap;";
+
+    // Font size controls
+    var btnFontDec = document.createElement("button");
+    btnFontDec.type = "button";
+    btnFontDec.title = "Decrease font size";
+    btnFontDec.style.cssText = "background: rgba(30, 41, 59, 0.7); color: #cbd5e1; border: 1px solid rgba(255, 255, 255, 0.15); width: 28px; height: 28px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 700;";
+    btnFontDec.textContent = "A-";
+    btnFontDec.onclick = function () {
+      readerPrefs.fontSize = Math.max(15, readerPrefs.fontSize - 1.5);
+      readerContainer.style.fontSize = readerPrefs.fontSize + "px";
+      try { localStorage.setItem("sf_reader_fontsize", String(readerPrefs.fontSize)); } catch (e) {}
+    };
+    barRight.appendChild(btnFontDec);
+
+    var btnFontInc = document.createElement("button");
+    btnFontInc.type = "button";
+    btnFontInc.title = "Increase font size";
+    btnFontInc.style.cssText = "background: rgba(30, 41, 59, 0.7); color: #cbd5e1; border: 1px solid rgba(255, 255, 255, 0.15); width: 28px; height: 28px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 700;";
+    btnFontInc.textContent = "A+";
+    btnFontInc.onclick = function () {
+      readerPrefs.fontSize = Math.min(27, readerPrefs.fontSize + 1.5);
+      readerContainer.style.fontSize = readerPrefs.fontSize + "px";
+      try { localStorage.setItem("sf_reader_fontsize", String(readerPrefs.fontSize)); } catch (e) {}
+    };
+    barRight.appendChild(btnFontInc);
+
+    // Theme Switchers
+    var themes = [
+      { id: "dark", label: "🌙", title: "Dark Theme" },
+      { id: "sepia", label: "📜", title: "Sepia Theme" },
+      { id: "oled", label: "🖤", title: "OLED Black" }
+    ];
+    themes.forEach(function (th) {
+      var tBtn = document.createElement("button");
+      tBtn.type = "button";
+      tBtn.title = th.title;
+      tBtn.style.cssText = "background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.15); width: 28px; height: 28px; border-radius: 6px; cursor: pointer; font-size: 12px;";
+      tBtn.textContent = th.label;
+      tBtn.onclick = function () {
+        readerPrefs.theme = th.id;
+        try { localStorage.setItem("sf_reader_theme", th.id); } catch (e) {}
+        var s = THEME_STYLES[th.id] || THEME_STYLES.dark;
+        readerContainer.style.background = s.bg;
+        readerContainer.style.color = s.text;
+        topBar.style.background = s.barBg;
+        topBar.style.borderBottomColor = s.border;
+      };
+      barRight.appendChild(tBtn);
+    });
+
     var closeBtn = document.createElement("button");
     closeBtn.id = "sf-close-reader";
     closeBtn.type = "button";
-    closeBtn.style.cssText = "background: #ef4444; color: #fff; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-family: sans-serif; font-size: 12px; font-weight: 700;";
+    closeBtn.style.cssText = "background: #ef4444; color: #fff; border: none; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-family: sans-serif; font-size: 12px; font-weight: 700; margin-left: 4px;";
     closeBtn.textContent = "✕ " + (window.tContent ? window.tContent("reader_mode_close") : "Close");
     closeBtn.onclick = function () { toggleReaderMode(); };
-    topBar.appendChild(closeBtn);
+    barRight.appendChild(closeBtn);
 
+    topBar.appendChild(barRight);
     readerContainer.appendChild(topBar);
 
     // Main Article Content Container
     var contentWrapper = document.createElement("div");
-    contentWrapper.style.cssText = "max-width: 820px; margin: 30px auto; padding: 0 20px; font-family: Georgia, 'Times New Roman', serif; font-size: 18.5px; line-height: 1.8;";
+    contentWrapper.style.cssText = "max-width: 820px; margin: 34px auto; padding: 0 24px 80px 24px; font-family: Georgia, 'Times New Roman', serif; line-height: 1.85;";
 
     // Headline
     if (articleTitle) {
       var h1El = document.createElement("h1");
-      h1El.style.cssText = "font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 28px; line-height: 1.35; color: #f8fafc; font-weight: 800; margin-bottom: 22px; padding-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.08);";
+      h1El.style.cssText = "font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 29px; line-height: 1.35; color: " + currentTheme.title + "; font-weight: 800; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.1);";
       h1El.textContent = articleTitle;
       contentWrapper.appendChild(h1El);
     }
@@ -521,8 +667,8 @@
     function highlightSentence(idx) {
       sentenceElements.forEach(function (el, i) {
         if (i === idx) {
-          el.style.background = "rgba(56, 189, 248, 0.25)";
-          el.style.borderBottom = "2px solid #38bdf8";
+          el.style.background = "rgba(56, 189, 248, 0.28)";
+          el.style.borderBottom = "2.5px solid #38bdf8";
           el.scrollIntoView({ behavior: "smooth", block: "center" });
         } else {
           el.style.background = "transparent";
@@ -567,19 +713,19 @@
       articleItems.forEach(function (item) {
         if (item.type === "image") {
           var figure = document.createElement("figure");
-          figure.style.cssText = "margin: 28px 0; text-align: center;";
+          figure.style.cssText = "margin: 30px 0; text-align: center;";
 
           var img = document.createElement("img");
           img.setAttribute("src", item.src);
           img.setAttribute("alt", item.caption || "Article image");
           img.setAttribute("loading", "lazy");
           img.setAttribute("referrerpolicy", "no-referrer");
-          img.style.cssText = "max-width: 100%; height: auto; border-radius: 10px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.08); display: block; margin: 0 auto;";
+          img.style.cssText = "max-width: 100%; height: auto; border-radius: 12px; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.08); display: block; margin: 0 auto;";
           figure.appendChild(img);
 
           if (item.caption) {
             var figCap = document.createElement("figcaption");
-            figCap.style.cssText = "font-size: 13px; color: #94a3b8; font-style: italic; margin-top: 8px; line-height: 1.5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;";
+            figCap.style.cssText = "font-size: 13px; color: #94a3b8; font-style: italic; margin-top: 10px; line-height: 1.5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;";
             figCap.textContent = item.caption;
             figure.appendChild(figCap);
           }
@@ -589,7 +735,7 @@
 
         if (item.type === "heading") {
           var hEl = document.createElement(item.level || "h2");
-          hEl.style.cssText = "font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #38bdf8; font-size: 21px; font-weight: 700; margin: 30px 0 14px 0;";
+          hEl.style.cssText = "font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #38bdf8; font-size: 22px; font-weight: 700; margin: 32px 0 14px 0;";
           hEl.textContent = item.text;
           contentWrapper.appendChild(hEl);
           return;
@@ -600,8 +746,8 @@
           if (sents.length > 0) {
             var pBlock = document.createElement("p");
             pBlock.style.cssText = item.isQuote
-              ? "margin-bottom: 22px; color: #94a3b8; font-style: italic; border-left: 3px solid #38bdf8; padding-left: 14px;"
-              : "margin-bottom: 22px; color: #cbd5e1;";
+              ? "margin-bottom: 24px; color: #94a3b8; font-style: italic; border-left: 3.5px solid #38bdf8; padding-left: 16px;"
+              : "margin-bottom: 24px;";
 
             sents.forEach(function (sText) {
               var sIdx = readerAudio.sentences.length;
@@ -614,7 +760,7 @@
               sSpan.textContent = sText + " ";
 
               sSpan.addEventListener("mouseenter", function () {
-                if (readerAudio.currentIndex !== sIdx) sSpan.style.background = "rgba(255, 255, 255, 0.08)";
+                if (readerAudio.currentIndex !== sIdx) sSpan.style.background = "rgba(255, 255, 255, 0.1)";
               });
               sSpan.addEventListener("mouseleave", function () {
                 if (readerAudio.currentIndex !== sIdx) sSpan.style.background = "transparent";
@@ -643,12 +789,14 @@
 
     readerContainer.appendChild(contentWrapper);
 
-    // Dictation Modal / Drawer
+    // Dictation Modal / Drawer Dock
     var dictationBox = null;
     function openDictationBox(sIdx) {
       if (dictationBox) dictationBox.remove();
       var targetSentence = readerAudio.sentences[sIdx];
       if (!targetSentence) return;
+
+      var currentBoxTheme = THEME_STYLES[readerPrefs.theme] || THEME_STYLES.dark;
 
       dictationBox = document.createElement("div");
       dictationBox.id = "sf-dictation-drawer";
@@ -657,13 +805,13 @@
         bottom: 20px;
         left: 50%;
         transform: translateX(-50%);
-        width: 90%;
-        max-width: 720px;
-        background: #0f172a;
-        border: 1px solid rgba(56, 189, 248, 0.4);
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-        border-radius: 12px;
-        padding: 16px 20px;
+        width: 92%;
+        max-width: 740px;
+        background: ${currentBoxTheme.cardBg};
+        border: 1px solid rgba(56, 189, 248, 0.45);
+        box-shadow: 0 12px 35px rgba(0, 0, 0, 0.65);
+        border-radius: 14px;
+        padding: 16px 22px;
         z-index: 10001;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       `;
@@ -672,7 +820,7 @@
       dHeader.style.cssText = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;";
 
       var dTitle = document.createElement("span");
-      dTitle.style.cssText = "font-size: 13px; font-weight: 700; color: #38bdf8;";
+      dTitle.style.cssText = "font-size: 13.5px; font-weight: 700; color: #38bdf8;";
       dTitle.textContent = "🎧 " + (window.tContent ? window.tContent("reader_dictation_mode") : "Dictation Practice") + " (" + (sIdx + 1) + "/" + readerAudio.sentences.length + ")";
       dHeader.appendChild(dTitle);
 
@@ -685,21 +833,21 @@
         readerAudio.isDictationMode = false;
         btnDictation.style.background = "rgba(30, 41, 59, 0.8)";
         btnDictation.style.color = "#cbd5e1";
-        btnDictation.style.borderColor = "rgba(255, 255, 255, 0.15)";
+        btnDictation.style.borderColor = "rgba(255, 255, 255, 0.2)";
       };
       dHeader.appendChild(dClose);
       dictationBox.appendChild(dHeader);
 
       var dHint = document.createElement("p");
-      dHint.style.cssText = "font-size: 11.5px; color: #94a3b8; margin: 0 0 8px 0;";
-      dHint.textContent = window.tContent ? window.tContent("reader_dictation_hint") : "Listen and type what you hear below:";
+      dHint.style.cssText = "font-size: 12px; color: #94a3b8; margin: 0 0 8px 0;";
+      dHint.textContent = window.tContent ? window.tContent("reader_dictation_hint") : "Listen and type what you hear below (Press Enter to Check):";
       dictationBox.appendChild(dHint);
 
       var dInput = document.createElement("textarea");
       dInput.id = "sf-dictation-input";
       dInput.rows = 3;
       dInput.placeholder = "Type sentence here...";
-      dInput.style.cssText = "width: 100%; box-sizing: border-box; background: #1e293b; color: #f8fafc; border: 1px solid #334155; border-radius: 8px; padding: 10px; font-size: 14px; font-family: inherit; resize: vertical; outline: none;";
+      dInput.style.cssText = "width: 100%; box-sizing: border-box; background: rgba(30, 41, 59, 0.8); color: #f8fafc; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 10px 12px; font-size: 14.5px; font-family: inherit; resize: vertical; outline: none;";
       dictationBox.appendChild(dInput);
 
       var dActions = document.createElement("div");
@@ -717,14 +865,14 @@
 
       var btnSlow = document.createElement("button");
       btnSlow.type = "button";
-      btnSlow.style.cssText = "background: #1e293b; color: #94a3b8; border: 1px solid #475569; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11.5px;";
+      btnSlow.style.cssText = "background: rgba(30, 41, 59, 0.9); color: #94a3b8; border: 1px solid #475569; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11.5px;";
       btnSlow.textContent = "🐢 0.7x";
       btnSlow.onclick = function () { speakReaderSentence(targetSentence, 0.7); };
       dLeftBtns.appendChild(btnSlow);
 
       var btnPrev = document.createElement("button");
       btnPrev.type = "button";
-      btnPrev.style.cssText = "background: #1e293b; color: #94a3b8; border: 1px solid #475569; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11.5px;";
+      btnPrev.style.cssText = "background: rgba(30, 41, 59, 0.9); color: #94a3b8; border: 1px solid #475569; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11.5px;";
       btnPrev.textContent = "◀ Prev";
       btnPrev.disabled = sIdx <= 0;
       btnPrev.onclick = function () {
@@ -737,7 +885,7 @@
 
       var btnNext = document.createElement("button");
       btnNext.type = "button";
-      btnNext.style.cssText = "background: #1e293b; color: #94a3b8; border: 1px solid #475569; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11.5px;";
+      btnNext.style.cssText = "background: rgba(30, 41, 59, 0.9); color: #94a3b8; border: 1px solid #475569; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11.5px;";
       btnNext.textContent = "Next ▶";
       btnNext.disabled = sIdx >= readerAudio.sentences.length - 1;
       btnNext.onclick = function () {
@@ -755,7 +903,7 @@
 
       var btnCheck = document.createElement("button");
       btnCheck.type = "button";
-      btnCheck.style.cssText = "background:#10b981; color:#fff; border:none; padding:6px 14px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:700;";
+      btnCheck.style.cssText = "background:#10b981; color:#fff; border:none; padding:6px 16px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:700;";
       btnCheck.textContent = "✓ " + (window.tContent ? window.tContent("reader_dictation_check") : "Check");
 
       var btnReveal = document.createElement("button");
@@ -770,16 +918,25 @@
       dictationBox.appendChild(dActions);
 
       var dResult = document.createElement("div");
-      dResult.style.cssText = "margin-top:10px; font-size:12px; display:none;";
+      dResult.style.cssText = "margin-top:12px; font-size:13px; display:none;";
       dictationBox.appendChild(dResult);
 
-      btnCheck.onclick = function () {
+      function doCheck() {
         var match = calculateWordMatch(targetSentence, dInput.value);
         dResult.style.display = "block";
         var scoreStr = (window.tContent ? window.tContent("reader_dictation_score", [match.score, match.correct, match.total]) : ("Accuracy: " + match.score + "% (" + match.correct + "/" + match.total + " words correct)"));
         dResult.textContent = (match.score >= 80 ? "🎉 " : "💡 ") + scoreStr;
         dResult.style.color = match.score >= 80 ? "#34d399" : "#fbbf24";
-      };
+      }
+
+      btnCheck.onclick = doCheck;
+
+      dInput.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          doCheck();
+        }
+      });
 
       btnReveal.onclick = function () {
         dResult.style.display = "block";
@@ -801,7 +958,7 @@
       } else {
         btnDictation.style.background = "rgba(30, 41, 59, 0.8)";
         btnDictation.style.color = "#cbd5e1";
-        btnDictation.style.borderColor = "rgba(255, 255, 255, 0.15)";
+        btnDictation.style.borderColor = "rgba(255, 255, 255, 0.2)";
         if (dictationBox) { dictationBox.remove(); dictationBox = null; }
       }
     });
