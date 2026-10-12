@@ -21,8 +21,9 @@ Tất cả thay đổi đáng chú ý của dự án đều được ghi tại �
   - Thêm 4 chế độ căn lề khối (Trái, Giữa, Phải, Đều 2 bên) và hỗ trợ căn lề cột bảng chuẩn GFM (`:---`, `:---:`, `---:`).
   - Tích hợp menu đổi phông chữ hệ thống (System UI, Monospace, Academic Serif, Modern Round, Clean, Handwriting) và chỉnh cỡ chữ trực quan, tự động lưu cấu hình.
 - **Chế độ Đọc Báo & Luyện Nghe Chép Chính Tả Tiếng Anh (News Reader & Dictation Practice)**:
-  - Bóc tách nội dung chính xác từ các trang báo & tin tức (BBC, CNN, Tuổi Trẻ, VnExpress...), tự động loại bỏ quảng cáo, header/footer, menu điều hướng và gợi ý bài viết liên quan.
-  - Tách câu thông minh và đọc to từng câu bằng giọng đọc tiếng Anh bản xứ tích hợp trong trình duyệt (`SpeechSynthesis`), có tuỳ chỉnh tốc độ đọc (0.75x đến 1.3x) và bấm trực tiếp vào bất kỳ câu nào để phát âm lại.
+  - Bóc tách nội dung chính xác từ các trang báo & tin tức (BBC, CNN, Tuổi Trẻ, VnExpress...), tự động loại bỏ triệt để quảng cáo, header/footer, menu điều hướng, hộp bài viết liên quan, widget đề xuất và bình luận rác bằng thuật toán Heuristic scoring và `closest()` noise pruning.
+  - Giữ lại và hiển thị các **hình ảnh minh họa chất lượng cao** của bài báo xen kẽ tự nhiên giữa các đoạn văn, hỗ trợ ảnh lazy-load (`data-src`, `srcset`) và chú thích ảnh (`figcaption`) trang nhã.
+  - Hiển thị tiêu đề bài báo trang trọng ở đầu trang; tách câu thông minh và đọc to từng câu bằng giọng đọc tiếng Anh bản xứ tích hợp trong trình duyệt (`SpeechSynthesis`), có tuỳ chỉnh tốc độ đọc (0.75x đến 1.3x) và bấm trực tiếp vào bất kỳ câu nào để phát âm lại.
   - Tích hợp ngăn **Luyện nghe chép chính tả (Dictation)**: cho phép nghe phát âm câu tiếng Anh, nghe chậm 0.7x, gõ lại nội dung nghe được vào khung soạn thảo, tự động chấm điểm độ chính xác theo phần trăm số từ đúng, cùng nút xem đáp án đối chiếu.
   - Tuân thủ 100% xử lý an toàn cục bộ (Local-Only), bảo đảm tính tương thích đa ngôn ngữ (5 thứ tiếng) và an toàn mã DOM tuyệt đối.
 - **Menu lệnh của userscript trên sidebar**: script đã gọi `GM_registerMenuCommand` giờ hiện nút *Menu* trong thẻ script, bấm ra dropdown liệt kê các lệnh (`caption`, `accessKey`), bấm là chạy đúng callback của script đó; background thêm action `US_MENU_REGISTER` / `US_MENU_UNREGISTER` và bridge method `menu.get`.

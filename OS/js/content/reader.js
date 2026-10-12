@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------------
 // ScholarFlow Cyber-Reader Mode (News Reader & Dictation Listening Coach)
-// Clean Article View, Text-To-Speech with Natural Voices, and Dictation
+// Clean Article View with Images, Text-To-Speech with Natural Voices, and Dictation
 // 100% Local processing - Secure DOM APIs only (No dynamic innerHTML)
 // ---------------------------------------------------------------------------
 
@@ -29,7 +29,6 @@
     if (!text) return [];
     var clean = text.replace(/\s+/g, " ").trim();
     if (!clean) return [];
-    // Tokenize by sentence enders while handling contractions & quotes
     var parts = clean.split(/(?<=[.!?])\s+(?=[A-Z0-9"“'‘])/);
     var res = [];
     for (var i = 0; i < parts.length; i++) {
@@ -76,7 +75,6 @@
     if (typeof window === "undefined" || !window.speechSynthesis) return null;
     var voices = window.speechSynthesis.getVoices() || [];
     if (voices.length === 0) return null;
-    // Prioritize natural / neural voices on Edge and Chrome
     var best = voices.find(function (v) {
       return v.lang && /en[-_]US/i.test(v.lang) && /natural|neural|online/i.test(v.name);
     });
@@ -114,7 +112,6 @@
       u.lang = (v && v.lang) ? v.lang : "en-US";
       u.rate = rate || readerAudio.rate || 0.95;
 
-      // Keep utterance reference alive to avoid garbage collection drop bug
       readerAudio.activeUtterance = u;
 
       u.onend = function () {
@@ -133,9 +130,174 @@
     }
   }
 
+  // --- Noise & Content Classification Selectors ---
+  var NOISE_SELECTORS = [
+    'header', 'footer', 'nav', 'aside',
+    '.sidebar', '#sidebar', '.aside',
+    '.comments', '#comments', '.comment-section', '#disqus_thread',
+    '.ad', '.ads', '.advert', '.advertisement', '.advertising', '.ad-box', '.ad-wrapper',
+    '.banner', '.banner-ad', '.sponsor', '.sponsored',
+    '.share', '.sharing', '.social-share', '.share-bar', '.share-buttons', '.social-links',
+    '.related', '.related-posts', '.related-news', '.related-articles', '.box-tin-lien-quan',
+    '.more-news', '.recommend', '.recommendation', '.suggested', '.trending', '.popular',
+    '.tags', '.tag-list', '.article-tags', '.topic-tags',
+    '.newsletter', '.subscribe-box', '.subscription', '.signup-box',
+    '.breadcrumb', '.breadcrumbs',
+    '.author-bio', '.author-box', '.about-author', '.author-info',
+    '.modal', '.popup', '.dialog', '.overlay',
+    'ytd-comments', 'ytd-watch-next-secondary-results-renderer', 'ytd-masthead', 'ytd-live-chat-frame',
+    '[role="complementary"]', '[role="navigation"]', '[role="banner"]', '[role="dialog"]',
+    '[aria-hidden="true"]'
+  ];
+
+  var JUNK_TEXT_RE = /^(advertisement|sponsored|read more|also read|xem thêm|bài viết liên quan|tin liên quan|ảnh:|photo:|nguồn:|theo\s|theo dõi chúng tôi|follow us|sign up|subscribe|all rights reserved|bản quyền thuộc|chia sẻ qua|đăng ký nhận tin)/i;
+
+  function isNoiseNode(el) {
+    if (!el || el.nodeType !== Node.ELEMENT_NODE) return false;
+    try {
+      for (var i = 0; i < NOISE_SELECTORS.length; i++) {
+        if (el.closest(NOISE_SELECTORS[i])) return true;
+      }
+    } catch (e) {}
+
+    var idClass = ((el.id || "") + " " + (el.className || "")).toLowerCase();
+    if (/(comment|sidebar|related|popular|advert|banner|promo|social|share|cookie|popup|modal|sponsor|recommend|newsletter|breadcrumb|tag-list|author-bio|read-more|also-read|inline-ad)/i.test(idClass)) {
+      return true;
+    }
+    return false;
+  }
+
+  function getLinkDensity(el) {
+    var textLen = (el.textContent || "").trim().length;
+    if (textLen === 0) return 0;
+    var linkElements = el.querySelectorAll("a");
+    var linkLen = 0;
+    for (var i = 0; i < linkElements.length; i++) {
+      linkLen += (linkElements[i].textContent || "").trim().length;
+    }
+    return linkLen / textLen;
+  }
+
+  function extractImageInfo(imgEl) {
+    if (!imgEl || imgEl.tagName !== "IMG") return null;
+    var src = imgEl.getAttribute("data-src") ||
+              imgEl.getAttribute("data-original") ||
+              imgEl.getAttribute("data-lazy-src") ||
+              imgEl.getAttribute("data-actualsrc") ||
+              imgEl.getAttribute("data-full") ||
+              imgEl.currentSrc ||
+              imgEl.getAttribute("src") || "";
+
+    if (!src && imgEl.getAttribute("srcset")) {
+      var parts = imgEl.getAttribute("srcset").split(",");
+      if (parts.length > 0) {
+        src = parts[parts.length - 1].trim().split(" ")[0];
+      }
+    }
+
+    if (!src || src.startsWith("data:image/svg") || (src.startsWith("data:image/gif") && src.length < 250)) {
+      return null;
+    }
+
+    if (/avatar|icon|logo|badge|emoji|pixel|tracker|analytics|button|spacer|banner/i.test(src)) {
+      return null;
+    }
+
+    // Check size if available
+    var rect = imgEl.getBoundingClientRect();
+    var w = imgEl.naturalWidth || rect.width || parseInt(imgEl.getAttribute("width") || "0", 10);
+    var h = imgEl.naturalHeight || rect.height || parseInt(imgEl.getAttribute("height") || "0", 10);
+    if ((w > 0 && w < 120) || (h > 0 && h < 90)) {
+      return null;
+    }
+
+    // Only allow http/https or safe data:image
+    if (!/^(https?:|data:image\/)/i.test(src)) {
+      return null;
+    }
+
+    var caption = "";
+    var fig = imgEl.closest("figure");
+    if (fig) {
+      var figCap = fig.querySelector("figcaption, .caption, .image-caption");
+      if (figCap) caption = (figCap.textContent || "").trim();
+    }
+    if (!caption) {
+      caption = (imgEl.getAttribute("alt") || imgEl.getAttribute("title") || "").trim();
+    }
+
+    return { src: src, caption: caption };
+  }
+
+  function pickBestArticleContainer() {
+    var selectors = [
+      "article", "[itemprop='articleBody']", "[itemprop='article']",
+      ".article-body", ".article__body", ".story-body", ".post-content",
+      ".entry-content", ".content-detail", ".detail-content", ".fck_detail",
+      ".content_detail", "#article-body", "main", "[role='main']",
+      "#main-content", ".main-content"
+    ];
+
+    var candidates = [];
+    var seen = new Set();
+    selectors.forEach(function (sel) {
+      try {
+        var els = document.querySelectorAll(sel);
+        for (var i = 0; i < els.length; i++) {
+          var el = els[i];
+          if (el && !seen.has(el) && el !== document.body && el !== document.documentElement) {
+            seen.add(el);
+            candidates.push(el);
+          }
+        }
+      } catch (e) {}
+    });
+
+    if (candidates.length === 0) {
+      return document.querySelector("article") || document.querySelector("main") || document.querySelector("[role='main']") || document.body;
+    }
+
+    var bestEl = null;
+    var bestScore = -100;
+    var GOOD_RE = /(article|entry|post|story|body|content|text|paratext)/i;
+    var NOISE_RE = /(comment|sidebar|related|popular|widget|advert|banner|promo|social|share|cookie|popup|modal|dialog|footer|nav|header)/i;
+
+    for (var j = 0; j < candidates.length; j++) {
+      var candidate = candidates[j];
+      var score = 0;
+      var tag = candidate.tagName;
+      if (tag === "ARTICLE") score += 35;
+      else if (tag === "MAIN") score += 25;
+      else if (tag === "SECTION" || tag === "DIV") score += 10;
+
+      var idClass = (candidate.id || "") + " " + (candidate.className || "");
+      if (GOOD_RE.test(idClass)) score += 30;
+      if (NOISE_RE.test(idClass)) score -= 45;
+
+      var pElements = candidate.querySelectorAll("p");
+      score += Math.min(60, pElements.length * 6);
+
+      var imgElements = candidate.querySelectorAll("img, figure");
+      score += Math.min(25, imgElements.length * 5);
+
+      var textLength = (candidate.textContent || "").trim().length;
+      if (textLength < 100) score -= 50;
+      else score += Math.min(60, Math.floor(textLength / 120));
+
+      var density = getLinkDensity(candidate);
+      if (density > 0.5) score -= 70;
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestEl = candidate;
+      }
+    }
+
+    return (bestScore > 15 && bestEl) ? bestEl : (document.querySelector("article") || document.querySelector("main") || document.body);
+  }
+
   function toggleReaderMode() {
     if (isReaderMode) {
-      // Restore
       if (typeof window !== "undefined" && window.speechSynthesis) {
         window.speechSynthesis.cancel();
       }
@@ -158,96 +320,82 @@
     isReaderMode = true;
     originalBodyDisplay = (document.body && document.body.style.display) || "";
 
-    // 1. Candidate extraction algorithms
-    var EXECUTABLE_TAGS = new Set([
-      'script', 'style', 'noscript', 'iframe', 'object', 'embed',
-      'link', 'meta', 'form', 'input', 'button', 'textarea', 'select', 'option', 'template', 'svg'
-    ]);
-    var NOISE_SELECTORS = [
-      'header', 'footer', 'nav', 'aside', '.sidebar', '#sidebar',
-      '.comments', '#comments', '.ad', '.ads', '.advertisement',
-      '.share-buttons', '.social-share', '.nav', '.menu', '.banner',
-      'ytd-comments', 'ytd-watch-next-secondary-results-renderer', 'ytd-masthead'
-    ];
-    var URL_ATTRS = ['href', 'src', 'action', 'formaction', 'xlink:href', 'poster', 'data'];
+    var mainContainer = pickBestArticleContainer();
 
-    function isNoiseElement(el) {
-      if (!el || !el.matches) return false;
-      try {
-        for (var i = 0; i < NOISE_SELECTORS.length; i++) {
-          if (el.matches(NOISE_SELECTORS[i])) return true;
-        }
-      } catch (e) {}
-      return false;
+    // Extract Title
+    var articleTitle = "";
+    var h1Candidate = (mainContainer && mainContainer.querySelector("h1")) || document.querySelector("article h1, h1");
+    if (h1Candidate && !isNoiseNode(h1Candidate)) {
+      articleTitle = (h1Candidate.textContent || "").trim();
+    }
+    if (!articleTitle) {
+      articleTitle = (document.title || "").split(/[-|–—]/)[0].trim();
     }
 
-    function sanitizeNode(node) {
-      if (node.nodeType === Node.TEXT_NODE) return document.createTextNode(node.nodeValue);
-      if (node.nodeType !== Node.ELEMENT_NODE) return null;
-      var tag = node.tagName.toLowerCase();
-      if (EXECUTABLE_TAGS.has(tag)) return null;
-      if (isNoiseElement(node)) return null;
+    // Extract Article Items in Natural Flow (Headings, Paragraphs, Images)
+    var articleItems = [];
+    var seenImages = new Set();
+    var seenTextHashes = new Set();
 
-      var clean = document.createElement(tag);
-      var attrs = Array.from(node.attributes || []);
-      for (var i = 0; i < attrs.length; i++) {
-        var attr = attrs[i];
-        var name = attr.name.toLowerCase();
-        if (name.startsWith('on')) continue;
-        if (name === 'style') {
-          clean.setAttribute('style', attr.value);
-          continue;
-        }
-        if (URL_ATTRS.indexOf(name) !== -1) {
-          var v = String(attr.value).trim().toLowerCase();
-          if (v.startsWith('javascript:') || v.startsWith('vbscript:') || v.startsWith('data:text/html')) continue;
-          clean.setAttribute(name, attr.value);
-          continue;
-        }
-        clean.setAttribute(name, attr.value);
-      }
-      var children = Array.from(node.childNodes);
-      for (var j = 0; j < children.length; j++) {
-        var c = sanitizeNode(children[j]);
-        if (c) clean.appendChild(c);
-      }
-      return clean;
-    }
-
-    // 2. Select main news container
-    var mainContainer = null;
-    var candidates = [
-      'article', '[itemprop="articleBody"]', '.article-body', '.story-body',
-      '.post-content', '.entry-content', '.detail-content', '.content-detail',
-      'main', '#main-content', '.main-content'
-    ];
-    for (var k = 0; k < candidates.length; k++) {
-      var candidateEl = document.querySelector(candidates[k]);
-      if (candidateEl && candidateEl.textContent.trim().length > 150) {
-        mainContainer = candidateEl;
-        break;
-      }
-    }
-
-    var textParagraphs = [];
     if (mainContainer) {
-      var paras = Array.from(mainContainer.querySelectorAll('h1, h2, h3, p, li, blockquote'))
-        .filter(function (p) {
-          return !isNoiseElement(p) && p.textContent.trim().length > 15;
-        });
-      if (paras.length > 0) {
-        paras.forEach(function (p) { textParagraphs.push(p); });
-      } else {
-        textParagraphs.push(mainContainer);
-      }
-    } else {
-      var allParas = Array.from(document.querySelectorAll('h1, h2, h3, p, li, blockquote'))
-        .filter(function (el) {
-          if (isNoiseElement(el)) return false;
-          var rect = el.getBoundingClientRect();
-          return (rect.width > 0 && rect.height > 0) && el.textContent.trim().length > 25;
-        });
-      allParas.forEach(function (p) { textParagraphs.push(p); });
+      var elements = Array.from(mainContainer.querySelectorAll("h1, h2, h3, h4, p, figure, img, blockquote"));
+      elements.forEach(function (el) {
+        if (isNoiseNode(el)) return;
+
+        var tag = el.tagName.toLowerCase();
+
+        // Figure or Img
+        if (tag === "figure") {
+          var img = el.querySelector("img");
+          if (img && !seenImages.has(img)) {
+            seenImages.add(img);
+            var info = extractImageInfo(img);
+            if (info) articleItems.push({ type: "image", src: info.src, caption: info.caption });
+          }
+          return;
+        }
+
+        if (tag === "img") {
+          if (!seenImages.has(el)) {
+            seenImages.add(el);
+            var imgInfo = extractImageInfo(el);
+            if (imgInfo) articleItems.push({ type: "image", src: imgInfo.src, caption: imgInfo.caption });
+          }
+          return;
+        }
+
+        // Headings
+        if (tag === "h1" || tag === "h2" || tag === "h3" || tag === "h4") {
+          var hText = (el.textContent || "").trim();
+          if (hText.length > 5 && hText !== articleTitle && !JUNK_TEXT_RE.test(hText)) {
+            articleItems.push({ type: "heading", level: tag, text: hText });
+          }
+          return;
+        }
+
+        // Paragraphs or Blockquotes
+        if (tag === "p" || tag === "blockquote") {
+          // If paragraph wraps an image
+          var innerImg = el.querySelector("img");
+          if (innerImg && !seenImages.has(innerImg)) {
+            seenImages.add(innerImg);
+            var pImgInfo = extractImageInfo(innerImg);
+            if (pImgInfo) articleItems.push({ type: "image", src: pImgInfo.src, caption: pImgInfo.caption });
+          }
+
+          var pText = (el.textContent || "").replace(/\s+/g, " ").trim();
+          if (pText.length < 20) return;
+          if (getLinkDensity(el) > 0.45) return;
+          if (JUNK_TEXT_RE.test(pText)) return;
+
+          // Deduplicate
+          var hash = pText.slice(0, 45);
+          if (seenTextHashes.has(hash)) return;
+          seenTextHashes.add(hash);
+
+          articleItems.push({ type: "paragraph", text: pText, isQuote: tag === "blockquote" });
+        }
+      });
     }
 
     // Hide original body, show reader container
@@ -255,7 +403,7 @@
       document.body.style.display = "none";
     }
 
-    readerContainer = document.createElement('div');
+    readerContainer = document.createElement("div");
     readerContainer.id = "sf-cyber-reader";
     readerContainer.style.cssText = `
       position: fixed;
@@ -271,8 +419,8 @@
       box-sizing: border-box;
     `;
 
-    // 3. Audio & Learning Header Toolbar
-    var topBar = document.createElement('div');
+    // Top Header & Controls Bar
+    var topBar = document.createElement("div");
     topBar.id = "sf-reader-topbar";
     topBar.style.cssText = `
       position: sticky;
@@ -292,29 +440,27 @@
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
     `;
 
-    var barLeft = document.createElement('div');
+    var barLeft = document.createElement("div");
     barLeft.style.cssText = "display: flex; align-items: center; gap: 8px; flex-wrap: wrap;";
 
-    var brandPill = document.createElement('span');
+    var brandPill = document.createElement("span");
     brandPill.style.cssText = "font-size: 12px; font-weight: 800; color: #38bdf8; background: rgba(56, 189, 248, 0.12); padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(56, 189, 248, 0.3);";
     brandPill.textContent = "🎧 ScholarFlow News Coach";
     barLeft.appendChild(brandPill);
 
-    // Play / Pause button
-    var btnPlay = document.createElement('button');
+    var btnPlay = document.createElement("button");
     btnPlay.type = "button";
     btnPlay.id = "sf-reader-btn-play";
     btnPlay.style.cssText = "background: #0284c7; color: #ffffff; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;";
     btnPlay.textContent = "▶ " + (window.tContent ? window.tContent("reader_listen_play") : "Read Aloud");
     barLeft.appendChild(btnPlay);
 
-    // Rate select
-    var speedLabel = document.createElement('span');
+    var speedLabel = document.createElement("span");
     speedLabel.style.cssText = "font-size: 11px; color: #94a3b8; font-weight: 600;";
     speedLabel.textContent = (window.tContent ? window.tContent("reader_listen_speed") : "Speed") + ":";
     barLeft.appendChild(speedLabel);
 
-    var selSpeed = document.createElement('select');
+    var selSpeed = document.createElement("select");
     selSpeed.style.cssText = "background: #1e293b; color: #f8fafc; border: 1px solid #334155; padding: 4px 8px; border-radius: 6px; font-size: 11.5px;";
     var speeds = [
       { v: "0.75", label: "0.75x" },
@@ -324,13 +470,13 @@
       { v: "1.3", label: "1.3x" }
     ];
     speeds.forEach(function (sp) {
-      var opt = document.createElement('option');
+      var opt = document.createElement("option");
       opt.value = sp.v;
       opt.textContent = sp.label;
       if (sp.v === "0.95") opt.selected = true;
       selSpeed.appendChild(opt);
     });
-    selSpeed.addEventListener('change', function () {
+    selSpeed.addEventListener("change", function () {
       readerAudio.rate = parseFloat(selSpeed.value) || 0.95;
       if (readerAudio.isPlaying && readerAudio.currentIndex >= 0) {
         playSentenceAt(readerAudio.currentIndex);
@@ -338,8 +484,7 @@
     });
     barLeft.appendChild(selSpeed);
 
-    // Dictation mode toggle button
-    var btnDictation = document.createElement('button');
+    var btnDictation = document.createElement("button");
     btnDictation.type = "button";
     btnDictation.id = "sf-reader-btn-dictation";
     btnDictation.style.cssText = "background: rgba(30, 41, 59, 0.8); color: #cbd5e1; border: 1px solid rgba(255, 255, 255, 0.15); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px;";
@@ -348,8 +493,7 @@
 
     topBar.appendChild(barLeft);
 
-    // Close Button
-    var closeBtn = document.createElement('button');
+    var closeBtn = document.createElement("button");
     closeBtn.id = "sf-close-reader";
     closeBtn.type = "button";
     closeBtn.style.cssText = "background: #ef4444; color: #fff; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-family: sans-serif; font-size: 12px; font-weight: 700;";
@@ -359,9 +503,17 @@
 
     readerContainer.appendChild(topBar);
 
-    // 4. Content Area & Sentence Tokenization
-    var contentWrapper = document.createElement('div');
-    contentWrapper.style.cssText = "max-width: 820px; margin: 30px auto; padding: 0 20px; font-family: Georgia, serif; font-size: 18.5px; line-height: 1.8;";
+    // Main Article Content Container
+    var contentWrapper = document.createElement("div");
+    contentWrapper.style.cssText = "max-width: 820px; margin: 30px auto; padding: 0 20px; font-family: Georgia, 'Times New Roman', serif; font-size: 18.5px; line-height: 1.8;";
+
+    // Headline
+    if (articleTitle) {
+      var h1El = document.createElement("h1");
+      h1El.style.cssText = "font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 28px; line-height: 1.35; color: #f8fafc; font-weight: 800; margin-bottom: 22px; padding-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.08);";
+      h1El.textContent = articleTitle;
+      contentWrapper.appendChild(h1El);
+    }
 
     readerAudio.sentences = [];
     var sentenceElements = [];
@@ -400,7 +552,7 @@
       });
     }
 
-    btnPlay.addEventListener('click', function () {
+    btnPlay.addEventListener("click", function () {
       if (readerAudio.isPlaying) {
         if (window.speechSynthesis) window.speechSynthesis.cancel();
         readerAudio.isPlaying = false;
@@ -411,65 +563,94 @@
       }
     });
 
-    if (textParagraphs.length > 0) {
-      textParagraphs.forEach(function (origPara) {
-        var pNode = sanitizeNode(origPara);
-        if (!pNode) return;
+    if (articleItems.length > 0) {
+      articleItems.forEach(function (item) {
+        if (item.type === "image") {
+          var figure = document.createElement("figure");
+          figure.style.cssText = "margin: 28px 0; text-align: center;";
 
-        var rawText = (pNode.textContent || "").trim();
-        var sents = splitTextIntoSentences(rawText);
+          var img = document.createElement("img");
+          img.setAttribute("src", item.src);
+          img.setAttribute("alt", item.caption || "Article image");
+          img.setAttribute("loading", "lazy");
+          img.setAttribute("referrerpolicy", "no-referrer");
+          img.style.cssText = "max-width: 100%; height: auto; border-radius: 10px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.08); display: block; margin: 0 auto;";
+          figure.appendChild(img);
 
-        if (sents.length > 0) {
-          var pBlock = document.createElement('p');
-          pBlock.style.cssText = "margin-bottom: 22px; color: #cbd5e1;";
+          if (item.caption) {
+            var figCap = document.createElement("figcaption");
+            figCap.style.cssText = "font-size: 13px; color: #94a3b8; font-style: italic; margin-top: 8px; line-height: 1.5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;";
+            figCap.textContent = item.caption;
+            figure.appendChild(figCap);
+          }
+          contentWrapper.appendChild(figure);
+          return;
+        }
 
-          sents.forEach(function (sText) {
-            var sIdx = readerAudio.sentences.length;
-            readerAudio.sentences.push(sText);
+        if (item.type === "heading") {
+          var hEl = document.createElement(item.level || "h2");
+          hEl.style.cssText = "font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #38bdf8; font-size: 21px; font-weight: 700; margin: 30px 0 14px 0;";
+          hEl.textContent = item.text;
+          contentWrapper.appendChild(hEl);
+          return;
+        }
 
-            var sSpan = document.createElement('span');
-            sSpan.className = "sf-reader-sentence";
-            sSpan.style.cssText = "cursor: pointer; padding: 2px 2px; border-radius: 4px; transition: background 0.2s;";
-            sSpan.title = "Click to listen";
-            sSpan.textContent = sText + " ";
+        if (item.type === "paragraph") {
+          var sents = splitTextIntoSentences(item.text);
+          if (sents.length > 0) {
+            var pBlock = document.createElement("p");
+            pBlock.style.cssText = item.isQuote
+              ? "margin-bottom: 22px; color: #94a3b8; font-style: italic; border-left: 3px solid #38bdf8; padding-left: 14px;"
+              : "margin-bottom: 22px; color: #cbd5e1;";
 
-            sSpan.addEventListener('mouseenter', function () {
-              if (readerAudio.currentIndex !== sIdx) sSpan.style.background = "rgba(255, 255, 255, 0.08)";
+            sents.forEach(function (sText) {
+              var sIdx = readerAudio.sentences.length;
+              readerAudio.sentences.push(sText);
+
+              var sSpan = document.createElement("span");
+              sSpan.className = "sf-reader-sentence";
+              sSpan.style.cssText = "cursor: pointer; padding: 2px 2px; border-radius: 4px; transition: background 0.2s;";
+              sSpan.title = "Click to listen";
+              sSpan.textContent = sText + " ";
+
+              sSpan.addEventListener("mouseenter", function () {
+                if (readerAudio.currentIndex !== sIdx) sSpan.style.background = "rgba(255, 255, 255, 0.08)";
+              });
+              sSpan.addEventListener("mouseleave", function () {
+                if (readerAudio.currentIndex !== sIdx) sSpan.style.background = "transparent";
+              });
+
+              sSpan.addEventListener("click", function () {
+                playSentenceAt(sIdx);
+                if (readerAudio.isDictationMode) {
+                  openDictationBox(sIdx);
+                }
+              });
+
+              sentenceElements.push(sSpan);
+              pBlock.appendChild(sSpan);
             });
-            sSpan.addEventListener('mouseleave', function () {
-              if (readerAudio.currentIndex !== sIdx) sSpan.style.background = "transparent";
-            });
 
-            sSpan.addEventListener('click', function () {
-              playSentenceAt(sIdx);
-              if (readerAudio.isDictationMode) {
-                openDictationBox(sIdx);
-              }
-            });
-
-            sentenceElements.push(sSpan);
-            pBlock.appendChild(sSpan);
-          });
-
-          contentWrapper.appendChild(pBlock);
+            contentWrapper.appendChild(pBlock);
+          }
         }
       });
     } else {
-      var empty = document.createElement('p');
+      var empty = document.createElement("p");
       empty.textContent = window.tContent ? window.tContent("reader_mode_empty") : "No readable content found on this page.";
       contentWrapper.appendChild(empty);
     }
 
     readerContainer.appendChild(contentWrapper);
 
-    // 5. Dictation & Listening Exercise Modal / Drawer
+    // Dictation Modal / Drawer
     var dictationBox = null;
     function openDictationBox(sIdx) {
       if (dictationBox) dictationBox.remove();
       var targetSentence = readerAudio.sentences[sIdx];
       if (!targetSentence) return;
 
-      dictationBox = document.createElement('div');
+      dictationBox = document.createElement("div");
       dictationBox.id = "sf-dictation-drawer";
       dictationBox.style.cssText = `
         position: fixed;
@@ -487,15 +668,15 @@
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       `;
 
-      var dHeader = document.createElement('div');
+      var dHeader = document.createElement("div");
       dHeader.style.cssText = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;";
 
-      var dTitle = document.createElement('span');
+      var dTitle = document.createElement("span");
       dTitle.style.cssText = "font-size: 13px; font-weight: 700; color: #38bdf8;";
       dTitle.textContent = "🎧 " + (window.tContent ? window.tContent("reader_dictation_mode") : "Dictation Practice") + " (" + (sIdx + 1) + "/" + readerAudio.sentences.length + ")";
       dHeader.appendChild(dTitle);
 
-      var dClose = document.createElement('button');
+      var dClose = document.createElement("button");
       dClose.type = "button";
       dClose.style.cssText = "background: none; border: none; color: #94a3b8; font-size: 16px; cursor: pointer;";
       dClose.textContent = "✕";
@@ -509,39 +690,39 @@
       dHeader.appendChild(dClose);
       dictationBox.appendChild(dHeader);
 
-      var dHint = document.createElement('p');
+      var dHint = document.createElement("p");
       dHint.style.cssText = "font-size: 11.5px; color: #94a3b8; margin: 0 0 8px 0;";
       dHint.textContent = window.tContent ? window.tContent("reader_dictation_hint") : "Listen and type what you hear below:";
       dictationBox.appendChild(dHint);
 
-      var dInput = document.createElement('textarea');
+      var dInput = document.createElement("textarea");
       dInput.id = "sf-dictation-input";
       dInput.rows = 3;
       dInput.placeholder = "Type sentence here...";
       dInput.style.cssText = "width: 100%; box-sizing: border-box; background: #1e293b; color: #f8fafc; border: 1px solid #334155; border-radius: 8px; padding: 10px; font-size: 14px; font-family: inherit; resize: vertical; outline: none;";
       dictationBox.appendChild(dInput);
 
-      var dActions = document.createElement('div');
+      var dActions = document.createElement("div");
       dActions.style.cssText = "display: flex; justify-content: space-between; align-items: center; margin-top: 10px; flex-wrap: wrap; gap: 8px;";
 
-      var dLeftBtns = document.createElement('div');
+      var dLeftBtns = document.createElement("div");
       dLeftBtns.style.cssText = "display: flex; gap: 6px; align-items: center;";
 
-      var btnReplay = document.createElement('button');
+      var btnReplay = document.createElement("button");
       btnReplay.type = "button";
       btnReplay.style.cssText = "background: #334155; color: #f8fafc; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;";
       btnReplay.textContent = "🔊 Replay";
       btnReplay.onclick = function () { speakReaderSentence(targetSentence, readerAudio.rate); };
       dLeftBtns.appendChild(btnReplay);
 
-      var btnSlow = document.createElement('button');
+      var btnSlow = document.createElement("button");
       btnSlow.type = "button";
       btnSlow.style.cssText = "background: #1e293b; color: #94a3b8; border: 1px solid #475569; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11.5px;";
       btnSlow.textContent = "🐢 0.7x";
       btnSlow.onclick = function () { speakReaderSentence(targetSentence, 0.7); };
       dLeftBtns.appendChild(btnSlow);
 
-      var btnPrev = document.createElement('button');
+      var btnPrev = document.createElement("button");
       btnPrev.type = "button";
       btnPrev.style.cssText = "background: #1e293b; color: #94a3b8; border: 1px solid #475569; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11.5px;";
       btnPrev.textContent = "◀ Prev";
@@ -554,7 +735,7 @@
       };
       dLeftBtns.appendChild(btnPrev);
 
-      var btnNext = document.createElement('button');
+      var btnNext = document.createElement("button");
       btnNext.type = "button";
       btnNext.style.cssText = "background: #1e293b; color: #94a3b8; border: 1px solid #475569; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11.5px;";
       btnNext.textContent = "Next ▶";
@@ -569,15 +750,15 @@
 
       dActions.appendChild(dLeftBtns);
 
-      var dRightBtns = document.createElement('div');
+      var dRightBtns = document.createElement("div");
       dRightBtns.style.cssText = "display: flex; gap: 8px;";
 
-      var btnCheck = document.createElement('button');
+      var btnCheck = document.createElement("button");
       btnCheck.type = "button";
       btnCheck.style.cssText = "background:#10b981; color:#fff; border:none; padding:6px 14px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:700;";
       btnCheck.textContent = "✓ " + (window.tContent ? window.tContent("reader_dictation_check") : "Check");
 
-      var btnReveal = document.createElement('button');
+      var btnReveal = document.createElement("button");
       btnReveal.type = "button";
       btnReveal.style.cssText = "background:transparent; color:#94a3b8; border:1px solid #475569; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:12px;";
       btnReveal.textContent = window.tContent ? window.tContent("reader_dictation_reveal") : "Show Answer";
@@ -588,7 +769,7 @@
 
       dictationBox.appendChild(dActions);
 
-      var dResult = document.createElement('div');
+      var dResult = document.createElement("div");
       dResult.style.cssText = "margin-top:10px; font-size:12px; display:none;";
       dictationBox.appendChild(dResult);
 
@@ -610,7 +791,7 @@
       setTimeout(function () { dInput.focus(); }, 100);
     }
 
-    btnDictation.addEventListener('click', function () {
+    btnDictation.addEventListener("click", function () {
       readerAudio.isDictationMode = !readerAudio.isDictationMode;
       if (readerAudio.isDictationMode) {
         btnDictation.style.background = "#0284c7";
@@ -630,7 +811,7 @@
 
   window.toggleReaderMode = toggleReaderMode;
 
-  // Register single message listener
+  // Register message listener
   if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage) {
     chrome.runtime.onMessage.addListener(function (req, sender, sendResponse) {
       if (req && req.command === "toggleReaderMode") {
