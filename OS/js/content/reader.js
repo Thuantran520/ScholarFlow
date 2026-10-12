@@ -631,19 +631,30 @@
             }
           }
 
-          // Single-link or link-heavy paragraph filter (typically another article link / clickbait)
-          var link = el.querySelector("a");
-          if (link) {
-            var linkText = (link.textContent || "").trim();
-            var fullElText = (el.textContent || "").trim();
-            if (linkText.length > 0 && (linkText === fullElText || (linkText.length / fullElText.length) > 0.75)) {
-              continue; // Drop paragraphs that are just links to other stories
+          var rawPText = (el.textContent || "").replace(/\s+/g, " ").trim();
+          if (rawPText.length < 20) continue;
+
+          // Check if paragraph is just a promotional link or related article recommendation
+          var linkElements = el.querySelectorAll("a");
+          if (linkElements.length > 0) {
+            var totalLinkLen = 0;
+            for (var li = 0; li < linkElements.length; li++) {
+              totalLinkLen += (linkElements[li].textContent || "").trim().length;
+            }
+            var density = rawPText.length > 0 ? (totalLinkLen / rawPText.length) : 0;
+            var nonLinkLen = rawPText.length - totalLinkLen;
+
+            // If the paragraph is virtually 100% link (>88% of text is in <a>), it's a stand-alone article link
+            if (density > 0.88) {
+              continue;
+            }
+            // If link density is high (>68%) AND there's very little surrounding context (<22 chars),
+            // it's a prompt link like ">> Click here to read full story" or "Read also: Article Title"
+            if (density > 0.68 && nonLinkLen < 22) {
+              continue;
             }
           }
 
-          var rawPText = (el.textContent || "").replace(/\s+/g, " ").trim();
-          if (rawPText.length < 20) continue;
-          if (getLinkDensity(el) > 0.35) continue;
           if (JUNK_TEXT_RE.test(rawPText)) continue;
 
           // Prompt phrase filter (e.g., 'Xem thêm:', 'Read also:')
