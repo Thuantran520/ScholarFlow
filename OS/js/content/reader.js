@@ -131,25 +131,29 @@
 
   function generateClozeExercise(sentence) {
     if (!sentence) return { tokens: [], clozeCount: 0 };
-    var rawTokens = String(sentence).split(/(\s+|[.,;:!?'"()[\]{}–—])/).filter(Boolean);
+    var cleanSentence = cleanVietnameseAccents ? cleanVietnameseAccents(sentence) : String(sentence);
+    var rawTokens = cleanSentence.match(/[\p{L}\p{N}]+|[^\p{L}\p{N}\s]+|\s+/gu) || [];
     var stopWords = new Set([
       "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with",
       "is", "are", "was", "were", "be", "been", "being", "it", "its", "he", "she", "they",
       "his", "her", "their", "that", "this", "these", "those", "from", "as", "by", "into",
-      "had", "has", "have", "do", "does", "did", "not", "so", "up", "out", "if", "than", "too"
+      "had", "has", "have", "do", "does", "did", "not", "so", "up", "out", "if", "than", "too",
+      // Vietnamese common stop words
+      "và", "của", "là", "các", "những", "được", "có", "cho", "với", "trong", "đã", "sẽ", "khi",
+      "tại", "như", "đến", "từ", "về", "người", "để", "ra", "lại", "này", "đó", "theo"
     ]);
 
     var candidates = [];
     for (var i = 0; i < rawTokens.length; i++) {
       var tok = rawTokens[i];
-      if (/^[a-zA-ZÀ-ỹ0-9_]{3,}$/.test(tok) && !stopWords.has(tok.toLowerCase())) {
+      if (/^[\p{L}\p{N}]{2,}$/u.test(tok) && !stopWords.has(tok.toLowerCase())) {
         candidates.push({ idx: i, text: tok, clean: tok.toLowerCase() });
       }
     }
 
     if (candidates.length === 0) {
       for (var j = 0; j < rawTokens.length; j++) {
-        if (/^[a-zA-ZÀ-ỹ0-9_]{3,}$/.test(rawTokens[j])) {
+        if (/^[\p{L}\p{N}]{2,}$/u.test(rawTokens[j])) {
           candidates.push({ idx: j, text: rawTokens[j], clean: rawTokens[j].toLowerCase() });
         }
       }
@@ -521,9 +525,43 @@
     return str.trim();
   }
 
+  var VIETNAMESE_ACCENT_MAP = {
+    "\u00E2\u0060": "\u1EA7", "\u00E2\u00B4": "\u1EA5",
+    "\u00EA\u0060": "\u1EC1", "\u00EA\u00B4": "\u1EBF",
+    "\u0103\u0060": "\u1EB1", "\u0103\u00B4": "\u1EAF",
+    "\u00F4\u0060": "\u1ED3", "\u00F4\u00B4": "\u1ED1",
+    "\u01A1\u0060": "\u1EDD", "\u01A1\u00B4": "\u1EDB",
+    "\u01B0\u0060": "\u1EEB", "\u01B0\u00B4": "\u1EE9",
+    "a\u0060": "\u00E0", "a\u00B4": "\u00E1",
+    "e\u0060": "\u00E8", "e\u00B4": "\u00E9",
+    "o\u0060": "\u00F2", "o\u00B4": "\u00F3",
+    "u\u0060": "\u00F9", "u\u00B4": "\u00FA",
+    "i\u0060": "\u00EC", "i\u00B4": "\u00ED",
+    "y\u0060": "\u1EF3", "y\u00B4": "\u00FD"
+  };
+
+  function cleanVietnameseAccents(str) {
+    if (!str) return "";
+    var s = String(str)
+      .replace(/([\u00C0-\u1EF9a-zA-Z])[\u0060\u00B4\u02CA\u02CB\u0300\u0301\u0303\u0309\u0323]\s*(?=[a-zA-Z\u00C0-\u1EF9])/g, function (m, c1) {
+        var toneChar = m.charCodeAt(c1.length);
+        var isAcute = (toneChar === 0xB4 || toneChar === 0x2CA || toneChar === 0x301);
+        var toneKey = isAcute ? "\u00B4" : "\u0060";
+        var combined = VIETNAMESE_ACCENT_MAP[c1.toLowerCase() + toneKey];
+        if (combined) {
+          return (c1 === c1.toUpperCase() && c1 !== c1.toLowerCase()) ? combined.toUpperCase() : combined;
+        }
+        return c1 + " ";
+      })
+      .replace(/[\u0060\u00B4\u02CA\u02CB\u0300\u0301\u0303\u0309\u0323]/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    return s.normalize ? s.normalize("NFC") : s;
+  }
+
   function cleanParagraphText(text) {
     if (!text) return "";
-    var str = String(text).replace(/\s+/g, " ").trim();
+    var str = cleanVietnameseAccents(String(text).replace(/\s+/g, " ").trim());
     str = str.replace(/\s*[\(\[]\s*(?:photo|ảnh|image|credit|nguồn|courtesy|source)\s*(?:by|:|of|from|via|\/|-|–)\s*[^)\]]+[\)\]]\s*$/i, "");
     str = str.replace(/[\s\.\,\;\|\-]+(?:photo|ảnh|image|credit|nguồn|courtesy|source)\s*(?:by|:|of|from|via|\/|-|–)\s*[^\n]+$/i, "");
     str = str.replace(/[\s\.\,\;\|\-]+(?:photo\s+(?:by|from|via)\s+[^\n]+)$/i, "");
@@ -729,12 +767,17 @@
     if (isReaderMode) {
       clearSpeechTimers();
       if (typeof window !== "undefined" && window.speechSynthesis) {
-        window.speechSynthesis.cancel();
+        try { window.speechSynthesis.cancel(); } catch (e) {}
       }
       readerAudio.isPlaying = false;
+      readerAudio.isDictationMode = false;
       readerAudio.currentIndex = -1;
       readerAudio.sentences = [];
       readerAudio.activeUtterance = null;
+
+      // Cleanly remove any existing dictation drawers or modals
+      var existingDrawer = document.getElementById("sf-dictation-drawer");
+      if (existingDrawer) existingDrawer.remove();
 
       if (readerContainer) {
         readerContainer.remove();
@@ -744,15 +787,24 @@
         scrollbarStyleEl.remove();
         scrollbarStyleEl = null;
       }
+
+      // Restore original document.body display cleanly
       if (document.body) {
-        document.body.style.display = originalBodyDisplay;
+        if (originalBodyDisplay && originalBodyDisplay !== "none") {
+          document.body.style.display = originalBodyDisplay;
+        } else {
+          document.body.style.removeProperty("display");
+        }
       }
+
       isReaderMode = false;
       return;
     }
 
     isReaderMode = true;
-    originalBodyDisplay = (document.body && document.body.style.display) || "";
+    originalBodyDisplay = (document.body && document.body.style && document.body.style.display !== "none")
+      ? document.body.style.display
+      : "";
 
     var mainContainer = pickBestArticleContainer();
 
@@ -1219,6 +1271,23 @@
         color: var(--sf-text) !important;
         border-color: var(--sf-select-border) !important;
         transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+        scrollbar-width: thin;
+        scrollbar-color: var(--sf-scroll-thumb) var(--sf-scroll-track);
+      }
+      #sf-cyber-reader textarea#sf-dictation-input::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      #sf-cyber-reader textarea#sf-dictation-input::-webkit-scrollbar-track {
+        background: var(--sf-scroll-track);
+        border-radius: 6px;
+      }
+      #sf-cyber-reader textarea#sf-dictation-input::-webkit-scrollbar-thumb {
+        background: var(--sf-scroll-thumb);
+        border-radius: 6px;
+      }
+      #sf-cyber-reader textarea#sf-dictation-input::-webkit-scrollbar-thumb:hover {
+        filter: brightness(1.25);
       }
       #sf-cyber-reader textarea#sf-dictation-input:focus {
         border-color: var(--sf-heading) !important;
@@ -2068,7 +2137,11 @@
 
       var textToSpeak = readerAudio.sentences[idx];
       speakReaderSentence(textToSpeak, readerAudio.rate, function () {
-        if (readerAudio.isPlaying) {
+        if (readerAudio.isDictationMode) {
+          // In dictation mode, only play the selected sentence for listening practice, do NOT autoplay forward!
+          readerAudio.isPlaying = false;
+          btnPlay.textContent = "▶ " + (window.tContent ? window.tContent("reader_listen_play") : "Read");
+        } else if (readerAudio.isPlaying) {
           playSentenceAt(idx + 1);
         }
       });
@@ -2516,20 +2589,23 @@
 
           var dInput = document.createElement("textarea");
           dInput.id = "sf-dictation-input";
-          dInput.rows = 3;
+          dInput.rows = 4;
           dInput.placeholder = "Type sentence here...";
           dInput.style.cssText = `
             width: 100%;
             box-sizing: border-box;
             background: ${currentBoxTheme.bg};
             color: ${currentBoxTheme.text};
-            border: 1px solid ${currentBoxTheme.selectBorder};
-            border-radius: 8px;
-            padding: 10px 12px;
-            font-size: 14.5px;
+            border: 1.5px solid ${currentBoxTheme.selectBorder};
+            border-radius: 9px;
+            padding: 12px 14px;
+            font-size: 15px;
+            line-height: 1.6;
+            min-height: 96px;
             font-family: inherit;
             resize: vertical;
             outline: none;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.15);
           `;
           dExerciseArea.appendChild(dInput);
 
