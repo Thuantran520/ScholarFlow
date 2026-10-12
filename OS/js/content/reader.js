@@ -36,9 +36,16 @@
 
   var FONT_FAMILIES = {
     serif: "Georgia, 'Times New Roman', Cambria, serif",
+    times: "'Times New Roman', Times, serif",
+    garamond: "'Garamond', 'EB Garamond', 'Baskerville', serif",
+    merriweather: "'Merriweather', 'Georgia', serif",
     sans: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+    inter: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    arial: "Arial, Helvetica, sans-serif",
     bookish: "'Palatino Linotype', 'Book Antiqua', Palatino, serif",
+    charter: "'Charter', 'Bitstream Charter', 'Cambria', serif",
     verdana: "Verdana, Geneva, sans-serif",
+    helvetica: "'Helvetica Neue', Helvetica, Arial, sans-serif",
     mono: "'Consolas', 'Courier New', Courier, monospace"
   };
 
@@ -243,49 +250,64 @@
     return "en";
   }
 
-  function getVoicesForArticle(targetLang) {
+  function getVoicesForArticle(targetLang, searchQuery) {
     if (typeof window === "undefined" || !window.speechSynthesis) return [];
     var allVoices = window.speechSynthesis.getVoices() || [];
-    if (!targetLang) targetLang = readerAudio.articleLang || "en";
+    if (!targetLang) targetLang = readerAudio.articleLang || "all";
     targetLang = targetLang.toLowerCase();
 
-    var matched = allVoices.filter(function (v) {
-      if (!v.lang) return false;
-      var vl = v.lang.toLowerCase();
-      var vn = (v.name || "").toLowerCase();
+    var matched = allVoices;
 
-      if (targetLang === "vi") {
-        return /^vi/i.test(vl) || /vietnam/i.test(vn) || /hoaimy|namminh|linh|an/i.test(vn);
-      }
-      if (targetLang === "zh") {
-        return /^zh/i.test(vl) || /chinese|mandarin|taiwan|cantonese/i.test(vn);
-      }
-      if (targetLang === "ja") {
-        return /^ja/i.test(vl) || /japan/i.test(vn);
-      }
-      if (targetLang === "ru") {
-        return /^ru/i.test(vl) || /russia/i.test(vn);
-      }
-      if (targetLang === "fr") {
-        return /^fr/i.test(vl) || /french/i.test(vn);
-      }
-      if (targetLang === "de") {
-        return /^de/i.test(vl) || /german/i.test(vn);
-      }
-      if (targetLang === "es") {
-        return /^es/i.test(vl) || /spanish/i.test(vn);
-      }
-      if (targetLang === "ko") {
-        return /^ko/i.test(vl) || /korean/i.test(vn);
-      }
-      return vl.startsWith(targetLang);
-    });
-
-    if (matched.length === 0) {
+    if (targetLang !== "all") {
       matched = allVoices.filter(function (v) {
-        return v.lang && /^en/i.test(v.lang);
+        if (!v.lang) return false;
+        var vl = v.lang.toLowerCase();
+        var vn = (v.name || "").toLowerCase();
+
+        if (targetLang === "vi") {
+          return /^vi/i.test(vl) || /vietnam/i.test(vn) || /hoaimy|namminh|linh|an/i.test(vn);
+        }
+        if (targetLang === "en") {
+          return /^en/i.test(vl) || /english/i.test(vn);
+        }
+        if (targetLang === "zh") {
+          return /^zh/i.test(vl) || /chinese|mandarin|taiwan|cantonese/i.test(vn);
+        }
+        if (targetLang === "ja") {
+          return /^ja/i.test(vl) || /japan/i.test(vn);
+        }
+        if (targetLang === "ru") {
+          return /^ru/i.test(vl) || /russia/i.test(vn);
+        }
+        if (targetLang === "fr") {
+          return /^fr/i.test(vl) || /french/i.test(vn);
+        }
+        if (targetLang === "de") {
+          return /^de/i.test(vl) || /german/i.test(vn);
+        }
+        if (targetLang === "es") {
+          return /^es/i.test(vl) || /spanish/i.test(vn);
+        }
+        if (targetLang === "ko") {
+          return /^ko/i.test(vl) || /korean/i.test(vn);
+        }
+        return vl.startsWith(targetLang);
       });
-      if (matched.length === 0) matched = allVoices;
+
+      if (matched.length === 0) {
+        matched = allVoices;
+      }
+    }
+
+    if (searchQuery) {
+      var q = String(searchQuery).trim().toLowerCase();
+      if (q) {
+        matched = matched.filter(function (v) {
+          var name = (v.name || "").toLowerCase();
+          var lang = (v.lang || "").toLowerCase();
+          return name.includes(q) || lang.includes(q);
+        });
+      }
     }
 
     // Sort: Natural/Neural/Online voices first, then regional priority
@@ -293,6 +315,12 @@
       var aNat = /natural|neural|online/i.test(a.name) ? 1 : 0;
       var bNat = /natural|neural|online/i.test(b.name) ? 1 : 0;
       if (aNat !== bNat) return bNat - aNat;
+
+      if (targetLang === "vi" || (/^vi/i.test(a.lang) && !/^vi/i.test(b.lang))) {
+        var aVi = /^vi/i.test(a.lang) ? 1 : 0;
+        var bVi = /^vi/i.test(b.lang) ? 1 : 0;
+        if (aVi !== bVi) return bVi - aVi;
+      }
 
       if (targetLang === "en") {
         var aUS = /en[-_]US/i.test(a.lang) ? 1 : 0;
@@ -1392,6 +1420,70 @@
       }
     }
 
+    // Language/Region Filter Dropdown (Tất cả, VN, US, UK, CN, JP...)
+    var voiceLangFilter = document.createElement("select");
+    voiceLangFilter.id = "sf-reader-voice-lang-filter";
+    voiceLangFilter.title = "Lọc vùng ngôn ngữ";
+    voiceLangFilter.style.cssText = `
+      background: ${currentTheme.selectBg};
+      color: ${currentTheme.selectText};
+      border: 1px solid ${currentTheme.selectBorder};
+      padding: 4px 6px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      width: 62px;
+      outline: none;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    `;
+    var langFilterOptions = [
+      { id: "all", label: "Tất cả" },
+      { id: "vi", label: "VN" },
+      { id: "en", label: "EN" },
+      { id: "zh", label: "CN" },
+      { id: "ja", label: "JP" },
+      { id: "ru", label: "RU" },
+      { id: "fr", label: "FR" },
+      { id: "de", label: "DE" },
+      { id: "ko", label: "KR" }
+    ];
+    langFilterOptions.forEach(function (optItem) {
+      var opt = document.createElement("option");
+      opt.value = optItem.id;
+      opt.textContent = optItem.label;
+      if (optItem.id === readerAudio.articleLang) {
+        opt.selected = true;
+      }
+      voiceLangFilter.appendChild(opt);
+    });
+
+    // Voice Search Input (Quick filter by name/region)
+    var voiceSearchInput = document.createElement("input");
+    voiceSearchInput.type = "text";
+    voiceSearchInput.id = "sf-reader-voice-search";
+    voiceSearchInput.placeholder = "🔍 Tìm giọng...";
+    voiceSearchInput.style.cssText = `
+      background: ${currentTheme.selectBg};
+      color: ${currentTheme.selectText};
+      border: 1px solid ${currentTheme.selectBorder};
+      padding: 4px 7px;
+      border-radius: 6px;
+      font-size: 11px;
+      width: 78px;
+      outline: none;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+      transition: width 0.2s ease, border-color 0.2s ease;
+    `;
+    voiceSearchInput.addEventListener("focus", function () {
+      voiceSearchInput.style.width = "105px";
+    });
+    voiceSearchInput.addEventListener("blur", function () {
+      if (!voiceSearchInput.value) {
+        voiceSearchInput.style.width = "78px";
+      }
+    });
+
     var voiceSelect = document.createElement("select");
     voiceSelect.id = "sf-reader-voice-select";
     voiceSelect.title = window.tContent ? window.tContent("reader_listen_voice") : "Voice";
@@ -1399,12 +1491,12 @@
       background: ${currentTheme.selectBg};
       color: ${currentTheme.selectText};
       border: 1px solid ${currentTheme.selectBorder};
-      padding: 5px 8px;
-      border-radius: 8px;
+      padding: 4px 6px;
+      border-radius: 6px;
       font-size: 11.5px;
       font-weight: 500;
-      width: 180px;
-      max-width: 185px;
+      width: 140px;
+      max-width: 150px;
       outline: none;
       cursor: pointer;
       white-space: nowrap;
@@ -1462,31 +1554,51 @@
       while (voiceSelect.firstChild) {
         voiceSelect.removeChild(voiceSelect.firstChild);
       }
-      var voices = getVoicesForArticle(readerAudio.articleLang);
+      var filterLang = voiceLangFilter ? voiceLangFilter.value : readerAudio.articleLang;
+      var q = voiceSearchInput ? voiceSearchInput.value : "";
+      var voices = getVoicesForArticle(filterLang, q);
       if (voices.length === 0) {
         var opt = document.createElement("option");
         opt.value = "";
-        opt.textContent = "Default Voice";
+        opt.textContent = "Không có giọng";
         voiceSelect.appendChild(opt);
         updateMcAvatar("");
         return;
       }
 
-      var defaultChoice = findBestVoiceForArticle(readerAudio.articleLang);
+      var defaultChoice = findBestVoiceForArticle(filterLang);
+      var hasSelected = false;
       voices.forEach(function (v) {
         var opt = document.createElement("option");
         opt.value = v.name;
         opt.textContent = formatVoiceLabel(v);
-        if (defaultChoice && v.name === defaultChoice.name) {
+        if (readerPrefs.preferredVoice && v.name === readerPrefs.preferredVoice) {
           opt.selected = true;
           readerAudio.voice = v;
+          hasSelected = true;
+        } else if (!hasSelected && defaultChoice && v.name === defaultChoice.name) {
+          opt.selected = true;
+          readerAudio.voice = v;
+          hasSelected = true;
         }
         voiceSelect.appendChild(opt);
       });
-      if (defaultChoice) {
-        updateMcAvatar(defaultChoice.name);
+      if (!hasSelected && voices.length > 0) {
+        voiceSelect.children[0].selected = true;
+        readerAudio.voice = voices[0];
+      }
+      if (readerAudio.voice) {
+        updateMcAvatar(readerAudio.voice.name);
       }
     }
+
+    voiceLangFilter.addEventListener("change", function () {
+      populateVoiceDropdown();
+    });
+
+    voiceSearchInput.addEventListener("input", function () {
+      populateVoiceDropdown();
+    });
 
     populateVoiceDropdown();
     if (typeof window !== "undefined" && window.speechSynthesis) {
@@ -1496,7 +1608,9 @@
     }
 
     voiceSelect.addEventListener("change", function () {
-      var voices = getVoicesForArticle(readerAudio.articleLang);
+      var filterLang = voiceLangFilter ? voiceLangFilter.value : readerAudio.articleLang;
+      var q = voiceSearchInput ? voiceSearchInput.value : "";
+      var voices = getVoicesForArticle(filterLang, q);
       var selected = voices.find(function (v) { return v.name === voiceSelect.value; });
       if (selected) {
         readerAudio.voice = selected;
@@ -1525,6 +1639,8 @@
     });
 
     voiceWrapper.appendChild(mcAvatar);
+    voiceWrapper.appendChild(voiceLangFilter);
+    voiceWrapper.appendChild(voiceSearchInput);
     voiceWrapper.appendChild(voiceSelect);
     barLeft.appendChild(voiceWrapper);
 
@@ -1672,11 +1788,18 @@
     `;
 
     var fontOptions = [
-      { id: "serif", label: "📖 Serif" },
-      { id: "sans", label: "🔤 Sans-serif" },
-      { id: "bookish", label: "📜 Bookish" },
-      { id: "verdana", label: "👁️ Verdana" },
-      { id: "mono", label: "💻 Monospace" }
+      { id: "serif", label: "Georgia" },
+      { id: "times", label: "Times New Roman" },
+      { id: "garamond", label: "Garamond" },
+      { id: "merriweather", label: "Merriweather" },
+      { id: "bookish", label: "Palatino" },
+      { id: "charter", label: "Charter" },
+      { id: "sans", label: "System Sans" },
+      { id: "inter", label: "Inter" },
+      { id: "arial", label: "Arial" },
+      { id: "helvetica", label: "Helvetica" },
+      { id: "verdana", label: "Verdana" },
+      { id: "mono", label: "Monospace" }
     ];
 
     fontOptions.forEach(function (fo) {
@@ -1739,6 +1862,14 @@
       voiceSelect.style.background = s.selectBg;
       voiceSelect.style.color = s.selectText;
       voiceSelect.style.borderColor = s.selectBorder;
+
+      voiceLangFilter.style.background = s.selectBg;
+      voiceLangFilter.style.color = s.selectText;
+      voiceLangFilter.style.borderColor = s.selectBorder;
+
+      voiceSearchInput.style.background = s.selectBg;
+      voiceSearchInput.style.color = s.selectText;
+      voiceSearchInput.style.borderColor = s.selectBorder;
 
       selSpeed.style.background = s.selectBg;
       selSpeed.style.color = s.selectText;
