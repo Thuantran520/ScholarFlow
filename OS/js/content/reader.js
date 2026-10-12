@@ -144,31 +144,50 @@
     ]);
 
     var candidates = [];
+    var wordOrdinal = 0;
     for (var i = 0; i < rawTokens.length; i++) {
       var tok = rawTokens[i];
-      if (/^[\p{L}\p{N}]{2,}$/u.test(tok) && !stopWords.has(tok.toLowerCase())) {
-        candidates.push({ idx: i, text: tok, clean: tok.toLowerCase() });
-      }
+      if (!/^[\p{L}\p{N}]+$/u.test(tok)) continue;
+      var w = wordOrdinal++;
+      if (/^\p{N}+$/u.test(tok)) continue; // numbers are not listening practice
+      if (!/^\p{L}{2,}$/u.test(tok)) continue;
+      if (stopWords.has(tok.toLowerCase())) continue;
+      candidates.push({ idx: i, word: w, text: tok, clean: tok.toLowerCase() });
     }
 
     if (candidates.length === 0) {
+      wordOrdinal = 0;
       for (var j = 0; j < rawTokens.length; j++) {
-        if (/^[\p{L}\p{N}]{2,}$/u.test(rawTokens[j])) {
-          candidates.push({ idx: j, text: rawTokens[j], clean: rawTokens[j].toLowerCase() });
+        if (!/^[\p{L}\p{N}]+$/u.test(rawTokens[j])) continue;
+        var wj = wordOrdinal++;
+        if (/^\p{L}{2,}$/u.test(rawTokens[j])) {
+          candidates.push({ idx: j, word: wj, text: rawTokens[j], clean: rawTokens[j].toLowerCase() });
         }
       }
     }
 
     var targetCount = Math.max(1, Math.min(5, Math.round(candidates.length * 0.35)));
     var chosenIndices = new Set();
-    var step = Math.max(1, Math.floor(candidates.length / targetCount));
-
-    for (var k = 0; k < candidates.length && chosenIndices.size < targetCount; k += step) {
-      chosenIndices.add(candidates[k].idx);
+    var chosenWords = new Set();
+    function canPick(c) {
+      // Never blank two neighbouring words: the learner needs context to anchor.
+      return !chosenWords.has(c.word - 1) && !chosenWords.has(c.word + 1) && !chosenWords.has(c.word);
     }
-    for (var m = 0; m < candidates.length && chosenIndices.size < targetCount; m++) {
-      chosenIndices.add(candidates[m].idx);
+    function pick(c) {
+      chosenIndices.add(c.idx);
+      chosenWords.add(c.word);
     }
+    // Spread blanks evenly across the sentence.
+    for (var k = 0; k < targetCount && candidates.length; k++) {
+      var pos = Math.min(candidates.length - 1, Math.floor((k + 0.5) * candidates.length / targetCount));
+      if (canPick(candidates[pos])) { pick(candidates[pos]); continue; }
+      for (var d = 1; d < candidates.length; d++) {
+        var a = candidates[pos + d], b = candidates[pos - d];
+        if (a && canPick(a)) { pick(a); break; }
+        if (b && canPick(b)) { pick(b); break; }
+      }
+    }
+    if (chosenIndices.size === 0 && candidates.length) pick(candidates[0]);
 
     var tokens = [];
     var cIdx = 0;
@@ -519,38 +538,37 @@
     return str.trim();
   }
 
-  var VIETNAMESE_ACCENT_MAP = {
-    "\u00E2\u0060": "\u1EA7", "\u00E2\u00B4": "\u1EA5",
-    "\u00EA\u0060": "\u1EC1", "\u00EA\u00B4": "\u1EBF",
-    "\u0103\u0060": "\u1EB1", "\u0103\u00B4": "\u1EAF",
-    "\u00F4\u0060": "\u1ED3", "\u00F4\u00B4": "\u1ED1",
-    "\u01A1\u0060": "\u1EDD", "\u01A1\u00B4": "\u1EDB",
-    "\u01B0\u0060": "\u1EEB", "\u01B0\u00B4": "\u1EE9",
-    "a\u0060": "\u00E0", "a\u00B4": "\u00E1",
-    "e\u0060": "\u00E8", "e\u00B4": "\u00E9",
-    "o\u0060": "\u00F2", "o\u00B4": "\u00F3",
-    "u\u0060": "\u00F9", "u\u00B4": "\u00FA",
-    "i\u0060": "\u00EC", "i\u00B4": "\u00ED",
-    "y\u0060": "\u1EF3", "y\u00B4": "\u00FD"
+  // Standalone (spacing) tone glyphs that broken fonts/copy-paste emit instead
+  // of real combining marks, mapped to their combining equivalents.
+  var SPACING_TONE_TO_COMBINING = {
+    "\u00B4": "\u0301", "\u02CA": "\u0301", // acute  -> sắc
+    "\u0060": "\u0300", "\u02CB": "\u0300", // grave  -> huyền
+    "\u02DC": "\u0303"                      // tilde  -> ngã
   };
+  var VI_VOWELS = "aăâeêioôơuưyAĂÂEÊIOÔƠUƯY";
+
+  function nfc(s) {
+    return (s && s.normalize) ? s.normalize("NFC") : s;
+  }
 
   function cleanVietnameseAccents(str) {
     if (!str) return "";
-    var s = String(str)
-      .replace(/([\u00C0-\u1EF9a-zA-Z])[\u0060\u00B4\u02CA\u02CB\u0300\u0301\u0303\u0309\u0323]\s*(?=[a-zA-Z\u00C0-\u1EF9])/g, function (m, c1) {
-        var toneChar = m.charCodeAt(c1.length);
-        var isAcute = (toneChar === 0xB4 || toneChar === 0x2CA || toneChar === 0x301);
-        var toneKey = isAcute ? "\u00B4" : "\u0060";
-        var combined = VIETNAMESE_ACCENT_MAP[c1.toLowerCase() + toneKey];
-        if (combined) {
-          return (c1 === c1.toUpperCase() && c1 !== c1.toLowerCase()) ? combined.toUpperCase() : combined;
-        }
-        return c1 + " ";
-      })
-      .replace(/[\u0060\u00B4\u02CA\u02CB\u0300\u0301\u0303\u0309\u0323]/g, "")
-      .replace(/\s+/g, " ")
-      .trim();
-    return s.normalize ? s.normalize("NFC") : s;
+    // 1) NFC merges decomposed ("tổ hợp") Vietnamese into precomposed letters
+    //    without losing any tone mark.
+    var s = nfc(String(str));
+    if (!/[\u00B4\u02CA\u0060\u02CB\u02DC]/.test(s)) {
+      return s.replace(/\s+/g, " ").trim();
+    }
+    // 2) Repair spacing tone glyphs glued after a vowel, e.g. "phâ` n" -> "phần".
+    //    The following fragment is re-joined only if it is a valid syllable final.
+    var re = new RegExp(
+      "([" + VI_VOWELS + "])([\\u00B4\\u02CA\\u0060\\u02CB\\u02DC])(?:\\s(?=(?:ng|nh|ch|[nmtcp]|[iouy])(?![\\p{L}])))?",
+      "gu"
+    );
+    s = s.replace(re, function (m, vowel, tone) {
+      return nfc(vowel + SPACING_TONE_TO_COMBINING[tone]);
+    });
+    return nfc(s).replace(/\s+/g, " ").trim();
   }
 
   function cleanParagraphText(text) {
@@ -2525,8 +2543,8 @@
             var correctCount = 0;
             var total = clozeInputs.length;
             clozeInputs.forEach(function (inp) {
-              var userVal = inp.value.trim().toLowerCase().replace(/[.,;:!?'"()[\]{}–—]/g, "");
-              var cleanAns = inp.dataset.cleanAnswer;
+              var userVal = nfc(inp.value).trim().toLowerCase().replace(/[.,;:!?'"()[\]{}–—]/g, "");
+              var cleanAns = nfc(inp.dataset.cleanAnswer || "");
               var origAns = inp.dataset.answer;
 
               if (userVal === cleanAns && cleanAns.length > 0) {
