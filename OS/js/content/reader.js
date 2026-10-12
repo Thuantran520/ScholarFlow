@@ -234,10 +234,11 @@
   }
 
   function detectArticleLanguage(title, sampleContent) {
-    var fullSample = String((title || "") + " " + (sampleContent || "")).slice(0, 1500);
+    var rawSample = String((title || "") + " " + (sampleContent || "")).slice(0, 1500);
+    var fullSample = (rawSample && rawSample.normalize) ? rawSample.normalize("NFC") : rawSample;
 
-    // 1. Vietnamese detection (diacritics unique to Vietnamese)
-    if (/[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/i.test(fullSample)) {
+    // 1. Vietnamese detection (precomposed diacritics + combining diacritical marks)
+    if (/[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ\u0300\u0301\u0303\u0309\u0323]/i.test(fullSample)) {
       return "vi";
     }
 
@@ -276,7 +277,7 @@
 
   // Language-name hints used only when a voice reports no usable `lang`.
   var VOICE_LANG_NAME_HINTS = {
-    vi: /\b(vietnamese|vietnam)\b/i,
+    vi: /\b(vietnamese|vietnam|tiếng việt)\b/i,
     en: /\benglish\b/i,
     zh: /\b(chinese|mandarin|cantonese)\b/i,
     ja: /\bjapanese\b/i,
@@ -288,9 +289,28 @@
   };
 
   function voiceMatchesLang(v, targetLang) {
+    if (!v) return false;
     var vl = String(v.lang || "").toLowerCase().replace("_", "-");
     var primary = vl.split("-")[0];
-    if (primary === "cmn" || primary === "yue") primary = "zh";
+    if (primary === "cmn" || primary === "yue" || primary === "zho") primary = "zh";
+    if (primary === "vie") primary = "vi";
+    if (primary === "eng") primary = "en";
+    if (primary === "jpn") primary = "ja";
+    if (primary === "rus") primary = "ru";
+    if (primary === "fra") primary = "fr";
+    if (primary === "deu") primary = "de";
+    if (primary === "spa") primary = "es";
+    if (primary === "kor") primary = "ko";
+
+    if (targetLang === "vi") {
+      if (primary === "vi") return true;
+      if (/vi[-_]vn/i.test(vl)) return true;
+      var vName = String(v.name || "").toLowerCase();
+      if (/\b(vietnamese|tiếng việt|tieng viet)\b/i.test(vName)) return true;
+      if (/\b(hoaimy|namminh)\b/i.test(vName.replace(/\s+/g, ""))) return true;
+      return false;
+    }
+
     if (primary) return primary === targetLang;
     // No lang tag: fall back to an explicit language name in the voice name.
     var hint = VOICE_LANG_NAME_HINTS[targetLang];
@@ -464,7 +484,9 @@
     '.news-list', '.article-list', '.story-list', '.post-list', '.listing-news', '.list-news', '.news-stream', '.river-news', '.box-listing', '.feed-grid',
     '.tags', '.tag-list', '.article-tags', '.topic-tags', '.tags-container', '.keywords',
     '.newsletter', '.subscribe-box', '.subscription', '.signup-box',
-    '.breadcrumb', '.breadcrumbs',
+    '.breadcrumb', '.breadcrumbs', '.parent_cate', '.cate-header', '.category-header', '.detail-cate', '.chuyen-muc', '.topic-header',
+    '.date', '.format_time', '.author-time', '.time-header', '.detail-time', '.author-date',
+    '.site-header', '.header-logo', '.navbar', '.nav-bar', '.main-nav', '.site-nav', '.navigation',
     '.author-bio', '.author-box', '.about-author', '.author-info',
     '.modal', '.popup', '.dialog', '.overlay',
     // Outbrain, Taboola, Recommender widgets
@@ -483,6 +505,7 @@
 
   function isNoiseNode(el) {
     if (!el || el.nodeType !== Node.ELEMENT_NODE) return false;
+    if (el.tagName === "NAV" || el.closest("nav")) return true;
     try {
       for (var i = 0; i < NOISE_SELECTORS.length; i++) {
         if (el.closest(NOISE_SELECTORS[i])) return true;
@@ -490,7 +513,7 @@
     } catch (e) {}
 
     var idClass = ((el.id || "") + " " + (el.className || "")).toLowerCase();
-    if (/(comment|sidebar|related|popular|advert|banner|promo|social|share|cookie|popup|modal|sponsor|recommend|suggested|newsletter|breadcrumb|tag-list|author-bio|read-more|also-read|inline-ad|more-news|more-stories|read-next|latest-news|top-stories|most-read|outbrain|taboola|mgid|news-list|story-list|box-category|item-news|tinlienquan|box-tin|thumb-art|title-news)/i.test(idClass)) {
+    if (/(comment|sidebar|related|popular|advert|banner|promo|social|share|cookie|popup|modal|sponsor|recommend|suggested|newsletter|breadcrumb|tag-list|author-bio|read-more|also-read|inline-ad|more-news|more-stories|read-next|latest-news|top-stories|most-read|outbrain|taboola|mgid|news-list|story-list|box-category|item-news|tinlienquan|box-tin|thumb-art|title-news|cate-header|category-header|chuyen-muc|parent_cate|format_time|author-time|publish-date|site-header|header-logo|main-nav|site-nav|navbar)/i.test(idClass)) {
       return true;
     }
     return false;
@@ -821,9 +844,9 @@
 
     var mainContainer = pickBestArticleContainer();
 
-    // Extract Title
+    // Extract Title (prefer specific article title selectors, avoid site logo/header h1)
     var articleTitle = "";
-    var h1Candidate = (mainContainer && mainContainer.querySelector("h1")) || document.querySelector("article h1, h1");
+    var h1Candidate = (mainContainer && (mainContainer.querySelector("h1.title-detail, h1.title-news, h1.article-title, h1.singular-title, h1.detail-title, h1:not(.logo):not(.site-logo)") || mainContainer.querySelector("h1"))) || document.querySelector("article h1, h1.title-detail, h1.title-news, h1.article-title, h1:not(.logo):not(.site-logo), h1");
     if (h1Candidate && !isNoiseNode(h1Candidate)) {
       articleTitle = (h1Candidate.textContent || "").trim();
     }
@@ -907,6 +930,10 @@
           if (paragraphCount >= 2 && RELATED_SECTION_RE.test(hText)) {
             // Once the main article content is read and a 'Related Stories' / 'More News' header is reached, STOP!
             break;
+          }
+          // Filter out section/category navigation names (e.g. Thời sự, Kinh doanh, v.v.)
+          if (/^(thời sự|góc nhìn|thế giới|kinh doanh|bất động sản|khoa học|giải trí|thể thao|pháp luật|giáo dục|sức khỏe|đời sống|du lịch|số hóa|xe|ý kiến|tâm sự|thư giãn|trang chủ|chính trị|văn hóa|quân sự|tin tức)$/i.test(hText.toLowerCase())) {
+            continue;
           }
           if (hText.length > 5 && hText !== articleTitle && !JUNK_TEXT_RE.test(hText)) {
             articleItems.push({ type: "heading", level: tag, text: hText });
@@ -1020,6 +1047,17 @@
           }
 
           if (JUNK_TEXT_RE.test(rawPText)) continue;
+
+          // Filter date, time, and byline lines common in Vietnamese news
+          if (/^(thứ\s+(hai|ba|tư|năm|sáu|bảy)|chủ\s*nhật|\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4}|\d{1,2}:\d{2}|gmt[\+\-]\d)/i.test(rawPText)) {
+            continue;
+          }
+          if (/^(trang\s*chủ|home)\s*[>\/|–—]/i.test(rawPText) || /^[a-zà-ỹ\s]+[>\/][a-zà-ỹ\s]+$/i.test(rawPText.trim())) {
+            continue;
+          }
+          if (/^(thời sự|góc nhìn|thế giới|kinh doanh|bất động sản|khoa học|giải trí|thể thao|pháp luật|giáo dục|sức khỏe|đời sống|du lịch|số hóa|xe|ý kiến|tâm sự|thư giãn)$/i.test(rawPText.trim().toLowerCase())) {
+            continue;
+          }
 
           // Prompt phrase filter (e.g., 'Xem thêm:', 'Read also:')
           if (/^(xem thêm|đọc thêm|bài viết liên quan|tin liên quan|cùng chủ đề|read also|see also|related|also read|read more|more on this|continue reading)[\s:–—\-]/i.test(rawPText)) {
@@ -1389,7 +1427,7 @@
       progressBar.style.width = pct + "%";
     });
 
-    // Top Header & Controls Bar (Strict single row flexbox!)
+    // Top Header & Controls Bar (Responsive flexbox!)
     var topBar = document.createElement("div");
     topBar.id = "sf-reader-topbar";
     topBar.style.cssText = `
@@ -1400,20 +1438,19 @@
       background: ${currentTheme.barBg};
       backdrop-filter: blur(14px);
       border-bottom: 1px solid ${currentTheme.border};
-      padding: 8px 16px;
+      padding: 6px 14px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      flex-wrap: nowrap;
-      gap: 8px;
-      overflow-x: auto;
+      flex-wrap: wrap;
+      gap: 6px 10px;
       z-index: 1000;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
       transition: background 0.25s ease, border-color 0.25s ease;
     `;
 
     var barLeft = document.createElement("div");
-    barLeft.style.cssText = "display: flex; align-items: center; gap: 6px; flex-shrink: 0;";
+    barLeft.style.cssText = "display: flex; align-items: center; gap: 6px; flex-wrap: wrap;";
 
     var brandPill = document.createElement("span");
     brandPill.style.cssText = `
@@ -1623,7 +1660,8 @@
       else if (/IN|India/i.test(v.lang) || /India/i.test(rawName)) region = "IN";
       else if (v.lang) region = v.lang.split("-")[0].toUpperCase();
 
-      var tag = region ? (isNat ? region + " - Tự nhiên" : region) : (isNat ? "Tự nhiên" : "");
+      var natLabel = (region === "VN") ? "Tự nhiên" : "Natural";
+      var tag = region ? (isNat ? region + " - " + natLabel : region) : (isNat ? natLabel : "");
 
       var parts = [];
       if (cleanName) parts.push(cleanName);
@@ -1802,7 +1840,7 @@
 
     // Right Controls: Font sizing, Theme toggling & Close
     var barRight = document.createElement("div");
-    barRight.style.cssText = "display: flex; align-items: center; gap: 5px; flex-shrink: 0;";
+    barRight.style.cssText = "display: flex; align-items: center; gap: 5px; flex-shrink: 0; margin-left: auto;";
 
     var btnFontDec = document.createElement("button");
     btnFontDec.type = "button";
@@ -2707,6 +2745,111 @@
       };
 
       renderDockExercise();
+
+      // Keyboard shortcuts for seamless dictation workflow
+      dictationBox.addEventListener("keydown", function (e) {
+        // Ctrl+Space or Alt+R: Replay sentence
+        if ((e.ctrlKey && (e.code === "Space" || e.key === " ")) || (e.altKey && (e.key === "r" || e.key === "R"))) {
+          e.preventDefault();
+          e.stopPropagation();
+          speakReaderSentence(targetSentence, 0.85);
+          return;
+        }
+        // Ctrl+Enter: Check answer
+        if (e.ctrlKey && e.key === "Enter") {
+          e.preventDefault();
+          e.stopPropagation();
+          btnCheck.click();
+          return;
+        }
+        // Alt+ArrowRight or Alt+N: Next sentence
+        if ((e.altKey && e.key === "ArrowRight") || (e.altKey && (e.key === "n" || e.key === "N"))) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (!btnNext.disabled) btnNext.click();
+          return;
+        }
+        // Alt+ArrowLeft or Alt+P: Prev sentence
+        if ((e.altKey && e.key === "ArrowLeft") || (e.altKey && (e.key === "p" || e.key === "P"))) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (!btnPrev.disabled) btnPrev.click();
+          return;
+        }
+        // Alt+S or Alt+A: Show answer
+        if (e.altKey && (e.key === "s" || e.key === "S" || e.key === "a" || e.key === "A")) {
+          e.preventDefault();
+          e.stopPropagation();
+          btnReveal.click();
+          return;
+        }
+        // Alt+M: Toggle Cloze vs Full sentence mode
+        if (e.altKey && (e.key === "m" || e.key === "M")) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (readerDictMode === "cloze") {
+            btnModeFull.click();
+          } else {
+            btnModeCloze.click();
+          }
+          return;
+        }
+        // Escape: Close drawer
+        if (e.key === "Escape") {
+          e.preventDefault();
+          e.stopPropagation();
+          dictationBox.remove();
+          dictationBox = null;
+          return;
+        }
+      });
+
+      // Hotkey hint toolbar at the bottom of the drawer
+      var dHotkeys = document.createElement("div");
+      dHotkeys.style.cssText = `
+        margin-top: 10px;
+        padding-top: 8px;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        font-size: 11px;
+        color: ${currentBoxTheme.captionColor};
+        opacity: 0.85;
+        user-select: none;
+      `;
+      var hotkeyShortcuts = [
+        { k: "Ctrl+Space", label: "Nghe lại" },
+        { k: "Ctrl+Enter", label: "Kiểm tra" },
+        { k: "Alt+→", label: "Câu tiếp" },
+        { k: "Alt+←", label: "Câu trước" },
+        { k: "Alt+S", label: "Đáp án" },
+        { k: "Alt+M", label: "Đổi mode" },
+        { k: "Esc", label: "Đóng" }
+      ];
+      hotkeyShortcuts.forEach(function (hk) {
+        var span = document.createElement("span");
+        var kbd = document.createElement("kbd");
+        kbd.textContent = hk.k;
+        kbd.style.cssText = `
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.22);
+          border-radius: 4px;
+          padding: 1px 5px;
+          font-size: 10px;
+          font-family: inherit;
+          font-weight: 700;
+          color: ${currentBoxTheme.text};
+          margin-right: 3px;
+        `;
+        span.appendChild(kbd);
+        span.appendChild(document.createTextNode(hk.label));
+        dHotkeys.appendChild(span);
+      });
+      dictationBox.appendChild(dHotkeys);
+
       readerContainer.appendChild(dictationBox);
     }
 
