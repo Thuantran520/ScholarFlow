@@ -39,8 +39,13 @@
     times: "'Times New Roman', Times, serif",
     garamond: "'Garamond', 'EB Garamond', 'Baskerville', serif",
     merriweather: "'Merriweather', 'Georgia', serif",
+    lora: "'Lora', Georgia, 'Times New Roman', serif",
+    literata: "'Literata', Georgia, Cambria, serif",
+    bookerly: "'Bookerly', Georgia, serif",
     sans: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
     inter: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    roboto: "'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    segoe: "'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif",
     arial: "Arial, Helvetica, sans-serif",
     bookish: "'Palatino Linotype', 'Book Antiqua', Palatino, serif",
     charter: "'Charter', 'Bitstream Charter', 'Cambria', serif",
@@ -53,7 +58,10 @@
     theme: (function () { try { return localStorage.getItem("sf_reader_theme") || "dark"; } catch (e) { return "dark"; } })(),
     fontSize: (function () { try { return parseInt(localStorage.getItem("sf_reader_fontsize"), 10) || 19; } catch (e) { return 19; } })(),
     fontFamily: (function () { try { return localStorage.getItem("sf_reader_font_family") || "serif"; } catch (e) { return "serif"; } })(),
-    preferredVoice: (function () { try { return localStorage.getItem("sf_reader_preferred_voice") || ""; } catch (e) { return ""; } })()
+    preferredVoice: (function () { try { return localStorage.getItem("sf_reader_preferred_voice") || ""; } catch (e) { return ""; } })(),
+    lineHeight: (function () { try { return localStorage.getItem("sf_reader_line_height") || "1.85"; } catch (e) { return "1.85"; } })(),
+    textAlign: (function () { try { return localStorage.getItem("sf_reader_text_align") || "left"; } catch (e) { return "left"; } })(),
+    maxWidth: (function () { try { return localStorage.getItem("sf_reader_max_width") || "820"; } catch (e) { return "820"; } })()
   };
 
   // Speech Synthesis & Dictation State
@@ -887,9 +895,11 @@
       readerAudio.sentences = [];
       readerAudio.activeUtterance = null;
 
-      // Cleanly remove any existing dictation drawers or modals
+      // Cleanly remove any existing dictation drawers, appearance popup, or modals
       var existingDrawer = document.getElementById("sf-dictation-drawer");
       if (existingDrawer) existingDrawer.remove();
+      var existingPopup = document.getElementById("sf-reader-appearance-popup");
+      if (existingPopup) existingPopup.remove();
 
       if (readerContainer) {
         readerContainer.remove();
@@ -975,7 +985,7 @@
         registerCaption(sc.textContent);
       });
 
-      var elements = Array.from(mainContainer.querySelectorAll("h1, h2, h3, h4, h5, p, figure, img, blockquote, video, iframe, [data-component='video-block'], [data-e2e='media-player'], .media-player, .video-container, .box_embed_video, [data-video-src]"));
+      var elements = Array.from(mainContainer.querySelectorAll("h1, h2, h3, h4, h5, p, figure, img, blockquote, ul, ol, table, pre, video, iframe, [data-component='video-block'], [data-e2e='media-player'], .media-player, .video-container, .box_embed_video, [data-video-src]"));
       var paragraphCount = 0;
 
       for (var i = 0; i < elements.length; i++) {
@@ -1164,6 +1174,60 @@
 
           paragraphCount++;
           articleItems.push({ type: "paragraph", text: cleanP, isQuote: tag === "blockquote" });
+          continue;
+        }
+
+        // 5. Lists (Bullet & Numbered Lists)
+        if (tag === "ul" || tag === "ol") {
+          if (el.closest("nav, aside, .menu, .header, .footer, .sidebar, .related, .box-tinlienquan, .tags, .social-share, .share-box, .breadcrumbs, .news-list, .article-list")) continue;
+          var lis = Array.from(el.querySelectorAll(":scope > li"));
+          if (lis.length === 0) lis = Array.from(el.querySelectorAll("li"));
+          var listItems = [];
+          for (var liIdx = 0; liIdx < lis.length && listItems.length < 30; liIdx++) {
+            var rawLi = (lis[liIdx].textContent || "").replace(/\s+/g, " ").trim();
+            if (rawLi.length > 3 && !JUNK_TEXT_RE.test(rawLi)) {
+              var cleanLi = cleanParagraphText(rawLi);
+              if (cleanLi.length > 2) listItems.push(cleanLi);
+            }
+          }
+          if (listItems.length >= 1) {
+            paragraphCount++;
+            articleItems.push({ type: "list", ordered: tag === "ol", items: listItems });
+          }
+          continue;
+        }
+
+        // 6. Data Tables
+        if (tag === "table") {
+          if (el.closest("figure, .tplCaption, nav, aside, .footer")) continue;
+          if (el.classList.contains("tplCaption")) continue;
+          var rows = Array.from(el.querySelectorAll("tr"));
+          if (rows.length >= 2 && rows.length <= 40) {
+            var tableRows = [];
+            for (var trIdx = 0; trIdx < rows.length; trIdx++) {
+              var cells = Array.from(rows[trIdx].querySelectorAll("th, td"));
+              var cellData = cells.map(function (c) {
+                return { isHeader: c.tagName.toLowerCase() === "th", text: (c.textContent || "").replace(/\s+/g, " ").trim() };
+              });
+              if (cellData.some(function (c) { return c.text.length > 0; })) {
+                tableRows.push(cellData);
+              }
+            }
+            if (tableRows.length >= 2) {
+              articleItems.push({ type: "table", rows: tableRows });
+            }
+          }
+          continue;
+        }
+
+        // 7. Code Blocks
+        if (tag === "pre") {
+          if (el.closest("nav, aside, .footer")) continue;
+          var preText = (el.textContent || "").trim();
+          if (preText.length > 10 && preText.length < 5000) {
+            articleItems.push({ type: "code", text: preText });
+          }
+          continue;
         }
       }
     }
@@ -1255,6 +1319,60 @@
         scrollThumb: "#52525b",
         scrollTrack: "#000000",
         captionColor: "#a1a1aa"
+      },
+      light: {
+        bg: "#ffffff",
+        barBg: "rgba(248, 250, 252, 0.98)",
+        text: "#1e293b",
+        title: "#0f172a",
+        heading: "#0284c7",
+        border: "rgba(0, 0, 0, 0.12)",
+        cardBg: "#f1f5f9",
+        navText: "#0f172a",
+        btnBg: "rgba(241, 245, 249, 0.95)",
+        btnText: "#0f172a",
+        btnBorder: "rgba(0, 0, 0, 0.15)",
+        playBtnBg: "linear-gradient(135deg, #0284c7, #0369a1)",
+        playBtnText: "#ffffff",
+        dictBtnActiveBg: "#0284c7",
+        dictBtnActiveText: "#ffffff",
+        brandBg: "rgba(2, 132, 199, 0.1)",
+        brandText: "#0284c7",
+        brandBorder: "rgba(2, 132, 199, 0.25)",
+        selectBg: "#ffffff",
+        selectText: "#0f172a",
+        selectBorder: "rgba(0, 0, 0, 0.2)",
+        quoteBorder: "#0284c7",
+        scrollThumb: "#94a3b8",
+        scrollTrack: "#f8fafc",
+        captionColor: "#64748b"
+      },
+      mint: {
+        bg: "#eef5ed",
+        barBg: "rgba(227, 239, 225, 0.98)",
+        text: "#142d1b",
+        title: "#0c2111",
+        heading: "#15803d",
+        border: "rgba(21, 128, 61, 0.2)",
+        cardBg: "#e2ede0",
+        navText: "#0c2111",
+        btnBg: "rgba(215, 232, 212, 0.95)",
+        btnText: "#0c2111",
+        btnBorder: "rgba(21, 128, 61, 0.25)",
+        playBtnBg: "linear-gradient(135deg, #15803d, #166534)",
+        playBtnText: "#ffffff",
+        dictBtnActiveBg: "#15803d",
+        dictBtnActiveText: "#ffffff",
+        brandBg: "rgba(21, 128, 61, 0.1)",
+        brandText: "#15803d",
+        brandBorder: "rgba(21, 128, 61, 0.25)",
+        selectBg: "#e2ede0",
+        selectText: "#0c2111",
+        selectBorder: "rgba(21, 128, 61, 0.25)",
+        quoteBorder: "#15803d",
+        scrollThumb: "#86af84",
+        scrollTrack: "#eef5ed",
+        captionColor: "#3f6745"
       }
     };
 
@@ -1346,6 +1464,60 @@
         --sf-scroll-thumb: #52525b;
         --sf-scroll-track: #000000;
         --sf-caption: #a1a1aa;
+      }
+
+      #sf-cyber-reader[data-theme="light"] {
+        --sf-bg: #ffffff;
+        --sf-bar-bg: rgba(248, 250, 252, 0.98);
+        --sf-text: #1e293b;
+        --sf-title: #0f172a;
+        --sf-heading: #0284c7;
+        --sf-border: rgba(0, 0, 0, 0.12);
+        --sf-card-bg: #f1f5f9;
+        --sf-btn-bg: rgba(241, 245, 249, 0.95);
+        --sf-btn-text: #0f172a;
+        --sf-btn-border: rgba(0, 0, 0, 0.15);
+        --sf-play-bg: linear-gradient(135deg, #0284c7, #0369a1);
+        --sf-play-text: #ffffff;
+        --sf-dict-active-bg: #0284c7;
+        --sf-dict-active-text: #ffffff;
+        --sf-brand-bg: rgba(2, 132, 199, 0.1);
+        --sf-brand-text: #0284c7;
+        --sf-brand-border: rgba(2, 132, 199, 0.25);
+        --sf-select-bg: #ffffff;
+        --sf-select-text: #0f172a;
+        --sf-select-border: rgba(0, 0, 0, 0.2);
+        --sf-quote-border: #0284c7;
+        --sf-scroll-thumb: #94a3b8;
+        --sf-scroll-track: #f8fafc;
+        --sf-caption: #64748b;
+      }
+
+      #sf-cyber-reader[data-theme="mint"] {
+        --sf-bg: #eef5ed;
+        --sf-bar-bg: rgba(227, 239, 225, 0.98);
+        --sf-text: #142d1b;
+        --sf-title: #0c2111;
+        --sf-heading: #15803d;
+        --sf-border: rgba(21, 128, 61, 0.2);
+        --sf-card-bg: #e2ede0;
+        --sf-btn-bg: rgba(215, 232, 212, 0.95);
+        --sf-btn-text: #0c2111;
+        --sf-btn-border: rgba(21, 128, 61, 0.25);
+        --sf-play-bg: linear-gradient(135deg, #15803d, #166534);
+        --sf-play-text: #ffffff;
+        --sf-dict-active-bg: #15803d;
+        --sf-dict-active-text: #ffffff;
+        --sf-brand-bg: rgba(21, 128, 61, 0.1);
+        --sf-brand-text: #15803d;
+        --sf-brand-border: rgba(21, 128, 61, 0.25);
+        --sf-select-bg: #e2ede0;
+        --sf-select-text: #0c2111;
+        --sf-select-border: rgba(21, 128, 61, 0.25);
+        --sf-quote-border: #15803d;
+        --sf-scroll-thumb: #86af84;
+        --sf-scroll-track: #eef5ed;
+        --sf-caption: #3f6745;
       }
 
       /* Isolation & Theme rules with !important */
@@ -2030,6 +2202,238 @@
     };
     barRight.appendChild(btnFontInc);
 
+    // Appearance & Typography Toggle Button (Aa)
+    var appearancePopup = null;
+    function toggleAppearancePopup() {
+      if (appearancePopup) {
+        appearancePopup.remove();
+        appearancePopup = null;
+        return;
+      }
+
+      appearancePopup = document.createElement("div");
+      appearancePopup.id = "sf-reader-appearance-popup";
+      appearancePopup.style.cssText = `
+        position: fixed;
+        top: 44px;
+        right: 18px;
+        width: 310px;
+        background: var(--sf-card-bg);
+        border: 1px solid var(--sf-border);
+        border-radius: 12px;
+        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+        padding: 16px 18px;
+        z-index: 2500;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        color: var(--sf-text);
+        box-sizing: border-box;
+      `;
+
+      var popHeader = document.createElement("div");
+      popHeader.style.cssText = "display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--sf-border);";
+
+      var popTitle = document.createElement("div");
+      popTitle.style.cssText = "font-size: 13.5px; font-weight: 800; color: var(--sf-heading); display: flex; align-items: center; gap: 6px;";
+      popTitle.textContent = "🎛️ " + (window.tContent ? window.tContent("reader_format_title") : "Định dạng bài đọc");
+
+      var popClose = document.createElement("button");
+      popClose.type = "button";
+      popClose.style.cssText = "background: transparent; border: none; color: var(--sf-caption); font-size: 15px; cursor: pointer; padding: 2px 6px; border-radius: 4px; line-height: 1;";
+      popClose.textContent = "✕";
+      popClose.onclick = function () {
+        if (appearancePopup) {
+          appearancePopup.remove();
+          appearancePopup = null;
+        }
+      };
+
+      popHeader.appendChild(popTitle);
+      popHeader.appendChild(popClose);
+      appearancePopup.appendChild(popHeader);
+
+      function createSection(titleText) {
+        var sec = document.createElement("div");
+        sec.style.cssText = "margin-bottom: 14px;";
+        var lbl = document.createElement("div");
+        lbl.style.cssText = "font-size: 11.5px; font-weight: 700; color: var(--sf-caption); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;";
+        lbl.textContent = titleText;
+        sec.appendChild(lbl);
+        return sec;
+      }
+
+      // 1. Line Height (Giãn dòng)
+      var lhSec = createSection(window.tContent ? window.tContent("reader_format_line_height") : "Giãn dòng");
+      var lhRow = document.createElement("div");
+      lhRow.style.cssText = "display: flex; gap: 6px;";
+      var lhOptions = [
+        { val: "1.5", label: "1.5x" },
+        { val: "1.85", label: "1.85x" },
+        { val: "2.2", label: "2.2x" }
+      ];
+      var lhBtns = [];
+      lhOptions.forEach(function (opt) {
+        var b = document.createElement("button");
+        b.type = "button";
+        var isActive = String(readerPrefs.lineHeight || "1.85") === opt.val;
+        b.style.cssText = `
+          flex: 1;
+          padding: 6px 0;
+          font-size: 11.5px;
+          font-weight: 700;
+          border-radius: 6px;
+          cursor: pointer;
+          border: 1px solid var(--sf-btn-border);
+          background: ${isActive ? "var(--sf-play-bg)" : "var(--sf-btn-bg)"};
+          color: ${isActive ? "#ffffff" : "var(--sf-btn-text)"};
+          transition: all 0.15s ease;
+        `;
+        b.textContent = opt.label;
+        b.onclick = function () {
+          readerPrefs.lineHeight = opt.val;
+          try { localStorage.setItem("sf_reader_line_height", opt.val); } catch (e) {}
+          if (contentWrapper) contentWrapper.style.lineHeight = opt.val;
+          lhBtns.forEach(function (btnObj) {
+            var active = btnObj.val === opt.val;
+            btnObj.btn.style.background = active ? "var(--sf-play-bg)" : "var(--sf-btn-bg)";
+            btnObj.btn.style.color = active ? "#ffffff" : "var(--sf-btn-text)";
+          });
+        };
+        lhBtns.push({ btn: b, val: opt.val });
+        lhRow.appendChild(b);
+      });
+      lhSec.appendChild(lhRow);
+      appearancePopup.appendChild(lhSec);
+
+      // 2. Alignment (Căn lề)
+      var alignSec = createSection(window.tContent ? window.tContent("reader_format_align") : "Căn lề");
+      var alignRow = document.createElement("div");
+      alignRow.style.cssText = "display: flex; gap: 6px;";
+      var alignOptions = [
+        { val: "left", label: "Left (Trái)" },
+        { val: "justify", label: "Justify (Đều)" }
+      ];
+      var alignBtns = [];
+      alignOptions.forEach(function (opt) {
+        var b = document.createElement("button");
+        b.type = "button";
+        var isActive = (readerPrefs.textAlign || "left") === opt.val;
+        b.style.cssText = `
+          flex: 1;
+          padding: 6px 0;
+          font-size: 11.5px;
+          font-weight: 700;
+          border-radius: 6px;
+          cursor: pointer;
+          border: 1px solid var(--sf-btn-border);
+          background: ${isActive ? "var(--sf-play-bg)" : "var(--sf-btn-bg)"};
+          color: ${isActive ? "#ffffff" : "var(--sf-btn-text)"};
+          transition: all 0.15s ease;
+        `;
+        b.textContent = opt.label;
+        b.onclick = function () {
+          readerPrefs.textAlign = opt.val;
+          try { localStorage.setItem("sf_reader_text_align", opt.val); } catch (e) {}
+          if (contentWrapper) contentWrapper.style.textAlign = opt.val;
+          alignBtns.forEach(function (btnObj) {
+            var active = btnObj.val === opt.val;
+            btnObj.btn.style.background = active ? "var(--sf-play-bg)" : "var(--sf-btn-bg)";
+            btnObj.btn.style.color = active ? "#ffffff" : "var(--sf-btn-text)";
+          });
+        };
+        alignBtns.push({ btn: b, val: opt.val });
+        alignRow.appendChild(b);
+      });
+      alignSec.appendChild(alignRow);
+      appearancePopup.appendChild(alignSec);
+
+      // 3. Column Width (Độ rộng bài viết)
+      var widthSec = createSection(window.tContent ? window.tContent("reader_format_width") : "Độ rộng");
+      var widthRow = document.createElement("div");
+      widthRow.style.cssText = "display: flex; gap: 6px;";
+      var widthOptions = [
+        { val: "680", label: "680px" },
+        { val: "820", label: "820px" },
+        { val: "1000", label: "1000px" }
+      ];
+      var widthBtns = [];
+      widthOptions.forEach(function (opt) {
+        var b = document.createElement("button");
+        b.type = "button";
+        var isActive = String(readerPrefs.maxWidth || "820") === opt.val;
+        b.style.cssText = `
+          flex: 1;
+          padding: 6px 0;
+          font-size: 11.5px;
+          font-weight: 700;
+          border-radius: 6px;
+          cursor: pointer;
+          border: 1px solid var(--sf-btn-border);
+          background: ${isActive ? "var(--sf-play-bg)" : "var(--sf-btn-bg)"};
+          color: ${isActive ? "#ffffff" : "var(--sf-btn-text)"};
+          transition: all 0.15s ease;
+        `;
+        b.textContent = opt.label;
+        b.onclick = function () {
+          readerPrefs.maxWidth = opt.val;
+          try { localStorage.setItem("sf_reader_max_width", opt.val); } catch (e) {}
+          if (contentWrapper) contentWrapper.style.maxWidth = opt.val + "px";
+          widthBtns.forEach(function (btnObj) {
+            var active = btnObj.val === opt.val;
+            btnObj.btn.style.background = active ? "var(--sf-play-bg)" : "var(--sf-btn-bg)";
+            btnObj.btn.style.color = active ? "#ffffff" : "var(--sf-btn-text)";
+          });
+        };
+        widthBtns.push({ btn: b, val: opt.val });
+        widthRow.appendChild(b);
+      });
+      widthSec.appendChild(widthRow);
+      appearancePopup.appendChild(widthSec);
+
+      // Click outside to dismiss popup
+      function onDocClick(e) {
+        if (appearancePopup && !appearancePopup.contains(e.target) && e.target !== btnAppearance && !btnAppearance.contains(e.target)) {
+          appearancePopup.remove();
+          appearancePopup = null;
+          document.removeEventListener("click", onDocClick, true);
+        }
+      }
+      setTimeout(function () {
+        document.addEventListener("click", onDocClick, true);
+      }, 50);
+
+      readerContainer.appendChild(appearancePopup);
+    }
+
+    var btnAppearance = document.createElement("button");
+    btnAppearance.type = "button";
+    btnAppearance.id = "sf-reader-btn-appearance";
+    btnAppearance.title = window.tContent ? window.tContent("reader_format_title") : "Appearance & Formatting";
+    btnAppearance.style.cssText = `
+      background: ${currentTheme.btnBg};
+      color: ${currentTheme.btnText};
+      border: 1px solid ${currentTheme.btnBorder};
+      width: 32px;
+      height: 28px;
+      min-width: 32px;
+      min-height: 28px;
+      padding: 0;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      box-sizing: border-box;
+      letter-spacing: -0.5px;
+    `;
+    btnAppearance.textContent = "Aa";
+    btnAppearance.onclick = function () {
+      toggleAppearancePopup();
+    };
+    barRight.appendChild(btnAppearance);
+
     // Font Family Selector Dropdown
     var fontSelect = document.createElement("select");
     fontSelect.id = "sf-reader-font-select";
@@ -2054,10 +2458,15 @@
       { id: "times", label: "Times New Roman" },
       { id: "garamond", label: "Garamond" },
       { id: "merriweather", label: "Merriweather" },
+      { id: "lora", label: "Lora" },
+      { id: "literata", label: "Literata" },
+      { id: "bookerly", label: "Bookerly" },
       { id: "bookish", label: "Palatino" },
       { id: "charter", label: "Charter" },
       { id: "sans", label: "System Sans" },
       { id: "inter", label: "Inter" },
+      { id: "roboto", label: "Roboto" },
+      { id: "segoe", label: "Segoe UI" },
       { id: "arial", label: "Arial" },
       { id: "helvetica", label: "Helvetica" },
       { id: "verdana", label: "Verdana" },
@@ -2091,7 +2500,9 @@
     var themeBtns = [];
     var themes = [
       { id: "dark", label: "🌙", title: "Dark Theme" },
-      { id: "sepia", label: "📜", title: "Sepia (Light) Theme" },
+      { id: "sepia", label: "📜", title: "Sepia Theme" },
+      { id: "light", label: "☀️", title: "Clean Light Theme" },
+      { id: "mint", label: "🌿", title: "Mint Paper (Eye-care) Theme" },
       { id: "oled", label: "🖤", title: "OLED Black Theme" }
     ];
 
@@ -2158,10 +2569,17 @@
       btnFontInc.style.color = s.btnText;
       btnFontInc.style.borderColor = s.btnBorder;
 
+      if (btnAppearance) {
+        btnAppearance.style.background = s.btnBg;
+        btnAppearance.style.color = s.btnText;
+        btnAppearance.style.borderColor = s.btnBorder;
+      }
+
       themeBtns.forEach(function (tb) {
-        tb.style.background = s.btnBg;
-        tb.style.color = s.btnText;
-        tb.style.borderColor = s.btnBorder;
+        var active = tb.dataset.themeId === thId;
+        tb.style.background = active ? s.playBtnBg : s.btnBg;
+        tb.style.color = active ? s.playBtnText : s.btnText;
+        tb.style.borderColor = active ? s.brandBorder : s.btnBorder;
       });
 
       // Update heading & title if present
@@ -2195,10 +2613,12 @@
       var tBtn = document.createElement("button");
       tBtn.type = "button";
       tBtn.title = th.title;
+      tBtn.dataset.themeId = th.id;
+      var isThActive = (readerPrefs.theme || "dark") === th.id;
       tBtn.style.cssText = `
-        background: ${currentTheme.btnBg};
-        color: ${currentTheme.btnText};
-        border: 1px solid ${currentTheme.btnBorder};
+        background: ${isThActive ? currentTheme.playBtnBg : currentTheme.btnBg};
+        color: ${isThActive ? currentTheme.playBtnText : currentTheme.btnText};
+        border: 1px solid ${isThActive ? currentTheme.brandBorder : currentTheme.btnBorder};
         width: 28px;
         height: 28px;
         min-width: 28px;
@@ -2259,7 +2679,10 @@
     // Main Article Content Container
     var currentFontFamily = FONT_FAMILIES[readerPrefs.fontFamily] || FONT_FAMILIES.serif;
     var contentWrapper = document.createElement("div");
-    contentWrapper.style.cssText = `max-width: 820px; margin: 34px auto; padding: 0 24px 80px 24px; font-family: ${currentFontFamily}; line-height: 1.85;`;
+    var curMaxWidth = (readerPrefs.maxWidth || "820") + "px";
+    var curLineHeight = readerPrefs.lineHeight || "1.85";
+    var curTextAlign = readerPrefs.textAlign || "left";
+    contentWrapper.style.cssText = `max-width: ${curMaxWidth}; margin: 34px auto; padding: 0 24px 80px 24px; font-family: ${currentFontFamily}; line-height: ${curLineHeight}; text-align: ${curTextAlign};`;
 
     // Reading Assistant Chibi Hero Badge
     if (CHIBI_READER_GIF) {
@@ -2461,9 +2884,9 @@
         if (item.type === "paragraph") {
           var sents = splitTextIntoSentences(item.text);
           if (sents.length > 0) {
-            var pBlock = document.createElement("p");
+            var pBlock = document.createElement(item.isQuote ? "blockquote" : "p");
             pBlock.style.cssText = item.isQuote
-              ? "margin-bottom: 24px; color: #94a3b8; font-style: italic; border-left: 3.5px solid " + currentTheme.quoteBorder + "; padding-left: 16px;"
+              ? "margin: 24px 0; color: var(--sf-caption); font-style: italic; border-left: 4px solid var(--sf-quote-border); padding: 12px 18px; background: var(--sf-card-bg); border-radius: 0 8px 8px 0; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);"
               : "margin-bottom: 24px;";
 
             sents.forEach(function (sText) {
@@ -2496,6 +2919,90 @@
 
             contentWrapper.appendChild(pBlock);
           }
+          return;
+        }
+
+        if (item.type === "list") {
+          var listEl = document.createElement(item.ordered ? "ol" : "ul");
+          listEl.style.cssText = "margin: 20px 0 24px 28px; padding-left: 12px; line-height: inherit; color: inherit;";
+          item.items.forEach(function (liText) {
+            var liEl = document.createElement("li");
+            liEl.style.cssText = "margin-bottom: 10px;";
+            var liSents = splitTextIntoSentences(liText);
+            if (liSents.length > 0) {
+              liSents.forEach(function (sText) {
+                var sIdx = readerAudio.sentences.length;
+                readerAudio.sentences.push(sText);
+
+                var sSpan = document.createElement("span");
+                sSpan.className = "sf-reader-sentence";
+                sSpan.style.cssText = "cursor: pointer; padding: 2px 2px; border-radius: 4px; transition: background 0.2s;";
+                sSpan.title = "Click to listen";
+                sSpan.textContent = sText + " ";
+
+                sSpan.addEventListener("mouseenter", function () {
+                  if (readerAudio.currentIndex !== sIdx) sSpan.style.background = "rgba(56, 189, 248, 0.15)";
+                });
+                sSpan.addEventListener("mouseleave", function () {
+                  if (readerAudio.currentIndex !== sIdx) sSpan.style.background = "transparent";
+                });
+
+                sSpan.addEventListener("click", function () {
+                  playSentenceAt(sIdx);
+                  if (readerAudio.isDictationMode) {
+                    openDictationBox(sIdx);
+                  }
+                });
+
+                sentenceElements.push(sSpan);
+                liEl.appendChild(sSpan);
+              });
+            } else {
+              liEl.textContent = liText;
+            }
+            listEl.appendChild(liEl);
+          });
+          contentWrapper.appendChild(listEl);
+          return;
+        }
+
+        if (item.type === "table") {
+          var tableWrap = document.createElement("div");
+          tableWrap.className = "sf-reader-table-wrap";
+          tableWrap.style.cssText = "margin: 28px 0; overflow-x: auto; border-radius: 10px; border: 1px solid var(--sf-border); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);";
+
+          var tbl = document.createElement("table");
+          tbl.style.cssText = "width: 100%; border-collapse: collapse; font-size: 14px; text-align: left;";
+
+          item.rows.forEach(function (row, rIdx) {
+            var tr = document.createElement("tr");
+            if (rIdx % 2 === 1) {
+              tr.style.background = "rgba(255, 255, 255, 0.03)";
+            }
+            row.forEach(function (cell) {
+              var cellEl = document.createElement(cell.isHeader ? "th" : "td");
+              cellEl.style.cssText = cell.isHeader
+                ? "padding: 10px 14px; font-weight: 700; color: var(--sf-heading); border-bottom: 2px solid var(--sf-border); background: var(--sf-card-bg);"
+                : "padding: 10px 14px; border-bottom: 1px solid var(--sf-border); color: inherit;";
+              cellEl.textContent = cell.text;
+              tr.appendChild(cellEl);
+            });
+            tbl.appendChild(tr);
+          });
+          tableWrap.appendChild(tbl);
+          contentWrapper.appendChild(tableWrap);
+          return;
+        }
+
+        if (item.type === "code") {
+          var preWrap = document.createElement("pre");
+          preWrap.className = "sf-reader-code";
+          preWrap.style.cssText = "margin: 24px 0; padding: 14px 18px; border-radius: 10px; background: var(--sf-card-bg); border: 1px solid var(--sf-border); overflow-x: auto; font-family: " + FONT_FAMILIES.mono + "; font-size: 13.5px; line-height: 1.6; color: var(--sf-text);";
+          var codeEl = document.createElement("code");
+          codeEl.textContent = item.text;
+          preWrap.appendChild(codeEl);
+          contentWrapper.appendChild(preWrap);
+          return;
         }
       });
     } else {
