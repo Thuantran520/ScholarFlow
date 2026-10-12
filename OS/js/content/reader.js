@@ -152,6 +152,7 @@
       if (/^\p{N}+$/u.test(tok)) continue; // numbers are not listening practice
       if (!/^\p{L}{2,}$/u.test(tok)) continue;
       if (stopWords.has(tok.toLowerCase())) continue;
+      if (/^\p{Lu}/u.test(tok)) continue; // proper nouns / sentence start: poor listening targets
       candidates.push({ idx: i, word: w, text: tok, clean: tok.toLowerCase() });
     }
 
@@ -2474,8 +2475,19 @@
           dExerciseArea.appendChild(dHint);
 
           var clozeData = generateClozeExercise(targetSentence);
+          // Host news pages style bare `input`/`span` (float, height, display…),
+          // which used to pull every blank to the start of its line. Force every
+          // layout-critical declaration inline with !important.
+          var important = function (css) {
+            return css.split(";").map(function (d) { return d.trim(); }).filter(Boolean)
+              .map(function (d) { return d + " !important"; }).join("; ") + ";";
+          };
           var box = document.createElement("div");
-          box.style.cssText = `
+          box.style.cssText = important(`
+            display: block;
+            float: none;
+            text-align: left;
+            white-space: normal;
             background: ${currentBoxTheme.selectBg};
             color: ${currentBoxTheme.selectText};
             border: 1px solid ${currentBoxTheme.selectBorder};
@@ -2483,8 +2495,8 @@
             padding: 12px 14px;
             font-size: 14.5px;
             line-height: 2.2;
-            box-shadow: inset 0 1px 3px rgba(0,0,0,0.15);
-          `;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.15)
+          `);
 
           var clozeInputs = [];
           clozeData.tokens.forEach(function (tok) {
@@ -2496,23 +2508,30 @@
               cInp.placeholder = "___";
               cInp.autocomplete = "off";
               cInp.spellcheck = false;
-              cInp.style.cssText = `
+              cInp.style.cssText = important(`
+                all: unset;
+                box-sizing: border-box;
+                display: inline-block;
+                float: none;
+                position: static;
                 background: ${currentBoxTheme.bg};
                 color: ${currentBoxTheme.text};
                 border: 1.5px solid ${currentBoxTheme.heading};
                 border-radius: 5px;
-                padding: 2px 6px;
+                padding: 1px 6px;
+                margin: 0 3px;
+                height: 1.75em;
+                min-height: 0;
+                max-width: none;
                 font-size: 14px;
                 font-family: inherit;
                 font-weight: 600;
+                line-height: 1.4;
                 text-align: center;
-                outline: none;
-                margin: 0 3px;
-                display: inline-block;
                 vertical-align: baseline;
-                width: ${Math.max(48, tok.answer.length * 10)}px;
-                transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
-              `;
+                width: ${Math.max(48, Array.from(tok.answer).length * 10 + 16)}px;
+                transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s
+              `);
 
               var currIdx = clozeInputs.length;
               clozeInputs.push(cInp);
@@ -2532,6 +2551,7 @@
               box.appendChild(cInp);
             } else {
               var sSpan = document.createElement("span");
+              sSpan.style.cssText = important("display: inline; float: none; position: static; margin: 0; padding: 0; white-space: pre-wrap");
               sSpan.textContent = tok.text;
               box.appendChild(sSpan);
             }
@@ -2549,14 +2569,14 @@
 
               if (userVal === cleanAns && cleanAns.length > 0) {
                 correctCount++;
-                inp.style.borderColor = "#10b981";
-                inp.style.background = "rgba(16, 185, 129, 0.15)";
-                inp.style.color = "#10b981";
+                inp.style.setProperty("border-color", "#10b981", "important");
+                inp.style.setProperty("background", "rgba(16, 185, 129, 0.15)", "important");
+                inp.style.setProperty("color", "#10b981", "important");
                 inp.disabled = true;
               } else {
-                inp.style.borderColor = "#ef4444";
-                inp.style.background = "rgba(239, 68, 68, 0.15)";
-                inp.style.color = "#ef4444";
+                inp.style.setProperty("border-color", "#ef4444", "important");
+                inp.style.setProperty("background", "rgba(239, 68, 68, 0.15)", "important");
+                inp.style.setProperty("color", "#ef4444", "important");
 
                 var corr = inp.nextElementSibling;
                 if (!corr || !corr.classList.contains("sf-cloze-corr")) {
@@ -2583,8 +2603,8 @@
           btnReveal.onclick = function () {
             clozeInputs.forEach(function (inp) {
               inp.value = inp.dataset.answer;
-              inp.style.color = currentBoxTheme.heading;
-              inp.style.borderColor = currentBoxTheme.heading;
+              inp.style.setProperty("color", currentBoxTheme.heading, "important");
+              inp.style.setProperty("border-color", currentBoxTheme.heading, "important");
             });
           };
 
