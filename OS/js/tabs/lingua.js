@@ -956,6 +956,56 @@ onReady(function () {
   if (linkBtn) linkBtn.addEventListener("click", function () { lngLinkJoin(); });
   
   // Cyber-Reader Mode trigger (supports both btn-lingua-reader-mode and legacy btn-sec-reader-mode)
+  function updateReaderButtonState(isActive) {
+    const readerTriggerBtn = document.getElementById("btn-lingua-reader-mode") || document.getElementById("btn-sec-reader-mode");
+    if (!readerTriggerBtn) return;
+    const textSpan = readerTriggerBtn.querySelector("#btn-lingua-reader-mode-text") || readerTriggerBtn.querySelector("span") || readerTriggerBtn;
+    if (isActive) {
+      readerTriggerBtn.classList.add("is-reader-active");
+      readerTriggerBtn.style.background = "#ef4444";
+      readerTriggerBtn.style.boxShadow = "0 2px 8px rgba(239, 68, 68, 0.35)";
+      if (textSpan) {
+        textSpan.setAttribute("data-i18n", "reader_mode_btn_off");
+        textSpan.textContent = (typeof t === "function" ? t("reader_mode_btn_off") : null) || "Tắt Chế độ đọc";
+      }
+    } else {
+      readerTriggerBtn.classList.remove("is-reader-active");
+      readerTriggerBtn.style.background = "var(--primary, #38bdf8)";
+      readerTriggerBtn.style.boxShadow = "0 2px 8px rgba(var(--primary-rgb, 56,189,248), 0.3)";
+      if (textSpan) {
+        textSpan.setAttribute("data-i18n", "reader_mode_btn");
+        textSpan.textContent = (typeof t === "function" ? t("reader_mode_btn") : null) || "Bật Chế độ đọc";
+      }
+    }
+  }
+
+  function syncReaderButtonState() {
+    const bApi = (typeof chrome !== "undefined" && chrome.tabs) ? chrome : (typeof browser !== "undefined" && browser.tabs) ? browser : null;
+    if (!bApi) return;
+    bApi.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const tab = tabs?.[0];
+      if (!tab || !tab.id) return;
+      try {
+        bApi.tabs.sendMessage(tab.id, { command: "getReaderModeStatus" }, (res) => {
+          if (bApi.runtime && bApi.runtime.lastError) return;
+          if (res && typeof res.active === "boolean") {
+            updateReaderButtonState(res.active);
+          }
+        });
+      } catch (e) {}
+    });
+  }
+
+  syncReaderButtonState();
+
+  if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage) {
+    chrome.runtime.onMessage.addListener((msg) => {
+      if (msg && msg.command === "readerModeChanged") {
+        updateReaderButtonState(!!msg.active);
+      }
+    });
+  }
+
   const readerTriggerBtn = document.getElementById("btn-lingua-reader-mode") || document.getElementById("btn-sec-reader-mode");
   if (readerTriggerBtn) {
     readerTriggerBtn.addEventListener("click", () => {
@@ -967,19 +1017,11 @@ onReady(function () {
             bApi.tabs.query({ active: true, currentWindow: true }, (tabs) => resolve(tabs?.[0] || null));
           });
 
-      getTargetTab().then(async (activeTab) => {
+      getTargetTab().then((activeTab) => {
         if (!activeTab || !activeTab.id) {
           const failMsg = (typeof t === "function" ? t("sec_reader_cannot_inject") : null) || "Không tìm thấy tab trang web nào đang mở để bật Chế độ đọc!";
           if (typeof showToast === "function") showToast(failMsg, "warning");
           return;
-        }
-        if (typeof isTabAlive === "function") {
-          const alive = await isTabAlive(activeTab.id);
-          if (!alive) {
-            const failMsg = (typeof t === "function" ? t("sec_reader_cannot_inject") : null) || "Tab trang web đã đóng hoặc không khả dụng!";
-            if (typeof showToast === "function") showToast(failMsg, "warning");
-            return;
-          }
         }
         const tabUrl = activeTab.url || "";
         if (/^(edge|chrome|about|chrome-extension|moz-extension|view-source):/i.test(tabUrl)) {
@@ -989,12 +1031,8 @@ onReady(function () {
           return;
         }
 
-        async function triggerReader(isRetry) {
+        function triggerReader(isRetry) {
           try {
-            if (typeof isTabAlive === "function") {
-              const alive = await isTabAlive(activeTab.id);
-              if (!alive) return;
-            }
             const maybePromise = bApi.tabs.sendMessage(activeTab.id, { command: "toggleReaderMode" }, (response) => {
               const err = bApi.runtime && bApi.runtime.lastError;
               if (err) {
@@ -1003,7 +1041,7 @@ onReady(function () {
                     target: { tabId: activeTab.id },
                     files: ["OS/js/content/i18n.js", "OS/js/content/reader.js"]
                   }).then(() => {
-                    setTimeout(() => { triggerReader(true); }, 150);
+                    setTimeout(() => { triggerReader(true); }, 80);
                   }).catch((injErr) => {
                     console.warn("ReaderMode injection error:", injErr);
                     const failMsg = (typeof t === "function" ? t("sec_reader_cannot_inject") : null) || "Không thể khởi động Chế độ đọc trên trang này. Hãy thử làm mới (F5) lại trang!";
@@ -1015,6 +1053,7 @@ onReady(function () {
                   if (typeof showToast === "function") showToast(failMsg, "error");
                 }
               } else if (response && response.success) {
+                updateReaderButtonState(response.active);
                 if (typeof showToast === "function") {
                   const toastMsg = response.active
                     ? ((typeof t === "function" ? t("sec_reader_activated") : null) || "Đã kích hoạt Chế độ đọc!")

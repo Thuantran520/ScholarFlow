@@ -62,7 +62,8 @@
     preferredVoice: (function () { try { return localStorage.getItem("sf_reader_preferred_voice") || ""; } catch (e) { return ""; } })(),
     lineHeight: (function () { try { return localStorage.getItem("sf_reader_line_height") || "1.85"; } catch (e) { return "1.85"; } })(),
     textAlign: (function () { try { return localStorage.getItem("sf_reader_text_align") || "left"; } catch (e) { return "left"; } })(),
-    maxWidth: (function () { try { return localStorage.getItem("sf_reader_max_width") || "820"; } catch (e) { return "820"; } })()
+    maxWidth: (function () { try { return localStorage.getItem("sf_reader_max_width") || "820"; } catch (e) { return "820"; } })(),
+    highlightColor: (function () { try { return localStorage.getItem("sf_reader_highlight_color") || "auto"; } catch (e) { return "auto"; } })()
   };
 
   // Speech Synthesis & Dictation State
@@ -1080,6 +1081,11 @@
       }
 
       isReaderMode = false;
+      try {
+        if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.sendMessage) {
+          chrome.runtime.sendMessage({ command: "readerModeChanged", active: false });
+        }
+      } catch (e) {}
       return;
     }
 
@@ -1628,7 +1634,10 @@
         quoteBorder: "#38bdf8",
         scrollThumb: "#38bdf8",
         scrollTrack: "#090d16",
-        captionColor: "#94a3b8"
+        captionColor: "#94a3b8",
+        highlightBg: "rgba(56, 189, 248, 0.22)",
+        highlightBorder: "#38bdf8",
+        highlightGlow: "rgba(56, 189, 248, 0.35)"
       },
       sepia: {
         bg: "#f7f1e3",
@@ -1655,7 +1664,10 @@
         quoteBorder: "#b45309",
         scrollThumb: "#a88a68",
         scrollTrack: "#f2ebd9",
-        captionColor: "#6b5d52"
+        captionColor: "#6b5d52",
+        highlightBg: "rgba(180, 83, 9, 0.2)",
+        highlightBorder: "#b45309",
+        highlightGlow: "rgba(180, 83, 9, 0.3)"
       },
       oled: {
         bg: "#000000",
@@ -1682,7 +1694,10 @@
         quoteBorder: "#0ea5e9",
         scrollThumb: "#52525b",
         scrollTrack: "#000000",
-        captionColor: "#a1a1aa"
+        captionColor: "#a1a1aa",
+        highlightBg: "rgba(14, 165, 233, 0.28)",
+        highlightBorder: "#0ea5e9",
+        highlightGlow: "rgba(14, 165, 233, 0.4)"
       },
       light: {
         bg: "#ffffff",
@@ -1709,7 +1724,10 @@
         quoteBorder: "#0284c7",
         scrollThumb: "#94a3b8",
         scrollTrack: "#f8fafc",
-        captionColor: "#64748b"
+        captionColor: "#64748b",
+        highlightBg: "rgba(2, 132, 199, 0.16)",
+        highlightBorder: "#0284c7",
+        highlightGlow: "rgba(2, 132, 199, 0.25)"
       },
       mint: {
         bg: "#eef5ed",
@@ -1736,9 +1754,38 @@
         quoteBorder: "#15803d",
         scrollThumb: "#86af84",
         scrollTrack: "#eef5ed",
-        captionColor: "#3f6745"
+        captionColor: "#3f6745",
+        highlightBg: "rgba(21, 128, 61, 0.2)",
+        highlightBorder: "#15803d",
+        highlightGlow: "rgba(21, 128, 61, 0.3)"
       }
     };
+
+    var HIGHLIGHT_PRESETS = {
+      auto: { id: "auto", name: (window.tContent ? window.tContent("reader_highlight_auto") : "Theme"), bg: null, border: null, glow: null },
+      cyan: { id: "cyan", name: "Cyan", bg: "rgba(56, 189, 248, 0.22)", border: "#38bdf8", glow: "rgba(56, 189, 248, 0.35)" },
+      amber: { id: "amber", name: "Amber", bg: "rgba(245, 158, 11, 0.22)", border: "#f59e0b", glow: "rgba(245, 158, 11, 0.35)" },
+      emerald: { id: "emerald", name: "Emerald", bg: "rgba(16, 185, 129, 0.22)", border: "#10b981", glow: "rgba(16, 185, 129, 0.35)" },
+      violet: { id: "violet", name: "Violet", bg: "rgba(168, 85, 247, 0.22)", border: "#a855f7", glow: "rgba(168, 85, 247, 0.35)" },
+      coral: { id: "coral", name: "Coral", bg: "rgba(244, 63, 94, 0.22)", border: "#f43f5e", glow: "rgba(244, 63, 94, 0.35)" }
+    };
+
+    function getEffectiveHighlight() {
+      var cTheme = THEME_STYLES[readerPrefs.theme] || THEME_STYLES.dark;
+      var userChoice = readerPrefs.highlightColor || "auto";
+      if (userChoice !== "auto" && HIGHLIGHT_PRESETS[userChoice]) {
+        return {
+          bg: HIGHLIGHT_PRESETS[userChoice].bg,
+          border: HIGHLIGHT_PRESETS[userChoice].border,
+          glow: HIGHLIGHT_PRESETS[userChoice].glow
+        };
+      }
+      return {
+        bg: cTheme.highlightBg || "rgba(56, 189, 248, 0.22)",
+        border: cTheme.highlightBorder || "#38bdf8",
+        glow: cTheme.highlightGlow || "rgba(56, 189, 248, 0.35)"
+      };
+    }
 
     var currentTheme = THEME_STYLES[readerPrefs.theme] || THEME_STYLES.dark;
 
@@ -1932,27 +1979,17 @@
         #sf-cyber-reader .sf-font-btn {
           display: none !important;
         }
-        #sf-cyber-reader #sf-reader-voice-search {
-          display: none !important;
-        }
       }
 
       @media (max-width: 820px) {
         #sf-cyber-reader .sf-brand-text {
           display: none !important;
         }
-        #sf-cyber-reader #sf-close-reader span {
-          display: none !important;
-        }
-        #sf-cyber-reader #sf-close-reader {
-          padding: 0 8px !important;
-          min-width: 28px !important;
-        }
       }
 
       @media (max-width: 720px) {
         #sf-cyber-reader #sf-reader-voice-select {
-          max-width: 110px !important;
+          max-width: 120px !important;
         }
       }
       #sf-cyber-reader h1 {
@@ -1998,15 +2035,17 @@
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
+        width: 28px !important;
         height: 28px !important;
+        min-width: 28px !important;
         min-height: 28px !important;
-        padding: 0 12px !important;
+        padding: 0 !important;
         border-radius: 6px !important;
         background: #ef4444 !important;
         color: #ffffff !important;
         border: none !important;
         cursor: pointer !important;
-        font-size: 11.5px !important;
+        font-size: 14px !important;
         font-weight: 700 !important;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
         text-transform: none !important;
@@ -2310,32 +2349,6 @@
       voiceLangFilter.appendChild(opt);
     });
 
-    // Voice Search Input (Quick filter by name/region)
-    var voiceSearchInput = document.createElement("input");
-    voiceSearchInput.type = "text";
-    voiceSearchInput.id = "sf-reader-voice-search";
-    voiceSearchInput.placeholder = "🔍 Tìm giọng...";
-    voiceSearchInput.style.cssText = `
-      background: ${currentTheme.selectBg};
-      color: ${currentTheme.selectText};
-      border: 1px solid ${currentTheme.selectBorder};
-      padding: 4px 7px;
-      border-radius: 6px;
-      font-size: 11px;
-      width: 78px;
-      outline: none;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-      transition: width 0.2s ease, border-color 0.2s ease;
-    `;
-    voiceSearchInput.addEventListener("focus", function () {
-      voiceSearchInput.style.width = "105px";
-    });
-    voiceSearchInput.addEventListener("blur", function () {
-      if (!voiceSearchInput.value) {
-        voiceSearchInput.style.width = "78px";
-      }
-    });
-
     var voiceSelect = document.createElement("select");
     voiceSelect.id = "sf-reader-voice-select";
     voiceSelect.title = window.tContent ? window.tContent("reader_listen_voice") : "Voice";
@@ -2347,8 +2360,8 @@
       border-radius: 6px;
       font-size: 11.5px;
       font-weight: 500;
-      width: 140px;
-      max-width: 150px;
+      width: 155px;
+      max-width: 175px;
       outline: none;
       cursor: pointer;
       white-space: nowrap;
@@ -2408,12 +2421,11 @@
         voiceSelect.removeChild(voiceSelect.firstChild);
       }
       var filterLang = voiceLangFilter ? voiceLangFilter.value : readerAudio.articleLang;
-      var q = voiceSearchInput ? voiceSearchInput.value : "";
-      var voices = getVoicesForArticle(filterLang, q, true);
+      var voices = getVoicesForArticle(filterLang, "", true);
       if (voices.length === 0) {
         var opt = document.createElement("option");
         opt.value = "";
-        opt.textContent = q ? "Không tìm thấy giọng" : "Không có giọng cho ngôn ngữ này";
+        opt.textContent = "Không có giọng cho ngôn ngữ này";
         voiceSelect.appendChild(opt);
         updateMcAvatar("");
         return;
@@ -2449,10 +2461,6 @@
       populateVoiceDropdown();
     });
 
-    voiceSearchInput.addEventListener("input", function () {
-      populateVoiceDropdown();
-    });
-
     populateVoiceDropdown();
     if (typeof window !== "undefined" && window.speechSynthesis) {
       window.speechSynthesis.onvoiceschanged = function () {
@@ -2462,8 +2470,7 @@
 
     voiceSelect.addEventListener("change", function () {
       var filterLang = voiceLangFilter ? voiceLangFilter.value : readerAudio.articleLang;
-      var q = voiceSearchInput ? voiceSearchInput.value : "";
-      var voices = getVoicesForArticle(filterLang, q, true);
+      var voices = getVoicesForArticle(filterLang, "", true);
       var selected = voices.find(function (v) { return v.name === voiceSelect.value; });
       if (selected) {
         readerAudio.voice = selected;
@@ -2493,7 +2500,6 @@
 
     voiceWrapper.appendChild(mcAvatar);
     voiceWrapper.appendChild(voiceLangFilter);
-    voiceWrapper.appendChild(voiceSearchInput);
     voiceWrapper.appendChild(voiceSelect);
     barLeft.appendChild(voiceWrapper);
 
@@ -2826,6 +2832,66 @@
       widthSec.appendChild(widthRow);
       appearancePopup.appendChild(widthSec);
 
+      // 4. Highlight Color (Màu highlight)
+      var hlSec = createSection(window.tContent ? window.tContent("reader_format_highlight") : "Màu highlight");
+      var hlRow = document.createElement("div");
+      hlRow.style.cssText = "display: flex; gap: 5px; flex-wrap: wrap;";
+      var hlOptions = [
+        { id: "auto", label: (window.tContent ? window.tContent("reader_highlight_auto") : "Theme"), color: "var(--sf-heading)" },
+        { id: "cyan", label: "Cyan", color: "#38bdf8" },
+        { id: "amber", label: "Amber", color: "#f59e0b" },
+        { id: "emerald", label: "Emerald", color: "#10b981" },
+        { id: "violet", label: "Violet", color: "#a855f7" },
+        { id: "coral", label: "Coral", color: "#f43f5e" }
+      ];
+      var hlBtns = [];
+      hlOptions.forEach(function (opt) {
+        var b = document.createElement("button");
+        b.type = "button";
+        var isAct = (readerPrefs.highlightColor || "auto") === opt.id;
+        b.style.cssText = `
+          flex: 1;
+          min-width: 44px;
+          padding: 5px 4px;
+          font-size: 11px;
+          font-weight: 700;
+          border-radius: 6px;
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 4px;
+          border: ${isAct ? "1.5px solid " + opt.color : "1px solid var(--sf-btn-border)"};
+          background: ${isAct ? "rgba(255, 255, 255, 0.08)" : "var(--sf-btn-bg)"};
+          color: var(--sf-btn-text);
+          box-shadow: ${isAct ? "0 0 8px " + opt.color + "44" : "none"};
+          transition: all 0.15s ease;
+        `;
+        var dot = document.createElement("span");
+        dot.style.cssText = `width: 7px; height: 7px; border-radius: 50%; background: ${opt.color}; display: inline-block; flex-shrink: 0;`;
+        b.appendChild(dot);
+        var txt = document.createElement("span");
+        txt.textContent = opt.label;
+        b.appendChild(txt);
+        b.onclick = function () {
+          readerPrefs.highlightColor = opt.id;
+          try { localStorage.setItem("sf_reader_highlight_color", opt.id); } catch (e) {}
+          hlBtns.forEach(function (btnObj) {
+            var active = btnObj.id === opt.id;
+            btnObj.btn.style.border = active ? ("1.5px solid " + btnObj.color) : "1px solid var(--sf-btn-border)";
+            btnObj.btn.style.background = active ? "rgba(255, 255, 255, 0.08)" : "var(--sf-btn-bg)";
+            btnObj.btn.style.boxShadow = active ? ("0 0 8px " + btnObj.color + "44") : "none";
+          });
+          if (readerAudio.currentIndex >= 0) {
+            highlightSentence(readerAudio.currentIndex);
+          }
+        };
+        hlBtns.push({ btn: b, id: opt.id, color: opt.color });
+        hlRow.appendChild(b);
+      });
+      hlSec.appendChild(hlRow);
+      appearancePopup.appendChild(hlSec);
+
       // Click outside to dismiss popup
       function onDocClick(e) {
         if (appearancePopup && !appearancePopup.contains(e.target) && e.target !== btnAppearance && !btnAppearance.contains(e.target)) {
@@ -2977,10 +3043,6 @@
       voiceLangFilter.style.color = s.selectText;
       voiceLangFilter.style.borderColor = s.selectBorder;
 
-      voiceSearchInput.style.background = s.selectBg;
-      voiceSearchInput.style.color = s.selectText;
-      voiceSearchInput.style.borderColor = s.selectBorder;
-
       selSpeed.style.background = s.selectBg;
       selSpeed.style.color = s.selectText;
       selSpeed.style.borderColor = s.selectBorder;
@@ -3036,6 +3098,11 @@
         if (hSub) hSub.style.color = s.captionColor;
       }
 
+      // Re-apply highlight to current sentence if active
+      if (readerAudio.currentIndex >= 0 && typeof highlightSentence === "function") {
+        highlightSentence(readerAudio.currentIndex);
+      }
+
       // Debounced dictation drawer update to ensure smooth rapid clicking
       if (dictationBox && readerAudio.isDictationMode) {
         if (themeSwitchRaf) cancelAnimationFrame(themeSwitchRaf);
@@ -3084,17 +3151,20 @@
     var closeBtn = document.createElement("button");
     closeBtn.id = "sf-close-reader";
     closeBtn.type = "button";
+    closeBtn.title = (window.tContent ? window.tContent("reader_mode_close") : "Đóng Chế độ đọc");
     closeBtn.style.cssText = `
       background: #ef4444;
-      color: #fff;
+      color: #ffffff;
       border: none;
+      width: 28px;
       height: 28px;
+      min-width: 28px;
       min-height: 28px;
-      padding: 0 12px;
+      padding: 0;
       border-radius: 6px;
       cursor: pointer;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      font-size: 11.5px;
+      font-size: 14px;
       font-weight: 700;
       margin-left: 4px;
       white-space: nowrap;
@@ -3103,15 +3173,10 @@
       justify-content: center;
       line-height: 1;
       box-sizing: border-box;
-      text-transform: none;
-      letter-spacing: normal;
       box-shadow: 0 2px 6px rgba(239, 68, 68, 0.35);
       transition: background 0.15s ease, transform 0.15s ease;
     `;
-    closeBtn.textContent = "✕ ";
-    var closeSpan = document.createElement("span");
-    closeSpan.textContent = (window.tContent ? window.tContent("reader_mode_close") : "Close");
-    closeBtn.appendChild(closeSpan);
+    closeBtn.textContent = "✕";
     closeBtn.onclick = function () { toggleReaderMode(); };
     barRight.appendChild(closeBtn);
 
@@ -3206,14 +3271,22 @@
     }
 
     function highlightSentence(idx) {
+      var hl = getEffectiveHighlight();
       sentenceElements.forEach(function (el, i) {
         if (i === idx) {
-          el.style.background = "rgba(56, 189, 248, 0.28)";
-          el.style.borderBottom = "2.5px solid #38bdf8";
+          el.style.background = hl.bg;
+          el.style.borderLeft = "3.5px solid " + hl.border;
+          el.style.boxShadow = "0 2px 8px " + hl.glow;
+          el.style.borderRadius = "5px";
+          el.style.padding = "2px 6px";
+          el.style.transition = "background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease";
           el.scrollIntoView({ behavior: "smooth", block: "center" });
         } else {
           el.style.background = "transparent";
-          el.style.borderBottom = "none";
+          el.style.borderLeft = "3.5px solid transparent";
+          el.style.boxShadow = "none";
+          el.style.borderRadius = "5px";
+          el.style.padding = "2px 6px";
         }
       });
     }
@@ -3875,6 +3948,8 @@
       var autoNextTimer = null;
       var isClozeComplete = false;
       var isFullComplete = false;
+      var isScrambleComplete = false;
+      var isShadowingComplete = false;
 
       var readerDictMode = "cloze";
       try { readerDictMode = localStorage.getItem("sf_reader_dict_mode") || "cloze"; } catch (e) {}
@@ -3888,20 +3963,36 @@
 
       // Mode Selector Bar (Harmonized with current theme)
       var dModeBar = document.createElement("div");
-      dModeBar.style.cssText = `display: flex; gap: 4px; background: ${currentBoxTheme.brandBg}; padding: 3px; border-radius: 7px; border: 1px solid ${currentBoxTheme.brandBorder}; width: fit-content;`;
+      dModeBar.style.cssText = `display: flex; gap: 4px; background: ${currentBoxTheme.brandBg}; padding: 3px; border-radius: 7px; border: 1px solid ${currentBoxTheme.brandBorder}; width: fit-content; flex-wrap: wrap;`;
 
       var btnModeCloze = document.createElement("button");
       btnModeCloze.type = "button";
-      btnModeCloze.style.cssText = `padding: 3px 10px; font-size: 11px; font-weight: 600; border: none; border-radius: 5px; cursor: pointer; transition: all 0.15s ease; color: ${readerDictMode === "cloze" ? (currentBoxTheme.playBtnText || "#ffffff") : currentBoxTheme.captionColor}; background: ${readerDictMode === "cloze" ? currentBoxTheme.dictBtnActiveBg : "transparent"};`;
       btnModeCloze.textContent = "✏️ " + (window.tContent ? window.tContent("reader_dictation_mode_cloze") : "Đục lỗ");
 
       var btnModeFull = document.createElement("button");
       btnModeFull.type = "button";
-      btnModeFull.style.cssText = `padding: 3px 10px; font-size: 11px; font-weight: 600; border: none; border-radius: 5px; cursor: pointer; transition: all 0.15s ease; color: ${readerDictMode === "full" ? (currentBoxTheme.playBtnText || "#ffffff") : currentBoxTheme.captionColor}; background: ${readerDictMode === "full" ? currentBoxTheme.dictBtnActiveBg : "transparent"};`;
       btnModeFull.textContent = "📝 " + (window.tContent ? window.tContent("reader_dictation_mode_full") : "Toàn câu");
 
-      dModeBar.appendChild(btnModeCloze);
-      dModeBar.appendChild(btnModeFull);
+      var btnModeScramble = document.createElement("button");
+      btnModeScramble.type = "button";
+      btnModeScramble.textContent = "🧩 " + (window.tContent ? window.tContent("reader_dictation_mode_scramble") : "Sắp xếp từ");
+
+      var btnModeShadowing = document.createElement("button");
+      btnModeShadowing.type = "button";
+      btnModeShadowing.textContent = "🗣️ " + (window.tContent ? window.tContent("reader_dictation_mode_shadowing") : "Đọc theo");
+
+      var modeList = [
+        { btn: btnModeCloze, id: "cloze" },
+        { btn: btnModeFull, id: "full" },
+        { btn: btnModeScramble, id: "scramble" },
+        { btn: btnModeShadowing, id: "shadowing" }
+      ];
+
+      modeList.forEach(function (m) {
+        m.btn.style.cssText = "padding: 3px 10px; font-size: 11px; font-weight: 600; border: none; border-radius: 5px; cursor: pointer; transition: all 0.15s ease;";
+        dModeBar.appendChild(m.btn);
+      });
+
       dToolbarsRow.appendChild(dModeBar);
 
       // Difficulty Selector Bar
@@ -4260,7 +4351,7 @@
             if (clozeInputs[0]) clozeInputs[0].focus();
           }, 100);
 
-        } else {
+        } else if (readerDictMode === "full") {
           // Full sentence mode
           var dHintFull = document.createElement("p");
           dHintFull.style.cssText = `font-size: 12px; color: ${currentBoxTheme.captionColor}; margin: 0 0 8px 0;`;
@@ -4351,44 +4442,285 @@
           };
 
           setTimeout(function () { dInput.focus(); }, 100);
+
+        } else if (readerDictMode === "scramble") {
+          var dHintScramble = document.createElement("p");
+          dHintScramble.style.cssText = `font-size: 12px; color: ${currentBoxTheme.captionColor}; margin: 0 0 8px 0;`;
+          dHintScramble.textContent = window.tContent ? window.tContent("reader_dictation_scramble_hint") : "Nghe câu và bấm chọn các từ bên dưới theo đúng thứ tự:";
+          dExerciseArea.appendChild(dHintScramble);
+
+          var rawWords = targetSentence.trim().split(/\s+/).filter(Boolean);
+          var origTokens = rawWords.map(function (w, i) { return { id: i, word: w }; });
+          
+          var poolTokens = origTokens.slice();
+          for (var si = poolTokens.length - 1; si > 0; si--) {
+            var sj = Math.floor(Math.random() * (si + 1));
+            var temp = poolTokens[si];
+            poolTokens[si] = poolTokens[sj];
+            poolTokens[sj] = temp;
+          }
+          if (poolTokens.length > 1 && poolTokens.every(function (t, idx) { return t.id === idx; })) {
+            poolTokens.reverse();
+          }
+
+          var placedTokens = [];
+
+          var scrambleContainer = document.createElement("div");
+          scrambleContainer.style.cssText = "display: flex; flex-direction: column; gap: 10px;";
+
+          var assembledArea = document.createElement("div");
+          assembledArea.style.cssText = `
+            min-height: 52px;
+            background: ${currentBoxTheme.selectBg};
+            color: ${currentBoxTheme.selectText};
+            border: 1.5px dashed ${currentBoxTheme.heading};
+            border-radius: 8px;
+            padding: 10px 14px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.12);
+          `;
+
+          var poolArea = document.createElement("div");
+          poolArea.style.cssText = `
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+            padding: 4px 0;
+          `;
+
+          function renderScrambleChips() {
+            assembledArea.textContent = "";
+            poolArea.textContent = "";
+
+            if (placedTokens.length === 0) {
+              var emptyNote = document.createElement("span");
+              emptyNote.style.cssText = `color: ${currentBoxTheme.captionColor}; font-size: 13px; font-style: italic; user-select: none;`;
+              emptyNote.textContent = "💡 Bấm các từ bên dưới để ghép câu theo thứ tự...";
+              assembledArea.appendChild(emptyNote);
+            } else {
+              placedTokens.forEach(function (tok, pIdx) {
+                var chip = document.createElement("button");
+                chip.type = "button";
+                chip.style.cssText = `
+                  background: ${currentBoxTheme.playBtnBg};
+                  color: ${currentBoxTheme.playBtnText || "#ffffff"};
+                  border: none;
+                  padding: 5px 11px;
+                  border-radius: 6px;
+                  font-size: 13.5px;
+                  font-weight: 600;
+                  cursor: pointer;
+                  display: inline-flex;
+                  align-items: center;
+                  gap: 4px;
+                  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+                  transition: transform 0.1s ease;
+                `;
+                chip.textContent = tok.word;
+                chip.title = "Bấm để trả về kho từ";
+                chip.onclick = function () {
+                  isScrambleComplete = false;
+                  placedTokens.splice(pIdx, 1);
+                  poolTokens.push(tok);
+                  renderScrambleChips();
+                };
+                assembledArea.appendChild(chip);
+              });
+            }
+
+            poolTokens.forEach(function (tok, poolIdx) {
+              var chip = document.createElement("button");
+              chip.type = "button";
+              chip.style.cssText = `
+                background: ${currentBoxTheme.bg};
+                color: ${currentBoxTheme.text};
+                border: 1px solid ${currentBoxTheme.border};
+                padding: 5px 11px;
+                border-radius: 6px;
+                font-size: 13.5px;
+                font-weight: 600;
+                cursor: pointer;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                transition: transform 0.1s ease, border-color 0.15s ease;
+              `;
+              chip.textContent = tok.word;
+              chip.onclick = function () {
+                isScrambleComplete = false;
+                poolTokens.splice(poolIdx, 1);
+                placedTokens.push(tok);
+                renderScrambleChips();
+                if (poolTokens.length === 0) {
+                  doCheckScramble();
+                }
+              };
+              poolArea.appendChild(chip);
+            });
+          }
+
+          function doCheckScramble() {
+            if (autoNextTimer) { clearTimeout(autoNextTimer); autoNextTimer = null; }
+            var isCorrect = (placedTokens.length === origTokens.length) && placedTokens.every(function (t, i) {
+              return t.id === i || t.word.toLowerCase() === origTokens[i].word.toLowerCase();
+            });
+
+            dResult.style.display = "block";
+            if (isCorrect) {
+              isScrambleComplete = true;
+              assembledArea.style.border = "1.5px solid #10b981";
+              dResult.style.color = "#10b981";
+              dResult.textContent = "🎉 " + (window.tContent ? window.tContent("reader_dictation_completed_all") : "Chính xác 100%! Đã hoàn thành câu.");
+              if (!btnNext.disabled) {
+                autoNextTimer = setTimeout(function () {
+                  btnNext.click();
+                }, 850);
+              }
+            } else {
+              isScrambleComplete = false;
+              dResult.style.color = "#f59e0b";
+              var matched = 0;
+              placedTokens.forEach(function (t, i) {
+                if (i < origTokens.length && t.word.toLowerCase() === origTokens[i].word.toLowerCase()) matched++;
+              });
+              var score = origTokens.length ? Math.round((matched / origTokens.length) * 100) : 0;
+              dResult.textContent = "💡 " + (window.tContent ? window.tContent("reader_dictation_score", [score, matched, origTokens.length]) : ("Đúng " + matched + "/" + origTokens.length + " từ"));
+              speakReaderSentence(targetSentence, 0.85);
+            }
+          }
+
+          btnCheck.onclick = doCheckScramble;
+
+          btnReveal.onclick = function () {
+            if (autoNextTimer) { clearTimeout(autoNextTimer); autoNextTimer = null; }
+            placedTokens = origTokens.slice();
+            poolTokens = [];
+            renderScrambleChips();
+            doCheckScramble();
+          };
+
+          renderScrambleChips();
+          scrambleContainer.appendChild(assembledArea);
+          scrambleContainer.appendChild(poolArea);
+          dExerciseArea.appendChild(scrambleContainer);
+
+        } else if (readerDictMode === "shadowing") {
+          var dHintShadowing = document.createElement("p");
+          dHintShadowing.style.cssText = `font-size: 12px; color: ${currentBoxTheme.captionColor}; margin: 0 0 8px 0;`;
+          dHintShadowing.textContent = window.tContent ? window.tContent("reader_dictation_shadowing_hint") : "Lắng nghe câu văn và luyện đọc theo ngữ điệu người bản xứ:";
+          dExerciseArea.appendChild(dHintShadowing);
+
+          var shadowCard = document.createElement("div");
+          shadowCard.style.cssText = `
+            background: ${currentBoxTheme.selectBg};
+            color: ${currentBoxTheme.text};
+            border: 1.5px solid ${currentBoxTheme.heading};
+            border-radius: 10px;
+            padding: 16px 20px;
+            font-size: 17px;
+            line-height: 1.7;
+            font-family: inherit;
+            font-weight: 600;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+          `;
+          shadowCard.textContent = targetSentence;
+          dExerciseArea.appendChild(shadowCard);
+
+          var shadowMetaRow = document.createElement("div");
+          shadowMetaRow.style.cssText = "display: flex; justify-content: space-between; align-items: center; margin-top: 8px; flex-wrap: wrap; gap: 8px;";
+
+          var repeatCounter = 1;
+          var repeatBadge = document.createElement("span");
+          repeatBadge.style.cssText = `font-size: 12px; font-weight: 700; color: ${currentBoxTheme.heading}; background: ${currentBoxTheme.brandBg}; padding: 3px 10px; border-radius: 99px; border: 1px solid ${currentBoxTheme.brandBorder};`;
+          repeatBadge.textContent = "🔁 " + (window.tContent ? window.tContent("reader_dictation_repeat_count", [repeatCounter]) : ("Lặp lại: " + repeatCounter + " lần"));
+          shadowMetaRow.appendChild(repeatBadge);
+
+          var btnDoneShadow = document.createElement("button");
+          btnDoneShadow.type = "button";
+          btnDoneShadow.style.cssText = `
+            background: #10b981;
+            color: #ffffff;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12.5px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
+            transition: transform 0.1s ease;
+          `;
+          btnDoneShadow.textContent = "✓ " + (window.tContent ? window.tContent("reader_dictation_shadowing_done") : "Đã đọc xong câu này");
+          btnDoneShadow.onclick = function () {
+            isShadowingComplete = true;
+            dResult.style.display = "block";
+            dResult.style.color = "#10b981";
+            dResult.textContent = "🎉 " + (window.tContent ? window.tContent("reader_dictation_shadowing_done") : "Đã đọc xong câu này!");
+            if (!btnNext.disabled) {
+              autoNextTimer = setTimeout(function () {
+                btnNext.click();
+              }, 600);
+            }
+          };
+          shadowMetaRow.appendChild(btnDoneShadow);
+          dExerciseArea.appendChild(shadowMetaRow);
+
+          btnCheck.onclick = btnDoneShadow.onclick;
+          btnReveal.onclick = function () {
+            repeatCounter++;
+            repeatBadge.textContent = "🔁 " + (window.tContent ? window.tContent("reader_dictation_repeat_count", [repeatCounter]) : ("Lặp lại: " + repeatCounter + " lần"));
+            speakReaderSentence(targetSentence, 0.85);
+          };
+
+          // Auto-play sentence on entering shadowing mode for immediate listening drill
+          speakReaderSentence(targetSentence, readerAudio.rate);
         }
       }
 
-      btnModeCloze.onclick = function () {
-        if (readerDictMode === "cloze") return;
-        readerDictMode = "cloze";
-        try { localStorage.setItem("sf_reader_dict_mode", "cloze"); } catch (e) {}
-        btnModeCloze.style.color = currentBoxTheme.playBtnText || "#ffffff";
-        btnModeCloze.style.background = currentBoxTheme.dictBtnActiveBg;
-        btnModeFull.style.color = currentBoxTheme.captionColor;
-        btnModeFull.style.background = "transparent";
-        dDiffBar.style.display = "flex";
-        renderDockExercise();
-      };
+      function updateModeButtons() {
+        modeList.forEach(function (m) {
+          var isAct = (readerDictMode === m.id);
+          m.btn.style.color = isAct ? (currentBoxTheme.playBtnText || "#ffffff") : currentBoxTheme.captionColor;
+          m.btn.style.background = isAct ? currentBoxTheme.dictBtnActiveBg : "transparent";
+        });
+        dDiffBar.style.display = (readerDictMode === "cloze" ? "flex" : "none");
+      }
 
-      btnModeFull.onclick = function () {
-        if (readerDictMode === "full") return;
-        readerDictMode = "full";
-        try { localStorage.setItem("sf_reader_dict_mode", "full"); } catch (e) {}
-        btnModeFull.style.color = currentBoxTheme.playBtnText || "#ffffff";
-        btnModeFull.style.background = currentBoxTheme.dictBtnActiveBg;
-        btnModeCloze.style.color = currentBoxTheme.captionColor;
-        btnModeCloze.style.background = "transparent";
-        dDiffBar.style.display = "none";
-        renderDockExercise();
-      };
+      modeList.forEach(function (m) {
+        m.btn.onclick = function () {
+          if (readerDictMode === m.id) return;
+          readerDictMode = m.id;
+          try { localStorage.setItem("sf_reader_dict_mode", m.id); } catch (e) {}
+          updateModeButtons();
+          renderDockExercise();
+        };
+      });
 
+      updateModeButtons();
       renderDockExercise();
 
       // Keyboard shortcuts for seamless dictation workflow
       dictationBox.addEventListener("keydown", function (e) {
         // Enter when completed: immediately advance to next sentence
-        if (e.key === "Enter" && !e.shiftKey && (isClozeComplete || isFullComplete)) {
-          e.preventDefault();
-          e.stopPropagation();
-          if (autoNextTimer) { clearTimeout(autoNextTimer); autoNextTimer = null; }
-          if (!btnNext.disabled) btnNext.click();
-          return;
+        var isAnyComplete = (isClozeComplete || isFullComplete || isScrambleComplete || isShadowingComplete);
+        if (e.key === "Enter" && !e.shiftKey) {
+          if (isAnyComplete) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (autoNextTimer) { clearTimeout(autoNextTimer); autoNextTimer = null; }
+            if (!btnNext.disabled) btnNext.click();
+            return;
+          } else if (readerDictMode === "shadowing") {
+            e.preventDefault();
+            e.stopPropagation();
+            btnCheck.click();
+            return;
+          }
         }
         // Ctrl+Space or Alt+R: Replay sentence
         if ((e.ctrlKey && (e.code === "Space" || e.key === " ")) || (e.altKey && (e.key === "r" || e.key === "R"))) {
@@ -4546,6 +4878,11 @@
     window.addEventListener("resize", onWindowResize);
 
     document.documentElement.appendChild(readerContainer);
+    try {
+      if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.sendMessage) {
+        chrome.runtime.sendMessage({ command: "readerModeChanged", active: true });
+      }
+    } catch (e) {}
   }
 
   window.toggleReaderMode = toggleReaderMode;
@@ -4553,6 +4890,10 @@
   // Register message listener
   if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage) {
     chrome.runtime.onMessage.addListener(function (req, sender, sendResponse) {
+      if (req && req.command === "getReaderModeStatus") {
+        sendResponse({ success: true, active: isReaderMode });
+        return true;
+      }
       if (req && req.command === "toggleReaderMode") {
         toggleReaderMode();
         sendResponse({ success: true, active: isReaderMode });
