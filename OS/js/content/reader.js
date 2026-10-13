@@ -1761,24 +1761,52 @@
       }
     };
 
+    function hexToRgba(hex, alpha) {
+      if (!hex || typeof hex !== "string") return "rgba(56, 189, 248, " + alpha + ")";
+      var clean = hex.replace("#", "").trim();
+      if (clean.length === 3) {
+        clean = clean[0] + clean[0] + clean[1] + clean[1] + clean[2] + clean[2];
+      }
+      if (clean.length !== 6) return "rgba(56, 189, 248, " + alpha + ")";
+      var r = parseInt(clean.substring(0, 2), 16);
+      var g = parseInt(clean.substring(2, 4), 16);
+      var b = parseInt(clean.substring(4, 6), 16);
+      if (isNaN(r) || isNaN(g) || isNaN(b)) return "rgba(56, 189, 248, " + alpha + ")";
+      return "rgba(" + r + ", " + g + ", " + b + ", " + alpha + ")";
+    }
+
     var HIGHLIGHT_PRESETS = {
-      auto: { id: "auto", name: (window.tContent ? window.tContent("reader_highlight_auto") : "Theme"), bg: null, border: null, glow: null },
-      cyan: { id: "cyan", name: "Cyan", bg: "rgba(56, 189, 248, 0.22)", border: "#38bdf8", glow: "rgba(56, 189, 248, 0.35)" },
-      amber: { id: "amber", name: "Amber", bg: "rgba(245, 158, 11, 0.22)", border: "#f59e0b", glow: "rgba(245, 158, 11, 0.35)" },
-      emerald: { id: "emerald", name: "Emerald", bg: "rgba(16, 185, 129, 0.22)", border: "#10b981", glow: "rgba(16, 185, 129, 0.35)" },
-      violet: { id: "violet", name: "Violet", bg: "rgba(168, 85, 247, 0.22)", border: "#a855f7", glow: "rgba(168, 85, 247, 0.35)" },
-      coral: { id: "coral", name: "Coral", bg: "rgba(244, 63, 94, 0.22)", border: "#f43f5e", glow: "rgba(244, 63, 94, 0.35)" }
+      auto: { id: "auto", name: (window.tContent ? window.tContent("reader_highlight_auto") : "Theme"), color: null, bg: null, border: null, glow: null },
+      yellow: { id: "yellow", name: "Canary", color: "#facc15", bg: "rgba(250, 204, 21, 0.24)", border: "#facc15", glow: "rgba(250, 204, 21, 0.38)" },
+      amber: { id: "amber", name: "Amber", color: "#f59e0b", bg: "rgba(245, 158, 11, 0.24)", border: "#f59e0b", glow: "rgba(245, 158, 11, 0.38)" },
+      emerald: { id: "emerald", name: "Emerald", color: "#10b981", bg: "rgba(16, 185, 129, 0.24)", border: "#10b981", glow: "rgba(16, 185, 129, 0.38)" },
+      cyan: { id: "cyan", name: "Cyan", color: "#38bdf8", bg: "rgba(56, 189, 248, 0.24)", border: "#38bdf8", glow: "rgba(56, 189, 248, 0.38)" },
+      violet: { id: "violet", name: "Violet", color: "#a855f7", bg: "rgba(168, 85, 247, 0.24)", border: "#a855f7", glow: "rgba(168, 85, 247, 0.38)" },
+      coral: { id: "coral", name: "Coral", color: "#f43f5e", bg: "rgba(244, 63, 94, 0.24)", border: "#f43f5e", glow: "rgba(244, 63, 94, 0.38)" },
+      rose: { id: "rose", name: "Rose", color: "#ec4899", bg: "rgba(236, 72, 153, 0.24)", border: "#ec4899", glow: "rgba(236, 72, 153, 0.38)" },
+      lime: { id: "lime", name: "Lime", color: "#84cc16", bg: "rgba(132, 204, 22, 0.24)", border: "#84cc16", glow: "rgba(132, 204, 22, 0.38)" }
     };
 
     function getEffectiveHighlight() {
       var cTheme = THEME_STYLES[readerPrefs.theme] || THEME_STYLES.dark;
       var userChoice = readerPrefs.highlightColor || "auto";
-      if (userChoice !== "auto" && HIGHLIGHT_PRESETS[userChoice]) {
-        return {
-          bg: HIGHLIGHT_PRESETS[userChoice].bg,
-          border: HIGHLIGHT_PRESETS[userChoice].border,
-          glow: HIGHLIGHT_PRESETS[userChoice].glow
-        };
+      if (userChoice !== "auto") {
+        if (HIGHLIGHT_PRESETS[userChoice] && HIGHLIGHT_PRESETS[userChoice].bg) {
+          return {
+            bg: HIGHLIGHT_PRESETS[userChoice].bg,
+            border: HIGHLIGHT_PRESETS[userChoice].border,
+            glow: HIGHLIGHT_PRESETS[userChoice].glow
+          };
+        }
+        // Custom HEX string, e.g. "#e11d48"
+        if (typeof userChoice === "string" && (userChoice.startsWith("#") || userChoice.startsWith("rgb"))) {
+          var borderCol = userChoice;
+          return {
+            bg: hexToRgba(borderCol, 0.25),
+            border: borderCol,
+            glow: hexToRgba(borderCol, 0.4)
+          };
+        }
       }
       return {
         bg: cTheme.highlightBg || "rgba(56, 189, 248, 0.22)",
@@ -2834,15 +2862,18 @@
 
       // 4. Highlight Color (Màu highlight)
       var hlSec = createSection(window.tContent ? window.tContent("reader_format_highlight") : "Màu highlight");
-      var hlRow = document.createElement("div");
-      hlRow.style.cssText = "display: flex; gap: 5px; flex-wrap: wrap;";
+      var hlGrid = document.createElement("div");
+      hlGrid.style.cssText = "display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 8px;";
       var hlOptions = [
         { id: "auto", label: (window.tContent ? window.tContent("reader_highlight_auto") : "Theme"), color: "var(--sf-heading)" },
-        { id: "cyan", label: "Cyan", color: "#38bdf8" },
+        { id: "yellow", label: "Canary", color: "#facc15" },
         { id: "amber", label: "Amber", color: "#f59e0b" },
         { id: "emerald", label: "Emerald", color: "#10b981" },
+        { id: "cyan", label: "Cyan", color: "#38bdf8" },
         { id: "violet", label: "Violet", color: "#a855f7" },
-        { id: "coral", label: "Coral", color: "#f43f5e" }
+        { id: "coral", label: "Coral", color: "#f43f5e" },
+        { id: "rose", label: "Rose", color: "#ec4899" },
+        { id: "lime", label: "Lime", color: "#84cc16" }
       ];
       var hlBtns = [];
       hlOptions.forEach(function (opt) {
@@ -2850,9 +2881,7 @@
         b.type = "button";
         var isAct = (readerPrefs.highlightColor || "auto") === opt.id;
         b.style.cssText = `
-          flex: 1;
-          min-width: 44px;
-          padding: 5px 4px;
+          padding: 6px 3px;
           font-size: 11px;
           font-weight: 700;
           border-radius: 6px;
@@ -2864,7 +2893,7 @@
           border: ${isAct ? "1.5px solid " + opt.color : "1px solid var(--sf-btn-border)"};
           background: ${isAct ? "rgba(255, 255, 255, 0.08)" : "var(--sf-btn-bg)"};
           color: var(--sf-btn-text);
-          box-shadow: ${isAct ? "0 0 8px " + opt.color + "44" : "none"};
+          box-shadow: ${isAct ? "0 0 8px " + (opt.color.startsWith("#") ? opt.color + "44" : "rgba(56, 189, 248, 0.3)") : "none"};
           transition: all 0.15s ease;
         `;
         var dot = document.createElement("span");
@@ -2874,22 +2903,44 @@
         txt.textContent = opt.label;
         b.appendChild(txt);
         b.onclick = function () {
-          readerPrefs.highlightColor = opt.id;
-          try { localStorage.setItem("sf_reader_highlight_color", opt.id); } catch (e) {}
+          applyHighlightPreference(opt.id);
           hlBtns.forEach(function (btnObj) {
             var active = btnObj.id === opt.id;
             btnObj.btn.style.border = active ? ("1.5px solid " + btnObj.color) : "1px solid var(--sf-btn-border)";
             btnObj.btn.style.background = active ? "rgba(255, 255, 255, 0.08)" : "var(--sf-btn-bg)";
-            btnObj.btn.style.boxShadow = active ? ("0 0 8px " + btnObj.color + "44") : "none";
+            btnObj.btn.style.boxShadow = active ? ("0 0 8px " + (btnObj.color.startsWith("#") ? btnObj.color + "44" : "rgba(56, 189, 248, 0.3)")) : "none";
           });
-          if (readerAudio.currentIndex >= 0) {
-            highlightSentence(readerAudio.currentIndex);
-          }
         };
         hlBtns.push({ btn: b, id: opt.id, color: opt.color });
-        hlRow.appendChild(b);
+        hlGrid.appendChild(b);
       });
-      hlSec.appendChild(hlRow);
+      hlSec.appendChild(hlGrid);
+
+      // Custom Color Picker input row
+      var customColorRow = document.createElement("div");
+      customColorRow.style.cssText = "display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: rgba(255, 255, 255, 0.04); border: 1px dashed var(--sf-btn-border); border-radius: 6px;";
+
+      var customLbl = document.createElement("span");
+      customLbl.style.cssText = "font-size: 11.5px; font-weight: 600; color: var(--sf-btn-text); display: inline-flex; align-items: center; gap: 5px;";
+      customLbl.textContent = "🎨 " + (window.tContent ? window.tContent("reader_highlight_custom") : "Tùy chọn màu:");
+      customColorRow.appendChild(customLbl);
+
+      var colorInput = document.createElement("input");
+      colorInput.type = "color";
+      var curCol = (readerPrefs.highlightColor && readerPrefs.highlightColor.startsWith("#")) ? readerPrefs.highlightColor : "#facc15";
+      colorInput.value = curCol;
+      colorInput.style.cssText = "width: 28px; height: 26px; border: none; padding: 0; background: transparent; cursor: pointer; border-radius: 4px;";
+      colorInput.addEventListener("input", function () {
+        applyHighlightPreference(colorInput.value);
+        hlBtns.forEach(function (btnObj) {
+          btnObj.btn.style.border = "1px solid var(--sf-btn-border)";
+          btnObj.btn.style.background = "var(--sf-btn-bg)";
+          btnObj.btn.style.boxShadow = "none";
+        });
+      });
+      customColorRow.appendChild(colorInput);
+      hlSec.appendChild(customColorRow);
+
       appearancePopup.appendChild(hlSec);
 
       // Click outside to dismiss popup
@@ -2905,6 +2956,24 @@
       }, 50);
 
       readerContainer.appendChild(appearancePopup);
+    }
+
+    function applyHighlightPreference(colorVal) {
+      readerPrefs.highlightColor = colorVal;
+      try { localStorage.setItem("sf_reader_highlight_color", colorVal); } catch (e) {}
+
+      var effHl = getEffectiveHighlight();
+      if (btnHighlightIndicator) {
+        btnHighlightIndicator.style.background = effHl.border || "var(--sf-heading)";
+      }
+
+      // If user hasn't started playing, light up sentence 0 for immediate visible confirmation
+      if (readerAudio.currentIndex < 0 && sentenceElements.length > 0) {
+        readerAudio.currentIndex = 0;
+      }
+      if (readerAudio.currentIndex >= 0 && typeof highlightSentence === "function") {
+        highlightSentence(readerAudio.currentIndex);
+      }
     }
 
     var btnAppearance = document.createElement("button");
@@ -2936,6 +3005,201 @@
       toggleAppearancePopup();
     };
     barRight.appendChild(btnAppearance);
+
+    // Dedicated Highlight Color Toggle Button (🖍️)
+    var highlightPopup = null;
+    var btnHighlightIndicator = null;
+    function toggleHighlightPopup() {
+      if (highlightPopup) {
+        highlightPopup.remove();
+        highlightPopup = null;
+        return;
+      }
+      if (appearancePopup) {
+        appearancePopup.remove();
+        appearancePopup = null;
+      }
+
+      highlightPopup = document.createElement("div");
+      highlightPopup.id = "sf-reader-highlight-popup";
+      var topOffset = (topBar ? Math.round(topBar.getBoundingClientRect().bottom + 4) : 50);
+      highlightPopup.style.cssText = `
+        position: fixed;
+        top: ${topOffset}px;
+        right: 48px;
+        width: 290px;
+        background: var(--sf-card-bg);
+        border: 1px solid var(--sf-border);
+        border-radius: 12px;
+        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+        padding: 14px 16px;
+        z-index: 2500;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        color: var(--sf-text);
+        box-sizing: border-box;
+      `;
+
+      var hlHeader = document.createElement("div");
+      hlHeader.style.cssText = "display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid var(--sf-border);";
+
+      var hlTitle = document.createElement("div");
+      hlTitle.style.cssText = "font-size: 13px; font-weight: 800; color: var(--sf-heading); display: flex; align-items: center; gap: 6px;";
+      hlTitle.textContent = "🖍️ " + (window.tContent ? window.tContent("reader_format_highlight") : "Màu highlight");
+
+      var hlClose = document.createElement("button");
+      hlClose.type = "button";
+      hlClose.style.cssText = "background: transparent; border: none; color: var(--sf-caption); font-size: 15px; cursor: pointer; padding: 2px 6px; border-radius: 4px; line-height: 1;";
+      hlClose.textContent = "✕";
+      hlClose.onclick = function () {
+        if (highlightPopup) {
+          highlightPopup.remove();
+          highlightPopup = null;
+        }
+      };
+
+      hlHeader.appendChild(hlTitle);
+      hlHeader.appendChild(hlClose);
+      highlightPopup.appendChild(hlHeader);
+
+      var hlPopupGrid = document.createElement("div");
+      hlPopupGrid.style.cssText = "display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px;";
+
+      var hlPopupOptions = [
+        { id: "auto", label: (window.tContent ? window.tContent("reader_highlight_auto") : "Theme"), color: "var(--sf-heading)" },
+        { id: "yellow", label: "Canary", color: "#facc15" },
+        { id: "amber", label: "Amber", color: "#f59e0b" },
+        { id: "emerald", label: "Emerald", color: "#10b981" },
+        { id: "cyan", label: "Cyan", color: "#38bdf8" },
+        { id: "violet", label: "Violet", color: "#a855f7" },
+        { id: "coral", label: "Coral", color: "#f43f5e" },
+        { id: "rose", label: "Rose", color: "#ec4899" },
+        { id: "lime", label: "Lime", color: "#84cc16" }
+      ];
+
+      var swatchButtons = [];
+      hlPopupOptions.forEach(function (opt) {
+        var sb = document.createElement("button");
+        sb.type = "button";
+        var isAct = (readerPrefs.highlightColor || "auto") === opt.id;
+        sb.style.cssText = `
+          padding: 6px 3px;
+          font-size: 11px;
+          font-weight: 700;
+          border-radius: 6px;
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 4px;
+          border: ${isAct ? "1.5px solid " + opt.color : "1px solid var(--sf-btn-border)"};
+          background: ${isAct ? "rgba(255, 255, 255, 0.08)" : "var(--sf-btn-bg)"};
+          color: var(--sf-btn-text);
+          box-shadow: ${isAct ? "0 0 8px " + (opt.color.startsWith("#") ? opt.color + "44" : "rgba(56, 189, 248, 0.3)") : "none"};
+          transition: all 0.15s ease;
+        `;
+        var dot = document.createElement("span");
+        dot.style.cssText = `width: 7px; height: 7px; border-radius: 50%; background: ${opt.color}; display: inline-block; flex-shrink: 0;`;
+        sb.appendChild(dot);
+        var txt = document.createElement("span");
+        txt.textContent = opt.label;
+        sb.appendChild(txt);
+
+        sb.onclick = function () {
+          applyHighlightPreference(opt.id);
+          swatchButtons.forEach(function (btnObj) {
+            var active = btnObj.id === opt.id;
+            btnObj.btn.style.border = active ? ("1.5px solid " + btnObj.color) : "1px solid var(--sf-btn-border)";
+            btnObj.btn.style.background = active ? "rgba(255, 255, 255, 0.08)" : "var(--sf-btn-bg)";
+            btnObj.btn.style.boxShadow = active ? ("0 0 8px " + (btnObj.color.startsWith("#") ? btnObj.color + "44" : "rgba(56, 189, 248, 0.3)")) : "none";
+          });
+        };
+        swatchButtons.push({ btn: sb, id: opt.id, color: opt.color });
+        hlPopupGrid.appendChild(sb);
+      });
+      highlightPopup.appendChild(hlPopupGrid);
+
+      // Custom Color Picker input row
+      var customRow = document.createElement("div");
+      customRow.style.cssText = "display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: rgba(255, 255, 255, 0.04); border: 1px dashed var(--sf-btn-border); border-radius: 6px;";
+
+      var customLbl = document.createElement("span");
+      customLbl.style.cssText = "font-size: 11.5px; font-weight: 600; color: var(--sf-btn-text); display: inline-flex; align-items: center; gap: 5px;";
+      customLbl.textContent = "🎨 " + (window.tContent ? window.tContent("reader_highlight_custom") : "Tùy chọn màu:");
+      customRow.appendChild(customLbl);
+
+      var colorInp = document.createElement("input");
+      colorInp.type = "color";
+      var curCol = (readerPrefs.highlightColor && readerPrefs.highlightColor.startsWith("#")) ? readerPrefs.highlightColor : "#facc15";
+      colorInp.value = curCol;
+      colorInp.style.cssText = "width: 28px; height: 26px; border: none; padding: 0; background: transparent; cursor: pointer; border-radius: 4px;";
+      colorInp.addEventListener("input", function () {
+        applyHighlightPreference(colorInp.value);
+        swatchButtons.forEach(function (btnObj) {
+          btnObj.btn.style.border = "1px solid var(--sf-btn-border)";
+          btnObj.btn.style.background = "var(--sf-btn-bg)";
+          btnObj.btn.style.boxShadow = "none";
+        });
+      });
+      customRow.appendChild(colorInp);
+      highlightPopup.appendChild(customRow);
+
+      function onHlDocClick(e) {
+        if (highlightPopup && !highlightPopup.contains(e.target) && e.target !== btnHighlight && !btnHighlight.contains(e.target)) {
+          highlightPopup.remove();
+          highlightPopup = null;
+          document.removeEventListener("click", onHlDocClick, true);
+        }
+      }
+      setTimeout(function () {
+        document.addEventListener("click", onHlDocClick, true);
+      }, 50);
+
+      readerContainer.appendChild(highlightPopup);
+    }
+
+    var btnHighlight = document.createElement("button");
+    btnHighlight.id = "sf-reader-btn-highlight";
+    btnHighlight.type = "button";
+    btnHighlight.title = window.tContent ? window.tContent("reader_format_highlight") : "Màu highlight";
+    btnHighlight.style.cssText = `
+      background: ${currentTheme.btnBg};
+      color: ${currentTheme.btnText};
+      border: 1px solid ${currentTheme.btnBorder};
+      width: 32px;
+      height: 28px;
+      min-width: 32px;
+      min-height: 28px;
+      padding: 0;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      box-sizing: border-box;
+      position: relative;
+    `;
+    var hlIconSpan = document.createElement("span");
+    hlIconSpan.textContent = "🖍️";
+    hlIconSpan.style.cssText = "font-size: 12px; line-height: 1;";
+    btnHighlight.appendChild(hlIconSpan);
+
+    btnHighlightIndicator = document.createElement("span");
+    btnHighlightIndicator.style.cssText = `
+      position: absolute;
+      bottom: 2px;
+      width: 14px;
+      height: 2.5px;
+      border-radius: 2px;
+      background: ${getEffectiveHighlight().border || "var(--sf-heading)"};
+    `;
+    btnHighlight.appendChild(btnHighlightIndicator);
+    btnHighlight.onclick = function () {
+      toggleHighlightPopup();
+    };
+    barRight.appendChild(btnHighlight);
 
     // Font Family Selector Dropdown
     var fontSelect = document.createElement("select");
@@ -3072,6 +3336,16 @@
         btnAppearance.style.background = s.btnBg;
         btnAppearance.style.color = s.btnText;
         btnAppearance.style.borderColor = s.btnBorder;
+      }
+
+      if (btnHighlight) {
+        btnHighlight.style.background = s.btnBg;
+        btnHighlight.style.color = s.btnText;
+        btnHighlight.style.borderColor = s.btnBorder;
+      }
+      if (btnHighlightIndicator) {
+        var effHlTheme = getEffectiveHighlight();
+        btnHighlightIndicator.style.background = effHlTheme.border || s.heading;
       }
 
       themeBtns.forEach(function (tb) {
@@ -3246,7 +3520,7 @@
       h1El.textContent = articleTitle;
 
       h1El.addEventListener("mouseenter", function () {
-        if (readerAudio.currentIndex !== h1Idx) h1El.style.background = "rgba(56, 189, 248, 0.12)";
+        if (readerAudio.currentIndex !== h1Idx) h1El.style.background = getEffectiveHighlight().bg;
       });
       h1El.addEventListener("mouseleave", function () {
         if (readerAudio.currentIndex !== h1Idx) h1El.style.background = "transparent";
@@ -3650,7 +3924,7 @@
                 sSpan.textContent = sText + " ";
 
                 sSpan.addEventListener("mouseenter", function () {
-                  if (readerAudio.currentIndex !== sIdx) sSpan.style.background = "rgba(56, 189, 248, 0.15)";
+                  if (readerAudio.currentIndex !== sIdx) sSpan.style.background = getEffectiveHighlight().bg;
                 });
                 sSpan.addEventListener("mouseleave", function () {
                   if (readerAudio.currentIndex !== sIdx) sSpan.style.background = "transparent";
@@ -3682,7 +3956,7 @@
               citeSpan.style.cssText = "cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: background 0.2s;";
 
               citeSpan.addEventListener("mouseenter", function () {
-                if (readerAudio.currentIndex !== cIdx) citeSpan.style.background = "rgba(56, 189, 248, 0.15)";
+                if (readerAudio.currentIndex !== cIdx) citeSpan.style.background = getEffectiveHighlight().bg;
               });
               citeSpan.addEventListener("mouseleave", function () {
                 if (readerAudio.currentIndex !== cIdx) citeSpan.style.background = "transparent";
@@ -3722,7 +3996,7 @@
               sSpan.textContent = sText + " ";
 
               sSpan.addEventListener("mouseenter", function () {
-                if (readerAudio.currentIndex !== sIdx) sSpan.style.background = "rgba(56, 189, 248, 0.15)";
+                if (readerAudio.currentIndex !== sIdx) sSpan.style.background = getEffectiveHighlight().bg;
               });
               sSpan.addEventListener("mouseleave", function () {
                 if (readerAudio.currentIndex !== sIdx) sSpan.style.background = "transparent";
@@ -3759,7 +4033,7 @@
           cSpan.style.cssText = "cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: background 0.2s;";
 
           cSpan.addEventListener("mouseenter", function () {
-            if (readerAudio.currentIndex !== cIdx) cSpan.style.background = "rgba(56, 189, 248, 0.15)";
+            if (readerAudio.currentIndex !== cIdx) cSpan.style.background = getEffectiveHighlight().bg;
           });
           cSpan.addEventListener("mouseleave", function () {
             if (readerAudio.currentIndex !== cIdx) cSpan.style.background = "transparent";
@@ -3796,7 +4070,7 @@
                 sSpan.textContent = sText + " ";
 
                 sSpan.addEventListener("mouseenter", function () {
-                  if (readerAudio.currentIndex !== sIdx) sSpan.style.background = "rgba(56, 189, 248, 0.15)";
+                  if (readerAudio.currentIndex !== sIdx) sSpan.style.background = getEffectiveHighlight().bg;
                 });
                 sSpan.addEventListener("mouseleave", function () {
                   if (readerAudio.currentIndex !== sIdx) sSpan.style.background = "transparent";
@@ -4580,13 +4854,14 @@
               }
             } else {
               isScrambleComplete = false;
-              dResult.style.color = "#f59e0b";
+              assembledArea.style.border = "1.5px solid #ef4444";
+              dResult.style.color = "#ef4444";
               var matched = 0;
               placedTokens.forEach(function (t, i) {
                 if (i < origTokens.length && t.word.toLowerCase() === origTokens[i].word.toLowerCase()) matched++;
               });
               var score = origTokens.length ? Math.round((matched / origTokens.length) * 100) : 0;
-              dResult.textContent = "💡 " + (window.tContent ? window.tContent("reader_dictation_score", [score, matched, origTokens.length]) : ("Đúng " + matched + "/" + origTokens.length + " từ"));
+              dResult.textContent = "❌ " + (window.tContent ? window.tContent("reader_dictation_score", [score, matched, origTokens.length]) : ("Đúng " + matched + "/" + origTokens.length + " từ"));
               speakReaderSentence(targetSentence, 0.85);
             }
           }
@@ -4598,7 +4873,51 @@
             placedTokens = origTokens.slice();
             poolTokens = [];
             renderScrambleChips();
-            doCheckScramble();
+            assembledArea.style.border = "1.5px solid #f59e0b";
+            dResult.style.display = "block";
+            dResult.style.color = currentBoxTheme.heading;
+            dResult.textContent = "";
+
+            var ansSpan = document.createElement("span");
+            ansSpan.textContent = "📖 " + (window.tContent ? window.tContent("reader_dictation_target") : "Đáp án đúng:") + " " + targetSentence;
+            dResult.appendChild(ansSpan);
+
+            var retryBtn = document.createElement("button");
+            retryBtn.type = "button";
+            retryBtn.style.cssText = `
+              background: transparent;
+              color: ${currentBoxTheme.heading};
+              border: 1px dashed ${currentBoxTheme.heading};
+              padding: 3px 10px;
+              border-radius: 6px;
+              cursor: pointer;
+              font-size: 11.5px;
+              margin-left: 10px;
+              font-weight: 600;
+              transition: background 0.15s ease;
+            `;
+            retryBtn.textContent = "🔄 " + (window.tContent ? window.tContent("reader_dictation_scramble_retry") : "Thử sắp xếp lại");
+            retryBtn.onclick = function () {
+              isScrambleComplete = false;
+              placedTokens = [];
+              poolTokens = origTokens.slice();
+              for (var si = poolTokens.length - 1; si > 0; si--) {
+                var sj = Math.floor(Math.random() * (si + 1));
+                var temp = poolTokens[si];
+                poolTokens[si] = poolTokens[sj];
+                poolTokens[sj] = temp;
+              }
+              if (poolTokens.length > 1 && poolTokens.every(function (t, idx) { return t.id === idx; })) {
+                poolTokens.reverse();
+              }
+              renderScrambleChips();
+              assembledArea.style.border = `1.5px dashed ${currentBoxTheme.heading}`;
+              dResult.style.display = "none";
+              dResult.textContent = "";
+            };
+            dResult.appendChild(retryBtn);
+
+            isScrambleComplete = true; // Allows pressing Enter or Next ▶ to advance when user decides to
           };
 
           renderScrambleChips();
