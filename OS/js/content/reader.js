@@ -95,14 +95,96 @@
 
   function splitTextIntoSentences(text) {
     if (!text) return [];
-    var clean = text.replace(/\s+/g, " ").trim();
+    var clean = String(text)
+      .replace(/\r\n/g, "\n")
+      .replace(/[\u200B\u200C\u200D\uFEFF]/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
     if (!clean) return [];
-    var parts = clean.split(/(?<=[.!?])\s+(?=[A-Z0-9"“'‘])/);
+
+    var DOT = "\uE000";
+    var EXCL = "\uE001";
+    var QUES = "\uE002";
+
+    // 1. Protect URLs & Emails
+    var masked = clean.replace(/https?:\/\/[^\s]+/g, function (url) {
+      return url.replace(/\./g, DOT).replace(/!/g, EXCL).replace(/\?/g, QUES);
+    }).replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, function (email) {
+      return email.replace(/\./g, DOT);
+    });
+
+    // 2. Protect Decimals, version numbers, and IP addresses (e.g. 3.14, 1.5, v2.5.7, 10.000)
+    masked = masked.replace(/(\d+)\.(\d+)/g, "$1" + DOT + "$2");
+
+    // 3. Protect Section numbering and in-text numbered/letter list markers
+    // e.g. "1. First point", "2.1 Methods", "A. Option A", "b. Option B"
+    masked = masked.replace(/(?:^|(?<=[\s\(\[\{]))([0-9]{1,3}(?:\.[0-9]{1,3})*|[a-zA-Z])\.\s+(?=[A-Za-z\p{Lu}0-9])/gu, function (match, marker) {
+      return marker.replace(/\./g, DOT) + DOT + " ";
+    });
+
+    // 4. Protect Multi-dot abbreviations (e.g. e.g., i.e., a.m., p.m., U.S., U.K., E.U., U.N., D.C., Ph.D., M.D., B.A., M.S.)
+    masked = masked.replace(/\b([a-zA-Z])\.([a-zA-Z])\.(?:([a-zA-Z])\.)?/gi, function (match) {
+      return match.replace(/\./g, DOT);
+    });
+
+    // 5. Protect Month abbreviations before dates, years, or words
+    // e.g. Oct. 1, 2025; Jan. 15; Sept. 30; in Nov. last year
+    masked = masked.replace(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\.\s*(?=[A-Za-z0-9])/gi, function (m, mName) {
+      return mName + DOT + " ";
+    });
+
+    // 6. Protect Day of week abbreviations before dates or words
+    // e.g. Mon. Oct. 1; Fri. 13th
+    masked = masked.replace(/\b(Mon|Tue|Tues|Wed|Thu|Thur|Thurs|Fri|Sat|Sun)\.\s*(?=[A-Za-z0-9])/gi, function (m, dName) {
+      return dName + DOT + " ";
+    });
+
+    // 7. Protect English Honorifics & Titles
+    // e.g. Mr., Mrs., Ms., Miss., Dr., Prof., Sr., Jr., Rev., Gen., Col., Capt., Lt., Sgt., Gov., Sen., Rep., Pres., Sec., Treas., St., Mt., Cmdr., Adm., Maj., Hon., Amb., Atty., Supt., Insp., Det., Fr., Esq., Messrs., Mmes.
+    masked = masked.replace(/\b(Mr|Mrs|Ms|Miss|Dr|Prof|Sr|Jr|Rev|Gen|Col|Capt|Lt|Sgt|Gov|Sen|Rep|Pres|Sec|Treas|St|Mt|Cmdr|Adm|Maj|Hon|Amb|Atty|Supt|Insp|Det|Fr|Esq|Messrs|Mmes)\.\s*(?=[A-Za-z0-9"“'‘(])/gi, function (m, tName) {
+      return tName + DOT + " ";
+    });
+
+    // 8. Protect Common English & Academic Abbreviations
+    // e.g. vs., v., al., et al., approx., app., dept., est., min., sec., hr., hrs., inc., corp., co., ltd., llc., pte., gmbh., vol., vols., no., nos., fig., figs., ed., eds., pp., p., ch., sec., ref., refs., univ., ave., blvd., rd., ct., pl., sq., hwy., bldg., ste., apt., opt., diag., eq., eqs., stat., temp., cal., intl., natl., ibid., ca., cf., viz., intro., trans., suppl., para., fn.
+    masked = masked.replace(/\b(vs|v|al|et al|approx|app|dept|est|min|sec|hr|hrs|inc|corp|co|ltd|llc|pte|gmbh|vol|vols|no|nos|fig|figs|ed|eds|pp|p|ch|ref|refs|univ|ave|blvd|rd|ct|pl|sq|hwy|bldg|ste|apt|opt|diag|eq|eqs|stat|temp|cal|intl|natl|ibid|ca|cf|viz|intro|trans|suppl|para|fn)\.\s*(?=[A-Za-z0-9"“'‘(])/gi, function (m, aName) {
+      return aName + DOT + " ";
+    });
+
+    // 9. Protect Vietnamese Titles, Administrative & Academic Abbreviations
+    // e.g. TP. HCM, Tp. Đà Nẵng, TX., TT., H., Q., P., X., GS., PGS., TS., ThS., BS., DS., KS., CN., Kts., NXB., STT., UBND., HĐND., BCH., TƯ., TW., BTV., TBT., CT., PCT., TTg., CP.
+    masked = masked.replace(/\b(TP|Tp|TX|TT|H|Q|P|X|GS|PGS|TS|ThS|BS|DS|KS|CN|Kts|NXB|STT|UBND|HDND|HĐND|BCH|TU|TƯ|TW|BTV|TBT|CT|PCT|TTg|CP)\.\s*(?=[A-Z\p{Lu}0-9])/gui, function (m, vName) {
+      return vName + DOT + " ";
+    });
+
+    // 10. Protect Single letter initials (e.g. J. K. Rowling, George W. Bush, John F. Kennedy)
+    masked = masked.replace(/\b([A-Z])\.\s*(?=[A-Z\p{Lu}])/gu, "$1" + DOT + " ");
+
+    // 11. Protect Ellipsis (...)
+    masked = masked.replace(/\.{2,}/g, function (dots) {
+      return dots.replace(/\./g, DOT);
+    });
+
+    // 12. Split on true sentence boundaries:
+    // (a) Western punctuation [.!?] followed optionally by closing quotes/parentheses/brackets, followed by whitespace and next sentence starter.
+    // (b) Asian punctuation [。！？] followed optionally by closing quotes, with optional whitespace, followed by character/quote.
+    var splitRegex = /(?<=[.!?]|[.!?]["”'’\)\]»])\s+(?=[A-Z\p{Lu}0-9"“'‘\(«])|(?<=[。！？]|[。！？]["”'’\)\]」』])\s*(?=[\p{L}\p{N}"“'‘「『\(«])/u;
+    var parts = masked.split(splitRegex);
     var res = [];
+    var dotRestoreRegex = new RegExp(DOT, "g");
+    var exclRestoreRegex = new RegExp(EXCL, "g");
+    var quesRestoreRegex = new RegExp(QUES, "g");
+
     for (var i = 0; i < parts.length; i++) {
-      var s = parts[i].trim();
+      var s = parts[i]
+        .replace(dotRestoreRegex, ".")
+        .replace(exclRestoreRegex, "!")
+        .replace(quesRestoreRegex, "?")
+        .replace(/\s+/g, " ")
+        .trim();
       if (s.length > 0) res.push(s);
     }
+
     return res.length > 0 ? res : [clean];
   }
 
@@ -471,6 +553,384 @@
     return natural || voices[0] || null;
   }
 
+  function prepareTextForSpeech(text, lang) {
+    if (!text) return "";
+    var s = String(text).trim();
+    if (!s) return "";
+
+    function pickRandom(arr) {
+      if (!arr || arr.length === 0) return "";
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    // 1. Strip reference citations [1], [2, 3], [12-15]
+    s = s.replace(/\[\d+(?:[\s,\-–—]+\d+)*\]/g, "");
+
+    // 2. Normalize web URLs and email addresses to spoken form
+    s = s.replace(/https?:\/\/[^\s]+/g, "link");
+    s = s.replace(/([a-zA-Z0-9._%+-]+)@([a-zA-Z0-9.-]+)\.([a-zA-Z]{2,})/g, function (m, u, d, t) {
+      return u + " at " + d + " dot " + t;
+    });
+
+    // 3. Normalize common symbols
+    s = s.replace(/\s*&\s*/g, " and ");
+    s = s.replace(/\s*w\/\s*/gi, " with ");
+    s = s.replace(/\s*b\/c\s*/gi, " because ");
+
+    var isVi = (lang === "vi" || /[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/i.test(s));
+
+    if (isVi) {
+      // --- VIETNAMESE NATURAL & RANDOMIZED SPEECH ---
+      // Dates (DD/MM/YYYY)
+      s = s.replace(/\b(?:ngày\s+)?(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\b/gi, function (m, d, mo, y) {
+        var dayNum = parseInt(d, 10);
+        var moNum = parseInt(mo, 10);
+        var dWord = (dayNum === 1) ? pickRandom(["mùng một", "ngày một"]) : (dayNum < 10 ? ("mùng " + dayNum) : String(dayNum));
+        var yVariant = pickRandom([
+          "năm " + y,
+          "năm hai mươi " + y.slice(2)
+        ]);
+        return "ngày " + dWord + " tháng " + moNum + " " + yVariant;
+      });
+
+      // Time (HH:MM)
+      s = s.replace(/\b([01]?\d|2[0-3]):([0-5]\d)(?:\s*(?:h|giờ))?\b/g, function (m, h, min) {
+        var hNum = parseInt(h, 10);
+        var mNum = parseInt(min, 10);
+        if (mNum === 0) return hNum + " giờ đúng";
+        if (mNum === 30) return pickRandom([hNum + " giờ ba mươi", hNum + " giờ rưỡi"]);
+        if (mNum === 15) return pickRandom([hNum + " giờ mười lăm", hNum + " giờ mười lăm phút"]);
+        if (mNum === 45) {
+          var nextH = (hNum % 12) + 1;
+          return pickRandom([hNum + " giờ bốn mươi lăm", nextH + " giờ kém mười lăm"]);
+        }
+        return hNum + " giờ " + mNum + " phút";
+      });
+
+      // Phone numbers (09xx, 08xx, 03xx, 07xx, 05xx...)
+      s = s.replace(/(?:số\s+điện\s+thoại|sđt|hotline|liên\s+hệ|call)?[\s:]*\b(0[35789]\d{1,2})[-.\s]?(\d{3})[-.\s]?(\d{3,4})\b/gi, function (m, p1, p2, p3) {
+        return "số điện thoại " + p1.split("").join(" ") + ", " + p2.split("").join(" ") + ", " + p3.split("").join(" ");
+      });
+
+      // Percentages & Temperatures
+      s = s.replace(/(\d+(?:[.,]\d+)?)\s*%/g, "$1 phần trăm");
+      s = s.replace(/(\d+(?:[.,]\d+)?)\s*°C/gi, "$1 độ C");
+
+      // Vietnamese titles, administrative abbreviations
+      s = s.replace(/\bTP\.\s*HCM\b|\bTp\.\s*HCM\b/gi, "Thành phố Hồ Chí Minh");
+      s = s.replace(/\bTP\.\s*|\bTp\.\s*/gi, "Thành phố ");
+      s = s.replace(/\bTX\.\s*/gi, "Thị xã ");
+      s = s.replace(/\bTT\.\s*/gi, "Thị trấn ");
+      s = s.replace(/\bH\.\s*(?=[A-Z\p{Lu}])/gu, "Huyện ");
+      s = s.replace(/\bQ\.\s*(?=[A-Z\p{Lu}0-9])/gu, "Quận ");
+      s = s.replace(/\bP\.\s*(?=[A-Z\p{Lu}0-9])/gu, "Phường ");
+      s = s.replace(/\bGS\.\s*/gi, "Giáo sư ");
+      s = s.replace(/\bPGS\.\s*/gi, "Phó Giáo sư ");
+      s = s.replace(/\bTS\.\s*/gi, "Tiến sĩ ");
+      s = s.replace(/\bThS\.\s*/gi, "Thạc sĩ ");
+      s = s.replace(/\bBS\.\s*/gi, "Bác sĩ ");
+      s = s.replace(/\bDS\.\s*/gi, "Dược sĩ ");
+      s = s.replace(/\bKS\.\s*/gi, "Kỹ sư ");
+      s = s.replace(/\bNXB\.\s*/gi, "Nhà xuất bản ");
+      s = s.replace(/\bUBND\b/g, "Ủy ban nhân dân");
+      s = s.replace(/\bHĐND\b/g, "Hội đồng nhân dân");
+      s = s.replace(/\bBCH\b/g, "Ban chấp hành");
+      s = s.replace(/\bTW\b|\bTƯ\b/g, "Trung ương");
+      s = s.replace(/\bTTg\b/g, "Thủ tướng");
+      s = s.replace(/\bCP\b/g, "Chính phủ");
+      s = s.replace(/\betc\.\b/gi, "vân vân");
+
+    } else {
+      // --- ENGLISH & MULTILINGUAL NATURAL & RANDOMIZED SPEECH ---
+      var NUM_WORDS = [
+        "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+        "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen", "twenty"
+      ];
+      var TENS_WORDS = { 2: "twenty", 3: "thirty", 4: "forty", 5: "fifty" };
+      function numberToWord(n) {
+        if (n <= 20) return NUM_WORDS[n] || String(n);
+        var t = Math.floor(n / 10);
+        var r = n % 10;
+        return (TENS_WORDS[t] || "") + (r > 0 ? ("-" + (NUM_WORDS[r] || "")) : "");
+      }
+
+      var DAY_ORDINALS = [
+        "", "first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth",
+        "eleventh", "twelfth", "thirteenth", "fourteenth", "fifteenth", "sixteenth", "seventeenth", "eighteenth", "nineteenth", "twentieth",
+        "twenty-first", "twenty-second", "twenty-third", "twenty-fourth", "twenty-fifth", "twenty-sixth", "twenty-seventh", "twenty-eighth", "twenty-ninth", "thirtieth",
+        "thirty-first"
+      ];
+
+      var MONTH_MAP = {
+        jan: "January", feb: "February", mar: "March", apr: "April", may: "May", jun: "June",
+        jul: "July", aug: "August", sep: "September", sept: "September", oct: "October", nov: "November", dec: "December",
+        january: "January", february: "February", march: "March", april: "April", june: "June",
+        july: "July", august: "August", september: "September", october: "October", november: "November", december: "December"
+      };
+
+      function spokenYear(y) {
+        var num = parseInt(y, 10);
+        if (isNaN(num)) return y;
+        if (num >= 2000 && num <= 2009) {
+          var last = num - 2000;
+          return pickRandom([
+            "two thousand and " + (last === 0 ? "" : (NUM_WORDS[last] || last)),
+            "twenty oh " + (last === 0 ? "zero" : (NUM_WORDS[last] || last))
+          ]).trim();
+        }
+        if (num >= 2010 && num <= 2099) {
+          var suff = num - 2000;
+          return pickRandom([
+            "twenty " + numberToWord(suff),
+            "two thousand and " + numberToWord(suff)
+          ]);
+        }
+        if (num >= 1900 && num <= 1999) {
+          var rem = num - 1900;
+          return "nineteen " + (rem < 10 ? ("oh " + (NUM_WORDS[rem] || rem)) : numberToWord(rem));
+        }
+        return String(num);
+      }
+
+      // 4.1. Dates (Thứ, ngày, tháng, năm)
+      // Format: [Weekday,] Month Day[, Year] -> e.g. "Oct. 1, 2025", "Monday, May 15", "September 23rd, 2024"
+      s = s.replace(/\b(?:(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Mon|Tue|Tues|Wed|Thu|Thur|Thurs|Fri|Sat|Sun)\.?\s*,?\s*)?(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec|January|February|March|April|June|July|August|September|October|November|December)\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:\s*,?\s*(\d{4}))?\b/gi, function (m, dayOfWeek, mStr, dStr, yStr) {
+        var fullMonth = MONTH_MAP[mStr.toLowerCase()] || mStr;
+        var dayNum = parseInt(dStr, 10);
+        var ord = (dayNum >= 1 && dayNum <= 31) ? DAY_ORDINALS[dayNum] : dStr;
+        var ySpoken = yStr ? (", " + spokenYear(yStr)) : "";
+        var prefix = dayOfWeek ? (dayOfWeek + ", ") : "";
+
+        var dateVariants = [
+          prefix + fullMonth + " the " + ord + ySpoken,
+          prefix + "the " + ord + " of " + fullMonth + ySpoken,
+          prefix + fullMonth + " " + ord + ySpoken
+        ];
+        return pickRandom(dateVariants);
+      });
+
+      // Format: Day of Month[, Year] -> e.g. "1st October 2025", "15th of May", "21 Jan 2024"
+      s = s.replace(/\b(\d{1,2})(?:st|nd|rd|th)?\s+(?:of\s+)?(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec|January|February|March|April|June|July|August|September|October|November|December)\.?(?:\s*,?\s*(\d{4}))?\b/gi, function (m, dStr, mStr, yStr) {
+        var fullMonth = MONTH_MAP[mStr.toLowerCase()] || mStr;
+        var dayNum = parseInt(dStr, 10);
+        var ord = (dayNum >= 1 && dayNum <= 31) ? DAY_ORDINALS[dayNum] : dStr;
+        var ySpoken = yStr ? (", " + spokenYear(yStr)) : "";
+
+        var dateVariants = [
+          "the " + ord + " of " + fullMonth + ySpoken,
+          fullMonth + " the " + ord + ySpoken,
+          fullMonth + " " + ord + ySpoken
+        ];
+        return pickRandom(dateVariants);
+      });
+
+      // 4.2. Time (Cách đọc thời gian: 10:30, 7:15, 8:45, 2:50 p.m.)
+      s = s.replace(/\b([01]?\d|2[0-3]):([0-5]\d)(?:\s*(am|pm|a\.m\.|p\.m\.))?\b/gi, function (m, hStr, minStr, ampmStr) {
+        var h = parseInt(hStr, 10);
+        var min = parseInt(minStr, 10);
+        var hDisplay = (h === 0) ? 12 : (h > 12 ? (h - 12) : h);
+        var hWord = NUM_WORDS[hDisplay] || String(hDisplay);
+        var nextH = (hDisplay % 12) + 1;
+        var nextHWord = NUM_WORDS[nextH] || String(nextH);
+        var ampmSpoken = "";
+        if (ampmStr) {
+          var isAm = /a/i.test(ampmStr);
+          ampmSpoken = isAm ? pickRandom([" a m", " in the morning"]) : pickRandom([" p m", " in the afternoon", " in the evening"]);
+        }
+
+        if (min === 0) {
+          return pickRandom([
+            hWord + " o'clock" + ampmSpoken,
+            hWord + ampmSpoken
+          ]);
+        }
+        if (min === 15) {
+          return pickRandom([
+            "a quarter past " + hWord + ampmSpoken,
+            "quarter past " + hWord + ampmSpoken,
+            hWord + " fifteen" + ampmSpoken
+          ]);
+        }
+        if (min === 30) {
+          return pickRandom([
+            "half past " + hWord + ampmSpoken,
+            hWord + " thirty" + ampmSpoken
+          ]);
+        }
+        if (min === 45) {
+          return pickRandom([
+            "a quarter to " + nextHWord + ampmSpoken,
+            "quarter to " + nextHWord + ampmSpoken,
+            hWord + " forty-five" + ampmSpoken
+          ]);
+        }
+        if (min === 10 || min === 20 || min === 5) {
+          return pickRandom([
+            numberToWord(min) + " past " + hWord + ampmSpoken,
+            hWord + " " + numberToWord(min) + ampmSpoken
+          ]);
+        }
+        if (min === 40 || min === 50 || min === 55) {
+          var diff = 60 - min;
+          return pickRandom([
+            numberToWord(diff) + " to " + nextHWord + ampmSpoken,
+            hWord + " " + numberToWord(min) + ampmSpoken
+          ]);
+        }
+        if (min < 10) {
+          return pickRandom([
+            hWord + " oh " + (NUM_WORDS[min] || min) + ampmSpoken,
+            numberToWord(min) + " minutes past " + hWord + ampmSpoken
+          ]);
+        }
+        return hWord + " " + numberToWord(min) + ampmSpoken;
+      });
+
+      // 4.3. Phone Numbers (IELTS / Cambridge style: digit-by-digit, double/triple, oh/zero)
+      s = s.replace(/(?:tel|phone|call|hotline|mobile|contact|fax)?[\s:]*\b((?:\+?\d{1,3}[\s-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4})\b/gi, function (m, phone) {
+        var digits = phone.replace(/\D/g, "");
+        if (digits.length < 7 || digits.length > 12) return phone;
+        var spokenParts = [];
+        var i = 0;
+        while (i < digits.length) {
+          // Check for triple digits
+          if (i + 2 < digits.length && digits[i] === digits[i + 1] && digits[i] === digits[i + 2]) {
+            var dWord = (digits[i] === "0") ? pickRandom(["oh", "zero"]) : (NUM_WORDS[parseInt(digits[i], 10)] || digits[i]);
+            spokenParts.push(pickRandom(["triple " + dWord, dWord + " " + dWord + " " + dWord]));
+            i += 3;
+            continue;
+          }
+          // Check for double digits
+          if (i + 1 < digits.length && digits[i] === digits[i + 1]) {
+            var dWord2 = (digits[i] === "0") ? pickRandom(["oh", "zero"]) : (NUM_WORDS[parseInt(digits[i], 10)] || digits[i]);
+            spokenParts.push(pickRandom(["double " + dWord2, dWord2 + " " + dWord2]));
+            i += 2;
+            continue;
+          }
+          // Single digit
+          var singleD = digits[i];
+          var singleWord = (singleD === "0") ? pickRandom(["oh", "zero"]) : (NUM_WORDS[parseInt(singleD, 10)] || singleD);
+          spokenParts.push(singleWord);
+          i++;
+        }
+        // Insert rhythmic commas between chunks of 3-4 digits for natural cadence
+        var grouped = [];
+        var chunkSize = spokenParts.length > 9 ? 3 : 4;
+        for (var c = 0; c < spokenParts.length; c += chunkSize) {
+          grouped.push(spokenParts.slice(c, c + chunkSize).join(" "));
+        }
+        return grouped.join(", ");
+      });
+
+      // 4.4. Addresses & Street Names (No. 42 Wallaby Way, 10 Downing St., Apt. 4B, Suite 300)
+      s = s.replace(/\b(?:No\.\s*|#\s*)?(\d{1,4}[A-Za-z]?)\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*)\s+(St\.|Street|Ave\.|Avenue|Rd\.|Road|Blvd\.|Boulevard|Dr\.|Drive|Lane|Ln\.|Ct\.|Court|Way|Pl\.|Place|Hwy\.|Highway)(?=[\s,;:\.!?\)]|$)/g, function (m, num, name, stType) {
+        var stTypeMap = {
+          "st.": "Street", "ave.": "Avenue", "rd.": "Road", "blvd.": "Boulevard",
+          "dr.": "Drive", "ln.": "Lane", "ct.": "Court", "pl.": "Place", "hwy.": "Highway"
+        };
+        var expandedSt = stTypeMap[stType.toLowerCase()] || stType;
+        var numSpoken = num;
+        var intNum = parseInt(num, 10);
+        if (!isNaN(intNum) && intNum < 100) {
+          numSpoken = numberToWord(intNum);
+        }
+        return numSpoken + " " + name + " " + expandedSt;
+      });
+      s = s.replace(/\b(Apt|Apartment)\.\s*(\d+[A-Za-z]?)\b/gi, function (m, p, aNum) {
+        return pickRandom(["apartment " + aNum, "flat " + aNum]);
+      });
+      s = s.replace(/\bSuite\s+(\d+)\b/gi, function (m, sNum) {
+        return "suite " + sNum;
+      });
+
+      // 4.5. Currency (USD, GBP, EUR)
+      s = s.replace(/\$(\d+)(?:\.(\d{2}))?\b/g, function (m, dollars, cents) {
+        var dNum = parseInt(dollars, 10);
+        var dWord = numberToWord(dNum) + (dNum === 1 ? " dollar" : " dollars");
+        if (!cents) return dWord;
+        var cNum = parseInt(cents, 10);
+        if (cNum === 0) return dWord;
+        var cWord = numberToWord(cNum) + (cNum === 1 ? " cent" : " cents");
+        return pickRandom([
+          dWord + " and " + cWord,
+          numberToWord(dNum) + " " + numberToWord(cNum)
+        ]);
+      });
+      s = s.replace(/£(\d+)(?:\.(\d{2}))?\b/g, function (m, pounds, pence) {
+        var pNum = parseInt(pounds, 10);
+        var pWord = numberToWord(pNum) + (pNum === 1 ? " pound" : " pounds");
+        if (!pence) return pWord;
+        var peNum = parseInt(pence, 10);
+        if (peNum === 0) return pWord;
+        return pickRandom([
+          numberToWord(pNum) + " pounds " + numberToWord(peNum),
+          pWord + " and " + numberToWord(peNum) + " pence"
+        ]);
+      });
+      s = s.replace(/€(\d+)(?:\.(\d{2}))?\b/g, function (m, euros, cents) {
+        var eNum = parseInt(euros, 10);
+        var eWord = numberToWord(eNum) + " euros";
+        if (!cents) return eWord;
+        var cNum = parseInt(cents, 10);
+        if (cNum === 0) return eWord;
+        return pickRandom([
+          numberToWord(eNum) + " euros " + numberToWord(cNum),
+          eWord + " and " + numberToWord(cNum) + " cents"
+        ]);
+      });
+
+      // 4.6. Fractions & Ratios
+      s = s.replace(/\b1\/2\b/g, function () { return pickRandom(["a half", "one half"]); });
+      s = s.replace(/\b1\/4\b/g, function () { return pickRandom(["a quarter", "one quarter"]); });
+      s = s.replace(/\b3\/4\b/g, "three quarters");
+      s = s.replace(/\b1\/3\b/g, "one third");
+      s = s.replace(/\b2\/3\b/g, "two thirds");
+      s = s.replace(/\b(\d+):(\d+)\b/g, "$1 to $2");
+
+      // 4.7. Percentages & Measurements
+      s = s.replace(/(\d+(?:\.\d+)?)\s*%/g, "$1 percent");
+      s = s.replace(/(\d+(?:\.\d+)?)\s*°C\b/gi, function (m, deg) {
+        return pickRandom([deg + " degrees Celsius", deg + " degrees"]);
+      });
+      s = s.replace(/(\d+(?:\.\d+)?)\s*°F\b/gi, "$1 degrees Fahrenheit");
+      s = s.replace(/(\d+(?:\.\d+)?)\s*km\/h\b/gi, "$1 kilometers per hour");
+      s = s.replace(/(\d+(?:\.\d+)?)\s*mph\b/gi, "$1 miles per hour");
+      s = s.replace(/(\d+(?:\.\d+)?)\s*kg\b/gi, "$1 kilograms");
+      s = s.replace(/(\d+(?:\.\d+)?)\s*cm\b/gi, "$1 centimeters");
+      s = s.replace(/(\d+(?:\.\d+)?)\s*km\b/gi, "$1 kilometers");
+
+      // 4.8. Titles & Honorifics
+      s = s.replace(/\bDr\.\s*/gi, "Doctor ");
+      s = s.replace(/\bMr\.\s*/gi, "Mister ");
+      s = s.replace(/\bMrs\.\s*/gi, "Missus ");
+      s = s.replace(/\bMs\.\s*/gi, "Miz ");
+      s = s.replace(/\bProf\.\s*/gi, "Professor ");
+      s = s.replace(/\bGen\.\s*/gi, "General ");
+      s = s.replace(/\bSen\.\s*/gi, "Senator ");
+      s = s.replace(/\bRep\.\s*/gi, "Representative ");
+      s = s.replace(/\bGov\.\s*/gi, "Governor ");
+      s = s.replace(/\bSt\.\s*(?=[A-Z])/g, "Saint ");
+      s = s.replace(/\bMt\.\s*(?=[A-Z])/g, "Mount ");
+
+      // 4.9. Common Abbreviations
+      s = s.replace(/\bvs\.\s*|\bv\.\s*/gi, "versus ");
+      s = s.replace(/\be\.g\.,?\s*/gi, "for example, ");
+      s = s.replace(/\bi\.e\.,?\s*/gi, "that is, ");
+      s = s.replace(/\betc\.\b/gi, "et cetera");
+      s = s.replace(/\bet\s+al\.\b/gi, "et al");
+      s = s.replace(/\bapprox\.\s*/gi, "approximately ");
+      s = s.replace(/\bdept\.\s*/gi, "department ");
+      s = s.replace(/\bfig\.\s*(\d+)/gi, "figure $1");
+      s = s.replace(/\bfigs\.\s*(\d+)/gi, "figures $1");
+      s = s.replace(/\bno\.\s*(\d+)/gi, "number $1");
+      s = s.replace(/\bvol\.\s*(\d+)/gi, "volume $1");
+      s = s.replace(/\bpp\.\s*(\d+)/gi, "pages $1");
+      s = s.replace(/\bp\.\s*(\d+)/gi, "page $1");
+    }
+
+    return s.replace(/\s+/g, " ").trim();
+  }
+
   // Anti-hang speak sentence implementation
   function speakReaderSentence(text, rate, onEndCallback) {
     if (typeof window === "undefined" || !window.speechSynthesis) {
@@ -487,7 +947,8 @@
         window.speechSynthesis.resume();
       }
 
-      var u = new SpeechSynthesisUtterance(String(text || ""));
+      var spokenText = prepareTextForSpeech(text, readerAudio.articleLang) || String(text || "");
+      var u = new SpeechSynthesisUtterance(spokenText);
       var v = readerAudio.voice || findBestVoiceForArticle(readerAudio.articleLang);
       if (v) u.voice = v;
       u.lang = (v && v.lang) ? v.lang : "en-US";
@@ -525,7 +986,7 @@
       }, 9000);
 
       // Watchdog timer: if engine fails to trigger onend, automatically advance
-      var wordsCount = (text || "").trim().split(/\s+/).length;
+      var wordsCount = spokenText.trim().split(/\s+/).length;
       var maxWaitMs = Math.max(4500, Math.round(((wordsCount * 700) / (rate || 0.95)) + 4000));
       readerAudio.watchdogTimer = setTimeout(function () {
         if (readerAudio.speechSeq === currentSeq) {
@@ -684,6 +1145,20 @@
   function cleanParagraphText(text) {
     if (!text) return "";
     var str = cleanVietnameseAccents(String(text).replace(/\s+/g, " ").trim());
+
+    // Discard text that consists purely of quotation marks or punctuation marks
+    if (/^[\s“”"„‟»«'’‘`´\.\,\-\[\]\(\)\/\\;:]+$/.test(str)) {
+      return "";
+    }
+
+    // Strip standalone leading decorative quotes or stray opening brackets
+    str = str.replace(/^[\s“”"„‟»«'’‘`´]+/, "");
+    if (str.startsWith("[ ") && !str.includes("]")) {
+      str = str.replace(/^\[\s*/, "");
+    }
+    // Strip standalone trailing decorative quotes
+    str = str.replace(/[\s“”"„‟»«'’‘`´]+$/, "");
+
     str = str.replace(/\s*[\(\[]\s*(?:photo|ảnh|image|credit|nguồn|courtesy|source)\s*(?:by|:|of|from|via|\/|-|–)\s*[^)\]]+[\)\]]\s*$/i, "");
     str = str.replace(/[\s\.\,\;\|\-]+(?:photo|ảnh|image|credit|nguồn|courtesy|source)\s*(?:by|:|of|from|via|\/|-|–)\s*[^\n]+$/i, "");
     str = str.replace(/[\s\.\,\;\|\-]+(?:photo\s+(?:by|from|via)\s+[^\n]+)$/i, "");
@@ -772,6 +1247,16 @@
     if (!el || el.nodeType !== Node.ELEMENT_NODE) return null;
     var tag = el.tagName ? el.tagName.toLowerCase() : "";
 
+    // Helper to sanitize & create standard embed URLs
+    function getYoutubeEmbed(ytId) {
+      if (!ytId) return "";
+      return "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(ytId);
+    }
+    function getVimeoEmbed(vmId) {
+      if (!vmId) return "";
+      return "https://player.vimeo.com/video/" + encodeURIComponent(vmId);
+    }
+
     // 1. Direct <video> tag
     if (tag === "video") {
       var vSrc = el.getAttribute("src") || (el.querySelector("source") ? el.querySelector("source").getAttribute("src") : "") || el.currentSrc || "";
@@ -784,12 +1269,33 @@
     // 2. Direct <iframe> tag
     if (tag === "iframe") {
       var iSrc = el.getAttribute("src") || el.getAttribute("data-src") || "";
-      if (iSrc && /youtube|vimeo|dailymotion|embed|player|video|stream|bbc\.co|cnn\.com|vnexpress|tuoitre|vtv/i.test(iSrc)) {
+      if (iSrc && /youtube|youtu\.be|vimeo|dailymotion|embed|player|video|stream|bbc\.co|cnn\.com|vnexpress|tuoitre|vtv|dantri|thanhnien/i.test(iSrc)) {
         return { type: "iframe", src: iSrc };
       }
     }
 
-    // 3. Container holding video or iframe
+    // 3. Web Components: <lite-youtube>, <lite-vimeo>
+    if (tag === "lite-youtube") {
+      var lyId = el.getAttribute("videoid") || el.getAttribute("data-videoid") || "";
+      if (lyId) return { type: "iframe", src: getYoutubeEmbed(lyId) };
+    }
+    if (tag === "lite-vimeo") {
+      var lvId = el.getAttribute("videoid") || el.getAttribute("data-videoid") || "";
+      if (lvId) return { type: "iframe", src: getVimeoEmbed(lvId) };
+    }
+
+    var lyEl = el.querySelector("lite-youtube");
+    if (lyEl) {
+      var lyChildId = lyEl.getAttribute("videoid") || lyEl.getAttribute("data-videoid") || "";
+      if (lyChildId) return { type: "iframe", src: getYoutubeEmbed(lyChildId) };
+    }
+    var lvEl = el.querySelector("lite-vimeo");
+    if (lvEl) {
+      var lvChildId = lvEl.getAttribute("videoid") || lvEl.getAttribute("data-videoid") || "";
+      if (lvChildId) return { type: "iframe", src: getVimeoEmbed(lvChildId) };
+    }
+
+    // 4. Container holding video or iframe
     var innerVideo = el.querySelector("video");
     if (innerVideo) {
       var ivSrc = innerVideo.getAttribute("src") || (innerVideo.querySelector("source") ? innerVideo.querySelector("source").getAttribute("src") : "") || innerVideo.currentSrc || "";
@@ -801,18 +1307,56 @@
     var innerIframe = el.querySelector("iframe");
     if (innerIframe) {
       var iiSrc = innerIframe.getAttribute("src") || innerIframe.getAttribute("data-src") || "";
-      if (iiSrc && /youtube|vimeo|dailymotion|embed|player|video|stream|bbc\.co|cnn\.com|vnexpress|tuoitre|vtv/i.test(iiSrc)) {
+      if (iiSrc && /youtube|youtu\.be|vimeo|dailymotion|embed|player|video|stream|bbc\.co|cnn\.com|vnexpress|tuoitre|vtv|dantri|thanhnien/i.test(iiSrc)) {
         return { type: "iframe", src: iiSrc };
       }
     }
 
-    // 4. Data-attribute video source (e.g. data-video-src, data-src ending in .mp4 or containing video player)
-    var dataSrc = el.getAttribute("data-video-src") || el.getAttribute("data-src") || el.getAttribute("data-url") || "";
-    if (dataSrc && /\.(mp4|webm|m4v)(\?.*)?$/i.test(dataSrc)) {
-      return { type: "video", src: dataSrc, poster: el.getAttribute("data-poster") || "" };
+    // 5. Data-attribute IDs (e.g. data-youtube-id, data-video-id, data-videoid)
+    var dYtId = el.getAttribute("data-youtube-id") || el.getAttribute("data-yt-id") || el.getAttribute("data-videoid") || "";
+    if (dYtId && /^[a-zA-Z0-9_\-]{8,15}$/.test(dYtId)) {
+      return { type: "iframe", src: getYoutubeEmbed(dYtId) };
     }
-    if (dataSrc && /youtube|vimeo|dailymotion|embed|player|video/i.test(dataSrc)) {
-      return { type: "iframe", src: dataSrc };
+    var dVmId = el.getAttribute("data-vimeo-id") || "";
+    if (dVmId && /^\d+$/.test(dVmId)) {
+      return { type: "iframe", src: getVimeoEmbed(dVmId) };
+    }
+
+    // Check inner elements with data-youtube-id or data-videoid
+    var innerYt = el.querySelector("[data-youtube-id], [data-yt-id], [data-videoid]");
+    if (innerYt) {
+      var iyId = innerYt.getAttribute("data-youtube-id") || innerYt.getAttribute("data-yt-id") || innerYt.getAttribute("data-videoid") || "";
+      if (iyId && /^[a-zA-Z0-9_\-]{8,15}$/.test(iyId)) {
+        return { type: "iframe", src: getYoutubeEmbed(iyId) };
+      }
+    }
+
+    // 6. News players & video wrappers (VCSortableInLine type="VideoStream", data-video-url, data-src ending in mp4/m3u8)
+    var dataSrc = el.getAttribute("data-video-src") || el.getAttribute("data-video-url") || el.getAttribute("data-src") || el.getAttribute("data-url") || "";
+    if (dataSrc) {
+      if (/\.(mp4|webm|m4v)(\?.*)?$/i.test(dataSrc)) {
+        return { type: "video", src: dataSrc, poster: el.getAttribute("data-poster") || el.getAttribute("data-thumb") || "" };
+      }
+      if (/youtube\.com\/(?:embed|watch\?v=)|youtu\.be\//i.test(dataSrc)) {
+        var ym = dataSrc.match(/(?:embed\/|v=|youtu\.be\/)([a-zA-Z0-9_\-]{8,15})/i);
+        if (ym) return { type: "iframe", src: getYoutubeEmbed(ym[1]) };
+      }
+      if (/vimeo\.com\/(?:video\/)?(\d+)/i.test(dataSrc)) {
+        var vm = dataSrc.match(/vimeo\.com\/(?:video\/)?(\d+)/i);
+        if (vm) return { type: "iframe", src: getVimeoEmbed(vm[1]) };
+      }
+      if (/dailymotion|embed|player|stream/i.test(dataSrc)) {
+        return { type: "iframe", src: dataSrc };
+      }
+    }
+
+    // Check child with data-video-src / data-video-url
+    var innerDataVid = el.querySelector("[data-video-src], [data-video-url]");
+    if (innerDataVid) {
+      var idvSrc = innerDataVid.getAttribute("data-video-src") || innerDataVid.getAttribute("data-video-url") || "";
+      if (idvSrc && /\.(mp4|webm|m4v)(\?.*)?$/i.test(idvSrc)) {
+        return { type: "video", src: idvSrc, poster: innerDataVid.getAttribute("data-poster") || "" };
+      }
     }
 
     return null;
@@ -858,19 +1402,27 @@
 
     for (var i = 0; i < el.childNodes.length; i++) {
       var node = el.childNodes[i];
-      if (node.nodeType === Node.ELEMENT_NODE && node.tagName.toLowerCase() === "br") {
-        consecutiveBrs++;
-        if (consecutiveBrs >= 2) {
-          var chunk = currentParts.join("").replace(/\s+/g, " ").trim();
-          if (chunk.length >= 15) {
-            paragraphs.push(chunk);
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        var nodeTag = node.tagName.toLowerCase();
+        if (nodeTag === "br") {
+          consecutiveBrs++;
+          if (consecutiveBrs >= 2) {
+            var chunk = currentParts.join("").replace(/\s+/g, " ").trim();
+            if (chunk.length >= 15) {
+              paragraphs.push(chunk);
+            }
+            currentParts = [];
           }
-          currentParts = [];
+          continue;
         }
-      } else {
-        consecutiveBrs = 0;
-        currentParts.push(node.textContent || "");
+        if (nodeTag === "svg" || isNoiseNode(node)) continue;
+        // Skip decorative quote marks / icon elements
+        if ((nodeTag === "i" || nodeTag === "span" || nodeTag === "em") && /^[\s“”"„‟»«'’‘`´]+$/.test(node.textContent || "")) {
+          continue;
+        }
       }
+      consecutiveBrs = 0;
+      currentParts.push(node.textContent || "");
     }
     var finalChunk = currentParts.join("").replace(/\s+/g, " ").trim();
     if (finalChunk.length >= 15) {
@@ -937,11 +1489,12 @@
       if (urlMatch) currentLevel = "Level " + urlMatch[1];
     }
 
-    if (!container) return currentLevel ? { current: currentLevel, levels: [] } : null;
-
     var levelLinks = [];
     var seenUrls = new Set();
-    var allLinks = container.querySelectorAll("a[href]");
+    var allLinks = container ? Array.from(container.querySelectorAll("a[href]")) : [];
+    if (allLinks.length === 0 && typeof document !== "undefined") {
+      allLinks = Array.from(document.querySelectorAll("#link-menu a[href], .reading-levels a[href], .levels a[href], [class*='level'] a[href], header a[href], #header a[href]"));
+    }
     for (var i = 0; i < allLinks.length; i++) {
       var a = allLinks[i];
       var aText = (a.textContent || "").trim();
@@ -966,11 +1519,16 @@
 
   function pickBestArticleContainer() {
     var selectors = [
-      "article", "[itemprop='articleBody']", "[itemprop='article']",
+      "article", "[role='article']", "[itemprop='articleBody']", "[itemprop='article']",
       ".article-body", ".article__body", ".story-body", ".post-content",
       ".entry-content", ".content-detail", ".detail-content", ".fck_detail",
       ".content_detail", "#article-body", ".lesson-excerpt", ".lesson-archive",
       ".article-content", ".story-content", "#primary .content-container",
+      "#content", "#content-area", ".main-article", ".single-post", ".rich-text",
+      ".text-content", ".body-content", ".post_content", ".article_content",
+      ".article-wrapper", ".post-wrapper", ".entry", ".page-content",
+      ".content__article-body", ".article__content", ".post-body", ".wysiwyg",
+      ".prose", ".markdown-body",
       "main", "[role='main']", "#main-content", ".main-content"
     ];
 
@@ -1199,7 +1757,7 @@
         registerCaption(sc.textContent);
       });
 
-      var elements = Array.from(mainContainer.querySelectorAll("h1, h2, h3, h4, h5, p, figure, img, audio, blockquote, cite, footer, ul, ol, dl, table, pre, video, iframe, [data-component='video-block'], [data-e2e='media-player'], .media-player, .video-container, .box_embed_video, [data-video-src], [data-audio-src], .audio"));
+      var elements = Array.from(mainContainer.querySelectorAll("h1, h2, h3, h4, h5, p, figure, img, audio, blockquote, cite, footer, ul, ol, dl, table, pre, video, iframe, [data-component='video-block'], [data-e2e='media-player'], .media-player, .video-container, .box_embed_video, [data-video-src], [data-audio-src], .audio, div.paragraph, div.text-block, div.article-paragraph, div.story-text"));
       var paragraphCount = 0;
 
       for (var i = 0; i < elements.length; i++) {
@@ -1343,8 +1901,8 @@
           }
         }
 
-        // 8. Paragraphs or Blockquotes
-        if (tag === "p" || tag === "blockquote") {
+        // 8. Paragraphs, Blockquotes, or Div-based paragraphs
+        if (tag === "p" || tag === "blockquote" || (tag === "div" && (el.classList.contains("paragraph") || el.classList.contains("article-paragraph") || el.classList.contains("story-text") || el.classList.contains("text-block")))) {
           // Exclude if it is part of a figure or marked as caption
           if (seenCaptionElements.has(el) || el.closest("figure, figcaption, table.tplCaption, .tplCaption, .fig-picture, .desc_cation, .image-container, .img-container, .photo-box")) continue;
 
@@ -1598,6 +2156,48 @@
             articleItems.push({ type: "code", text: preText });
           }
           continue;
+        }
+
+        // 8. Collapsible Accordions & Answer Keys (<details><summary>)
+        if (tag === "details") {
+          if (el.closest("nav, aside, .footer")) continue;
+          var summaryEl = el.querySelector("summary");
+          var summaryText = summaryEl ? (summaryEl.textContent || "").replace(/\s+/g, " ").trim() : "Details / Answer Key";
+          var detailBody = "";
+          // Extract text excluding the summary line
+          var cloneDetails = el.cloneNode(true);
+          var cloneSum = cloneDetails.querySelector("summary");
+          if (cloneSum) cloneSum.remove();
+          detailBody = (cloneDetails.textContent || "").replace(/\s+/g, " ").trim();
+          if (detailBody.length >= 8) {
+            articleItems.push({
+              type: "accordion",
+              title: summaryText,
+              text: detailBody
+            });
+          }
+          continue;
+        }
+
+        // 9. Key Takeaways / Highlights boxes (.key-takeaways, .highlights, .tldr, .quick-summary)
+        if (tag === "div" || tag === "section" || tag === "aside") {
+          if (el.classList.contains("key-takeaways") || el.classList.contains("highlights") || el.classList.contains("tldr") || el.classList.contains("quick-summary") || el.classList.contains("executive-summary")) {
+            var ktList = Array.from(el.querySelectorAll("li, p"));
+            var ktItems = [];
+            ktList.forEach(function (kti) {
+              var ktTxt = (kti.textContent || "").replace(/\s+/g, " ").trim();
+              if (ktTxt.length >= 10 && !JUNK_TEXT_RE.test(ktTxt)) {
+                ktItems.push(cleanParagraphText(ktTxt));
+              }
+            });
+            if (ktItems.length >= 1) {
+              articleItems.push({
+                type: "takeaways",
+                items: ktItems
+              });
+              continue;
+            }
+          }
         }
       }
     }
@@ -2029,9 +2629,70 @@
       #sf-cyber-reader p, #sf-cyber-reader .sf-reader-sentence {
         color: var(--sf-text) !important;
       }
-      #sf-cyber-reader blockquote {
-        border-left-color: var(--sf-quote-border) !important;
+      #sf-cyber-reader blockquote,
+      #sf-cyber-reader .sf-reader-quote-block {
+        position: relative !important;
+        margin: 26px 0 !important;
+        padding: 16px 22px 16px 26px !important;
+        background: rgba(56, 189, 248, 0.05) !important;
+        border: none !important;
+        border-left: 4px solid var(--sf-quote-border) !important;
+        border-radius: 0 12px 12px 0 !important;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12) !important;
+        color: var(--sf-text) !important;
+        font-style: italic !important;
+        box-sizing: border-box !important;
+        quotes: none !important;
+      }
+      #sf-cyber-reader blockquote::before,
+      #sf-cyber-reader blockquote::after,
+      #sf-cyber-reader .sf-reader-quote-block::before,
+      #sf-cyber-reader .sf-reader-quote-block::after,
+      #sf-cyber-reader .sf-reader-quote-text::before,
+      #sf-cyber-reader .sf-reader-quote-text::after,
+      #sf-cyber-reader q::before,
+      #sf-cyber-reader q::after,
+      #sf-cyber-reader p::before,
+      #sf-cyber-reader p::after {
+        content: none !important;
+        display: none !important;
+        width: 0 !important;
+        height: 0 !important;
+        font-size: 0 !important;
+        line-height: 0 !important;
+        border: none !important;
+        background: none !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+      }
+      #sf-cyber-reader blockquote .sf-reader-sentence,
+      #sf-cyber-reader .sf-reader-quote-block .sf-reader-sentence {
+        position: relative !important;
+        z-index: 1 !important;
+        font-style: italic !important;
+      }
+      #sf-cyber-reader .sf-reader-quote-text {
+        margin: 0 0 8px 0 !important;
+        font-style: italic !important;
+        color: var(--sf-text) !important;
+        line-height: inherit !important;
+        font-size: inherit !important;
+      }
+      #sf-cyber-reader .sf-reader-citation {
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        margin-top: 8px !important;
+        font-style: normal !important;
+        font-size: 13.5px !important;
+        font-weight: 500 !important;
         color: var(--sf-caption) !important;
+        letter-spacing: 0.2px !important;
+      }
+      #sf-cyber-reader .sf-reader-citation::before {
+        content: "—" !important;
+        color: var(--sf-quote-border) !important;
+        font-weight: 700 !important;
       }
       #sf-cyber-reader figcaption {
         color: var(--sf-caption) !important;
@@ -3549,17 +4210,19 @@
       sentenceElements.forEach(function (el, i) {
         if (i === idx) {
           el.style.background = hl.bg;
-          el.style.borderLeft = "3.5px solid " + hl.border;
-          el.style.boxShadow = "0 2px 8px " + hl.glow;
-          el.style.borderRadius = "5px";
+          el.style.boxShadow = "0 0 0 1.5px " + hl.border + ", 0 2px 10px " + hl.glow;
+          el.style.borderRadius = "6px";
           el.style.padding = "2px 6px";
-          el.style.transition = "background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease";
-          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          el.style.borderLeft = "none";
+          el.style.transition = "background 0.2s ease, box-shadow 0.2s ease";
+          if (typeof el.scrollIntoView === "function") {
+            el.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
         } else {
           el.style.background = "transparent";
-          el.style.borderLeft = "3.5px solid transparent";
           el.style.boxShadow = "none";
-          el.style.borderRadius = "5px";
+          el.style.borderLeft = "none";
+          el.style.borderRadius = "6px";
           el.style.padding = "2px 6px";
         }
       });
@@ -3859,6 +4522,27 @@
           vEl.setAttribute("preload", "metadata");
           vEl.style.cssText = "max-width: 100%; width: 100%; border-radius: 12px; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35); border: 1px solid var(--sf-border); display: block; margin: 0 auto;";
           vBox.appendChild(vEl);
+
+          // Video actions: Picture-in-Picture floating button
+          if (document.pictureInPictureEnabled) {
+            var vControlsBar = document.createElement("div");
+            vControlsBar.style.cssText = "display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-top: 8px;";
+            var pipBtn = document.createElement("button");
+            pipBtn.type = "button";
+            pipBtn.style.cssText = "background: var(--sf-btn-bg); color: var(--sf-btn-text); border: 1px solid var(--sf-btn-border); border-radius: 6px; padding: 4px 10px; font-size: 11.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: background 0.15s ease;";
+            pipBtn.textContent = "⧉ Cửa sổ nổi (PiP)";
+            pipBtn.title = "Bật cửa sổ nổi (Picture-in-Picture) để vừa xem video vừa đọc & luyện nghe";
+            pipBtn.addEventListener("click", function () {
+              if (document.pictureInPictureElement) {
+                document.exitPictureInPicture().catch(function () {});
+              } else {
+                vEl.requestPictureInPicture().catch(function () {});
+              }
+            });
+            vControlsBar.appendChild(pipBtn);
+            vBox.appendChild(vControlsBar);
+          }
+
           if (item.caption) {
             var vCap = document.createElement("figcaption");
             vCap.style.cssText = "font-size: 13.5px; color: var(--sf-caption); font-style: italic; margin-top: 10px; line-height: 1.5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 92%; margin-left: auto; margin-right: auto;";
@@ -3907,11 +4591,9 @@
             if (item.citation) {
               var quoteWrap = document.createElement("div");
               quoteWrap.className = "sf-reader-quote-block";
-              quoteWrap.style.cssText = "margin: 24px 0 32px 0;";
 
               var pQuote = document.createElement("p");
               pQuote.className = "sf-reader-quote-text";
-              pQuote.style.cssText = "font-style: italic; color: var(--sf-text); margin-bottom: 8px; line-height: inherit; font-size: inherit;";
 
               sents.forEach(function (sText) {
                 var sIdx = readerAudio.sentences.length;
@@ -3919,7 +4601,6 @@
 
                 var sSpan = document.createElement("span");
                 sSpan.className = "sf-reader-sentence";
-                sSpan.style.cssText = "cursor: pointer; padding: 2px 2px; border-radius: 4px; transition: background 0.2s;";
                 sSpan.title = "Click to listen";
                 sSpan.textContent = sText + " ";
 
@@ -3944,7 +4625,6 @@
               // Source citation line in brackets [Source, Date]
               var citeDiv = document.createElement("div");
               citeDiv.className = "sf-reader-citation";
-              citeDiv.style.cssText = "font-style: normal; font-size: 14.5px; color: var(--sf-caption); line-height: 1.5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; cursor: pointer; padding-left: 2px;";
 
               var cIdx = readerAudio.sentences.length;
               readerAudio.sentences.push(item.citation);
@@ -3976,12 +4656,14 @@
               return;
             }
 
-            // Normal paragraph or blockquote
-            var pBlock = document.createElement(item.isQuote ? "blockquote" : "p");
-            pBlock.style.cssText = item.isQuote
-              ? "margin: 24px 0; color: var(--sf-text); font-style: italic; border-left: 3.5px solid var(--sf-quote-border); padding: 10px 18px; background: rgba(56, 189, 248, 0.04); border-radius: 0 8px 8px 0;"
-              : "margin-bottom: 24px;";
-            if (item.isItalic) {
+            // Normal paragraph or quote block
+            var pBlock = document.createElement(item.isQuote ? "div" : "p");
+            if (item.isQuote) {
+              pBlock.className = "sf-reader-quote-block";
+            } else {
+              pBlock.style.marginBottom = "24px";
+            }
+            if (item.isItalic && !item.isQuote) {
               pBlock.style.fontStyle = "italic";
             }
 
@@ -4131,6 +4813,120 @@
           codeEl.textContent = item.text;
           preWrap.appendChild(codeEl);
           contentWrapper.appendChild(preWrap);
+          return;
+        }
+
+        if (item.type === "accordion") {
+          var accDetails = document.createElement("details");
+          accDetails.className = "sf-reader-accordion";
+          accDetails.style.cssText = "margin: 20px 0; padding: 12px 16px; border-radius: 10px; background: var(--sf-card-bg); border: 1px solid var(--sf-border); font-size: 14.5px;";
+
+          var accSummary = document.createElement("summary");
+          accSummary.style.cssText = "font-weight: 700; color: var(--sf-heading); cursor: pointer; outline: none; user-select: none; display: flex; align-items: center; gap: 8px;";
+          var accIcon = document.createElement("span");
+          accIcon.textContent = "📂";
+          accSummary.appendChild(accIcon);
+          var accSumText = document.createElement("span");
+          accSumText.textContent = item.title || "Chi tiết / Đáp án";
+          accSummary.appendChild(accSumText);
+          accDetails.appendChild(accSummary);
+
+          var accContent = document.createElement("div");
+          accContent.style.cssText = "margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--sf-border); color: var(--sf-text); line-height: 1.7;";
+
+          var accSents = splitTextIntoSentences(item.text);
+          if (accSents.length > 0) {
+            accSents.forEach(function (sText) {
+              var sIdx = readerAudio.sentences.length;
+              readerAudio.sentences.push(sText);
+
+              var sSpan = document.createElement("span");
+              sSpan.className = "sf-reader-sentence";
+              sSpan.style.cssText = "cursor: pointer; padding: 2px 2px; border-radius: 4px; transition: background 0.2s;";
+              sSpan.title = "Click to listen";
+              sSpan.textContent = sText + " ";
+
+              sSpan.addEventListener("mouseenter", function () {
+                if (readerAudio.currentIndex !== sIdx) sSpan.style.background = getEffectiveHighlight().bg;
+              });
+              sSpan.addEventListener("mouseleave", function () {
+                if (readerAudio.currentIndex !== sIdx) sSpan.style.background = "transparent";
+              });
+              sSpan.addEventListener("click", function () {
+                playSentenceAt(sIdx);
+                if (readerAudio.isDictationMode) {
+                  openDictationBox(sIdx);
+                }
+              });
+
+              sentenceElements.push(sSpan);
+              accContent.appendChild(sSpan);
+            });
+          } else {
+            accContent.textContent = item.text;
+          }
+          accDetails.appendChild(accContent);
+          contentWrapper.appendChild(accDetails);
+          return;
+        }
+
+        if (item.type === "takeaways") {
+          var tkBox = document.createElement("div");
+          tkBox.className = "sf-reader-takeaways";
+          tkBox.style.cssText = "margin: 26px 0; padding: 16px 20px; border-radius: 12px; background: rgba(56, 189, 248, 0.06); border: 1px solid var(--sf-border); border-left: 4px solid var(--sf-heading);";
+
+          var tkHeader = document.createElement("div");
+          tkHeader.style.cssText = "font-weight: 700; color: var(--sf-heading); font-size: 15px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;";
+          var tkHIcon = document.createElement("span");
+          tkHIcon.textContent = "⭐";
+          tkHeader.appendChild(tkHIcon);
+          var tkHText = document.createElement("span");
+          tkHText.textContent = "Điểm chính & Tóm tắt nhanh (Key Takeaways)";
+          tkHeader.appendChild(tkHText);
+          tkBox.appendChild(tkHeader);
+
+          var tkList = document.createElement("ul");
+          tkList.style.cssText = "margin: 0; padding-left: 20px; color: var(--sf-text); line-height: 1.7;";
+
+          item.items.forEach(function (tkItemText) {
+            var tkLi = document.createElement("li");
+            tkLi.style.cssText = "margin-bottom: 8px;";
+
+            var tkSents = splitTextIntoSentences(tkItemText);
+            if (tkSents.length > 0) {
+              tkSents.forEach(function (sText) {
+                var sIdx = readerAudio.sentences.length;
+                readerAudio.sentences.push(sText);
+
+                var sSpan = document.createElement("span");
+                sSpan.className = "sf-reader-sentence";
+                sSpan.style.cssText = "cursor: pointer; padding: 2px 2px; border-radius: 4px; transition: background 0.2s;";
+                sSpan.title = "Click to listen";
+                sSpan.textContent = sText + " ";
+
+                sSpan.addEventListener("mouseenter", function () {
+                  if (readerAudio.currentIndex !== sIdx) sSpan.style.background = getEffectiveHighlight().bg;
+                });
+                sSpan.addEventListener("mouseleave", function () {
+                  if (readerAudio.currentIndex !== sIdx) sSpan.style.background = "transparent";
+                });
+                sSpan.addEventListener("click", function () {
+                  playSentenceAt(sIdx);
+                  if (readerAudio.isDictationMode) {
+                    openDictationBox(sIdx);
+                  }
+                });
+
+                sentenceElements.push(sSpan);
+                tkLi.appendChild(sSpan);
+              });
+            } else {
+              tkLi.textContent = tkItemText;
+            }
+            tkList.appendChild(tkLi);
+          });
+          tkBox.appendChild(tkList);
+          contentWrapper.appendChild(tkBox);
           return;
         }
       });
@@ -5205,6 +6001,8 @@
   }
 
   window.toggleReaderMode = toggleReaderMode;
+  window.splitTextIntoSentences = splitTextIntoSentences;
+  window.prepareTextForSpeech = prepareTextForSpeech;
 
   // Register message listener
   if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage) {

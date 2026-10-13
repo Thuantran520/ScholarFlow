@@ -105,7 +105,9 @@ const ALLOWED_HOSTS = new Set([
    "teams.microsoft.com",
    "discord.gg",
    "ipwho.is",
-   "freeipapi.com"
+   "freeipapi.com",
+   "www.youtube-nocookie.com",
+   "player.vimeo.com"
    ]);
 
 function walk(dir, out = []) {
@@ -289,6 +291,67 @@ async function main() {
     check(!/javascript:/i.test(html), "javascript: URLs are stripped");
     check(/A perfectly ordinary heading/.test(html), "the real article text is preserved");
     check(!!window.document.getElementById("sf-close-reader"), "the close button is still built");
+
+    // Sentence splitting regression checks (dates, abbreviations, initials, decimals, titles)
+    const splitFn = window.splitTextIntoSentences;
+    check(typeof splitFn === "function", "splitTextIntoSentences exposed on window");
+    if (typeof splitFn === "function") {
+      const s1 = splitFn("Oct. 1, 2025. School protests continue across the district.");
+      check(s1.length === 2 && s1[0] === "Oct. 1, 2025." && s1[1] === "School protests continue across the district.",
+        `Date abbreviation Oct. 1, 2025 not prematurely split -> got ${JSON.stringify(s1)}`);
+
+      const s2 = splitFn("Dr. Smith met with Mr. Johnson at 10 a.m. in Washington. They discussed AI.");
+      check(s2.length === 2 && s2[0] === "Dr. Smith met with Mr. Johnson at 10 a.m. in Washington." && s2[1] === "They discussed AI.",
+        `Titles & Latin abbreviations not split -> got ${JSON.stringify(s2)}`);
+
+      const s3 = splitFn("TP. HCM là trung tâm kinh tế lớn. GS. TS. Nguyễn Văn A đã phát biểu.");
+      check(s3.length === 2 && s3[0] === "TP. HCM là trung tâm kinh tế lớn." && s3[1] === "GS. TS. Nguyễn Văn A đã phát biểu.",
+        `Vietnamese administrative & academic titles preserved -> got ${JSON.stringify(s3)}`);
+
+      const s4 = splitFn("The constant is 3.14. Please use version 2.5.7 in production.");
+      check(s4.length === 2 && s4[0] === "The constant is 3.14." && s4[1] === "Please use version 2.5.7 in production.",
+        `Decimals and version numbers not split -> got ${JSON.stringify(s4)}`);
+
+      const s5 = splitFn('He said, "Goodbye." Then he left. "Wait!" she cried.');
+      check(s5.length === 3 && s5[0] === 'He said, "Goodbye."' && s5[1] === 'Then he left.' && s5[2] === '"Wait!" she cried.',
+        `Sentences ending with quotation marks split cleanly -> got ${JSON.stringify(s5)}`);
+
+      const s6 = splitFn("这是第一句。这是第二句！第三句？");
+      check(s6.length === 3 && s6[0] === "这是第一句。" && s6[1] === "这是第二句！" && s6[2] === "第三句？",
+        `Asian CJK fullwidth punctuation split cleanly -> got ${JSON.stringify(s6)}`);
+
+      const s7 = splitFn("1. First point. 2. Second point.");
+      check(s7.length === 2 && s7[0] === "1. First point." && s7[1] === "2. Second point.",
+        `Numbered list items preserve item marker -> got ${JSON.stringify(s7)}`);
+    }
+
+    const prepSpeechFn = window.prepareTextForSpeech;
+    check(typeof prepSpeechFn === "function", "prepareTextForSpeech exposed on window");
+    if (typeof prepSpeechFn === "function") {
+      const sp1 = prepSpeechFn("Study [1, 2] on Oct. 1, 2025 by Dr. Smith.", "en");
+      check(!sp1.includes("[1, 2]") && sp1.includes("October") && sp1.includes("first") && sp1.includes("Doctor Smith"),
+        `Speech preparation expands October and Doctor, removes citations -> got ${sp1}`);
+
+      const sp2 = prepSpeechFn("UBND TP. HCM đã phê duyệt kế hoạch [3].", "vi");
+      check(!sp2.includes("[3]") && sp2.includes("Ủy ban nhân dân") && sp2.includes("Thành phố Hồ Chí Minh"),
+        `Vietnamese speech preparation expands UBND and TP. HCM -> got ${sp2}`);
+
+      const spTime = prepSpeechFn("The lecture begins at 10:30 a.m. today.", "en");
+      check(spTime.includes("ten") || spTime.includes("half past"),
+        `Time spoken naturally (ten thirty / half past ten) -> got ${spTime}`);
+
+      const spPhone = prepSpeechFn("Please call (555) 234-5678 immediately.", "en");
+      check(spPhone.includes("five") && spPhone.includes("two") && spPhone.includes("three"),
+        `Phone numbers spoken digit-by-digit -> got ${spPhone}`);
+
+      const spAddr = prepSpeechFn("The office is at 10 Downing St. and Apt. 4B.", "en");
+      check(spAddr.includes("Downing Street") && (spAddr.includes("apartment") || spAddr.includes("flat")),
+        `Address abbreviations expanded (Street, apartment/flat) -> got ${spAddr}`);
+
+      const spMoney = prepSpeechFn("The book costs $15.50 on sale.", "en");
+      check(spMoney.includes("fifteen") && spMoney.includes("fifty"),
+        `Currency spoken naturally (fifteen dollars fifty cents / fifteen fifty) -> got ${spMoney}`);
+    }
   }
 
   finish("security.test.js");
