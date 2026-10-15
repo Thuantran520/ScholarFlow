@@ -214,36 +214,42 @@ function getVisibleTabDataUrl(windowId = null) {
 }
 
 async function captureVisibleScreen() {
-  const delaySec = screenshotSettings.delay || 0;
-  if (delaySec > 0) {
-    showToast("toast_screenshot_timer", "success", [delaySec]);
-    await new Promise(r => setTimeout(r, delaySec * 1000));
-  }
-  const dataUrl = await getVisibleTabDataUrl();
-  if (dataUrl) {
-    const img = await loadImage(dataUrl);
-    const canvas = document.createElement("canvas");
-    canvas.width = img.width;
-    canvas.height = img.height;
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(img, 0, 0);
-
-    // Group A: overlay active redaction masks so the export stays protected
-    try {
-      const res = await fetchRedactMasks();
-      if (res.masks.length && res.viewportWidth > 0) {
-        const scaleX = img.width / res.viewportWidth;
-        const scaleY = img.height / res.viewportHeight;
-        applyRedactionToCanvas(ctx, res.masks, { scaleX, scaleY, viewport: true });
-      }
-    } catch (e) {}
-
-    displayScreenshotResult(dataUrlFromCanvas(canvas));
-    if (!screenshotSettings.autoCopy) {
-      showToast("✓ Đã chụp ảnh màn hình!");
+  const autoHide = (typeof videoSettings !== "undefined" && videoSettings.autoHideSidebar !== false);
+  if (autoHide) document.body.classList.add("sf-capture-minimized");
+  try {
+    const delaySec = screenshotSettings.delay || 0;
+    if (delaySec > 0) {
+      showToast("toast_screenshot_timer", "success", [delaySec]);
+      await new Promise(r => setTimeout(r, delaySec * 1000));
     }
-  } else {
-    showToast("err_004", "error");
+    const dataUrl = await getVisibleTabDataUrl();
+    if (dataUrl) {
+      const img = await loadImage(dataUrl);
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0);
+
+      // Group A: overlay active redaction masks so the export stays protected
+      try {
+        const res = await fetchRedactMasks();
+        if (res.masks.length && res.viewportWidth > 0) {
+          const scaleX = img.width / res.viewportWidth;
+          const scaleY = img.height / res.viewportHeight;
+          applyRedactionToCanvas(ctx, res.masks, { scaleX, scaleY, viewport: true });
+        }
+      } catch (e) {}
+
+      displayScreenshotResult(dataUrlFromCanvas(canvas));
+      if (!screenshotSettings.autoCopy) {
+        showToast("✓ Đã chụp ảnh màn hình!");
+      }
+    } else {
+      showToast("err_004", "error");
+    }
+  } finally {
+    if (autoHide) document.body.classList.remove("sf-capture-minimized");
   }
 }
 
@@ -326,6 +332,8 @@ function loadImage(src) {
 }
 
 async function captureFullPageSmart() {
+  const autoHide = (typeof videoSettings !== "undefined" && videoSettings.autoHideSidebar !== false);
+  if (autoHide) document.body.classList.add("sf-capture-minimized");
   const delaySec = screenshotSettings.delay || 0;
   if (delaySec > 0) {
     showToast("toast_screenshot_full_timer", "success", [delaySec]);
@@ -334,6 +342,7 @@ async function captureFullPageSmart() {
   showToast("⏳ Đang chuẩn bị chụp toàn trang...");
   sendTabMessage({ action: "PREPARE_FULLPAGE_SCROLL" }, async (info) => {
     if (!info) {
+      if (autoHide) document.body.classList.remove("sf-capture-minimized");
       return captureVisibleScreen(); // Fallback
     }
 
@@ -346,6 +355,7 @@ async function captureFullPageSmart() {
     // Capture slice 0 (includes top header/branding naturally)
     const firstDataUrl = await getVisibleTabDataUrl();
     if (!firstDataUrl) {
+      if (autoHide) document.body.classList.remove("sf-capture-minimized");
       return showToast("err_004", "error");
     }
 
@@ -451,6 +461,7 @@ async function captureFullPageSmart() {
     } catch (e) {}
 
     const fullDataUrl = dataUrlFromCanvas(finalCanvas);
+    if (autoHide) document.body.classList.remove("sf-capture-minimized");
     displayScreenshotResult(fullDataUrl);
     if (!screenshotSettings.autoCopy) {
       showToast("✔ Chụp toàn bộ trang hoàn tất, không bị chồng chữ!");

@@ -18,12 +18,19 @@
         </div>
         <span class="custom-switch"><input type="checkbox" id="sec-dm-toggle"><span class="switch-slider"></span></span>
       </label>
-      <label class="switch-row" for="sec-dm-auto" style="margin-bottom:0;">
+      <label class="switch-row" for="sec-dm-auto">
         <div class="switch-row-left">
           <span class="switch-row-title" data-i18n="dm_auto">Bỏ qua trang đã có nền tối</span>
           <span class="switch-row-desc" data-i18n="dm_auto_desc">Tự phát hiện site dark-native (GitHub, YouTube...) để không invert 2 lần</span>
         </div>
         <span class="custom-switch"><input type="checkbox" id="sec-dm-auto"><span class="switch-slider"></span></span>
+      </label>
+      <label class="switch-row" for="sec-dm-preserve" style="margin-bottom:0;">
+        <div class="switch-row-left">
+          <span class="switch-row-title" data-i18n="dm_preserve_brand">Bảo tồn Header, Footer &amp; Logo</span>
+          <span class="switch-row-desc" data-i18n="dm_preserve_brand_desc">Giữ nguyên màu gốc cho thanh Header, Footer và Logo thương hiệu</span>
+        </div>
+        <span class="custom-switch"><input type="checkbox" id="sec-dm-preserve"><span class="switch-slider"></span></span>
       </label>
     </div>
 
@@ -71,6 +78,10 @@
             <button id="btn-sec-dm-site" class="btn-text-small dm-btn" data-i18n="dm_this_on">Tối trang này</button>
             <button id="btn-sec-dm-force" class="btn-text-small dm-btn" data-i18n="dm_force_on">Ép tối</button>
           </span>
+        </div>
+        <div id="sec-dm-detect-row" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; font-size:10px;">
+          <span id="sec-dm-detect-badge" class="dm-detect-badge" style="display:none;"></span>
+          <button id="btn-sec-dm-rescan" class="dm-mini" type="button" style="margin-top:0; margin-left:auto;" data-i18n-title="dm_rescan_tip" title="Quét lại giao diện trang">↺</button>
         </div>
         <div class="dm-tune-group">
           <div class="dm-slider" style="--dm-acc:#94a3b8;">

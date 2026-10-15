@@ -4,7 +4,7 @@
 // brightness slider, per-site 🌙/☀️ + ⚡force, exclusion lists management.
 // Persists sf_darkmode consumed by OS/js/content/darkmode.js (engine v2).
 // ---------------------------------------------------------------------------
-let dmState = { enabled: false, mode: "all", auto: true, bright: 100, theme: "std", onSites: {}, offSites: {}, forceSites: {}, siteTune: {},
+let dmState = { enabled: false, mode: "all", auto: true, preserveBrand: true, bright: 100, theme: "std", onSites: {}, offSites: {}, forceSites: {}, siteTune: {},
   paper: { mode: "none", custom: "#f6ecd9", alpha: 18 },
   typo: { on: false, family: "", size: 100, line: 1.6, ls: 0, ws: 0, width: 0, justify: false },
   reader: { on: false, preset: "news", warm: 55, dark: 20, accent: "#f0a860", txt: "#e8dcc3", bg: "#16130e", flat: false }, darkKnown: {} };
@@ -42,6 +42,50 @@ const DM_READER_PRESETS = [
 ];
 let _dmCurrentHost = "";
 
+function _dmQueryLiveState() {
+  try {
+    if (!_dmCurrentHost) return;
+    ensureActiveTab().then(function (tab) {
+      if (!tab || !tab.id) return;
+      const api = (typeof chrome !== "undefined" && chrome.tabs) ? chrome.tabs : null;
+      if (!api || !api.sendMessage) return;
+      api.sendMessage(tab.id, { action: "DM_GET_STATE" }, function (resp) {
+        if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.lastError) return;
+        if (resp && resp.ok && resp.host === _dmCurrentHost) {
+          if (dmState.darkKnown[_dmCurrentHost] !== resp.darkPage) {
+            dmState.darkKnown[_dmCurrentHost] = resp.darkPage;
+            dmSave();
+          } else {
+            _dmUpdateDetectBadge();
+          }
+        }
+      });
+    }).catch(function () {});
+  } catch (e) {}
+}
+
+function _dmUpdateDetectBadge() {
+  const badge = document.getElementById("sec-dm-detect-badge");
+  if (!badge) return;
+  if (!_dmCurrentHost) {
+    badge.style.display = "none";
+    return;
+  }
+  const isForced = !!dmState.forceSites[_dmCurrentHost];
+  const isNative = (dmState.darkKnown && dmState.darkKnown[_dmCurrentHost] === true);
+  badge.style.display = "inline-flex";
+  if (isForced) {
+    badge.className = "dm-detect-badge dm-detect-forced";
+    badge.textContent = t("dm_detect_forced");
+  } else if (isNative) {
+    badge.className = "dm-detect-badge dm-detect-native";
+    badge.textContent = t("dm_detect_native") + (dmState.auto !== false ? " (" + t("dm_detect_bypassed") + ")" : "");
+  } else {
+    badge.className = "dm-detect-badge dm-detect-light";
+    badge.textContent = t("dm_detect_light");
+  }
+}
+
 function _dmRefreshHost(cb) {
   try {
     ensureActiveTab().then(function (tab) {
@@ -51,6 +95,7 @@ function _dmRefreshHost(cb) {
           ? u.hostname.replace(/^www\./, "").toLowerCase() : "";
       } catch (e) { _dmCurrentHost = ""; }
       if (cb) cb();
+      _dmQueryLiveState();
     }).catch(function () { _dmCurrentHost = ""; if (cb) cb(); });
   } catch (e) { _dmCurrentHost = ""; if (cb) cb(); }
 }
@@ -61,6 +106,7 @@ function dmLoad() {
       dmState.enabled = !!s.enabled;
       dmState.mode = s.mode === "selected" ? "selected" : "all";
       dmState.auto = s.auto !== false;
+      dmState.preserveBrand = s.preserveBrand !== false;
       dmState.bright = Math.min(140, Math.max(60, parseInt(s.bright, 10) || 100));
       dmState.theme = (s.theme === "dim" || s.theme === "warm" || s.theme === "contrast") ? s.theme : "std";
       dmState.onSites = s.onSites || {};
@@ -78,6 +124,7 @@ function dmLoad() {
 function dmSave() {
   storSet({ sf_darkmode: {
     enabled: dmState.enabled, mode: dmState.mode, auto: dmState.auto,
+    preserveBrand: dmState.preserveBrand !== false,
     bright: dmState.bright, theme: dmState.theme,
     onSites: dmState.onSites, offSites: dmState.offSites, forceSites: dmState.forceSites,
     siteTune: dmState.siteTune, paper: dmState.paper, typo: dmState.typo, reader: dmState.reader, darkKnown: dmState.darkKnown || {}
@@ -109,6 +156,8 @@ function dmRender() {
   if (tgl) tgl.checked = !!dmState.enabled;
   const auto = document.getElementById("sec-dm-auto");
   if (auto) auto.checked = !!dmState.auto;
+  const pres = document.getElementById("sec-dm-preserve");
+  if (pres) pres.checked = dmState.preserveBrand !== false;
   const mode = document.getElementById("sec-dm-mode");
   if (mode) mode.value = dmState.mode;
   const theme = document.getElementById("sec-dm-theme");
@@ -137,6 +186,7 @@ function dmRender() {
     force.classList.toggle("is-active", f);
     force.disabled = !_dmCurrentHost || !dmState.enabled;
   }
+  _dmUpdateDetectBadge();
   const tune = (_dmCurrentHost && dmState.siteTune[_dmCurrentHost]) || {};
   [["dm-tune-bright", "b", 100], ["dm-tune-contrast", "c", 100], ["dm-tune-color", "s", 100], ["dm-tune-size", "size", 100]].forEach(function (row) {
     const el = document.getElementById(row[0]);
@@ -312,6 +362,8 @@ onReady(function () {
   if (tgl) tgl.addEventListener("change", function () { dmState.enabled = !!tgl.checked; dmSave(); });
   const auto = document.getElementById("sec-dm-auto");
   if (auto) auto.addEventListener("change", function () { dmState.auto = !!auto.checked; dmSave(); });
+  const pres = document.getElementById("sec-dm-preserve");
+  if (pres) pres.addEventListener("change", function () { dmState.preserveBrand = !!pres.checked; dmSave(); });
   const mode = document.getElementById("sec-dm-mode");
   if (mode) mode.addEventListener("change", function () { dmState.mode = mode.value === "selected" ? "selected" : "all"; dmSave(); });
   const theme = document.getElementById("sec-dm-theme");
@@ -327,6 +379,20 @@ onReady(function () {
   if (btn) btn.addEventListener("click", dmToggleSite);
   const force = document.getElementById("btn-sec-dm-force");
   if (force) force.addEventListener("click", dmToggleForce);
+  const rescanBtn = document.getElementById("btn-sec-dm-rescan");
+  if (rescanBtn) {
+    rescanBtn.addEventListener("click", function () {
+      if (!_dmCurrentHost) return;
+      ensureActiveTab().then(function (tab) {
+        if (!tab || !tab.id) return;
+        const api = (typeof chrome !== "undefined" && chrome.tabs) ? chrome.tabs : null;
+        if (!api || !api.sendMessage) return;
+        api.sendMessage(tab.id, { action: "DM_REFRESH" }, function () {
+          setTimeout(_dmQueryLiveState, 150);
+        });
+      }).catch(function () {});
+    });
+  }
   [["dm-tune-bright", "b"], ["dm-tune-contrast", "c"], ["dm-tune-color", "s"], ["dm-tune-size", "size"]].forEach(function (row) {
     const el = document.getElementById(row[0]);
     if (!el) return;

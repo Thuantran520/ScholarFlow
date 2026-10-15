@@ -12,7 +12,28 @@
   const PAPER_ID = "__sf_paper_overlay";
   const TYPO_ID = "__sf_typo_style";
   const READER_ID = "__sf_reader_style";
-  const IMG_SEL = "img,video,iframe,canvas,picture,embed,object,[style*='background-image'],[class*='logo' i],[id*='logo' i]";
+  const IMG_SEL = [
+    "img",
+    "video",
+    "iframe",
+    "canvas",
+    "embed",
+    "object",
+    "svg[class*='logo' i]",
+    "svg[id*='logo' i]",
+    "[class*='logo' i] svg",
+    "[class*='brand' i] svg",
+    "a[class*='logo' i] img",
+    "div[class*='logo' i] img",
+    "[class*='brand' i] img",
+    "div[style*='background-image']:empty",
+    "span[style*='background-image']:empty",
+    "i[style*='background-image']:empty",
+    "[role='img'][style*='background-image']",
+    "[class*='avatar' i][style*='background-image']",
+    "[class*='thumb' i][style*='background-image']",
+    "[class*='cover' i][style*='background-image']"
+  ].join(",");
   const PAPER_COLORS = { paper: "#f6ecd9", mint: "#e4f2e7", sky: "#e4edf9", amber: "#f9e6c8", rose: "#fbe9ee" };
   let _s = null;
 
@@ -134,21 +155,116 @@
     if (/rgba?\([^,]+,[^,]+,[^,]+,\s*0\)/.test(rgb || "")) return null;
     return (0.2126 * (+m[1]) + 0.7152 * (+m[2]) + 0.0722 * (+m[3])) / 255;
   }
+  function s_force(host) { try { return !!(_s && _s.forceSites && _s.forceSites[host]); } catch (e) { return false; } }
+  const DARK_THEME_ATTRS = ["data-theme", "data-color-scheme", "data-colorscheme", "data-mode", "data-bs-theme", "data-theme-mode", "theme", "color-scheme"];
+  const DARK_THEME_VALUES = /^(dark|dim|black|night|oled|navy|dracula|one-dark|gruvbox-dark|synthwave)$/i;
+  const DARK_CLASS_REGEX = /\b(dark|dark-mode|dark-theme|theme-dark|mode-dark|is-dark|night-mode|theme--dark|dark_theme|theme-night|bp-dark|tw-dark)\b/i;
+
+  function _effectiveCanvasLum() {
+    try {
+      if (document.body && typeof getComputedStyle === "function") {
+        const bLum = _lumOf(getComputedStyle(document.body).backgroundColor);
+        if (bLum !== null) return bLum;
+      }
+      if (document.documentElement && typeof getComputedStyle === "function") {
+        const hLum = _lumOf(getComputedStyle(document.documentElement).backgroundColor);
+        if (hLum !== null) return hLum;
+      }
+      return 1.0; // Browser canvas defaults to white
+    } catch (e) {
+      return 1.0;
+    }
+  }
+
+  function _isNativeDarkTheme() {
+    try {
+      const doc = document.documentElement;
+      const body = document.body;
+      if (!doc) return false;
+
+      // 1. YouTube, GitHub, and platforms with explicit boolean dark attrs
+      if (doc.hasAttribute("dark") || (body && body.hasAttribute("dark"))) return true;
+      if (doc.getAttribute("data-color-mode") === "dark" || (body && body.getAttribute("data-color-mode") === "dark")) return true;
+
+      // 2. Explicit theme attributes with dark values
+      for (let i = 0; i < DARK_THEME_ATTRS.length; i++) {
+        const attr = DARK_THEME_ATTRS[i];
+        const vHtml = doc.getAttribute(attr);
+        if (vHtml && DARK_THEME_VALUES.test(vHtml.trim())) return true;
+        const vBody = body ? body.getAttribute(attr) : null;
+        if (vBody && DARK_THEME_VALUES.test(vBody.trim())) return true;
+      }
+
+      // 3. Explicit dark classes on root / body (with sanity check against white canvas)
+      const cHtml = (doc.className && typeof doc.className === "string") ? doc.className : "";
+      const cBody = (body && body.className && typeof body.className === "string") ? body.className : "";
+      if (cHtml && DARK_CLASS_REGEX.test(cHtml)) {
+        if (_effectiveCanvasLum() < 0.60) return true;
+      }
+      if (cBody && DARK_CLASS_REGEX.test(cBody)) {
+        if (_effectiveCanvasLum() < 0.60) return true;
+      }
+
+      // 4. Meta color-scheme: ONLY if explicitly "only dark" or "dark" (never "light dark")
+      const meta = document.querySelector("meta[name='color-scheme']");
+      if (meta && meta.content) {
+        const c = meta.content.trim().toLowerCase();
+        if (c === "dark" || c === "only dark") return true;
+      }
+    } catch (e) {}
+    return false;
+  }
+
   function _pageIsDark() {
     try {
-      const cands = [document.documentElement, document.body];
-      let dark = 0, tot = 0;
-      try { document.querySelectorAll("main,article,.container,#content,[class*='content' i],[class*='page' i]").forEach(function (e) { if (cands.length < 8) cands.push(e); }); } catch (e) {}
-      for (let i = 0; i < cands.length; i++) {
-        try {
-          const el = cands[i];
-          if (!el || typeof getComputedStyle !== "function") continue;
-          const l = _lumOf(getComputedStyle(el).backgroundColor);
-          if (l === null) continue;
-          tot++; if (l < 0.35) dark++;
-        } catch (e) {}
+      // 1. Explicit native dark mode flags
+      if (_isNativeDarkTheme()) return true;
+
+      // 2. Check effective canvas background & text luminance
+      const canvasLum = _effectiveCanvasLum();
+      let bodyTextLum = null;
+      if (document.body && typeof getComputedStyle === "function") {
+        bodyTextLum = _lumOf(getComputedStyle(document.body).color);
+      } else if (document.documentElement && typeof getComputedStyle === "function") {
+        bodyTextLum = _lumOf(getComputedStyle(document.documentElement).color);
       }
-      return tot > 0 && dark / tot >= 0.6;
+
+      // If canvas is clearly dark (e.g. background < 0.35) and text is light (> 0.45):
+      if (canvasLum < 0.35 && (bodyTextLum === null || bodyTextLum > 0.45)) {
+        return true;
+      }
+
+      // If canvas is clearly light (e.g. background > 0.60):
+      // The canvas is light. Only check if a full-page dominant container covers it.
+      if (canvasLum > 0.60) {
+        let dominantDark = false;
+        try {
+          const mainSel = "main, [role='main'], #root > div, #__next > div, #app > div, article";
+          const mains = document.querySelectorAll(mainSel);
+          const vpArea = (window.innerWidth || 1000) * (window.innerHeight || 800);
+          for (let j = 0; j < mains.length && j < 4; j++) {
+            const el = mains[j];
+            if (!el || typeof getComputedStyle !== "function") continue;
+            const rect = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
+            if (rect && (rect.width * rect.height) > (vpArea * 0.45)) {
+              const cs = getComputedStyle(el);
+              const lum = _lumOf(cs.backgroundColor);
+              const txt = _lumOf(cs.color);
+              if (lum !== null && lum < 0.35 && (txt === null || txt > 0.50)) {
+                dominantDark = true;
+                break;
+              }
+            }
+          }
+        } catch (e) {}
+        return dominantDark;
+      }
+
+      // Intermediate canvas (0.35 <= canvasLum <= 0.60)
+      if (canvasLum < 0.42 && bodyTextLum !== null && bodyTextLum > 0.55) {
+        return true;
+      }
+      return false;
     } catch (e) { return false; }
   }
   function _baseWanted(host, s) {
@@ -203,11 +319,20 @@
     }
     if (r && r.on && !r.flat && s.__toneOnly) {
       const tp = _toneParts(r);
-      return "html{filter:" + tp.top + ";background:#000000!important}" + IMG_SEL + "{filter:" + tp.img + "}" + extra;
+      return "html{filter:" + tp.top + " !important;background:#000000!important}" +
+        "body{filter:none!important;background-color:transparent!important}" +
+        IMG_SEL + "{filter:" + tp.img + " !important}" + extra;
+    }
+    let preserveCss = "";
+    if (s && s.preserveBrand !== false) {
+      preserveCss = "[data-sf-dm-preserve='true'],.navbar-dark,.bg-dark,.header-dark,.mobile-header--inverse{filter:invert(1) hue-rotate(180deg)!important}" +
+        "[data-sf-dm-preserve='true'] img,[data-sf-dm-preserve='true'] video,[data-sf-dm-preserve='true'] iframe,[data-sf-dm-preserve='true'] canvas,[data-sf-dm-preserve='true'] svg,[data-sf-dm-preserve='true'] embed,[data-sf-dm-preserve='true'] object,[data-sf-dm-preserve='true'] [style*='background-image']," +
+        ".navbar-dark img,.navbar-dark svg,.bg-dark img,.bg-dark svg,.header-dark img,.header-dark svg,.mobile-header--inverse img,.mobile-header--inverse svg{filter:none!important}";
     }
     const f = _filters(s);
-    return "html{filter:" + f.top + ";background:#ffffff!important}" +
-      IMG_SEL + "{filter:" + f.img + "}" + extra;
+    return "html{filter:" + f.top + " !important;background:#ffffff!important}" +
+      "body{filter:none!important;background-color:transparent!important}" +
+      IMG_SEL + "{filter:" + f.img + " !important}" + extra + preserveCss;
   }
   function _injectFilter(s) {
     try {
@@ -221,7 +346,50 @@
     } catch (e) {}
   }
   function _removeFilter() {
-    try { const st = document.getElementById(STYLE_ID); if (st) st.remove(); } catch (e) {}
+    try {
+      const st = document.getElementById(STYLE_ID);
+      if (st) st.remove();
+      document.querySelectorAll("[data-sf-dm-preserve]").forEach(function (e) {
+        e.removeAttribute("data-sf-dm-preserve");
+      });
+    } catch (e) {}
+  }
+  function _applyBrandPreservation(s) {
+    try {
+      if (!document.body) return;
+      const enabled = s && s.enabled && _baseWanted(_host(), s) && s.preserveBrand !== false && !s.__toneOnly;
+      if (!enabled) {
+        document.querySelectorAll("[data-sf-dm-preserve]").forEach(function (e) {
+          e.removeAttribute("data-sf-dm-preserve");
+        });
+        return;
+      }
+      const sel = "header, nav, footer, [role='banner'], [role='contentinfo'], .site-header, .site-footer, .navbar, .navigation-bar, .header, .footer, pre, .highlight, [class*='code-block' i]";
+      const cands = document.querySelectorAll(sel);
+      for (let i = 0; i < cands.length; i++) {
+        const el = cands[i];
+        if (!el || el === document.body || el === document.documentElement) continue;
+        if (el.parentElement && el.parentElement.closest && el.parentElement.closest("[data-sf-dm-preserve='true']")) continue;
+        if (typeof getComputedStyle !== "function") continue;
+        const cs = getComputedStyle(el);
+        let lum = _lumOf(cs.backgroundColor);
+        let bgImg = cs.backgroundImage;
+        let hasGradient = bgImg && bgImg !== "none" && /gradient/i.test(bgImg);
+        if (lum === null && !hasGradient && el.firstElementChild) {
+          try {
+            const childCs = getComputedStyle(el.firstElementChild);
+            lum = _lumOf(childCs.backgroundColor);
+            bgImg = childCs.backgroundImage;
+            hasGradient = bgImg && bgImg !== "none" && /gradient/i.test(bgImg);
+          } catch (e2) {}
+        }
+        if ((lum !== null && lum < 0.40) || hasGradient) {
+          el.setAttribute("data-sf-dm-preserve", "true");
+        } else {
+          el.removeAttribute("data-sf-dm-preserve");
+        }
+      }
+    } catch (e) {}
   }
   function _remember(host, isDark) {
     try {
@@ -235,6 +403,45 @@
       if (api) { const p = api.set({ sf_darkmode: _s }); if (p && p.catch) p.catch(function () {}); }
     } catch (e) {}
   }
+  let _darkObserver = null;
+  function _watchThemeChanges() {
+    try {
+      if (typeof MutationObserver === "undefined") return;
+      if (!document.documentElement) return;
+      if (_darkObserver) {
+        if (document.body && !_darkObserver.__hasBody) {
+          try {
+            _darkObserver.observe(document.body, { attributes: true, attributeFilter: ["class", "data-theme", "data-color-scheme", "data-mode", "data-bs-theme", "data-theme-mode", "theme", "style", "color-scheme"] });
+            _darkObserver.__hasBody = true;
+          } catch (e) {}
+        }
+        return;
+      }
+      let timer = null;
+      _darkObserver = new MutationObserver(function () {
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(function () {
+          if (!_s || !_baseWanted(_host(), _s) || _s.auto === false || s_force(_host())) return;
+          const isDark = _pageIsDark();
+          const host = _host();
+          const toneOn = !!(_s.reader && _s.reader.on);
+          const toneS = Object.assign({}, _s, { __toneOnly: true });
+          _remember(host, isDark);
+          if (isDark) {
+            if (toneOn) _injectFilter(toneS); else _removeFilter();
+          } else {
+            _injectFilter(_s);
+            _applyBrandPreservation(_s);
+          }
+        }, 60);
+      });
+      _darkObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "data-theme", "data-color-scheme", "data-mode", "data-bs-theme", "data-theme-mode", "theme", "style", "color-scheme"] });
+      if (document.body) {
+        _darkObserver.observe(document.body, { attributes: true, attributeFilter: ["class", "data-theme", "data-color-scheme", "data-mode", "data-bs-theme", "data-theme-mode", "theme", "style", "color-scheme"] });
+        _darkObserver.__hasBody = true;
+      }
+    } catch (e) {}
+  }
   function _decide() {
     const host = _host();
     const s = _s;
@@ -243,26 +450,38 @@
     if (_applyFlatReader(s)) { _removeFilter(); _applyExtras(); return; }
     const toneOn = !!(s.reader && s.reader.on);
     const toneS = Object.assign({}, s, { __toneOnly: true });
-    if (s.auto !== false && !(s.forceSites && s.forceSites[host])) {
-      const known = (s.darkKnown && host in s.darkKnown) ? s.darkKnown[host] : undefined;
-      if (known === true) {
+    if (s.auto !== false && !s_force(host)) {
+      if (_pageIsDark()) {
+        _remember(host, true);
         if (toneOn) _injectFilter(toneS); else _removeFilter();
-        _applyExtras(); return;
+        _applyExtras();
+        _watchThemeChanges();
+        return;
       }
-      if (known === undefined) {
-        // first visit: can't measure pre-paint — defer ~1 frame, then cache
+      const known = (s.darkKnown && host in s.darkKnown) ? s.darkKnown[host] : undefined;
+      if (known === true && document.readyState === "loading") {
+        if (toneOn) _injectFilter(toneS); else _removeFilter();
+        _applyExtras();
+        _watchThemeChanges();
+        return;
+      }
+      if (known === undefined && document.readyState === "loading") {
+        // First visit at document_start: defer measurement until styles settle
         setTimeout(function () {
           const dark = _pageIsDark();
-          _remember(host, dark);
+          if (document.readyState !== "loading" && document.body) _remember(host, dark);
           if (dark) { if (toneOn) _injectFilter(toneS); else _removeFilter(); }
-          else _injectFilter(s);
+          else { _injectFilter(s); _applyBrandPreservation(s); }
           _applyExtras();
-        }, 16);
+          _watchThemeChanges();
+        }, 32);
         return;
       }
     }
     _injectFilter(s);
+    _applyBrandPreservation(s);
     _applyExtras();
+    _watchThemeChanges();
   }
   function _applyExtras() {
     _applyPaper(_s);
@@ -330,15 +549,45 @@
       if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", function () {
           const host = _host();
-          if (_s && _baseWanted(host, _s) && _s.auto !== false && !(s_force(host))) {
+          if (_s && _baseWanted(host, _s) && _s.auto !== false && !s_force(host)) {
             const dark = _pageIsDark();
             _remember(host, dark);
-            _decide();
+            const toneOn = !!(_s.reader && _s.reader.on);
+            const toneS = Object.assign({}, _s, { __toneOnly: true });
+            if (dark) {
+              if (toneOn) _injectFilter(toneS); else _removeFilter();
+            } else {
+              _injectFilter(_s);
+              _applyBrandPreservation(_s);
+            }
+          } else if (_s && _baseWanted(host, _s)) {
+            _applyBrandPreservation(_s);
           }
+          _watchThemeChanges();
         });
+      } else {
+        _applyBrandPreservation(_s);
+        _watchThemeChanges();
       }
+      window.addEventListener("load", function () {
+        const host = _host();
+        if (_s && _baseWanted(host, _s) && _s.auto !== false && !s_force(host)) {
+          const dark = _pageIsDark();
+          _remember(host, dark);
+          const toneOn = !!(_s.reader && _s.reader.on);
+          const toneS = Object.assign({}, _s, { __toneOnly: true });
+          if (dark) {
+            if (toneOn) _injectFilter(toneS); else _removeFilter();
+          } else {
+            _injectFilter(_s);
+            _applyBrandPreservation(_s);
+          }
+        } else if (_s && _baseWanted(host, _s)) {
+          _applyBrandPreservation(_s);
+        }
+        _watchThemeChanges();
+      });
     }
-    function s_force(host) { try { return !!(_s && _s.forceSites && _s.forceSites[host]); } catch (e) { return false; } }
     const rt = (typeof chrome !== "undefined" && chrome.runtime) ? chrome.runtime : null;
     if (rt && rt.onMessage && rt.onMessage.addListener) {
       rt.onMessage.addListener(function (msg, sender, sendResponse) {

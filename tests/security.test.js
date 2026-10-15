@@ -107,7 +107,8 @@ const ALLOWED_HOSTS = new Set([
    "ipwho.is",
    "freeipapi.com",
    "www.youtube-nocookie.com",
-   "player.vimeo.com"
+   "player.vimeo.com",
+   "tts.mediacdn.vn"
    ]);
 
 function walk(dir, out = []) {

@@ -1682,6 +1682,7 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
       return showToast(`❌ Chưa khởi động được chế độ chọn khung (${why}). Hãy tải lại trang web rồi thử lại.`);
     }
     isElementCapturePicking = true;
+    document.body.classList.add("sf-capture-minimized");
     const banner = document.getElementById("element-cap-active-banner");
     if (banner) banner.style.display = "block";
     showToast("🎯 Hãy rê chuột và click vào bảng hoặc thẻ cần chụp!");
@@ -1689,6 +1690,7 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
 
   document.getElementById("btn-cancel-cap-element")?.addEventListener("click", () => {
     isElementCapturePicking = false;
+    document.body.classList.remove("sf-capture-minimized");
     const banner = document.getElementById("element-cap-active-banner");
     if (banner) banner.style.display = "none";
     sendTabMessage({ action: "STOP_ELEMENT_CAPTURE" });
@@ -1744,6 +1746,10 @@ document.getElementById("btn-export-cookie")?.addEventListener("click", async ()
   document.getElementById("video-pref-resolution")?.addEventListener("change", saveVideoSettings);
   document.getElementById("video-pref-fps")?.addEventListener("change", saveVideoSettings);
   document.getElementById("video-pref-countdown")?.addEventListener("change", saveVideoSettings);
+  document.getElementById("video-pref-autohide-sidebar")?.addEventListener("change", saveVideoSettings);
+  document.getElementById("btn-toggle-recording-collapse")?.addEventListener("click", () => {
+    document.body.classList.toggle("sf-recording-minimized");
+  });
 
   document.getElementById("btn-cancel-countdown")?.addEventListener("click", cancelVideoCountdown);
 
@@ -1776,6 +1782,27 @@ document.getElementById("btn-save-prompter")?.addEventListener("click", () => {
         });
       }
     }, 400);
+  });
+
+  document.getElementById("btn-open-record-studio")?.addEventListener("click", () => {
+    if (typeof saveVideoSettings === "function") saveVideoSettings();
+    const wApi = (typeof browser !== "undefined" && browser.windows) ? browser.windows : (typeof chrome !== "undefined" ? chrome.windows : null);
+    if (wApi) {
+      wApi.create({
+        url: (typeof browser !== "undefined" ? browser.runtime.getURL("OS/html/prompter.html?mode=studio") : chrome.runtime.getURL("OS/html/prompter.html?mode=studio")),
+        type: "popup",
+        width: 380,
+        height: 500
+      });
+    }
+    // Auto-close sidebar so the active tab expands to 100% full 16:9 width
+    setTimeout(() => {
+      try {
+        if (!document.body.classList.contains("is-popup")) {
+          window.close();
+        }
+      } catch (e) {}
+    }, 450);
   });
 
 document.getElementById("btn-quick-swap-tabs")?.addEventListener("click", swapDualTabs);
@@ -1825,16 +1852,19 @@ document.getElementById("btn-quick-swap-tabs")?.addEventListener("click", swapDu
       updateRedactionVisibilityUI();
     } else if (msg.type === "ELEMENT_CAPTURE_CHOSEN") {
       isElementCapturePicking = false;
+      document.body.classList.remove("sf-capture-minimized");
       const banner = document.getElementById("element-cap-active-banner");
       if (banner) banner.style.display = "none";
       captureChosenElement(msg.info);
     } else if (msg.type === "SNIP_RECT_CHOSEN") {
       isElementCapturePicking = false;
+      document.body.classList.remove("sf-capture-minimized");
       const banner = document.getElementById("element-cap-active-banner");
       if (banner) banner.style.display = "none";
       captureSnipRect(msg);
     } else if (msg.type === "ELEMENT_CAPTURE_CANCELLED") {
       isElementCapturePicking = false;
+      document.body.classList.remove("sf-capture-minimized");
       const banner = document.getElementById("element-cap-active-banner");
       if (banner) banner.style.display = "none";
       showToast("Đã dừng chọn đối tượng!");
@@ -2496,91 +2526,255 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
      TAB AUTOFILL
   ------------------------------------------------------------- */
   let savedAutofill = [];
+  let currentAutofillCat = "all";
+  let autofillSearchQuery = "";
+  let autofillAddCat = "academic";
+  let editingAutofillIdx = -1;
+
+  function getAutofillCatLabel(cat) {
+    if (cat === "work") return (window.i18n ? window.i18n.t("autofill_tab_work") : null) || "Công việc";
+    if (cat === "personal") return (window.i18n ? window.i18n.t("autofill_tab_personal") : null) || "Cá nhân";
+    return (window.i18n ? window.i18n.t("autofill_tab_academic") : null) || "Học tập";
+  }
 
   function renderAutofillList() {
     const list = document.getElementById("autofill-list");
     if (!list) return;
     list.textContent = "";
+
+    const badge = document.getElementById("autofill-count-badge");
+    if (badge) {
+      badge.textContent = String(savedAutofill.length);
+    }
+
     const delText = (window.i18n ? window.i18n.t("btn_delete") : null) || "Xóa";
     const copyText = (window.i18n ? window.i18n.t("btn_copy") : null) || "Sao chép";
+    const editText = (window.i18n ? window.i18n.t("autofill_btn_edit") : null) || "Sửa";
+    const saveText = (window.i18n ? window.i18n.t("autofill_btn_save") : null) || "Lưu";
+    const cancelText = (window.i18n ? window.i18n.t("autofill_btn_cancel") : null) || "Hủy";
+    const fillSingleTitle = (window.i18n ? window.i18n.t("autofill_fill_field_title") : null) || "Điền trường này vào ô đang chọn trên trang web";
 
-    savedAutofill.forEach((item, index) => {
-      const div = document.createElement("div");
-      div.className = "feature-card";
-      div.style.display = "flex";
-      div.style.flexDirection = "column";
-      div.style.gap = "6px";
-      div.style.padding = "8px";
-      div.style.position = "relative";
-      const autofillName = document.createElement("div");
-      autofillName.style.fontWeight = "700";
-      autofillName.style.color = "var(--primary)";
-      autofillName.style.fontSize = "12px";
-      autofillName.textContent = item.name;
-
-      const autofillValue = document.createElement("div");
-      autofillValue.style.fontFamily = "ui-monospace, monospace";
-      autofillValue.style.fontSize = "11px";
-      autofillValue.style.background = "rgba(0,0,0,0.2)";
-      autofillValue.style.padding = "4px";
-      autofillValue.style.borderRadius = "4px";
-      autofillValue.style.whiteSpace = "pre-wrap";
-      autofillValue.style.wordBreak = "break-all";
-      autofillValue.textContent = item.value;
-
-      const delAutofillBtn = document.createElement("button");
-      delAutofillBtn.className = "btn-text-small btn-del-autofill";
-      delAutofillBtn.setAttribute("data-index", index);
-      delAutofillBtn.style.position = "absolute";
-      delAutofillBtn.style.top = "8px";
-      delAutofillBtn.style.right = "8px";
-      delAutofillBtn.style.color = "#f87171";
-      delAutofillBtn.textContent = delText;
-
-      const copyAutofillBtn = document.createElement("button");
-      copyAutofillBtn.className = "btn btn-secondary btn-copy-autofill";
-      copyAutofillBtn.setAttribute("data-index", index);
-      copyAutofillBtn.style.padding = "4px 8px";
-      copyAutofillBtn.style.marginTop = "4px";
-      copyAutofillBtn.style.display = "inline-flex";
-      copyAutofillBtn.style.alignItems = "center";
-      copyAutofillBtn.style.justifyContent = "center";
-      copyAutofillBtn.style.gap = "4px";
-      const autofillCopyIcon = document.createElement("span");
-      autofillCopyIcon.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
-      copyAutofillBtn.appendChild(autofillCopyIcon);
-      const autofillCopyLabel = document.createElement("span");
-      autofillCopyLabel.textContent = copyText;
-      copyAutofillBtn.appendChild(autofillCopyLabel);
-
-      div.appendChild(autofillName);
-      div.appendChild(autofillValue);
-      div.appendChild(delAutofillBtn);
-      div.appendChild(copyAutofillBtn);
-      list.appendChild(div);
+    const q = (autofillSearchQuery || "").toLowerCase().trim();
+    const filtered = savedAutofill.map((item, originalIndex) => ({ ...item, originalIndex })).filter(item => {
+      const matchCat = (currentAutofillCat === "all") || ((item.category || "academic") === currentAutofillCat);
+      if (!matchCat) return false;
+      if (!q) return true;
+      const n = (item.name || "").toLowerCase();
+      const v = (item.value || "").toLowerCase();
+      return n.includes(q) || v.includes(q);
     });
 
-    list.querySelectorAll('.btn-del-autofill').forEach(btn => {
-      btn.addEventListener("click", (e) => {
-        const idx = parseInt(e.target.getAttribute("data-index"), 10);
-        savedAutofill.splice(idx, 1);
-        storSet({ "sf_autofill": savedAutofill });
-        renderAutofillList();
-      });
-    });
+    if (filtered.length === 0) {
+      const emptyDiv = document.createElement("div");
+      emptyDiv.className = "autofill-empty-state";
+      if (q) {
+        emptyDiv.textContent = (window.i18n ? window.i18n.t("autofill_empty_search") : null) || "Không tìm thấy trường nào phù hợp với từ khóa.";
+      } else {
+        emptyDiv.textContent = (window.i18n ? window.i18n.t("autofill_empty_list") : null) || "Chưa có dữ liệu nào. Nhấp các gợi ý trên hoặc tự nhập để tạo mẫu điền nhanh!";
+      }
+      list.appendChild(emptyDiv);
+      return;
+    }
 
-    list.querySelectorAll('.btn-copy-autofill').forEach(btn => {
-      btn.addEventListener("click", (e) => {
-        const idx = parseInt(e.target.getAttribute("data-index"), 10);
-        const text = savedAutofill[idx].value;
-        navigator.clipboard.writeText(text).then(() => {
-          const toastCopied = (window.i18n ? window.i18n.t("autofill_toast_copied", null, { name: savedAutofill[idx].name }) : null) || `✓ Đã sao chép: ${savedAutofill[idx].name}`;
-          showToast(toastCopied);
+    filtered.forEach(item => {
+      const idx = item.originalIndex;
+      const card = document.createElement("div");
+      card.className = "autofill-card-item";
+
+      if (editingAutofillIdx === idx) {
+        // --- Inline Edit Mode ---
+        const editBox = document.createElement("div");
+        editBox.className = "autofill-edit-box";
+
+        const editCatSel = document.createElement("div");
+        editCatSel.className = "autofill-category-selector";
+        editCatSel.style.marginBottom = "4px";
+
+        ["academic", "work", "personal"].forEach(c => {
+          const radio = document.createElement("div");
+          radio.className = "autofill-cat-radio" + ((item.category || "academic") === c ? " selected" : "");
+          radio.textContent = getAutofillCatLabel(c);
+          radio.addEventListener("click", () => {
+            editCatSel.querySelectorAll(".autofill-cat-radio").forEach(r => r.classList.remove("selected"));
+            radio.classList.add("selected");
+            item._editCat = c;
+          });
+          editCatSel.appendChild(radio);
         });
-      });
+
+        const editName = document.createElement("input");
+        editName.type = "text";
+        editName.className = "form-control";
+        editName.style.fontSize = "11px";
+        editName.style.padding = "5px";
+        editName.value = item.name;
+
+        const editVal = document.createElement("textarea");
+        editVal.className = "form-control";
+        editVal.style.fontSize = "11px";
+        editVal.style.padding = "5px";
+        editVal.style.minHeight = "44px";
+        editVal.style.resize = "vertical";
+        editVal.value = item.value;
+
+        const editActions = document.createElement("div");
+        editActions.className = "autofill-edit-actions";
+
+        const cancelBtn = document.createElement("button");
+        cancelBtn.className = "btn btn-secondary";
+        cancelBtn.style.padding = "4px 10px";
+        cancelBtn.style.fontSize = "11px";
+        cancelBtn.textContent = cancelText;
+        cancelBtn.addEventListener("click", () => {
+          editingAutofillIdx = -1;
+          renderAutofillList();
+        });
+
+        const saveBtn = document.createElement("button");
+        saveBtn.className = "btn btn-primary";
+        saveBtn.style.padding = "4px 10px";
+        saveBtn.style.fontSize = "11px";
+        saveBtn.textContent = saveText;
+        saveBtn.addEventListener("click", () => {
+          const newName = (editName.value || "").trim();
+          const newVal = (editVal.value || "").trim();
+          if (!newName || !newVal) {
+            showToast((window.i18n ? window.i18n.t("autofill_toast_required") : null) || "Vui lòng nhập đủ tên và giá trị!", "warning");
+            return;
+          }
+          savedAutofill[idx].name = newName;
+          savedAutofill[idx].value = newVal;
+          if (item._editCat) {
+            savedAutofill[idx].category = item._editCat;
+          }
+          storSet({ "sf_autofill": savedAutofill });
+          editingAutofillIdx = -1;
+          renderAutofillList();
+          showToast((window.i18n ? window.i18n.t("autofill_toast_updated") : null) || "✓ Đã cập nhật trường dữ liệu!");
+        });
+
+        editActions.appendChild(cancelBtn);
+        editActions.appendChild(saveBtn);
+
+        editBox.appendChild(editCatSel);
+        editBox.appendChild(editName);
+        editBox.appendChild(editVal);
+        editBox.appendChild(editActions);
+        card.appendChild(editBox);
+      } else {
+        // --- View Mode ---
+        const header = document.createElement("div");
+        header.className = "autofill-card-header";
+
+        const titleGroup = document.createElement("div");
+        titleGroup.className = "autofill-card-title-group";
+
+        const catBadge = document.createElement("span");
+        const itemCat = item.category || "academic";
+        catBadge.className = `autofill-card-cat-badge autofill-cat-badge-${itemCat}`;
+        catBadge.textContent = getAutofillCatLabel(itemCat);
+
+        const nameEl = document.createElement("span");
+        nameEl.className = "autofill-card-name";
+        nameEl.textContent = item.name;
+
+        titleGroup.appendChild(catBadge);
+        titleGroup.appendChild(nameEl);
+
+        const actions = document.createElement("div");
+        actions.className = "autofill-card-actions";
+
+        // ⚡ Fill single field into active webpage input
+        const fillBtn = document.createElement("button");
+        fillBtn.className = "autofill-icon-btn";
+        fillBtn.title = fillSingleTitle;
+        fillBtn.setAttribute("aria-label", fillSingleTitle);
+        const fillSvg = document.createElement("span");
+        fillSvg.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>';
+        fillBtn.appendChild(fillSvg);
+        fillBtn.addEventListener("click", async () => {
+          if (typeof ensureActiveTab === "function") {
+            const tab = await ensureActiveTab();
+            if (tab && tab.id) {
+              if (typeof ensureContentScriptInjected === "function") {
+                await ensureContentScriptInjected(tab.id);
+              }
+              const res = await safeSendTabMessage(tab.id, { action: "AUTOFILL_FILL_ACTIVE_INPUT", value: item.value });
+              if (res && res.success) {
+                showToast(`✓ Đã điền "${item.name}" vào ô đang chọn!`);
+              } else {
+                showToast("Vui lòng nhấp trỏ chuột vào một ô nhập trên trang trước!", "warning");
+              }
+            }
+          }
+        });
+
+        // 📋 Copy Button
+        const copyBtn = document.createElement("button");
+        copyBtn.className = "autofill-icon-btn";
+        copyBtn.title = copyText;
+        copyBtn.setAttribute("aria-label", copyText);
+        const copySvg = document.createElement("span");
+        copySvg.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+        copyBtn.appendChild(copySvg);
+        copyBtn.addEventListener("click", () => {
+          navigator.clipboard.writeText(item.value).then(() => {
+            copyBtn.style.color = "#10b981";
+            setTimeout(() => { copyBtn.style.color = ""; }, 1200);
+            const msg = (window.i18n ? window.i18n.t("autofill_toast_copied") : null) || "✓ Đã sao chép giá trị!";
+            showToast(`${msg}: ${item.name}`);
+          });
+        });
+
+        // ✏️ Edit Button
+        const editBtn = document.createElement("button");
+        editBtn.className = "autofill-icon-btn";
+        editBtn.title = editText;
+        editBtn.setAttribute("aria-label", editText);
+        const editSvg = document.createElement("span");
+        editSvg.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>';
+        editBtn.appendChild(editSvg);
+        editBtn.addEventListener("click", () => {
+          editingAutofillIdx = idx;
+          renderAutofillList();
+        });
+
+        // 🗑️ Delete Button
+        const delBtn = document.createElement("button");
+        delBtn.className = "autofill-icon-btn btn-del";
+        delBtn.title = delText;
+        delBtn.setAttribute("aria-label", delText);
+        const delSvg = document.createElement("span");
+        delSvg.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>';
+        delBtn.appendChild(delSvg);
+        delBtn.addEventListener("click", () => {
+          savedAutofill.splice(idx, 1);
+          storSet({ "sf_autofill": savedAutofill });
+          renderAutofillList();
+          showToast((window.i18n ? window.i18n.t("autofill_toast_deleted") : null) || "✓ Đã xóa trường dữ liệu!");
+        });
+
+        actions.appendChild(fillBtn);
+        actions.appendChild(copyBtn);
+        actions.appendChild(editBtn);
+        actions.appendChild(delBtn);
+
+        header.appendChild(titleGroup);
+        header.appendChild(actions);
+
+        const valEl = document.createElement("div");
+        valEl.className = "autofill-card-value";
+        valEl.textContent = item.value;
+
+        card.appendChild(header);
+        card.appendChild(valEl);
+      }
+
+      list.appendChild(card);
     });
   }
 
+  // --- Add New Item Form ---
   const btnAddAutofill = document.getElementById("btn-autofill-add");
   if (btnAddAutofill) {
     btnAddAutofill.addEventListener("click", () => {
@@ -2593,13 +2787,203 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         showToast(warnMsg, "warning");
         return;
       }
-      savedAutofill.push({ name, value });
+      savedAutofill.push({ name, value, category: autofillAddCat });
       storSet({ "sf_autofill": savedAutofill });
       nameInput.value = "";
       valInput.value = "";
       renderAutofillList();
-      const addedMsg = (window.i18n ? window.i18n.t("autofill_toast_added") : null) || "Đã thêm trường Autofill mới!";
+      const addedMsg = (window.i18n ? window.i18n.t("autofill_toast_added") : null) || "✓ Đã lưu mẫu thông tin!";
       showToast(addedMsg);
+    });
+  }
+
+  // Add Category Selector Pills
+  const addCatSelector = document.getElementById("autofill-add-cat-selector");
+  if (addCatSelector) {
+    addCatSelector.querySelectorAll(".autofill-cat-radio").forEach(radio => {
+      radio.addEventListener("click", () => {
+        addCatSelector.querySelectorAll(".autofill-cat-radio").forEach(r => r.classList.remove("selected"));
+        radio.classList.add("selected");
+        autofillAddCat = radio.getAttribute("data-cat") || "academic";
+      });
+    });
+  }
+
+  // --- Category Filter Tabs ---
+  const catTabs = document.getElementById("autofill-cat-tabs");
+  if (catTabs) {
+    catTabs.querySelectorAll(".autofill-cat-tab").forEach(tab => {
+      tab.addEventListener("click", () => {
+        catTabs.querySelectorAll(".autofill-cat-tab").forEach(t => t.classList.remove("active"));
+        tab.classList.add("active");
+        currentAutofillCat = tab.getAttribute("data-cat") || "all";
+        renderAutofillList();
+      });
+    });
+  }
+
+  // --- Quick Presets Chips ---
+  document.querySelectorAll(".autofill-preset-chip").forEach(chip => {
+    chip.addEventListener("click", () => {
+      const nameInput = document.getElementById("autofill-name");
+      const valInput = document.getElementById("autofill-value");
+      const cat = chip.getAttribute("data-cat") || "academic";
+      const txt = chip.textContent.replace(/^\+\s*/, "").trim();
+
+      if (nameInput) {
+        nameInput.value = txt;
+      }
+      autofillAddCat = cat;
+      if (addCatSelector) {
+        addCatSelector.querySelectorAll(".autofill-cat-radio").forEach(r => {
+          if (r.getAttribute("data-cat") === cat) r.classList.add("selected");
+          else r.classList.remove("selected");
+        });
+      }
+      if (valInput) {
+        valInput.focus();
+      }
+    });
+  });
+
+  // --- Search Input ---
+  const searchInput = document.getElementById("autofill-search");
+  if (searchInput) {
+    searchInput.addEventListener("input", (e) => {
+      autofillSearchQuery = e.target.value;
+      renderAutofillList();
+    });
+  }
+
+  // --- ⚡ In-Page Form Fill ---
+  const btnFillPage = document.getElementById("btn-autofill-fill-page");
+  if (btnFillPage) {
+    btnFillPage.addEventListener("click", async () => {
+      if (!savedAutofill.length) {
+        showToast((window.i18n ? window.i18n.t("autofill_empty_list") : null) || "Vui lòng thêm dữ liệu trước khi điền!", "warning");
+        return;
+      }
+      if (typeof ensureActiveTab === "function") {
+        const tab = await ensureActiveTab();
+        if (!tab || !tab.id) {
+          showToast("Không tìm thấy tab trang web hiện tại!", "warning");
+          return;
+        }
+        if (typeof ensureContentScriptInjected === "function") {
+          await ensureContentScriptInjected(tab.id);
+        }
+        btnFillPage.disabled = true;
+        btnFillPage.style.opacity = "0.7";
+        try {
+          const res = await safeSendTabMessage(tab.id, {
+            action: "AUTOFILL_FILL_PAGE",
+            fields: savedAutofill
+          }, 4000);
+          if (res && res.success) {
+            if (res.count > 0) {
+              const successMsg = (window.i18n ? window.i18n.t("autofill_toast_fill_success", [res.count]) : null) || `✓ Đã tự động điền ${res.count} trường vào trang web!`;
+              showToast(successMsg);
+            } else {
+              const noneMsg = (window.i18n ? window.i18n.t("autofill_toast_fill_none") : null) || "Không tìm thấy trường nào phù hợp trên trang web hiện tại.";
+              showToast(noneMsg, "warning");
+            }
+          } else {
+            const noneMsg = (window.i18n ? window.i18n.t("autofill_toast_fill_none") : null) || "Không thể kết nối hoặc trang không hỗ trợ điền tự động.";
+            showToast(noneMsg, "warning");
+          }
+        } finally {
+          btnFillPage.disabled = false;
+          btnFillPage.style.opacity = "";
+        }
+      }
+    });
+  }
+
+  // --- 📋 Copy All ---
+  const btnAutofillCopyAll = document.getElementById("btn-autofill-copy-all");
+  if (btnAutofillCopyAll) {
+    btnAutofillCopyAll.addEventListener("click", () => {
+      if (!savedAutofill.length) {
+        showToast((window.i18n ? window.i18n.t("autofill_empty_list") : null) || "Chưa có dữ liệu nào để sao chép!", "warning");
+        return;
+      }
+      const text = savedAutofill.map(item => `${item.name}: ${item.value}`).join("\n");
+      navigator.clipboard.writeText(text).then(() => {
+        showToast((window.i18n ? window.i18n.t("autofill_toast_copy_all") : null) || "✓ Đã sao chép tất cả trường dữ liệu!");
+      });
+    });
+  }
+
+  // --- 📂 Export JSON ---
+  const btnAutofillExport = document.getElementById("btn-autofill-export");
+  if (btnAutofillExport) {
+    btnAutofillExport.addEventListener("click", () => {
+      if (!savedAutofill.length) {
+        showToast((window.i18n ? window.i18n.t("autofill_empty_list") : null) || "Chưa có dữ liệu để xuất!", "warning");
+        return;
+      }
+      try {
+        const jsonStr = JSON.stringify(savedAutofill, null, 2);
+        const blob = new Blob([jsonStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `scholarflow_autofill_${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast("✓ Đã xuất tập tin JSON dự phòng!");
+      } catch (e) {
+        showToast("Lỗi xuất dữ liệu: " + e.message, "warning");
+      }
+    });
+  }
+
+  // --- 📥 Import JSON ---
+  const btnAutofillImport = document.getElementById("btn-autofill-import-btn");
+  const autofillImportFile = document.getElementById("autofill-import-file");
+  if (btnAutofillImport && autofillImportFile) {
+    btnAutofillImport.addEventListener("click", () => {
+      autofillImportFile.click();
+    });
+
+    autofillImportFile.addEventListener("change", (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        try {
+          const parsed = JSON.parse(evt.target.result);
+          if (!Array.isArray(parsed)) {
+            showToast((window.i18n ? window.i18n.t("autofill_import_invalid") : null) || "Dữ liệu JSON không hợp lệ!", "warning");
+            return;
+          }
+          let count = 0;
+          parsed.forEach(p => {
+            if (p && p.name && p.value) {
+              const exists = savedAutofill.some(item => item.name === p.name);
+              if (!exists) {
+                savedAutofill.push({
+                  name: String(p.name).trim(),
+                  value: String(p.value).trim(),
+                  category: p.category || "academic"
+                });
+                count++;
+              }
+            }
+          });
+          storSet({ "sf_autofill": savedAutofill });
+          renderAutofillList();
+          const succMsg = (window.i18n ? window.i18n.t("autofill_import_success", [count]) : null) || `✓ Đã nhập thành công ${count} trường dữ liệu!`;
+          showToast(succMsg);
+        } catch (err) {
+          showToast((window.i18n ? window.i18n.t("autofill_import_invalid") : null) || "Tập tin JSON không hợp lệ!", "warning");
+        } finally {
+          autofillImportFile.value = "";
+        }
+      };
+      reader.readAsText(file);
     });
   }
 

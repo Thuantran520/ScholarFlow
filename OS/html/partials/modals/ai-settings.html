@@ -18,7 +18,7 @@
           <input type="password" id="ai-key-input" class="form-control" style="display:none;">
           <input type="password" id="ai-key-input-modal" class="form-control" style="display:none;">
           <div style="display:flex; gap:6px; margin-top:8px;">
-            <button type="button" class="btn btn-secondary" id="ai-btn-toggle-key" title="Hiện/ẩn key" data-i18n-title="ai_btn_show_key">👁</button> <button type="button" class="btn btn-primary" id="ai-btn-save-key" style="flex:1;" data-i18n="ai_btn_save_all_keys">Lưu tất cả key</button>
+            <button type="button" class="btn btn-secondary ai-btn-toggle-key" id="ai-btn-toggle-key" title="Hiện/ẩn key" data-i18n-title="ai_btn_show_key" style="display:inline-flex; align-items:center; justify-content:center; padding:5px 9px;"><svg class="ai-key-eye-open" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg><svg class="ai-key-eye-off" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none;"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg></button> <button type="button" class="btn btn-primary" id="ai-btn-save-key" style="flex:1;" data-i18n="ai_btn_save_all_keys">Lưu tất cả key</button>
             <button type="button" class="btn btn-secondary" id="ai-btn-clear-key" data-i18n="ai_btn_clear_key2">Xóa</button>
             <button type="button" class="btn btn-secondary" id="ai-btn-open-provider" data-i18n="ai_btn_open_provider">Lấy key ↗</button>
           </div>
@@ -84,25 +84,34 @@
         <div class="ai-settings-section">
           <div class="ai-field-label" data-i18n="ai_prompt_title">Prompt</div>
           <label class="ai-field-sub" data-i18n="ai_prompt_summary_label">Tóm tắt</label>
-          <textarea id="ai-prompt-summary" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;"></textarea>
+          <textarea id="ai-prompt-summary" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;" data-i18n-placeholder="ai_prompt_summary" placeholder="Tóm tắt trang này..."></textarea>
           <label class="ai-field-sub" data-i18n="ai_prompt_qa_label">Hỏi đáp</label>
-          <textarea id="ai-prompt-qa" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;"></textarea>
+          <textarea id="ai-prompt-qa" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;" data-i18n-placeholder="ai_prompt_qa" placeholder="Trả lời câu hỏi dựa trên nội dung trang..."></textarea>
           <label class="ai-field-sub" data-i18n="ai_prompt_explain_label">Giải thích</label>
-          <textarea id="ai-prompt-explain" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;"></textarea>
+          <textarea id="ai-prompt-explain" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;" data-i18n-placeholder="ai_prompt_explain" placeholder="Giải thích đoạn bôi đen..."></textarea>
           <label class="ai-field-sub" data-i18n="ai_prompt_translate_label">Dịch</label>
-          <textarea id="ai-prompt-translate" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;"></textarea>
+          <textarea id="ai-prompt-translate" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;" data-i18n-placeholder="ai_prompt_translate" placeholder="Dịch nội dung chính..."></textarea>
           <label class="ai-field-sub" data-i18n="ai_prompt_outline_label">Outline</label>
-          <textarea id="ai-prompt-outline" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;"></textarea>
+          <textarea id="ai-prompt-outline" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;" data-i18n-placeholder="ai_prompt_outline" placeholder="Tạo outline..."></textarea>
           <label class="ai-field-sub" data-i18n="ai_prompt_cite_label">Gợi ý</label>
-          <textarea id="ai-prompt-cite" class="form-control" rows="2" style="font-size:11px;"></textarea>
+          <textarea id="ai-prompt-cite" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;" data-i18n-placeholder="ai_prompt_cite" placeholder="Gợi ý câu hỏi nghiên cứu..."></textarea>
           <label class="ai-field-sub" data-i18n="ai_prompt_answer_label">Giải đáp án</label>
-          <textarea id="ai-prompt-answer" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;"></textarea>
+          <textarea id="ai-prompt-answer" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;" data-i18n-placeholder="ai_prompt_answer" placeholder="Giải các câu trắc nghiệm..."></textarea>
           <label class="ai-field-sub" data-i18n="ai_prompt_papers_label">Tài liệu</label>
-          <textarea id="ai-prompt-papers" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;"></textarea>
-<label class="ai-field-sub" data-i18n="ai_prompt_tabs_label">Tóm tắt tab</label>
-          <textarea id="ai-prompt-tabs" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;"></textarea>
+          <textarea id="ai-prompt-papers" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;" data-i18n-placeholder="ai_prompt_papers" placeholder="Dựa vào danh sách tài liệu..."></textarea>
+          <label class="ai-field-sub" data-i18n="ai_prompt_tabs_label">Tóm tắt tab</label>
+          <textarea id="ai-prompt-tabs" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;" data-i18n-placeholder="ai_prompt_tabs" placeholder="Tóm tắt từng tab đang mở..."></textarea>
           <button type="button" class="btn btn-secondary" id="ai-btn-save-prompts" style="width:100%; margin-top:8px;" data-i18n="ai_btn_save_prompts">Lưu prompt</button>
           <button type="button" class="btn btn-secondary" id="ai-btn-reset-prompts" style="width:100%; margin-top:6px;" data-i18n="ai_btn_reset_prompts">Khôi phục</button>
+
+          <div class="ai-custom-prompt-adder" style="margin-top:10px; padding:8px; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.08); border-radius:6px;">
+            <div style="font-weight:600; font-size:11px; margin-bottom:6px; color:#e2e8f0;" data-i18n="ai_custom_prompts_title">Prompt tùy chỉnh thêm</div>
+            <input type="text" id="ai-new-prompt-name" class="form-control" style="font-size:11px; margin-bottom:6px;" placeholder="Tên prompt (ví dụ: Sửa ngữ pháp)" data-i18n-placeholder="ai_new_prompt_name_placeholder">
+            <textarea id="ai-new-prompt-content" class="form-control" rows="2" style="font-size:11px; margin-bottom:6px;" placeholder="Nội dung chỉ thị prompt..." data-i18n-placeholder="ai_new_prompt_content_placeholder"></textarea>
+            <button type="button" class="btn btn-secondary" id="ai-btn-add-custom-prompt" style="width:100%; font-size:11px;" data-i18n="ai_btn_add_custom_prompt">+ Thêm prompt mới</button>
+            <div id="ai-custom-prompts-list" style="margin-top:8px; display:flex; flex-direction:column; gap:4px; max-height:120px; overflow-y:auto;"></div>
+          </div>
+
           <button type="button" class="btn btn-secondary" id="ai-btn-copy-convo" style="width:100%; margin-top:6px;" data-i18n="ai_btn_copy_convo" title="Copy cả hội thoại" data-i18n-title="ai_btn_copy_convo">📄 Copy cả hội thoại (Markdown)</button>
         </div>
         <div class="ai-settings-section">

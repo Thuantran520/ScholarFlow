@@ -1,18 +1,84 @@
-<div class="feature-title" data-i18n="autofill_title">Tự Động Điền Data</div>
-    <p style="color:var(--text-muted); font-size:11.5px; margin-bottom:10px; line-height:1.4;" data-i18n="autofill_desc">
-      Thêm các trường dữ liệu hay dùng (Email, SĐT, Địa chỉ, Mã số thuế...) để điền nhanh vào form trên web.
-    </p>
+<div class="autofill-container">
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:2px;">
+    <div class="feature-title" style="margin-bottom:0;" data-i18n="autofill_title">Mẫu thông tin tự điền nhanh</div>
+    <span id="autofill-count-badge" style="font-size:10.5px; font-weight:600; color:var(--primary); background:rgba(var(--primary-rgb),0.12); padding:2px 8px; border-radius:12px; border:1px solid rgba(var(--primary-rgb),0.25);">0</span>
+  </div>
+  <p style="color:var(--text-muted); font-size:11.5px; margin-bottom:8px; line-height:1.4;" data-i18n="autofill_desc">
+    Lưu trữ sẵn họ tên, email, trường/viện, mã số SV/học viên để điền nhanh vào form khảo sát, đăng ký hội thảo chỉ với 1 cú nhấp.
+  </p>
 
-    <!-- New Item Form -->
-    <div style="background:rgba(15,23,42,0.65); border:1px solid var(--card-border); border-radius:8px; padding:10px; margin-bottom:10px;">
-      <div style="font-size:11.5px; font-weight:700; color:var(--primary); margin-bottom:8px;" data-i18n="autofill_add_header">Thêm trường mới</div>
-      <input type="text" class="form-control" id="autofill-name" placeholder="Tên trường (vd: Email công ty)" data-i18n-placeholder="autofill_name_placeholder" style="margin-bottom:6px; font-size:11px; padding:6px;">
-      <textarea class="form-control" id="autofill-value" placeholder="Giá trị (vd: contact@company.com)" data-i18n-placeholder="autofill_val_placeholder" style="margin-bottom:8px; font-size:11px; padding:6px; min-height:40px; resize:vertical;"></textarea>
-      <button class="btn btn-primary" id="btn-autofill-add" style="width:100%; padding:7px;" data-i18n="autofill_btn_add">Thêm vào danh sách</button>
+  <!-- Action Bar -->
+  <div class="autofill-action-bar">
+    <button class="autofill-btn-primary" id="btn-autofill-fill-page" title="Tự động điền dữ liệu vào form của trang web hiện tại">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+      <span data-i18n="autofill_btn_fill_page">⚡ Điền vào trang web</span>
+    </button>
+    <div class="autofill-action-group">
+      <button class="autofill-tool-btn" id="btn-autofill-copy-all" title="Sao chép toàn bộ trường">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        <span data-i18n="autofill_btn_copy_all">Sao chép tất cả</span>
+      </button>
+      <button class="autofill-tool-btn" id="btn-autofill-export" title="Xuất dữ liệu dự phòng JSON">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        <span data-i18n="autofill_btn_export">Xuất JSON</span>
+      </button>
+      <button class="autofill-tool-btn" id="btn-autofill-import-btn" title="Nhập dữ liệu từ file JSON">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+        <span data-i18n="autofill_btn_import">Nhập JSON</span>
+      </button>
+      <input type="file" id="autofill-import-file" accept=".json" style="display:none;">
     </div>
+  </div>
 
-    <!-- Saved Items List -->
-    <div class="feature-title" style="font-size:12px; margin-top:10px;" data-i18n="autofill_list_title">Danh sách dữ liệu mẫu</div>
-    <div id="autofill-list" style="display: flex; flex-direction: column; gap: 8px;">
-      <!-- JavaScript will populate items here -->
+  <!-- Category Filter Tabs -->
+  <div class="autofill-cat-tabs" id="autofill-cat-tabs">
+    <div class="autofill-cat-tab active" data-cat="all" data-i18n="autofill_tab_all">Tất cả</div>
+    <div class="autofill-cat-tab" data-cat="academic" data-i18n="autofill_tab_academic">Học tập</div>
+    <div class="autofill-cat-tab" data-cat="work" data-i18n="autofill_tab_work">Công việc</div>
+    <div class="autofill-cat-tab" data-cat="personal" data-i18n="autofill_tab_personal">Cá nhân</div>
+  </div>
+
+  <!-- Quick Presets -->
+  <div class="autofill-presets-wrapper">
+    <div class="autofill-presets-header">
+      <span data-i18n="autofill_presets_title">Gợi ý thêm nhanh:</span>
     </div>
+    <div class="autofill-presets-chips">
+      <div class="autofill-preset-chip" data-preset="fullname" data-cat="academic" data-i18n="autofill_preset_fullname">+ Họ và tên</div>
+      <div class="autofill-preset-chip" data-preset="email" data-cat="academic" data-i18n="autofill_preset_email">+ Email trường (.edu)</div>
+      <div class="autofill-preset-chip" data-preset="phone" data-cat="personal" data-i18n="autofill_preset_phone">+ Số điện thoại</div>
+      <div class="autofill-preset-chip" data-preset="studentid" data-cat="academic" data-i18n="autofill_preset_studentid">+ Mã số sinh viên (MSSV)</div>
+      <div class="autofill-preset-chip" data-preset="university" data-cat="academic" data-i18n="autofill_preset_university">+ Trường / Viện</div>
+      <div class="autofill-preset-chip" data-preset="faculty" data-cat="academic" data-i18n="autofill_preset_faculty">+ Khoa / Chuyên ngành</div>
+      <div class="autofill-preset-chip" data-preset="address" data-cat="personal" data-i18n="autofill_preset_address">+ Địa chỉ</div>
+      <div class="autofill-preset-chip" data-preset="citizenid" data-cat="personal" data-i18n="autofill_preset_citizenid">+ Số CCCD / CMND</div>
+      <div class="autofill-preset-chip" data-preset="scholar" data-cat="academic" data-i18n="autofill_preset_scholar">+ Google Scholar / ORCID</div>
+      <div class="autofill-preset-chip" data-preset="linkedin" data-cat="work" data-i18n="autofill_preset_linkedin">+ LinkedIn / Portfolio</div>
+    </div>
+  </div>
+
+  <!-- Add New Item Form -->
+  <div class="autofill-add-card">
+    <div style="display:flex; align-items:center; justify-content:space-between;">
+      <div style="font-size:11.5px; font-weight:700; color:var(--primary);" data-i18n="autofill_add_header">Thêm thông tin mới</div>
+      <div class="autofill-category-selector" id="autofill-add-cat-selector">
+        <div class="autofill-cat-radio selected" data-cat="academic" data-i18n="autofill_tab_academic">Học tập</div>
+        <div class="autofill-cat-radio" data-cat="work" data-i18n="autofill_tab_work">Công việc</div>
+        <div class="autofill-cat-radio" data-cat="personal" data-i18n="autofill_tab_personal">Cá nhân</div>
+      </div>
+    </div>
+    <input type="text" class="form-control" id="autofill-name" placeholder="Tên trường (ví dụ: Họ và tên, Email SV, MSSV...)" data-i18n-placeholder="autofill_name_placeholder" style="font-size:11px; padding:6px;">
+    <textarea class="form-control" id="autofill-value" placeholder="Giá trị điền (ví dụ: Nguyễn Văn A, nva@university.edu.vn...)" data-i18n-placeholder="autofill_val_placeholder" style="font-size:11px; padding:6px; min-height:44px; resize:vertical;"></textarea>
+    <button class="btn btn-primary" id="btn-autofill-add" style="width:100%; padding:7px;" data-i18n="autofill_btn_add">Thêm mục</button>
+  </div>
+
+  <!-- Search & List -->
+  <div class="autofill-search-row">
+    <input type="text" class="autofill-search-input" id="autofill-search" placeholder="Tìm kiếm trường dữ liệu..." data-i18n-placeholder="autofill_search_placeholder">
+  </div>
+
+  <!-- Saved Items List -->
+  <div id="autofill-list" style="display: flex; flex-direction: column; gap: 8px;">
+    <!-- Populated dynamically by JavaScript -->
+  </div>
+</div>

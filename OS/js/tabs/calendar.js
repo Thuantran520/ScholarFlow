@@ -640,6 +640,51 @@ function calBuildEventRow(item, isAllDay) {
     topRow.appendChild(chip);
   }
 
+  if (item.ev.category && item.ev.category !== "general") {
+    const catMap = {
+      study: { icon: "🎓", label: window.i18n ? window.i18n.t("cal_cat_study") : "Học tập" },
+      work: { icon: "💼", label: window.i18n ? window.i18n.t("cal_cat_work") : "Công việc" },
+      exam: { icon: "📝", label: window.i18n ? window.i18n.t("cal_cat_exam") : "Thi cử" },
+      personal: { icon: "☕", label: window.i18n ? window.i18n.t("cal_cat_personal") : "Cá nhân" }
+    };
+    const cInfo = catMap[item.ev.category];
+    if (cInfo) {
+      const catBadge = document.createElement("span");
+      catBadge.className = "cal-event-cat-badge";
+      catBadge.textContent = cInfo.icon + " " + cInfo.label;
+      topRow.appendChild(catBadge);
+    }
+  }
+
+  if (item.ev.priority && item.ev.priority !== "normal") {
+    const priBadge = document.createElement("span");
+    priBadge.className = "cal-event-pri-badge is-" + item.ev.priority;
+    priBadge.textContent = item.ev.priority === "urgent" ? "🔴 " + (window.i18n ? window.i18n.t("cal_pri_urgent") : "Khẩn cấp") : "🟡 " + (window.i18n ? window.i18n.t("cal_pri_important") : "Quan trọng");
+    topRow.appendChild(priBadge);
+  }
+
+  if (item.ev.remind && item.ev.remind !== "none") {
+    const remBadge = document.createElement("span");
+    remBadge.className = "cal-event-rem-badge";
+    const remMap = { "5m": "5p", "15m": "15p", "30m": "30p", "1h": "1h", "1d": "1d" };
+    remBadge.textContent = "⏰ " + (remMap[item.ev.remind] || item.ev.remind);
+    topRow.appendChild(remBadge);
+  }
+
+  const isManual = item.feedId === "cal_manual" || (feed && feed.id === "cal_manual") || (item.ev.uid && item.ev.uid.indexOf("m_") === 0);
+  if (isManual) {
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "cal-event-del-btn";
+    delBtn.title = window.i18n ? window.i18n.t("cal_event_delete_btn") : "Xóa sự kiện";
+    delBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+    delBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      calDeleteManualEvent(item.ev.uid);
+    });
+    topRow.appendChild(delBtn);
+  }
+
   row.appendChild(topRow);
 
   const body = document.createElement("div");
@@ -1980,11 +2025,19 @@ function calAddManualEvent() {
     }
     rrule = rr;
   }
+  const descVal = g("cal-manual-desc") ? (g("cal-manual-desc").value || "").trim() : "";
+  const catVal = g("cal-manual-category") ? g("cal-manual-category").value : "study";
+  const priVal = g("cal-manual-priority") ? g("cal-manual-priority").value : "normal";
+  const remVal = g("cal-manual-remind") ? g("cal-manual-remind").value : "none";
+
   const eve = {
     uid: "m_" + Date.now() + "_" + Math.floor(Math.random() * 100000),
     summary: title,
     location: (g("cal-manual-loc").value || "").trim(),
-    description: "",
+    description: descVal,
+    category: catVal,
+    priority: priVal,
+    remind: remVal,
     url: "",
     start: { key: startDate, time: allDay ? null : (startTime || "00:00") },
     end: null,
@@ -2002,10 +2055,28 @@ function calAddManualEvent() {
   calPersist();
   g("cal-manual-title").value = "";
   g("cal-manual-loc").value = "";
+  if (g("cal-manual-desc")) g("cal-manual-desc").value = "";
+  if (g("cal-manual-category")) g("cal-manual-category").value = "study";
+  if (g("cal-manual-priority")) g("cal-manual-priority").value = "normal";
+  if (g("cal-manual-remind")) g("cal-manual-remind").value = "15m";
   calCloseEventModal();
   showToast(window.i18n ? window.i18n.t("cal_toast_manual_created") : "✓ Đã thêm sự kiện thủ công");
   calRenderFeedList();
   calRenderCalendar();
+  if (typeof calRenderDayView === "function" && calSelectedKey) {
+    calRenderDayView(calSelectedKey);
+  }
+}
+
+function calDeleteManualEvent(uid) {
+  if (!calData["cal_manual"]) return;
+  calData["cal_manual"] = calData["cal_manual"].filter(function (e) { return e.uid !== uid; });
+  calPersist();
+  showToast(window.i18n ? window.i18n.t("cal_toast_manual_deleted") : "✓ Đã xóa sự kiện");
+  calRenderCalendar();
+  if (typeof calRenderDayView === "function" && calSelectedKey) {
+    calRenderDayView(calSelectedKey);
+  }
 }
 
 function calCreateDemoMeeting() {

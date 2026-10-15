@@ -51,11 +51,13 @@ function playBeep(freq = 520, duration = 140) {
 let isVideoCountdownActive = false;
 let isVideoCountdownCancelled = false;
 
-function cleanUpCountdown() {
+async function cleanUpCountdown() {
   isVideoCountdownActive = false;
   const countdownOverlay = document.getElementById("video-countdown-overlay");
   if (countdownOverlay) countdownOverlay.style.display = "none";
-  sendTabMessage({ action: "HIDE_PAGE_COUNTDOWN" });
+  try {
+    await sendTabMessage({ action: "HIDE_PAGE_COUNTDOWN" });
+  } catch (e) {}
 }
 
 function cancelVideoCountdown() {
@@ -78,6 +80,7 @@ function loadVideoSettings() {
     }
     const audioCheck = document.getElementById("video-pref-audio");
     const autoDlCheck = document.getElementById("video-pref-autodownload");
+    const autoHideCheck = document.getElementById("video-pref-autohide-sidebar");
     const resSelect = document.getElementById("video-pref-resolution");
     const fpsSelect = document.getElementById("video-pref-fps");
     const cdSelect = document.getElementById("video-pref-countdown");
@@ -85,6 +88,7 @@ function loadVideoSettings() {
 
     if (audioCheck) audioCheck.checked = !!videoSettings.audio;
     if (autoDlCheck) autoDlCheck.checked = !!videoSettings.autoDownload;
+    if (autoHideCheck) autoHideCheck.checked = videoSettings.autoHideSidebar !== false;
     if (resSelect) resSelect.value = videoSettings.resolution || "1080";
     if (fpsSelect) fpsSelect.value = videoSettings.fps || "30";
     if (cdSelect) cdSelect.value = (videoSettings.countdown !== undefined ? videoSettings.countdown : "3").toString();
@@ -95,6 +99,7 @@ function loadVideoSettings() {
 function saveVideoSettings() {
   const audioCheck = document.getElementById("video-pref-audio");
   const autoDlCheck = document.getElementById("video-pref-autodownload");
+  const autoHideCheck = document.getElementById("video-pref-autohide-sidebar");
   const resSelect = document.getElementById("video-pref-resolution");
   const fpsSelect = document.getElementById("video-pref-fps");
   const cdSelect = document.getElementById("video-pref-countdown");
@@ -102,6 +107,7 @@ function saveVideoSettings() {
 
   videoSettings.audio = audioCheck ? audioCheck.checked : false;
   videoSettings.autoDownload = autoDlCheck ? autoDlCheck.checked : false;
+  videoSettings.autoHideSidebar = autoHideCheck ? autoHideCheck.checked : true;
   videoSettings.resolution = resSelect ? resSelect.value : "1080";
   videoSettings.fps = fpsSelect ? fpsSelect.value : "30";
   videoSettings.countdown = cdSelect ? cdSelect.value : "3";
@@ -248,20 +254,27 @@ async function startVideoRecording() {
       }
 
       if (isVideoCountdownCancelled) {
-        cleanUpCountdown();
+        await cleanUpCountdown();
         return;
       }
 
       // Finish countdown cue: High chime
       playBeep(880, 260);
       if (countdownNumber) countdownNumber.textContent = "GO!";
-      sendTabMessage({ action: "UPDATE_PAGE_COUNTDOWN", value: "GO!" });
-      await new Promise(r => setTimeout(r, 350));
-
-      cleanUpCountdown();
+      // Immediately remove in-page countdown HUD before recording frames start!
+      await cleanUpCountdown();
+      // Allow browser compositor to paint completely clear frames without HUD
+      await new Promise(r => setTimeout(r, 220));
+    } else {
+      await cleanUpCountdown();
     }
 
     mediaRecorder.start(500); // 500ms data slices
+
+    // Auto-minimize sidebar to unobtrusive pill if enabled
+    if (videoSettings.autoHideSidebar !== false) {
+      document.body.classList.add("sf-recording-minimized");
+    }
 
     // Update UI
     const startBtn = document.getElementById("btn-start-record");
@@ -282,7 +295,8 @@ async function startVideoRecording() {
     if (timerText) timerText.textContent = "00:00";
     recordTimerInterval = setInterval(() => {
       const elapsedSec = Math.floor((Date.now() - recordStartTime) / 1000);
-      if (timerText) timerText.textContent = formatRecordDuration(elapsedSec);
+      const timeStr = formatRecordDuration(elapsedSec);
+      if (timerText) timerText.textContent = timeStr;
     }, 500);
 
     showToast(videoSettings.audio ? "toast_video_recording_audio" : "toast_video_recording_no_audio");
@@ -322,6 +336,9 @@ function stopVideoRecording() {
 function finishRecording() {
   if (isFinishingRecording) return;
   isFinishingRecording = true;
+
+  document.body.classList.remove("sf-recording-minimized");
+  sendTabMessage({ action: "HIDE_RECORDING_TOOLBAR" });
 
   clearInterval(recordTimerInterval);
   const activeBar = document.getElementById("recording-active-bar");
@@ -377,6 +394,9 @@ function finishRecording() {
 }
 
 function cancelVideoRecording() {
+  document.body.classList.remove("sf-recording-minimized");
+  sendTabMessage({ action: "HIDE_RECORDING_TOOLBAR" });
+
   clearInterval(recordTimerInterval);
   isFinishingRecording = false;
   if (mediaRecorder) {
@@ -427,5 +447,31 @@ function downloadRecordedVideo() {
   a.href = lastRecordedVideoUrl;
   a.download = `video_${cleanTitle || "capture"}_${Date.now()}.webm`;
   a.click();
+}
+
+if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage) {
+  chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
+    if (req.type === "STOP_RECORDING_REQUEST") {
+      stopVideoRecording();
+      if (sendResponse) sendResponse({ success: true });
+    } else if (req.type === "TOGGLE_RECORD_MIC") {
+      if (recordStream) {
+        const audioTracks = recordStream.getAudioTracks();
+        audioTracks.forEach(t => {
+          t.enabled = !req.isMuted;
+        });
+      }
+      if (sendResponse) sendResponse({ success: true });
+    } else if (req.type === "TOGGLE_RECORD_PAUSE") {
+      if (mediaRecorder) {
+        if (req.isPaused && mediaRecorder.state === "recording") {
+          mediaRecorder.pause();
+        } else if (!req.isPaused && mediaRecorder.state === "paused") {
+          mediaRecorder.resume();
+        }
+      }
+      if (sendResponse) sendResponse({ success: true });
+    }
+  });
 }
 

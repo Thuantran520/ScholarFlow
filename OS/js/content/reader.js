@@ -1362,6 +1362,171 @@
     return null;
   }
 
+  function detectPageAudioNarration() {
+    // 1. Tier 1: Check OpenGraph and Twitter Meta Tags (<meta property="og:audio"> / twitter:player:stream)
+    try {
+      var metaAudio = document.querySelector("meta[property='og:audio'], meta[property='og:audio:secure_url'], meta[name='twitter:player:stream'], meta[name='audio']");
+      if (metaAudio) {
+        var mContent = metaAudio.getAttribute("content") || "";
+        if (mContent && /\.(mp3|m4a|aac|ogg|wav)(\?.*)?$/i.test(mContent)) {
+          return {
+            type: "audio",
+            src: new URL(mContent, window.location.href).href,
+            title: (window.tContent ? window.tContent("reader_audio_player") : "Audio bài viết")
+          };
+        }
+      }
+    } catch (e) {}
+
+    // 2. Tier 2: Check JSON-LD Schema (<script type="application/ld+json">)
+    try {
+      var ldScripts = document.querySelectorAll("script[type='application/ld+json']");
+      for (var ldi = 0; ldi < ldScripts.length; ldi++) {
+        var ldTxt = ldScripts[ldi].textContent || "";
+        if (!ldTxt || (!ldTxt.includes("AudioObject") && !ldTxt.includes("contentUrl") && !ldTxt.includes("audio"))) continue;
+        try {
+          var ldData = JSON.parse(ldTxt);
+          var itemsToCheck = Array.isArray(ldData) ? ldData : (ldData["@graph"] ? ldData["@graph"] : [ldData]);
+          for (var itemIdx = 0; itemIdx < itemsToCheck.length; itemIdx++) {
+            var ldItem = itemsToCheck[itemIdx];
+            if (!ldItem) continue;
+            var audioObj = ldItem.audio || (ldItem["@type"] === "AudioObject" ? ldItem : null) || ldItem.associatedMedia;
+            if (audioObj) {
+              var aUrl = (typeof audioObj === "string") ? audioObj : (audioObj.contentUrl || audioObj.url || audioObj.embedUrl || "");
+              if (aUrl && /\.(mp3|m4a|aac|ogg|wav)(\?.*)?$/i.test(aUrl)) {
+                return {
+                  type: "audio",
+                  src: new URL(aUrl, window.location.href).href,
+                  title: (typeof audioObj === "object" && audioObj.name) ? audioObj.name : (window.tContent ? window.tContent("reader_audio_player") : "Audio bài viết")
+                };
+              }
+            }
+          }
+        } catch (e) {}
+      }
+    } catch (e) {}
+
+    // 3. Tier 3: Universal Publisher Audio / TTS Containers & Elements
+    try {
+      var audioSelectors = [
+        ".box-audio audio", ".box-audio [data-src]", ".box-audio",
+        ".tts-player audio", ".tts-player [data-src]", ".tts-player",
+        ".af-tts audio", ".voice-player audio", ".voice-player [data-src]",
+        ".audioSwitchVoicePlayer audio", ".vnn-audio audio", ".vnn-audio [data-src]",
+        ".player-audio audio", ".audio-player audio", ".audio-player [data-src]",
+        ".vbee-audio audio", ".vbee-audio [data-src]",
+        ".article-audio audio", ".podcast-player audio", ".listen-article audio",
+        "#audio-player audio", "[data-component='audio'] audio",
+        "audio[src]", "audio source[src]",
+        "[data-audio-src]", "[data-voice-url]", "[data-audio-url]", "[data-sound-src]", "[data-podcast-url]"
+      ];
+      for (var a = 0; a < audioSelectors.length; a++) {
+        var aEl = document.querySelector(audioSelectors[a]);
+        if (aEl && !isNoiseNode(aEl)) {
+          var aSrc = aEl.getAttribute("src") ||
+                     (aEl.querySelector("source") ? aEl.querySelector("source").getAttribute("src") : "") ||
+                     aEl.currentSrc ||
+                     aEl.getAttribute("data-src") ||
+                     aEl.getAttribute("data-audio-src") ||
+                     aEl.getAttribute("data-voice-url") ||
+                     aEl.getAttribute("data-audio-url") ||
+                     aEl.getAttribute("data-sound-src") ||
+                     aEl.getAttribute("data-podcast-url") || "";
+
+          var container = aEl.closest(".box-audio, .tts-player, .voice-player, .player-audio, .audio-player") || aEl.parentElement;
+          if (container) {
+            var voiceOptions = container.querySelectorAll("[data-src], [data-voice-url], [data-audio-src]");
+            if (voiceOptions.length >= 2) {
+              var v1 = voiceOptions[0].getAttribute("data-src") || voiceOptions[0].getAttribute("data-voice-url") || voiceOptions[0].getAttribute("data-audio-src") || "";
+              var v2 = voiceOptions[1].getAttribute("data-src") || voiceOptions[1].getAttribute("data-voice-url") || voiceOptions[1].getAttribute("data-audio-src") || "";
+              if (v1 && v2 && v1 !== v2) {
+                try {
+                  v1 = new URL(v1, window.location.href).href;
+                  v2 = new URL(v2, window.location.href).href;
+                  return {
+                    type: "audio",
+                    src: v1,
+                    femaleSrc: v1,
+                    maleSrc: v2,
+                    hasMultiVoice: true,
+                    currentVoice: "nu",
+                    title: (window.tContent ? window.tContent("reader_audio_player") : "Audio bài viết")
+                  };
+                } catch (e) {}
+              }
+            }
+          }
+
+          if (aSrc && !aSrc.startsWith("blob:") && !aSrc.startsWith("data:")) {
+            try { aSrc = new URL(aSrc, window.location.href).href; } catch (e) {}
+            if (/\.(mp3|m4a|aac|ogg|wav)(\?.*)?$/i.test(aSrc) || aSrc.includes("audio") || aSrc.includes("podcast") || aSrc.includes("tts")) {
+              return {
+                type: "audio",
+                src: aSrc,
+                title: (window.tContent ? window.tContent("reader_audio_player") : "Audio bài viết")
+              };
+            }
+          }
+        }
+      }
+    } catch (e) {}
+
+    // 4. Tier 4: Script Pattern Analysis (VCCorp, VnExpress, Dân Trí, WordPress TTS plugins, etc.)
+    try {
+      var scripts = document.querySelectorAll("script:not([src])");
+      for (var s = 0; s < scripts.length; s++) {
+        var scText = scripts[s].textContent || "";
+        if (!scText) continue;
+
+        if (scText.includes("embedTTS.init") || scText.includes("speech.aiservice.vn") || scText.includes("tts.mediacdn.vn")) {
+          var mNewsId = scText.match(/newsId\s*:\s*['"]([^'"]+)['"]/);
+          var mDate = scText.match(/distributionDate\s*:\s*['"]([^'"]+)['"]/);
+          var mNs = scText.match(/nameSpace\s*:\s*['"]([^'"]+)['"]/);
+          var mDomain = scText.match(/domainStorage\s*:\s*['"]([^'"]+)['"]/);
+          var mExt = scText.match(/ext\s*:\s*['"]([^'"]+)['"]/);
+          var mVoice = scText.match(/defaultVoice\s*:\s*['"]([^'"]+)['"]/);
+
+          if (mNewsId && mDate && mNs) {
+            var newsId = mNewsId[1];
+            var distDate = mDate[1];
+            var ns = mNs[1];
+            var domain = (mDomain && mDomain[1]) ? mDomain[1] : "https://tts.mediacdn.vn";
+            var ext = (mExt && mExt[1]) ? mExt[1] : "m4a";
+            var defVoice = (mVoice && mVoice[1]) ? mVoice[1] : "nu";
+
+            var femaleSrc = domain + "/" + distDate + "/" + ns + "-nu-" + newsId + "." + ext;
+            var maleSrc = domain + "/" + distDate + "/" + ns + "-nam-" + newsId + "." + ext;
+            var activeSrc = (defVoice === "nam") ? maleSrc : femaleSrc;
+
+            return {
+              type: "audio",
+              src: activeSrc,
+              femaleSrc: femaleSrc,
+              maleSrc: maleSrc,
+              hasMultiVoice: true,
+              currentVoice: defVoice,
+              title: "Báo nói AI (" + ns.toUpperCase() + ")",
+              publisher: ns.toUpperCase()
+            };
+          }
+        }
+
+        if (/(?:audio|tts|voice|speech|podcast|sound)/i.test(scText)) {
+          var audioUrlMatch = scText.match(/https?:\/\/[^\s"'<>]+\.(?:mp3|m4a|aac|ogg|wav)(?:\?[^\s"'<>]*)?/i);
+          if (audioUrlMatch && !audioUrlMatch[0].includes("sound-effect") && !audioUrlMatch[0].includes("bell.")) {
+            return {
+              type: "audio",
+              src: audioUrlMatch[0],
+              title: (window.tContent ? window.tContent("reader_audio_player") : "Audio bài viết")
+            };
+          }
+        }
+      }
+    } catch (e) {}
+
+    return null;
+  }
+
   function extractAudioInfo(el) {
     if (!el) return null;
     var audioEl = el.tagName.toLowerCase() === "audio" ? el : el.querySelector("audio");
@@ -1756,6 +1921,51 @@
         seenCaptionElements.add(sc);
         registerCaption(sc.textContent);
       });
+
+      // Check for prominent lead/cover/hero image outside or at the top of mainContainer
+      var leadSelectors = [
+        "article header figure img", ".article-header figure img", "header.entry-header img",
+        ".post-thumbnail img", ".entry-featured-image img", ".lead-image img", ".hero-image img",
+        ".featured-image img", ".article-cover img", ".detail-top-image img",
+        "[data-component='lead-image'] img", ".lead_media img", ".media-hero img",
+        ".article__lead-asset img", "figure.lead-media img", "figure.cover-media img"
+      ];
+      for (var lsi = 0; lsi < leadSelectors.length; lsi++) {
+        var leadCand = document.querySelector(leadSelectors[lsi]);
+        if (leadCand && !seenImages.has(leadCand) && !isNoiseNode(leadCand)) {
+          var leadInfo = extractImageInfo(leadCand);
+          if (leadInfo) {
+            seenImages.add(leadCand);
+            seenImages.add(leadInfo.src);
+            articleItems.push({
+              type: "image",
+              src: leadInfo.src,
+              caption: cleanCaptionText(leadInfo.caption),
+              isLead: true
+            });
+            break;
+          }
+        }
+      }
+
+      // Check for publisher audio narration track (e.g. GameK / VCCorp Báo nói AI, VnExpress, Tuổi Trẻ, etc.)
+      var pageNarration = detectPageAudioNarration();
+      if (pageNarration && !seenAudios.has(pageNarration.src)) {
+        seenAudios.add(pageNarration.src);
+        if (pageNarration.femaleSrc) seenAudios.add(pageNarration.femaleSrc);
+        if (pageNarration.maleSrc) seenAudios.add(pageNarration.maleSrc);
+        articleItems.push(pageNarration);
+      }
+
+      // Check for standalone sapo / lead / summary element outside or preceding mainContainer
+      var sapoCandidate = document.querySelector(".sapo, .chapeau, [data-field='sapo'], [data-role='sapo'], .article-sapo, .detail-sapo, .lead, .content-detail-sapo, .summary, .article-summary, .post-excerpt, .entry-summary, .subtitle, .sub-title, .description, .article__summary, .article-lead, .story-lead, .news-sapo, .the-article-summary, .header-summary");
+      if (sapoCandidate && !mainContainer.contains(sapoCandidate) && !isNoiseNode(sapoCandidate)) {
+        var sapoText = (sapoCandidate.textContent || "").trim();
+        if (sapoText && sapoText.length > 5 && !seenTextHashes.has(sapoText.toLowerCase()) && sapoText !== articleTitle) {
+          seenTextHashes.add(sapoText.toLowerCase());
+          articleItems.push({ type: "heading", level: "h2", text: sapoText, isSapo: true });
+        }
+      }
 
       var elements = Array.from(mainContainer.querySelectorAll("h1, h2, h3, h4, h5, p, figure, img, audio, blockquote, cite, footer, ul, ol, dl, table, pre, video, iframe, [data-component='video-block'], [data-e2e='media-player'], .media-player, .video-container, .box_embed_video, [data-video-src], [data-audio-src], .audio, div.paragraph, div.text-block, div.article-paragraph, div.story-text"));
       var paragraphCount = 0;
@@ -4331,10 +4541,51 @@
           audioTitleWrap.appendChild(audioTitleSpan);
           audioHeader.appendChild(audioTitleWrap);
 
-          var audioBadge = document.createElement("span");
-          audioBadge.style.cssText = "font-size: 11px; padding: 2px 8px; border-radius: 10px; background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-weight: 600; text-transform: uppercase;";
-          audioBadge.textContent = "Audio Narration";
-          audioHeader.appendChild(audioBadge);
+          // Voice switcher buttons if multi-voice is available (e.g. female / male)
+          if (item.hasMultiVoice && item.femaleSrc && item.maleSrc) {
+            var voiceWrap = document.createElement("div");
+            voiceWrap.style.cssText = "display: inline-flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.06); padding: 2px 4px; border-radius: 8px; border: 1px solid var(--sf-border);";
+
+            var btnFemale = document.createElement("button");
+            btnFemale.type = "button";
+            btnFemale.textContent = "👩 Giọng Nữ";
+            var activeVoice = item.currentVoice || "nu";
+            btnFemale.style.cssText = "padding: 3px 8px; border-radius: 6px; border: none; font-size: 11.5px; cursor: pointer; transition: all 0.15s ease;" + (activeVoice !== "nam" ? "background: #0284c7; color: #fff; font-weight: 600;" : "background: transparent; color: var(--sf-caption);");
+
+            var btnMale = document.createElement("button");
+            btnMale.type = "button";
+            btnMale.textContent = "👨 Giọng Nam";
+            btnMale.style.cssText = "padding: 3px 8px; border-radius: 6px; border: none; font-size: 11.5px; cursor: pointer; transition: all 0.15s ease;" + (activeVoice === "nam" ? "background: #0284c7; color: #fff; font-weight: 600;" : "background: transparent; color: var(--sf-caption);");
+
+            btnFemale.addEventListener("click", function () {
+              var wasPlaying = !audioPlayer.paused;
+              var curTime = audioPlayer.currentTime;
+              audioPlayer.src = item.femaleSrc;
+              audioPlayer.currentTime = curTime;
+              if (wasPlaying) audioPlayer.play().catch(function () {});
+              btnFemale.style.cssText = "padding: 3px 8px; border-radius: 6px; border: none; font-size: 11.5px; cursor: pointer; background: #0284c7; color: #fff; font-weight: 600;";
+              btnMale.style.cssText = "padding: 3px 8px; border-radius: 6px; border: none; font-size: 11.5px; cursor: pointer; background: transparent; color: var(--sf-caption);";
+            });
+
+            btnMale.addEventListener("click", function () {
+              var wasPlaying = !audioPlayer.paused;
+              var curTime = audioPlayer.currentTime;
+              audioPlayer.src = item.maleSrc;
+              audioPlayer.currentTime = curTime;
+              if (wasPlaying) audioPlayer.play().catch(function () {});
+              btnMale.style.cssText = "padding: 3px 8px; border-radius: 6px; border: none; font-size: 11.5px; cursor: pointer; background: #0284c7; color: #fff; font-weight: 600;";
+              btnFemale.style.cssText = "padding: 3px 8px; border-radius: 6px; border: none; font-size: 11.5px; cursor: pointer; background: transparent; color: var(--sf-caption);";
+            });
+
+            voiceWrap.appendChild(btnFemale);
+            voiceWrap.appendChild(btnMale);
+            audioHeader.appendChild(voiceWrap);
+          } else {
+            var audioBadge = document.createElement("span");
+            audioBadge.style.cssText = "font-size: 11px; padding: 2px 8px; border-radius: 10px; background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-weight: 600; text-transform: uppercase;";
+            audioBadge.textContent = "Audio Narration";
+            audioHeader.appendChild(audioBadge);
+          }
 
           audioCard.appendChild(audioHeader);
 
@@ -4343,6 +4594,17 @@
           audioPlayer.setAttribute("preload", "metadata");
           audioPlayer.setAttribute("src", item.src);
           audioPlayer.style.cssText = "width: 100%; height: 38px; border-radius: 8px; outline: none;";
+
+          // Mutual pause: if user plays recorded audio, pause synthetic TTS
+          audioPlayer.addEventListener("play", function () {
+            if (readerAudio.isPlaying) {
+              clearSpeechTimers();
+              if (window.speechSynthesis) window.speechSynthesis.cancel();
+              readerAudio.isPlaying = false;
+              btnPlay.textContent = "▶ " + (window.tContent ? window.tContent("reader_listen_play") : "Read");
+            }
+          });
+
           audioCard.appendChild(audioPlayer);
 
           // Speed presets (0.75x, 1.0x, 1.25x, 1.5x)
@@ -4578,8 +4840,48 @@
 
         if (item.type === "heading") {
           var hEl = document.createElement(item.level || "h2");
-          hEl.style.cssText = "font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: " + currentTheme.heading + "; font-size: 22px; font-weight: 700; margin: 32px 0 14px 0;";
-          hEl.textContent = item.text;
+          hEl.style.cssText = "font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: " + currentTheme.heading + "; font-size: 22px; font-weight: 700; margin: 28px 0 14px 0; line-height: 1.4;";
+
+          if (item.isSapo) {
+            hEl.style.fontSize = "19px";
+            hEl.style.fontWeight = "600";
+            hEl.style.fontStyle = "italic";
+            hEl.style.opacity = "0.95";
+            hEl.style.margin = "12px 0 24px 0";
+            hEl.style.lineHeight = "1.55";
+          }
+
+          var hSents = splitTextIntoSentences(item.text);
+          if (hSents.length > 0) {
+            hSents.forEach(function (sText) {
+              var sIdx = readerAudio.sentences.length;
+              readerAudio.sentences.push(sText);
+
+              var sSpan = document.createElement("span");
+              sSpan.className = "sf-reader-sentence";
+              sSpan.style.cssText = "cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: background 0.2s;";
+              sSpan.title = "Click to listen";
+              sSpan.textContent = sText + " ";
+
+              sSpan.addEventListener("mouseenter", function () {
+                if (readerAudio.currentIndex !== sIdx) sSpan.style.background = getEffectiveHighlight().bg;
+              });
+              sSpan.addEventListener("mouseleave", function () {
+                if (readerAudio.currentIndex !== sIdx) sSpan.style.background = "transparent";
+              });
+              sSpan.addEventListener("click", function () {
+                playSentenceAt(sIdx);
+                if (readerAudio.isDictationMode) {
+                  openDictationBox(sIdx);
+                }
+              });
+
+              sentenceElements.push(sSpan);
+              hEl.appendChild(sSpan);
+            });
+          } else {
+            hEl.textContent = item.text;
+          }
           contentWrapper.appendChild(hEl);
           return;
         }

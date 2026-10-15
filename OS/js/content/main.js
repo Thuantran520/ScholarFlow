@@ -452,6 +452,27 @@
           sendResponse({ success: true });
           break;
 
+        case "SHOW_RECORDING_TOOLBAR":
+          if (typeof showRecordingToolbar === "function") {
+            showRecordingToolbar(msg.options);
+          }
+          sendResponse({ success: true });
+          break;
+
+        case "UPDATE_RECORDING_TIMER":
+          if (typeof updateRecordingTimer === "function") {
+            updateRecordingTimer(msg.text);
+          }
+          sendResponse({ success: true });
+          break;
+
+        case "HIDE_RECORDING_TOOLBAR":
+          if (typeof hideRecordingToolbar === "function") {
+            hideRecordingToolbar();
+          }
+          sendResponse({ success: true });
+          break;
+
         case "GET_REDACT_MASKS":
           sendResponse({
             success: true,
@@ -891,6 +912,189 @@ case "GET_YT_META": {
           setCopilotVisionBorder(!!msg.enabled);
           sendResponse({ success: true });
           break;
+
+        case "AUTOFILL_FILL_PAGE": {
+          const fields = Array.isArray(msg.fields) ? msg.fields : [];
+          if (!fields.length) {
+            sendResponse({ success: false, count: 0, message: "No fields provided" });
+            break;
+          }
+
+          function sfNormStr(str) {
+            if (!str) return "";
+            try {
+              return String(str)
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .toLowerCase()
+                .replace(/[^a-z0-9]/g, " ")
+                .trim()
+                .replace(/\s+/g, " ");
+            } catch (e) {
+              return String(str).toLowerCase().trim();
+            }
+          }
+
+          const SYNONYMS = {
+            name: ["ho va ten", "ho ten", "ten", "full name", "fullname", "name", "your name", "candidate name", "student name", "author", "tac gia"],
+            email: ["email", "e mail", "thu dien tu", "mail", "academic email", "edu email"],
+            phone: ["so dien thoai", "dien thoai", "sdt", "phone", "telephone", "mobile", "cellphone", "contact number"],
+            studentid: ["ma sinh vien", "ma so sinh vien", "mssv", "student id", "student number", "matriculation", "student code"],
+            school: ["truong", "dai hoc", "hoc vien", "vien", "university", "college", "school", "institution", "organization", "affiliation", "don vi"],
+            faculty: ["khoa", "bo mon", "chuyen nganh", "nganh hoc", "faculty", "department", "major", "discipline", "division"],
+            address: ["dia chi", "noi o", "address", "street", "residence", "location"],
+            citizenid: ["cccd", "cmnd", "can cuoc", "chung minh thu", "citizen id", "id number", "national id", "passport", "ho chieu"],
+            scholar: ["google scholar", "scholar", "orcid", "researchgate", "profile link", "scholar profile"],
+            linkedin: ["linkedin", "portfolio", "website", "cv link", "homepage"]
+          };
+
+          const candidates = Array.from(document.querySelectorAll(
+            'input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="image"]):not([disabled]):not([readonly]), textarea:not([disabled]):not([readonly]), select:not([disabled])'
+          )).filter(el => {
+            try {
+              const rect = el.getBoundingClientRect();
+              const style = window.getComputedStyle(el);
+              return style.display !== "none" && style.visibility !== "hidden" && (rect.width > 0 || rect.height > 0 || el.getClientRects().length > 0);
+            } catch (e) {
+              return false;
+            }
+          });
+
+          let filledCount = 0;
+          const filledElements = new Set();
+
+          function getSignals(el) {
+            const sigs = [];
+            if (el.name) sigs.push(el.name);
+            if (el.id) sigs.push(el.id);
+            if (el.placeholder) sigs.push(el.placeholder);
+            if (el.getAttribute("aria-label")) sigs.push(el.getAttribute("aria-label"));
+            if (el.getAttribute("aria-description")) sigs.push(el.getAttribute("aria-description"));
+            if (el.getAttribute("autocomplete")) sigs.push(el.getAttribute("autocomplete"));
+
+            if (el.id) {
+              try {
+                const lbl = document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
+                if (lbl && lbl.textContent) sigs.push(lbl.textContent);
+              } catch (e) {}
+            }
+            const parentLabel = el.closest("label");
+            if (parentLabel && parentLabel.textContent) sigs.push(parentLabel.textContent);
+
+            const prev = el.previousElementSibling;
+            if (prev && (prev.tagName === "LABEL" || prev.tagName === "SPAN" || prev.tagName === "DIV" || prev.tagName === "P")) {
+              const txt = (prev.textContent || "").trim();
+              if (txt.length < 100) sigs.push(txt);
+            }
+            return sigs.map(sfNormStr).filter(Boolean);
+          }
+
+          function checkMatch(sigs, normName) {
+            for (const sig of sigs) {
+              if (sig === normName || sig.includes(normName) || normName.includes(sig)) {
+                return true;
+              }
+            }
+            for (const key of Object.keys(SYNONYMS)) {
+              const synList = SYNONYMS[key];
+              const itemMatchesSyn = synList.some(s => normName.includes(s) || s.includes(normName));
+              if (itemMatchesSyn) {
+                for (const sig of sigs) {
+                  if (synList.some(s => sig.includes(s) || s.includes(sig))) {
+                    return true;
+                  }
+                }
+              }
+            }
+            return false;
+          }
+
+          for (const item of fields) {
+            const normName = sfNormStr(item.name);
+            if (!normName || !item.value) continue;
+
+            for (const el of candidates) {
+              if (filledElements.has(el)) continue;
+
+              const sigs = getSignals(el);
+              const inputType = (el.getAttribute("type") || "").toLowerCase();
+              let isMatched = false;
+              if (inputType === "email" && normName.includes("email")) {
+                isMatched = true;
+              } else if (inputType === "tel" && (normName.includes("thoai") || normName.includes("phone") || normName.includes("sdt"))) {
+                isMatched = true;
+              } else {
+                isMatched = checkMatch(sigs, normName);
+              }
+
+              if (!isMatched) continue;
+
+              try {
+                el.focus();
+                if (el.tagName === "SELECT") {
+                  let optFound = false;
+                  const valNorm = sfNormStr(item.value);
+                  for (const opt of el.options) {
+                    if (sfNormStr(opt.value) === valNorm || sfNormStr(opt.textContent) === valNorm || sfNormStr(opt.textContent).includes(valNorm)) {
+                      el.value = opt.value;
+                      optFound = true;
+                      break;
+                    }
+                  }
+                  if (!optFound) continue;
+                } else {
+                  el.value = item.value;
+                }
+
+                el.dispatchEvent(new Event("input", { bubbles: true }));
+                el.dispatchEvent(new Event("change", { bubbles: true }));
+
+                const oldOutline = el.style.outline;
+                const oldTransition = el.style.transition;
+                el.style.transition = "outline 0.2s ease, box-shadow 0.2s ease";
+                el.style.outline = "2px solid #10b981";
+                el.style.boxShadow = "0 0 10px rgba(16, 185, 129, 0.4)";
+                setTimeout(() => {
+                  el.style.outline = oldOutline;
+                  el.style.boxShadow = "";
+                  el.style.transition = oldTransition;
+                }, 1600);
+
+                filledElements.add(el);
+                filledCount++;
+                break;
+              } catch (err) {}
+            }
+          }
+
+          sendResponse({ success: true, count: filledCount });
+          break;
+        }
+
+        case "AUTOFILL_FILL_ACTIVE_INPUT": {
+          const val = String(msg.value || "");
+          let target = document.activeElement;
+          if (!target || (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA")) {
+            target = document.querySelector('input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([disabled]):not([readonly]), textarea:not([disabled]):not([readonly])');
+          }
+          if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) {
+            try {
+              target.focus();
+              target.value = val;
+              target.dispatchEvent(new Event("input", { bubbles: true }));
+              target.dispatchEvent(new Event("change", { bubbles: true }));
+              const oldOutline = target.style.outline;
+              target.style.outline = "2px solid #10b981";
+              setTimeout(() => { target.style.outline = oldOutline; }, 1200);
+              sendResponse({ success: true, filled: true });
+            } catch (err) {
+              sendResponse({ success: false, filled: false });
+            }
+          } else {
+            sendResponse({ success: false, filled: false, message: "No active input found" });
+          }
+          break;
+        }
 
         case "PING":
           sendResponse({ pong: true });

@@ -90,6 +90,24 @@
   padding: 3px 9px; font-size: 10px;
 }
 #tab-dm .dm-btn svg { flex-shrink: 0; }
+#tab-dm .dm-detect-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 9.5px; font-weight: 600;
+  border-radius: 4px; padding: 2px 7px;
+}
+#tab-dm .dm-detect-badge::before {
+  content: ""; display: inline-block; width: 5px; height: 5px; border-radius: 50%;
+  background: currentColor; flex-shrink: 0;
+}
+#tab-dm .dm-detect-native {
+  background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.28);
+}
+#tab-dm .dm-detect-light {
+  background: rgba(234, 179, 8, 0.12); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.28);
+}
+#tab-dm .dm-detect-forced {
+  background: rgba(239, 68, 68, 0.12); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.28);
+}
 
 /* ── Tune sliders (per-site) — neutral accent ── */
 #tab-dm .dm-tune-group { margin-top: 4px; }

@@ -227,6 +227,8 @@ var tContentShim = function(key, ...args) {
       id === "super-snip-toolbar" ||
       id === "super-inpage-countdown-hud" ||
       id === "super-inpage-toast" ||
+      id === "super-recording-toolbar" ||
+      id === "super-webcam-pip-bubble" ||
       id === "super-region-preview"
     ) {
       return true;
@@ -240,7 +242,7 @@ var tContentShim = function(key, ...args) {
     )) {
       return true;
     }
-    if (el.closest && el.closest("#super-inspect-highlighter-box, #super-element-tag-badge, #super-snip-box, #super-snip-toolbar, #super-inpage-countdown-hud, #super-inpage-toast, #super-region-preview, .super-redact-flash, .super-remove-flash, .super-capture-flash, .super-redact-region")) {
+    if (el.closest && el.closest("#super-inspect-highlighter-box, #super-element-tag-badge, #super-snip-box, #super-snip-toolbar, #super-inpage-countdown-hud, #super-inpage-toast, #super-recording-toolbar, #super-webcam-pip-bubble, #super-region-preview, .super-redact-flash, .super-remove-flash, .super-capture-flash, .super-redact-region")) {
       return true;
     }
     return false;
@@ -715,7 +717,8 @@ var tContentShim = function(key, ...args) {
     }
   }, true);
 
-  // In-Page Countdown HUD for Video Recording
+  // In-Page Countdown HUD for Video Recording (cleans up cleanly before frames record)
+  let pageCountdownTimer = null;
   function showPageCountdown(seconds) {
     hidePageCountdown();
     const hud = document.createElement("div");
@@ -738,9 +741,19 @@ var tContentShim = function(key, ...args) {
     hud.appendChild(num);
     hud.appendChild(sub);
     document.documentElement.appendChild(hud);
+
+    if (pageCountdownTimer) clearTimeout(pageCountdownTimer);
+    const maxSec = Math.max(1, parseInt(seconds, 10) || 3);
+    pageCountdownTimer = setTimeout(() => {
+      hidePageCountdown();
+    }, (maxSec + 0.3) * 1000);
   }
 
   function updatePageCountdown(val) {
+    if (val === "GO!" || val === "0" || val === 0 || !val) {
+      hidePageCountdown();
+      return;
+    }
     const num = document.getElementById("super-hud-count-num");
     if (num) {
       num.textContent = val.toString();
@@ -748,8 +761,255 @@ var tContentShim = function(key, ...args) {
   }
 
   function hidePageCountdown() {
+    if (pageCountdownTimer) {
+      clearTimeout(pageCountdownTimer);
+      pageCountdownTimer = null;
+    }
     const hud = document.getElementById("super-inpage-countdown-hud");
-    if (hud) hud.remove();
+    if (hud) {
+      hud.style.display = "none";
+      hud.remove();
+    }
+  }
+
+  // Floating In-Page Recording Toolbar & Webcam PiP Bubble
+  let inPageRecToolbarEl = null;
+  let inPageRecKeydownHandler = null;
+  let inPageWebcamStream = null;
+  let inPageWebcamBubbleEl = null;
+  let inPageRecIsMicMuted = false;
+  let inPageRecIsPaused = false;
+
+  function createRecSvgIcon(type) {
+    const ns = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("width", "16");
+    svg.setAttribute("height", "16");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("fill", "none");
+    svg.setAttribute("stroke", "currentColor");
+    svg.setAttribute("stroke-width", "2.2");
+    svg.setAttribute("stroke-linecap", "round");
+    svg.setAttribute("stroke-linejoin", "round");
+
+    if (type === "mic") {
+      const path1 = document.createElementNS(ns, "path");
+      path1.setAttribute("d", "M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z");
+      const path2 = document.createElementNS(ns, "path");
+      path2.setAttribute("d", "M19 10v2a7 7 0 0 1-14 0v-2");
+      const line1 = document.createElementNS(ns, "line");
+      line1.setAttribute("x1", "12"); line1.setAttribute("y1", "19"); line1.setAttribute("x2", "12"); line1.setAttribute("y2", "23");
+      const line2 = document.createElementNS(ns, "line");
+      line2.setAttribute("x1", "8"); line2.setAttribute("y1", "23"); line2.setAttribute("x2", "16"); line2.setAttribute("y2", "23");
+      svg.appendChild(path1); svg.appendChild(path2); svg.appendChild(line1); svg.appendChild(line2);
+    } else if (type === "mic-off") {
+      const lineCross = document.createElementNS(ns, "line");
+      lineCross.setAttribute("x1", "1"); lineCross.setAttribute("y1", "1"); lineCross.setAttribute("x2", "23"); lineCross.setAttribute("y2", "23");
+      const path1 = document.createElementNS(ns, "path");
+      path1.setAttribute("d", "M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6");
+      const path2 = document.createElementNS(ns, "path");
+      path2.setAttribute("d", "M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23");
+      const line1 = document.createElementNS(ns, "line");
+      line1.setAttribute("x1", "12"); line1.setAttribute("y1", "19"); line1.setAttribute("x2", "12"); line1.setAttribute("y2", "23");
+      const line2 = document.createElementNS(ns, "line");
+      line2.setAttribute("x1", "8"); line2.setAttribute("y1", "23"); line2.setAttribute("x2", "16"); line2.setAttribute("y2", "23");
+      svg.appendChild(lineCross); svg.appendChild(path1); svg.appendChild(path2); svg.appendChild(line1); svg.appendChild(line2);
+    } else if (type === "video") {
+      const polygon = document.createElementNS(ns, "polygon");
+      polygon.setAttribute("points", "23 7 16 12 23 17 23 7");
+      const rect = document.createElementNS(ns, "rect");
+      rect.setAttribute("x", "1"); rect.setAttribute("y", "5"); rect.setAttribute("width", "15"); rect.setAttribute("height", "14"); rect.setAttribute("rx", "2"); rect.setAttribute("ry", "2");
+      svg.appendChild(polygon); svg.appendChild(rect);
+    } else if (type === "pause") {
+      const rect1 = document.createElementNS(ns, "rect");
+      rect1.setAttribute("x", "6"); rect1.setAttribute("y", "4"); rect1.setAttribute("width", "4"); rect1.setAttribute("height", "16"); rect1.setAttribute("rx", "1");
+      const rect2 = document.createElementNS(ns, "rect");
+      rect2.setAttribute("x", "14"); rect2.setAttribute("y", "4"); rect2.setAttribute("width", "4"); rect2.setAttribute("height", "16"); rect2.setAttribute("rx", "1");
+      svg.appendChild(rect1); svg.appendChild(rect2);
+    } else if (type === "play") {
+      const polygon = document.createElementNS(ns, "polygon");
+      polygon.setAttribute("points", "6 4 20 12 6 20 6 4");
+      polygon.setAttribute("fill", "currentColor");
+      svg.appendChild(polygon);
+    } else if (type === "stop") {
+      const rect = document.createElementNS(ns, "rect");
+      rect.setAttribute("x", "5"); rect.setAttribute("y", "5"); rect.setAttribute("width", "14"); rect.setAttribute("height", "14"); rect.setAttribute("rx", "2");
+      rect.setAttribute("fill", "currentColor");
+      svg.appendChild(rect);
+    }
+    return svg;
+  }
+
+  function makeInPageDraggable(el) {
+    let isDragging = false;
+    let startX = 0, startY = 0, initialLeft = 0, initialTop = 0;
+
+    el.addEventListener("mousedown", (e) => {
+      if (e.target.tagName === "BUTTON" || (e.target.closest && e.target.closest("button"))) return;
+      isDragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      const rect = el.getBoundingClientRect();
+      initialLeft = rect.left;
+      initialTop = rect.top;
+      el.style.transform = "none";
+      el.style.left = initialLeft + "px";
+      el.style.top = initialTop + "px";
+      el.style.bottom = "auto";
+      el.style.right = "auto";
+      e.preventDefault();
+    });
+
+    const onDragMove = (e) => {
+      if (!isDragging) return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      const newL = Math.max(10, Math.min(window.innerWidth - el.offsetWidth - 10, initialLeft + dx));
+      const newT = Math.max(10, Math.min(window.innerHeight - el.offsetHeight - 10, initialTop + dy));
+      el.style.left = newL + "px";
+      el.style.top = newT + "px";
+    };
+
+    const onDragEnd = () => {
+      isDragging = false;
+    };
+
+    window.addEventListener("mousemove", onDragMove);
+    window.addEventListener("mouseup", onDragEnd);
+  }
+
+  function showRecordingToolbar(options) {
+    hideRecordingToolbar();
+    inPageRecIsMicMuted = false;
+    inPageRecIsPaused = false;
+
+    // Do not inject floating capsule into web page to keep the recording clean and unobstructed
+
+
+    // Hotkey listener (Alt+M, Alt+C, Alt+P, Alt+S)
+    inPageRecKeydownHandler = (e) => {
+      if (e.altKey && !e.ctrlKey && !e.metaKey) {
+        const k = (e.key || "").toLowerCase();
+        if (k === "m") {
+          e.preventDefault(); e.stopPropagation();
+          toggleInPageMic();
+        } else if (k === "c") {
+          e.preventDefault(); e.stopPropagation();
+          toggleInPageWebcamPiP();
+        } else if (k === "p") {
+          e.preventDefault(); e.stopPropagation();
+          toggleInPagePause();
+        } else if (k === "s") {
+          e.preventDefault(); e.stopPropagation();
+          stopInPageRecording();
+        }
+      }
+    };
+    window.addEventListener("keydown", inPageRecKeydownHandler, true);
+  }
+
+  function updateRecordingTimer(text) {
+    const timer = document.getElementById("super-rec-timer");
+    if (timer && text) {
+      timer.textContent = text;
+    }
+  }
+
+  function toggleInPageMic() {
+    inPageRecIsMicMuted = !inPageRecIsMicMuted;
+    const btnMic = document.getElementById("super-rec-btn-mic");
+    if (btnMic) {
+      btnMic.replaceChildren(createRecSvgIcon(inPageRecIsMicMuted ? "mic-off" : "mic"));
+      btnMic.classList.toggle("is-muted", inPageRecIsMicMuted);
+    }
+    showInPageToast(inPageRecIsMicMuted ? tContentShim("rec_mic_off") : tContentShim("rec_mic_on"));
+    notifySidebarShim({ type: "TOGGLE_RECORD_MIC", isMuted: inPageRecIsMicMuted });
+  }
+
+  async function toggleInPageWebcamPiP() {
+    const btnCam = document.getElementById("super-rec-btn-cam");
+    if (inPageWebcamStream) {
+      try {
+        inPageWebcamStream.getTracks().forEach(t => t.stop());
+      } catch (e) {}
+      inPageWebcamStream = null;
+      if (inPageWebcamBubbleEl) {
+        inPageWebcamBubbleEl.remove();
+        inPageWebcamBubbleEl = null;
+      }
+      if (btnCam) btnCam.classList.remove("is-active");
+      showInPageToast(tContentShim("rec_cam_off"));
+      return;
+    }
+
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showInPageToast(tContentShim("rec_cam_err"));
+        return;
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 480 }, height: { ideal: 480 } },
+        audio: false
+      });
+      inPageWebcamStream = stream;
+
+      const bubble = document.createElement("div");
+      bubble.id = "super-webcam-pip-bubble";
+      const vid = document.createElement("video");
+      vid.autoplay = true;
+      vid.playsInline = true;
+      vid.muted = true;
+      vid.srcObject = stream;
+      bubble.appendChild(vid);
+
+      makeInPageDraggable(bubble);
+      document.documentElement.appendChild(bubble);
+      inPageWebcamBubbleEl = bubble;
+
+      if (btnCam) btnCam.classList.add("is-active");
+      showInPageToast(tContentShim("rec_cam_on"));
+    } catch (err) {
+      showInPageToast(tContentShim("rec_cam_err"));
+    }
+  }
+
+  function toggleInPagePause() {
+    inPageRecIsPaused = !inPageRecIsPaused;
+    const btnPause = document.getElementById("super-rec-btn-pause");
+    if (btnPause) {
+      btnPause.replaceChildren(createRecSvgIcon(inPageRecIsPaused ? "play" : "pause"));
+      btnPause.classList.toggle("is-active", inPageRecIsPaused);
+    }
+    showInPageToast(inPageRecIsPaused ? tContentShim("rec_paused") : tContentShim("rec_resumed"));
+    notifySidebarShim({ type: "TOGGLE_RECORD_PAUSE", isPaused: inPageRecIsPaused });
+  }
+
+  function stopInPageRecording() {
+    hideRecordingToolbar();
+    notifySidebarShim({ type: "STOP_RECORDING_REQUEST" });
+  }
+
+  function hideRecordingToolbar() {
+    if (inPageWebcamStream) {
+      try {
+        inPageWebcamStream.getTracks().forEach(t => t.stop());
+      } catch (e) {}
+      inPageWebcamStream = null;
+    }
+    if (inPageWebcamBubbleEl) {
+      inPageWebcamBubbleEl.remove();
+      inPageWebcamBubbleEl = null;
+    }
+    if (inPageRecToolbarEl) {
+      inPageRecToolbarEl.remove();
+      inPageRecToolbarEl = null;
+    }
+    if (inPageRecKeydownHandler) {
+      window.removeEventListener("keydown", inPageRecKeydownHandler, true);
+      inPageRecKeydownHandler = null;
+    }
+    inPageRecIsMicMuted = false;
+    inPageRecIsPaused = false;
   }
 
   function showInPageToast(text) {

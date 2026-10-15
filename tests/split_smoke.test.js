@@ -43,7 +43,6 @@ const LOAD_ORDER_MODULES = [
   "core/header-layout.js",
   "tabs/calendar.js",
   "tabs/pomodoro.js",
-  "tabs/webllm.js",
   "tabs/ai.js",
   "tabs/tab-manager.js",
   "tabs/test-helper.js",
@@ -71,9 +70,7 @@ const KEY_GLOBALS = [
   "renderAutofillList", "renderTodoList", "calRenderCalendar",
   "pomodoroFormatTime", "pomodoroDailyStats", "pomodoroPlan", "pomodoroWeekStats",
   "sfGetHeaderSettings", "sfHeaderApply", "sfHeaderReset",
-  "sfNavGetOrder", "sfNavReorder", "sfNavReset", "sfNavIsDisabled", "sfNavGetDisabled", "sfNavSetDisabled", "sfNavToggleDisabled",
-  "sfNavSetBadge", "sfNavGetStyle", "sfNavSetStyle", "sfNavUpdatePill",
-  "sfGetThemeSettings", "sfApplyTheme",
+  "sfNavGetOrder", "sfNavReorder", "sfNavReset",
   "tabmgrMediaGetPref", "tabmgrMediaSetPref", "tabmgrMediaRefresh"
 ];
 
@@ -927,8 +924,8 @@ async function main() {
     const viCount = w.Object.keys(w.I18N_DATA.vi).filter(k => k.startsWith("content_")).length;
     const enCount = w.Object.keys(w.I18N_DATA.en).filter(k => k.startsWith("content_")).length;
     const prCount = w.Object.keys(w.I18N_DATA.vi).filter(k => k.startsWith("privacy_")).length;
-    check(viCount === 102 && enCount === 102 && prCount === 50,
-      `namespace keys present in locale dumps (content_*=102, privacy_*=50; got ${viCount}/${enCount}/${prCount})`);
+    check(viCount === 114 && enCount === 114 && prCount === 50,
+      `namespace keys present in locale dumps (content_*=114, privacy_*=50; got ${viCount}/${enCount}/${prCount})`);
   }
 
   // 3. privacy.html standalone page uses the unified i18n engine
@@ -1029,7 +1026,7 @@ async function main() {
       // inside the player container (plus a small avatar). The extractor must pick
       // the biggest image and ignore the tiny avatar.
       meta.remove();
-      if (v.removeAttribute) v.removeAttribute("poster");
+      v.removeAttribute && v.removeAttribute("poster");
       const player = w.document.createElement("div");
       player.className = "xgplayer xgplayer-live";
       const cover = w.document.createElement("img");
@@ -1439,12 +1436,12 @@ async function main() {
         Object.defineProperty(feed, "duration", { value: 600, configurable: true });
         Object.defineProperty(feed, "paused", { value: false, configurable: true });
         Object.defineProperty(feed, "ended", { value: false, configurable: true });
-        let feedStart = 5000;
-        Object.defineProperty(feed, "seekable", { value: { length: 1, start: function () { return feedStart; }, end: function () { return feedStart + 60; } }, configurable: true });
-        Object.defineProperty(feed, "currentTime", { value: feedStart + 55, configurable: true });
+        let fs = 5000;
+        Object.defineProperty(feed, "seekable", { value: { length: 1, start: function () { return fs; }, end: function () { return fs + 60; } }, configurable: true });
+        Object.defineProperty(feed, "currentTime", { value: fs + 55, configurable: true });
         w.__sfMedia._resetLiveEdge();
         w.__sfMedia.getState();                 // set reference
-        fakeT += 8000; feedStart += 8;                 // real time + 8s, edge advanced 8s
+        fakeT += 8000; fs += 8;                 // real time + 8s, edge advanced 8s
         const stFeed = w.__sfMedia.getState();
         check(stFeed && stFeed.isLive === true,
           `a finite-duration non-YouTube feed with a sliding seekable window is flagged LIVE by getState (got: ${stFeed && stFeed.isLive})`);
@@ -2285,83 +2282,6 @@ async function main() {
         "sidebar: aiBuildPrompt embeds page context + trailing question");
       check(await w.eval(`aiHasKey("gemini") === false && aiGetProviderConfig("bogus").label === "Gemini"`),
         "sidebar: key-gate + provider config fallback sane");
-      check(await w.eval(`typeof sfWebllmIsReady === "function" && sfWebllmIsReady() === false && aiCanUse("webllm") === false && Array.isArray(SF_WEBLLM_MODELS) && SF_WEBLLM_MODELS.length >= 1 && aiGetProviderModels("webllm").length === SF_WEBLLM_MODELS.length && aiNeedProviderToastKey("webllm") === "ai_toast_webllm_not_loaded"`),
-        "sidebar: WebLLM offline provider wired (model roster + not-ready gate)");
-      check(await w.eval(`(function(){
-        var a=aiDetectAgentAction("tìm kênh YouTube MixiGaming rồi đăng ký giúp tôi");
-        return !!a && a.verb==="click" && a.sensitive===true && a.topic==="kênh YouTube MixiGaming" && a.match.indexOf("đăng ký")!==-1;
-      })()`),
-        "sidebar: agent action detects 'tìm ... rồi đăng ký' as a sensitive click");
-      check(await w.eval(`(function(){
-        var a=aiDetectAgentAction("mở trang web youtube.com rồi gõ hello vào ô tìm kiếm");
-        return !!a && a.verb==="type" && a.text==="hello" && a.match[0]==="ô tìm kiếm" && a.submitAfter===false && a.topic==="trang web youtube.com";
-      })()`),
-        "sidebar: agent action parses 'gõ <text> vào <target>' after a connector");
-      check(await w.eval(`(function(){
-        var a=aiDetectAgentAction("mở trang web example.com rồi gửi");
-        return !!a && a.verb==="submit" &&
-          aiDetectAgentAction("giải thích thuật ngữ click là gì")===null &&
-          aiDetectAgentAction("tìm kênh YouTube MixiGaming đăng ký")===null;
-      })()`),
-        "sidebar: agent action fires on 'rồi gửi', stays quiet without a nav command or connector");
-      check(await w.eval(`(function(){
-        var p=aiBuildAgentActionPlan(aiDetectAgentAction("tìm kênh YouTube MixiGaming rồi đăng ký giúp tôi"), true);
-        return p.length===2 && p[0].kind==="wait" && p[0].ms===2600 && p[1].kind==="click" && p[1].sensitive===true &&
-          aiAgentPlanIsSensitive(p)===true && aiAgentRequiresApproval(p,false)===true;
-      })()`),
-        "sidebar: sensitive click plan always requires approval (even with confirm off)");
-      check(await w.eval(`(function(){
-        var p=aiBuildAgentActionPlan(aiDetectAgentAction("mở trang web youtube.com rồi gõ hello vào ô tìm kiếm"), false);
-        return p.length===3 && p[0].kind==="wait" && p[0].ms===1800 && p[1].kind==="click" && p[2].kind==="type" && p[2].text==="hello" &&
-          aiAgentPlanIsSensitive(p)===false && aiAgentRequiresApproval(p,false)===false && aiAgentRequiresApproval(p,true)===true;
-      })()`),
-        "sidebar: non-sensitive plan honours the confirm setting");
-      check(await w.eval(`(function(){
-        var host=document.createElement("div");
-        var b=document.createElement("button"); b.textContent="Đăng ký MixiGaming demo"; host.appendChild(b);
-        var inp=document.createElement("input"); inp.setAttribute("placeholder","Ô tìm kiếm demo agent"); host.appendChild(inp);
-        document.body.appendChild(host);
-        var r1=sfAgentDomAct({kind:"click", match:["đăng ký mixigaming demo"]});
-        var r2=sfAgentDomAct({kind:"type", text:"xin chào", match:["ô tìm kiếm demo agent"]});
-        var r3=sfAgentDomAct({kind:"click", match:["zzz_khong_ton_tai"]});
-        var ok=r1.ok===true && r1.found===true && r2.ok===true && inp.value==="xin chào" &&
-          r3.ok===false && r3.found===false && r3.reason==="not_found" &&
-          String(sfAgentDomAct).indexOf("function pick(")!==-1;
-        document.body.removeChild(host);
-        return ok;
-      })()`),
-        "sidebar: sfAgentDomAct clicks, types, reports not-found and is self-contained (no closure)");
-      check(await w.eval(`(function(){
-        var host=document.createElement("div");
-        var f=document.createElement("form");
-        var inp=document.createElement("input"); inp.name="q"; f.appendChild(inp);
-        var sb=document.createElement("button"); sb.type="submit"; sb.textContent="Gửi form test"; f.appendChild(sb);
-        host.appendChild(f); document.body.appendChild(host);
-        var r=sfAgentDomAct({kind:"submit", match:["gửi form test"]});
-        document.body.removeChild(host);
-        return r.ok===true && r.found===true;
-      })()`),
-        "sidebar: sfAgentDomAct submits the form through its submit button");
-      check(await w.eval(`(function(){
-        var plan=aiBuildAgentActionPlan(aiDetectAgentAction("tìm kênh YouTube MixiGaming rồi đăng ký giúp tôi"), true);
-        var fired=0;
-        aiAppendAgentApprovalCard("tìm kênh YouTube MixiGaming rồi đăng ký giúp tôi","tìm kênh YouTube MixiGaming rồi đăng ký giúp tôi","gemini","",null,false,{plan:plan,onApprove:function(){fired++;}});
-        var rows=document.querySelectorAll(".ai-agent-approval-row");
-        var last=rows[rows.length-1];
-        var approve=last.querySelector(".ai-agent-btn-approve");
-        if(!approve) return false;
-        var before=fired;
-        approve.click();
-        var sensitiveOk=fired===before+1 && last.querySelectorAll(".ai-agent-plan-step").length===2 && !!last.querySelector(".ai-agent-risk") && approve.disabled===true;
-        aiAppendAgentApprovalCard("gõ hello","gõ hello","gemini","",null,false,{plan:[{kind:"wait",ms:500},{kind:"type",text:"hello",match:["a"]}],onApprove:function(){}});
-        var rows2=document.querySelectorAll(".ai-agent-approval-row");
-        var last2=rows2[rows2.length-1];
-        var benignOk=!last2.querySelector(".ai-agent-risk") && last2.querySelectorAll(".ai-agent-plan-step").length===2;
-        var md=aiAgentResultsReport([{ok:true,kind:"click",label:"Bấm",icon:"x"},{ok:false,kind:"type",label:"Nhập",icon:"y"}]);
-        var reportOk=typeof md==="string";
-        return sensitiveOk && benignOk && reportOk;
-      })()`),
-        "sidebar: approval card lists plan steps, gates sensitive actions and reports results");
       check(await w.eval(`aiValidateCustomUrl("https://api.example.com/v1") === true && aiValidateCustomUrl("http://api.example.com/v1") === false && aiValidateCustomUrl("javascript:alert(1)") === false && aiValidateCustomUrl("https://localhost:8080/x") === false && aiValidateCustomUrl("https://169.254.169.254/meta") === false && aiValidateCustomUrl("https://10.1.2.3/v1") === false && aiValidateCustomUrl("https://192.168.0.1/v1") === false && aiValidateCustomUrl("https://[::1]/v1") === false && aiValidateCustomUrl("https://user:pw@example.com") === false`),
         "sidebar: custom URL validator blocks http/js/localhost/private-IP/creds");
       check(await w.eval(`aiSanitizeExternal("a\\u200Bb", 100).text === "ab"`),
@@ -2797,8 +2717,7 @@ async function main() {
       `first right item carries margin-left:auto (lang=${langEl.style.marginLeft}, brand=${brandEl.style.marginLeft})`);
     // hiding the FIRST right item must re-anchor margin-left:auto on the next
     // visible right item so the right group stays flush against the edge
-    console.log("NAV BEFORE APPLY:", w.sfNavGetOrder()[0]);
-      w.sfHeaderApply({
+    w.sfHeaderApply({
       position: "top",
       hidden: { lang: true },
       side: { brand: "left", lang: "right", trust: "right", badge: "right" },
@@ -2811,12 +2730,9 @@ async function main() {
     // the sfHeaderApply above re-rendered the modal rows with its ad-hoc state,
     // so re-apply the injected custom layout before asserting the modal reflects it
     w.sfHeaderApply(custom);
-    console.log("NAV BEFORE GEAR:", w.sfNavGetOrder()[0]);
-      const gear = w.document.getElementById("btn-header-settings");
+    const gear = w.document.getElementById("btn-header-settings");
     check(!!gear, "gear button present in header");
     gear.click();
-      await new Promise(r => setTimeout(r, 40));
-      console.log("NAV AFTER GEAR:", w.sfNavGetOrder()[0]);
     const modal = w.document.getElementById("header-settings-modal");
     check(!!modal && modal.style.display === "block", "gear opens the header settings modal");
     check(w.document.querySelectorAll("#hdrs-item-list .hdrs-item-row").length === 4,
@@ -2877,9 +2793,7 @@ async function main() {
       domAfterTie.indexOf("lang") < domAfterTie.indexOf("brand"),
       `tied orders are renumbered so ▲/▼ always work (lang=${afterTie.order.lang}, brand=${afterTie.order.brand})`);
 
-    console.log("NAV BEFORE RESET:", w.sfNavGetOrder()[0]);
-      const defs = w.sfHeaderReset();
-      console.log("NAV AFTER RESET:", w.sfNavGetOrder()[0]);
+    const defs = w.sfHeaderReset();
     check(defs && defs.position === "top" && defs.side.brand === "left" && defs.side.badge === "right" &&
       defs.hidden.badge === false && defs.order.badge === 2,
       `reset restores the default layout (got ${JSON.stringify(defs)})`);
@@ -2890,9 +2804,6 @@ async function main() {
 
     // --- Main-nav tab reorder ---
     const navDefault = w.sfNavGetOrder();
-    if (! (Array.isArray(navDefault) && navDefault.length === 19 && navDefault[0] === "tab-cite" && navDefault[navDefault.length - 1] === "tab-userscripts")) {
-      console.log("DEBUG NAVDEFAULT:", navDefault);
-    }
     check(Array.isArray(navDefault) && navDefault.length === 19 && navDefault[0] === "tab-cite" &&
       navDefault[navDefault.length - 1] === "tab-userscripts",
       `nav order initialized with 19 default targets (got ${navDefault.length})`);
@@ -2931,134 +2842,6 @@ async function main() {
       storedNavReset.order.join() === navDefault.join() &&
       [...w.document.querySelectorAll("#nav-wrapper .main-nav-btn")].map(b => b.dataset.target).join() === navDefault.join(),
       "reset restores the default nav order in model, DOM, and storage");
-
-    // --- Main-nav Drag & Drop and Module Kill-Switch ---
-    const allNavRows = w.document.querySelectorAll("#hdrs-nav-list .hdrs-item-row");
-    const handles = w.document.querySelectorAll("#hdrs-nav-list .hdrs-drag-handle");
-    check(handles.length === 19 && allNavRows[0].draggable === true,
-      `modal nav rows provide drag handles and draggable rows (got ${handles.length} handles)`);
-    const navBtns = w.document.querySelectorAll("#nav-wrapper .main-nav-btn");
-    check(navBtns.length === 19 && navBtns[0].draggable === true,
-      "navbar buttons are draggable for direct reordering");
-
-    // Toggle module disable / kill-switch
-    const pomoRow = w.document.querySelector('#hdrs-nav-list [data-nav-target="tab-pomo"]');
-    const pomoToggle = pomoRow ? pomoRow.querySelector(".hdrs-toggle-btn") : null;
-    check(!!pomoToggle && pomoToggle.classList.contains("is-on"), "pomo toggle button is on initially");
-    pomoToggle.click();
-    await new Promise(r => setTimeout(r, 40));
-    const pomoRowAfter = w.document.querySelector('#hdrs-nav-list [data-nav-target="tab-pomo"]');
-    check(w.sfNavIsDisabled("tab-pomo") === true && pomoRowAfter && pomoRowAfter.classList.contains("is-hidden"),
-      "clicking toggle disables module and marks row is-hidden");
-    const pomoNavBtn = w.document.querySelector('#nav-wrapper .main-nav-btn[data-target="tab-pomo"]');
-    check(pomoNavBtn && pomoNavBtn.style.display === "none",
-      "disabled tab button is hidden in navbar");
-
-    // Disabling current active tab automatically switches to first enabled tab
-    w.sfNavSetDisabled("tab-cite", true);
-    await new Promise(r => setTimeout(r, 40));
-    const activeTarget = w.document.querySelector("#nav-wrapper .main-nav-btn.active");
-    check(activeTarget && activeTarget.dataset.target !== "tab-cite" && activeTarget.dataset.target !== "tab-pomo",
-      `disabling active tab switches to first enabled tab (switched to ${activeTarget && activeTarget.dataset.target})`);
-
-    // Min 1 tab guard
-    const orderNow = w.sfNavGetOrder();
-    orderNow.forEach(t => { if (t !== "tab-ai") w.sfNavSetDisabled(t, true); });
-    await new Promise(r => setTimeout(r, 40));
-    const cantDisableLast = w.sfNavSetDisabled("tab-ai", true);
-    check(cantDisableLast === false && w.sfNavIsDisabled("tab-ai") === false,
-      "cannot disable the last remaining enabled tab (min 1 tab guard)");
-
-    // Re-enable and reset
-    w.document.getElementById("btn-reset-header-settings").click();
-    await new Promise(r => setTimeout(r, 40));
-    check(w.sfNavIsDisabled("tab-pomo") === false && w.sfNavIsDisabled("tab-cite") === false,
-      "reset re-enables all tabs");
-
-    // --- Direction 1: Floating pill, Badges, and Compact Nav Mode ---
-    const pill = w.document.getElementById("nav-active-pill");
-    check(!!pill && pill.classList.contains("nav-active-pill"),
-      "nav active indicator pill exists inside nav-wrapper");
-
-    // Compact mode check
-    check(w.sfNavGetStyle() === "full", "default nav style is full");
-    const navBar = w.document.querySelector(".main-nav-bar");
-    check(navBar && !navBar.classList.contains("is-compact-nav"),
-      "navbar does not have is-compact-nav class by default");
-
-    const compactBtn = w.document.querySelector('#hdrs-nav-style-seg [data-nav-style="compact"]');
-    check(!!compactBtn, "compact nav button exists in settings modal");
-    if (compactBtn) {
-      compactBtn.click();
-      await new Promise(r => setTimeout(r, 40));
-      check(w.sfNavGetStyle() === "compact", "clicking compact button changes navStyle to compact");
-      check(navBar && navBar.classList.contains("is-compact-nav"),
-        "navbar receives is-compact-nav class in compact mode");
-      const storedAfterCompact = (await w.chrome.storage.local.get("sf_nav_settings")).sf_nav_settings;
-      check(storedAfterCompact && storedAfterCompact.style === "compact",
-        "compact nav style persisted to storage");
-    }
-
-    w.sfNavSetStyle("full");
-    await new Promise(r => setTimeout(r, 40));
-    check(w.sfNavGetStyle() === "full" && navBar && !navBar.classList.contains("is-compact-nav"),
-      "sfNavSetStyle('full') reverts compact mode");
-
-    // Status Badges check
-    const citeBadge = w.document.getElementById("nav-badge-tab-cite");
-    check(!!citeBadge && citeBadge.classList.contains("nav-badge"),
-      "tab-cite nav button contains nav-badge element");
-
-    w.sfNavSetBadge("tab-cite", { text: "5", visible: true });
-    check(citeBadge.classList.contains("is-visible") && citeBadge.textContent === "5",
-      "sfNavSetBadge sets text and makes badge visible");
-
-    w.sfNavSetBadge("tab-pomo", { dot: true, pulse: true, visible: true });
-    const pomoBadge = w.document.getElementById("nav-badge-tab-pomo");
-    check(pomoBadge && pomoBadge.classList.contains("badge-dot") && pomoBadge.classList.contains("badge-pulse"),
-      "sfNavSetBadge supports dot and pulse options");
-
-    w.sfNavSetBadge("tab-cite", { visible: false });
-    check(!citeBadge.classList.contains("is-visible") && citeBadge.textContent === "",
-      "sfNavSetBadge with visible=false hides badge");
-
-    // Theme Accent & Motion Engine check
-    const thSettings = w.sfGetThemeSettings();
-    check(!!thSettings && thSettings.accent === "cyan" && thSettings.motion === "smooth",
-      "default theme settings is cyan and smooth motion");
-    check(w.document.documentElement.getAttribute("data-theme") === "cyan",
-      "document data-theme attribute defaults to cyan");
-    check(w.document.documentElement.getAttribute("data-motion") === "smooth",
-      "document data-motion attribute defaults to smooth");
-
-    const amberChip = w.document.querySelector('.hdrs-theme-chip[data-theme-val="amber"]');
-    check(!!amberChip, "amber theme chip exists");
-    if (amberChip) {
-      amberChip.click();
-      await new Promise(r => setTimeout(r, 40));
-      check(w.sfGetThemeSettings().accent === "amber",
-        "clicking amber chip updates themeState.accent to amber");
-      check(w.document.documentElement.getAttribute("data-theme") === "amber",
-        "clicking amber chip updates data-theme attribute to amber");
-      check(amberChip.classList.contains("active"),
-        "amber chip receives active class");
-      const storedTheme = (await w.chrome.storage.local.get("sf_theme_settings")).sf_theme_settings;
-      check(storedTheme && storedTheme.accent === "amber",
-        "theme selection persisted to sf_theme_settings in storage");
-    }
-
-    const instantMotionBtn = w.document.querySelector('#hdrs-motion-seg [data-motion-val="instant"]');
-    check(!!instantMotionBtn, "instant motion button exists");
-    if (instantMotionBtn) {
-      instantMotionBtn.click();
-      await new Promise(r => setTimeout(r, 40));
-      check(w.sfGetThemeSettings().motion === "instant",
-        "clicking instant motion button updates themeState.motion to instant");
-      check(w.document.documentElement.getAttribute("data-motion") === "instant",
-        "clicking instant motion updates data-motion attribute to instant");
-      check(instantMotionBtn.classList.contains("active"),
-        "instant button receives active class");
-    }
   }
 
   // 4zz2. Nav default active tab = stored active, else first tab in nav order

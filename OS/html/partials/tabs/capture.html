@@ -177,6 +177,18 @@
           </div>
         </label>
 
+        <!-- Option: Auto-collapse sidebar during recording -->
+        <label class="switch-row">
+          <div class="switch-row-left">
+            <span class="switch-row-title" data-i18n="pref_video_autohide_sidebar">Tự động thu gọn sidebar khi quay / chụp</span>
+            <span class="switch-row-desc" data-i18n="pref_video_autohide_sidebar_desc">Thu gọn ScholarFlow để không che màn hình và tự mở lại khi hoàn thành.</span>
+          </div>
+          <div class="custom-switch">
+            <input type="checkbox" id="video-pref-autohide-sidebar" checked>
+            <span class="switch-slider"></span>
+          </div>
+        </label>
+
         <!-- 3. Option: Resolution, FPS & Countdown Row -->
         <div class="row" style="margin-bottom:0;">
           <div class="col form-group" style="margin-bottom:0;">
@@ -230,6 +242,11 @@
         <span data-i18n="btn_start_record">Bắt đầu quay video</span>
       </button>
 
+      <button class="btn btn-secondary" id="btn-open-record-studio" style="width:100%; padding:8px 10px; margin-top:6px; border-color:rgba(56,189,248,0.4); background:rgba(2,132,199,0.12); color:#38bdf8; display:flex; align-items:center; justify-content:center; gap:6px; font-size:12px; font-weight:600;" title="Mở Studio nổi độc lập để tự đóng sidebar, giữ tab web bung rộng chuẩn tỷ lệ 16:9" data-i18n-title="tip_record_studio">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+        <span data-i18n="btn_record_studio">Quay 16:9 Cửa sổ nổi</span>
+      </button>
+
       <!-- Active recording status bar -->
       <div id="recording-active-bar" style="display:none; margin-top:8px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.2); border-radius:8px; padding:10px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
@@ -238,7 +255,12 @@
             <span data-i18n="lbl_recording_active">ĐANG QUAY:</span>
             <span id="record-timer" style="font-family:ui-monospace, monospace; color:#ffffff; font-size:13px;">00:00</span>
           </div>
-          <span id="record-audio-status" style="font-size:10.5px; color:#cbd5e1;" data-i18n="lbl_no_audio">(Không âm thanh)</span>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span id="record-audio-status" style="font-size:10.5px; color:#cbd5e1;" data-i18n="lbl_no_audio">(Không âm thanh)</span>
+            <button type="button" id="btn-toggle-recording-collapse" class="btn-text-small" style="font-size:10.5px; padding:2px 7px; border:1px solid rgba(255,255,255,0.2); border-radius:4px; color:#cbd5e1; background:rgba(255,255,255,0.08); cursor:pointer;">
+              ↕ <span data-i18n="btn_toggle_collapse">Thu gọn / Mở rộng</span>
+            </button>
+          </div>
         </div>
         <div class="actions-row" style="margin-bottom:0;">
           <button class="btn btn-primary" id="btn-stop-record" style="flex:2; padding:7px;">
@@ -247,6 +269,10 @@
           <button class="btn btn-secondary" id="btn-cancel-record" style="flex:1; padding:7px;">
             <span data-i18n="btn_cancel_record">✕ Hủy</span>
           </button>
+        </div>
+        <div style="font-size:10px; color:#94a3b8; margin-top:6px; display:flex; justify-content:space-between; padding-top:4px; border-top:1px solid rgba(255,255,255,0.08);">
+          <span>Alt + S: Dừng quay</span>
+          <span>Alt + P: Tạm dừng</span>
         </div>
       </div>
 

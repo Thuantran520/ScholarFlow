@@ -598,26 +598,32 @@
           </div>
         </div>
         <div class="ai-top-actions">
-          <button type="button" class="ai-gear-btn ai-web-btn" id="ai-btn-web-search" title="Tim noi dung nay tren web" data-i18n-title="ai_btn_web_search"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></button>
-          <button type="button" class="ai-gear-btn ai-history-btn" id="ai-btn-sessions" title="Lịch sử & Phiên chat" data-i18n-title="ai_btn_sessions"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></button>
-          <button type="button" class="ai-gear-btn" id="ai-btn-open-settings" title="Cài đặt" data-i18n-title="ai_settings_tip">⚙</button>
+          <button type="button" class="ai-gear-btn ai-web-btn" id="ai-btn-web-search" title="Tìm nội dung này trên web" data-i18n-title="ai_btn_web_search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></button>
+          <button type="button" class="ai-gear-btn ai-history-btn" id="ai-btn-sessions" title="Lịch sử &amp; Phiên chat" data-i18n-title="ai_btn_sessions"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></button>
+          <button type="button" class="ai-gear-btn" id="ai-btn-open-settings" title="Cài đặt" data-i18n-title="ai_settings_tip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0 2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
         </div>
       </div>
+
+      <!-- Current page bar (slim capsule) -->
       <div class="ai-current-page" id="ai-current-page" style="display:flex; gap:6px; align-items:center; padding:4px 8px; background:rgba(15,23,42,0.5); border:1px solid rgba(255,255,255,0.06); border-radius:8px; font-size:11px;">
         <img id="ai-page-favicon" src="" alt="" style="width:14px; height:14px; object-fit:contain; flex-shrink:0; display:none;"><span id="ai-page-favicon-fb" style="font-size:12px;">🌐</span>
         <div style="flex:1; min-width:0; overflow:hidden;">
           <div id="ai-page-title" style="font-weight:600; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" data-i18n="ai_page_title_default">Chưa có trang</div>
           <div id="ai-page-url" style="color:#94a3b8; font-size:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">—</div>
         </div>
-        <button type="button" class="btn btn-secondary ai-btn-add-page" id="ai-btn-add-page" style="padding:2px 7px; font-size:10.5px;" title="Thêm trang này vào ngữ cảnh (+)" data-i18n-title="ai_btn_add_page">+</button>
-        <button type="button" class="btn btn-secondary" id="ai-btn-copy-page" style="padding:2px 7px; font-size:10.5px;" title="Copy URL" data-i18n-title="ai_btn_copy_page">⎘</button>
+        <button type="button" class="btn btn-secondary ai-btn-add-page" id="ai-btn-add-page" title="Thêm trang này vào ngữ cảnh (+)" data-i18n-title="ai_btn_add_page"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+        <button type="button" class="btn btn-secondary ai-btn-copy-page" id="ai-btn-copy-page" title="Copy URL" data-i18n-title="ai_btn_copy_page"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
       </div>
+
+      <!-- Pages added to context (single horizontal strip) -->
       <div id="ai-pages-context" class="ai-pages-context" style="display:none;">
         <span class="ai-pages-label"><span aria-hidden="true">📌</span> <span data-i18n="ai_pages_added">Trang đã thêm</span> <span id="ai-pages-count" class="ai-pages-count">(0)</span></span>
         <div id="ai-pages-list" class="ai-pages-list"></div>
         <button type="button" id="ai-btn-clear-pages" class="ai-pages-clear-btn" title="Xóa tất cả trang đã ghim" data-i18n-title="ai_pages_clear_all">✕</button>
       </div>
+
       <div id="ai-chat-history" class="ai-chat-history ai-chat-box"></div>
+
       <div class="ai-quick-chips">
         <button type="button" class="ai-chip" data-ai-quick="summary" data-i18n="ai_quick_summary">Tóm tắt</button>
         <button type="button" class="ai-chip" data-ai-quick="qa" data-i18n="ai_quick_qa">Hỏi đáp</button>
@@ -630,37 +636,35 @@
         <button type="button" class="ai-chip" data-ai-quick="answer" data-i18n="ai_quick_answer">Giải đáp án</button>
         <button type="button" class="ai-chip" data-ai-quick="papers" data-i18n="ai_quick_papers">Tài liệu</button>
         <button type="button" class="ai-chip" data-ai-quick="tabs" data-i18n="ai_quick_tabs">Tab</button>
+        <span id="ai-custom-chips-list" class="ai-custom-chips-list" style="display:contents;"></span>
       </div>
-      <!-- Realtime Live Stream Monitor Box -->
+
+      <!-- Realtime Vision Live Monitor Capsule -->
       <div id="ai-live-box" class="ai-live-box" style="display:none;">
         <div class="ai-live-box-header">
           <div class="ai-live-status-pill">
-            <span id="ai-live-status-text" data-i18n="ai_live_status_active">REALTIME LIVE</span>
+            <span class="ai-live-dot"></span>
+            <span id="ai-live-status-text" data-i18n="ai_live_status_active">LIVE</span>
           </div>
-          <div class="ai-live-token-pill" data-i18n="ai_live_token_badge">⚡ Nén ~258 token/lần hỏi</div>
+          <div class="ai-live-token-pill" data-i18n="ai_live_token_badge">~258 token/lần hỏi</div>
           <div class="ai-live-actions">
-            <select id="ai-live-source-select" class="ai-live-source-select" title="Chọn màn hình Live">
-              <option value="tab" data-i18n="ai_live_source_tab">🌐 Tab hiện tại</option>
-              <option value="screen" data-i18n="ai_live_source_screen">🖥️ Màn hình / Cửa sổ</option>
-              <option value="camera" data-i18n="ai_live_source_camera">📷 Camera</option>
+            <select id="ai-live-source-select" class="ai-live-source-select" title="Chọn nguồn Vision">
+              <option value="tab" data-i18n="ai_live_source_tab">Tab hiện tại</option>
+              <option value="screen" data-i18n="ai_live_source_screen">Màn hình</option>
+              <option value="camera" data-i18n="ai_live_source_camera">Camera</option>
             </select>
-            <button type="button" class="ai-live-btn" id="ai-btn-live-switch" title="Chuyển đổi giữa Camera và Màn hình" data-i18n-title="ai_btn_live_switch_tip">🔄</button>
-            <button type="button" class="ai-live-btn" id="ai-btn-live-snap" title="Chụp khung hình này vào khung chat" data-i18n-title="ai_btn_live_snap_tip">📸</button>
-            <button type="button" class="ai-live-btn" id="ai-btn-live-close" title="Dừng quay trực tiếp (Đóng Live)" data-i18n-title="ai_btn_live_close_tip">✕</button>
+            <button type="button" class="ai-live-btn" id="ai-btn-live-switch" title="Chuyển đổi giữa Camera và Màn hình" data-i18n-title="ai_btn_live_switch_tip"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8.1 8.1 0 0 0-15.5-2m-.5-4v6h6M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-6h-6"/></svg></button>
+            <button type="button" class="ai-live-btn" id="ai-btn-live-snap" title="Chụp khung hình này vào khung chat" data-i18n-title="ai_btn_live_snap_tip"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg></button>
+            <button type="button" class="ai-live-btn" id="ai-btn-live-close" title="Dừng quay trực tiếp (Đóng Live)" data-i18n-title="ai_btn_live_close_tip"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
           </div>
         </div>
-        <div class="ai-live-video-wrap">
-          <video id="ai-live-video" autoplay muted playsinline style="display:none;"></video>
-          <img id="ai-live-preview-img" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:inherit;" alt="Live Preview">
-          <div id="ai-live-tab-card" class="ai-live-tab-card" style="display:none;">
-            <div class="ai-live-pulse-radar"></div>
-            <div class="ai-live-tab-info">
-              <span class="ai-live-tab-title" id="ai-live-tab-title">Tab hiện tại</span>
-              <span class="ai-live-tab-desc" data-i18n="ai_live_tab_desc">Viền đổ sáng đang kích hoạt · Không lag</span>
-            </div>
-          </div>
+        <div style="position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; overflow:hidden;">
+          <video id="ai-live-video" autoplay muted playsinline></video>
+          <img id="ai-live-preview-img" alt="Live Preview">
+          <div id="ai-live-tab-card"><span id="ai-live-tab-title"></span><span class="ai-live-tab-desc"></span></div>
         </div>
       </div>
+
       <div id="ai-image-preview" class="ai-image-preview" style="display:none; padding:6px 8px; margin:6px 0; background:rgba(15,23,42,0.65); border:1px solid rgba(var(--primary-rgb),0.2); border-radius:8px; flex-direction:column; gap:6px; flex-shrink:0;">
         <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; font-size:11px;">
           <span id="ai-image-count-label" style="color:#94a3b8; font-weight:600;" data-i18n="ai_attached_images_count">Ảnh đã đính kèm (0/10)</span>
@@ -669,30 +673,34 @@
         <div id="ai-image-preview-list" class="ai-image-preview-list"></div>
         <div style="display:none;"><img id="ai-image-thumb" src="" alt=""><span id="ai-image-name"></span></div>
       </div>
+
       <div class="ai-input-row">
         <button type="button" class="btn btn-secondary" id="ai-btn-attach-image" data-i18n="ai_btn_attach_label" title="Đính kèm" data-i18n-title="ai_btn_attach_image">Ảnh</button>
-        <button type="button" class="btn btn-secondary" id="ai-btn-capture-vision" data-i18n="ai_btn_vision_label" title="Chụp nhanh màn hình nén gửi kèm AI (Tiết kiệm token)" data-i18n-title="ai_btn_vision_title">Vision</button>
-        <button type="button" class="btn btn-secondary" id="ai-btn-live-stream" data-i18n="ai_btn_live_stream_label" title="Quay camera/màn hình trực tiếp thời gian thực (Realtime Live Vision)" data-i18n-title="ai_btn_live_stream_title">Live</button>
+        <button type="button" id="ai-btn-capture-vision" style="display:none;" aria-hidden="true"></button>
         <input type="file" id="ai-image-input" accept="image/*" multiple style="display:none;">
         <div class="ai-input-wrap">
           <textarea id="ai-input" class="ai-input" rows="1"></textarea>
         </div>
         <button type="button" class="ai-send-btn" id="ai-btn-send" data-i18n="ai_btn_send">Gửi</button>
       </div>
-      <div class="ai-disclaimer-row" style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:4px; min-height:26px; padding:4px 8px; background:rgba(15,23,42,0.55); border:1px solid rgba(255,255,255,0.05); border-radius:8px; position:relative;">
-        <span class="ai-disclaimer" style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" data-i18n="ai_disclaimer_short">Chỉ gửi khi bấm Gửi — 4000 ký tự.</span>
-        <span style="display:flex; gap:4px; align-items:center;">
+
+      <div class="ai-disclaimer-row">
+        <button type="button" class="ai-tool-btn ai-tool-pill" id="ai-btn-live-stream" title="Vision" data-i18n-title="ai_btn_vision_title">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          <span data-i18n="ai_btn_vision_label">Vision</span>
+        </button>
+        <span style="display:inline-flex; gap:5px; align-items:center;">
           <div class="ai-export-dropdown" style="position:relative; display:inline-block;">
-            <button type="button" class="ai-tool-btn" id="ai-btn-export" title="Xuất dữ liệu" data-i18n-title="ai_btn_export"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></button>
+            <button type="button" class="ai-tool-btn" id="ai-btn-export" title="Xuất dữ liệu" data-i18n-title="ai_btn_export"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></button>
             <div id="ai-export-menu" class="ai-export-menu is-hidden">
               <button type="button" class="ai-export-item" id="ai-btn-export-md" data-i18n="ai_export_md_title">Xuất Markdown (.md)</button>
               <button type="button" class="ai-export-item" id="ai-btn-export-anki" data-i18n="ai_export_anki_title">Xuất Flashcard Anki (.txt)</button>
             </div>
           </div>
-          <button type="button" class="ai-tool-btn" id="ai-btn-new-chat" title="Cuộc trò chuyện mới" data-i18n-title="ai_btn_new_chat">↻</button>
-          <button type="button" class="ai-tool-btn" id="ai-btn-copy-last" title="Copy" data-i18n-title="ai_btn_copy_last">⎘</button>
-          <button type="button" class="ai-tool-btn" id="ai-btn-insert-note" title="Ghi chú" data-i18n-title="ai_btn_insert_note">→</button>
-          <button type="button" class="ai-tool-btn" id="ai-btn-clear-chat" title="Xóa" data-i18n-title="ai_btn_clear_chat">🗑</button>
+          <button type="button" class="ai-tool-btn" id="ai-btn-new-chat" title="Cuộc trò chuyện mới" data-i18n-title="ai_btn_new_chat"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg></button>
+          <button type="button" class="ai-tool-btn" id="ai-btn-copy-last" title="Copy" data-i18n-title="ai_btn_copy_last"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
+          <button type="button" class="ai-tool-btn" id="ai-btn-insert-note" title="Ghi chú" data-i18n-title="ai_btn_insert_note"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></button>
+          <button type="button" class="ai-tool-btn" id="ai-btn-clear-chat" title="Xóa" data-i18n-title="ai_btn_clear_chat"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
         </span>
       </div>
     </div>
@@ -1394,6 +1402,18 @@
           </div>
         </label>
 
+        <!-- Option: Auto-collapse sidebar during recording -->
+        <label class="switch-row">
+          <div class="switch-row-left">
+            <span class="switch-row-title" data-i18n="pref_video_autohide_sidebar">Tự động thu gọn sidebar khi quay / chụp</span>
+            <span class="switch-row-desc" data-i18n="pref_video_autohide_sidebar_desc">Thu gọn ScholarFlow để không che màn hình và tự mở lại khi hoàn thành.</span>
+          </div>
+          <div class="custom-switch">
+            <input type="checkbox" id="video-pref-autohide-sidebar" checked>
+            <span class="switch-slider"></span>
+          </div>
+        </label>
+
         <!-- 3. Option: Resolution, FPS & Countdown Row -->
         <div class="row" style="margin-bottom:0;">
           <div class="col form-group" style="margin-bottom:0;">
@@ -1447,6 +1467,11 @@
         <span data-i18n="btn_start_record">Bắt đầu quay video</span>
       </button>
 
+      <button class="btn btn-secondary" id="btn-open-record-studio" style="width:100%; padding:8px 10px; margin-top:6px; border-color:rgba(56,189,248,0.4); background:rgba(2,132,199,0.12); color:#38bdf8; display:flex; align-items:center; justify-content:center; gap:6px; font-size:12px; font-weight:600;" title="Mở Studio nổi độc lập để tự đóng sidebar, giữ tab web bung rộng chuẩn tỷ lệ 16:9" data-i18n-title="tip_record_studio">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+        <span data-i18n="btn_record_studio">Quay 16:9 Cửa sổ nổi</span>
+      </button>
+
       <!-- Active recording status bar -->
       <div id="recording-active-bar" style="display:none; margin-top:8px; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.35); border-radius:8px; padding:10px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
@@ -1455,7 +1480,12 @@
             <span data-i18n="lbl_recording_active">ĐANG QUAY:</span>
             <span id="record-timer" style="font-family:ui-monospace, monospace; color:#ffffff; font-size:13px;">00:00</span>
           </div>
-          <span id="record-audio-status" style="font-size:10.5px; color:#cbd5e1;" data-i18n="lbl_no_audio">(Không âm thanh)</span>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span id="record-audio-status" style="font-size:10.5px; color:#cbd5e1;" data-i18n="lbl_no_audio">(Không âm thanh)</span>
+            <button type="button" id="btn-toggle-recording-collapse" class="btn-text-small" style="font-size:10.5px; padding:2px 7px; border:1px solid rgba(255,255,255,0.2); border-radius:4px; color:#cbd5e1; background:rgba(255,255,255,0.08); cursor:pointer;">
+              ↕ <span data-i18n="btn_toggle_collapse">Thu gọn / Mở rộng</span>
+            </button>
+          </div>
         </div>
         <div class="actions-row" style="margin-bottom:0;">
           <button class="btn btn-success" id="btn-stop-record" style="flex:2; padding:7px;">
@@ -1464,6 +1494,10 @@
           <button class="btn btn-danger" id="btn-cancel-record" style="flex:1; padding:7px;">
             <span data-i18n="btn_cancel_record">✕ Hủy</span>
           </button>
+        </div>
+        <div style="font-size:10px; color:#94a3b8; margin-top:6px; display:flex; justify-content:space-between; padding-top:4px; border-top:1px solid rgba(255,255,255,0.08);">
+          <span>Alt + S: Dừng quay</span>
+          <span>Alt + P: Tạm dừng</span>
         </div>
       </div>
 
@@ -3580,12 +3614,19 @@
         </div>
         <span class="custom-switch"><input type="checkbox" id="sec-dm-toggle"><span class="switch-slider"></span></span>
       </label>
-      <label class="switch-row" for="sec-dm-auto" style="margin-bottom:0;">
+      <label class="switch-row" for="sec-dm-auto">
         <div class="switch-row-left">
           <span class="switch-row-title" data-i18n="dm_auto">Bỏ qua trang đã có nền tối</span>
           <span class="switch-row-desc" data-i18n="dm_auto_desc">Tự phát hiện site dark-native (GitHub, YouTube...) để không invert 2 lần</span>
         </div>
         <span class="custom-switch"><input type="checkbox" id="sec-dm-auto"><span class="switch-slider"></span></span>
+      </label>
+      <label class="switch-row" for="sec-dm-preserve" style="margin-bottom:0;">
+        <div class="switch-row-left">
+          <span class="switch-row-title" data-i18n="dm_preserve_brand">Bảo tồn Header, Footer &amp; Logo</span>
+          <span class="switch-row-desc" data-i18n="dm_preserve_brand_desc">Giữ nguyên màu gốc cho thanh Header, Footer và Logo thương hiệu</span>
+        </div>
+        <span class="custom-switch"><input type="checkbox" id="sec-dm-preserve"><span class="switch-slider"></span></span>
       </label>
     </div>
 
@@ -3633,6 +3674,10 @@
             <button id="btn-sec-dm-site" class="btn-text-small dm-btn" data-i18n="dm_this_on">Tối trang này</button>
             <button id="btn-sec-dm-force" class="btn-text-small dm-btn" data-i18n="dm_force_on">Ép tối</button>
           </span>
+        </div>
+        <div id="sec-dm-detect-row" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; font-size:10px;">
+          <span id="sec-dm-detect-badge" class="dm-detect-badge" style="display:none;"></span>
+          <button id="btn-sec-dm-rescan" class="dm-mini" type="button" style="margin-top:0; margin-left:auto;" data-i18n-title="dm_rescan_tip" title="Quét lại giao diện trang">↺</button>
         </div>
         <div class="dm-tune-group">
           <div class="dm-slider" style="--dm-acc:#94a3b8;">

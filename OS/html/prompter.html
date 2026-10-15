@@ -1,174 +1,316 @@
 <!DOCTYPE html>
-<html>
+<html data-theme="cyan">
 <head>
   <meta charset="utf-8">
   <title>ScholarFlow - Teleprompter</title>
   <link rel="stylesheet" href="../css/base/variables.css">
-  <link rel="stylesheet" href="../css/popup.css">
   <style>
     :root {
       --prompter-font: 22px;
       --prompter-speed: 1;
     }
-    body {
-      background: #0f172a;
-      color: #f8fafc;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+    * {
+      box-sizing: border-box;
       margin: 0;
+      padding: 0;
+    }
+    html, body {
+      width: 100vw;
       height: 100vh;
+      background: #090e17;
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      margin: 0;
+      padding: 0;
       display: flex;
       flex-direction: column;
-      box-sizing: border-box;
       overflow: hidden;
+      user-select: none;
     }
+
+    /* Modern Two-Tier Toolbar */
     #prompter-toolbar {
+      display: flex;
+      flex-direction: column;
+      background: rgba(15, 23, 42, 0.96);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(12px);
+      flex-shrink: 0;
+      z-index: 10;
+    }
+
+    /* Row 1: Actions */
+    .prompter-actions-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 12px;
+    }
+    .prompter-btn-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    #prompter-toolbar button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      background: rgba(30, 41, 59, 0.85);
+      color: #e2e8f0;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 6px;
+      padding: 5px 12px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+      height: 28px;
+    }
+    #prompter-toolbar button:hover {
+      background: rgba(51, 65, 85, 0.95);
+      border-color: rgba(255, 255, 255, 0.25);
+      color: #ffffff;
+    }
+    #prompter-toolbar button:active {
+      transform: scale(0.98);
+    }
+
+    /* Primary Play/Pause Button */
+    #prompter-toolbar button.primary {
+      background: linear-gradient(135deg, #0284c7 0%, #38bdf8 100%);
+      color: #041426;
+      border: 1px solid #7dd3fc;
+      font-weight: 700;
+      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.4);
+    }
+    #prompter-toolbar button.primary:hover {
+      background: linear-gradient(135deg, #0369a1 0%, #0ea5e9 100%);
+      box-shadow: 0 3px 12px rgba(2, 132, 199, 0.6);
+      color: #000000;
+    }
+    #prompter-toolbar button.playing {
+      background: linear-gradient(135deg, #d97706 0%, #fbbf24 100%) !important;
+      color: #1a0f00 !important;
+      border-color: #fde68a !important;
+      box-shadow: 0 2px 8px rgba(217, 119, 6, 0.4) !important;
+    }
+    #prompter-toolbar button.is-editing {
+      background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important;
+      color: #ffffff !important;
+      border-color: #6ee7b7 !important;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4) !important;
+    }
+    #prompter-toolbar button.notes-active {
+      background: rgba(56, 189, 248, 0.18);
+      color: #38bdf8;
+      border-color: rgba(56, 189, 248, 0.4);
+    }
+
+    /* Row 2: Sliders & Tuners */
+    .prompter-tuners-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 6px 12px;
+      background: rgba(11, 18, 32, 0.6);
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .prompter-tuner {
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 6px 8px;
-      background: rgba(30, 41, 59, 0.9);
-      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
-      font-size: 11px;
-      flex-wrap: wrap;
+      flex: 1;
+      min-width: 0;
     }
-    #prompter-toolbar button {
-      background: rgba(var(--primary-rgb), 0.15);
-      color: #e0f2fe;
-      border: 1px solid rgba(var(--primary-rgb), 0.35);
-      border-radius: 5px;
-      padding: 4px 9px;
+    .tuner-label {
       font-size: 11px;
-      cursor: pointer;
+      font-weight: 600;
+      color: #94a3b8;
       white-space: nowrap;
+      flex-shrink: 0;
     }
-    #prompter-toolbar button:hover { background: rgba(var(--primary-rgb), 0.3); }
-    #prompter-toolbar button.primary { background: var(--primary); color: #0f172a; font-weight: 700; }
-    #prompter-toolbar .ctl { display: flex; align-items: center; gap: 6px; }
-    #prompter-toolbar .ctl label { color: #94a3b8; font-size: 11px; }
+    .slider-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      min-width: 50px;
+    }
+
+    /* Sleek Range Sliders with Circular Thumbs */
     #prompter-toolbar input[type="range"] {
-      width: 80px;
+      width: 100%;
       -webkit-appearance: none;
       appearance: none;
       background: transparent;
       cursor: pointer;
-      height: 20px;
+      height: 18px;
       margin: 0;
+      outline: none;
     }
     #prompter-toolbar input[type="range"]::-webkit-slider-runnable-track {
       height: 4px;
-      background: linear-gradient(90deg, var(--primary-hover) 0%, var(--primary) var(--range-pct, 50%), rgba(255, 255, 255, 0.12) var(--range-pct, 50%), rgba(255, 255, 255, 0.12) 100%);
+      background: linear-gradient(90deg, #0284c7 0%, #38bdf8 var(--range-pct, 50%), rgba(255, 255, 255, 0.12) var(--range-pct, 50%), rgba(255, 255, 255, 0.12) 100%);
       border-radius: 999px;
       box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
     }
     #prompter-toolbar input[type="range"]::-webkit-slider-thumb {
       -webkit-appearance: none;
       appearance: none;
-      margin-top: -6.5px;
-      height: 17px;
-      width: 28px;
-      border-radius: 999px;
-      background: linear-gradient(135deg, var(--primary-hover) 0%, var(--primary) 100%);
-      border: 1px solid rgba(255, 255, 255, 0.45);
-      box-shadow: 0 2px 6px rgba(14, 165, 233, 0.45), 0 0 10px rgba(var(--primary-rgb), 0.35);
+      margin-top: -5px;
+      height: 14px;
+      width: 14px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 2.5px solid #38bdf8;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5), 0 0 6px rgba(56, 189, 248, 0.4);
       cursor: grab;
-      transition: box-shadow 0.15s ease, border-color 0.15s ease;
+      transition: transform 0.12s ease, border-color 0.12s ease;
     }
     #prompter-toolbar input[type="range"]:hover::-webkit-slider-thumb {
-      border-color: #ffffff;
-      box-shadow: 0 2px 10px rgba(var(--primary-rgb), 0.75), 0 0 16px rgba(var(--primary-rgb), 0.6);
+      transform: scale(1.2);
+      border-color: #0284c7;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6), 0 0 10px rgba(56, 189, 248, 0.7);
     }
     #prompter-toolbar input[type="range"]::-moz-range-track {
       height: 4px;
       background: rgba(255, 255, 255, 0.12);
       border-radius: 999px;
-      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
     }
     #prompter-toolbar input[type="range"]::-moz-range-progress {
       height: 4px;
-      background: linear-gradient(90deg, var(--primary-hover) 0%, var(--primary) 100%);
+      background: linear-gradient(90deg, #0284c7 0%, #38bdf8 100%);
       border-radius: 999px;
-      box-shadow: 0 0 6px rgba(var(--primary-rgb), 0.55);
     }
     #prompter-toolbar input[type="range"]::-moz-range-thumb {
-      height: 17px;
-      width: 28px;
-      border-radius: 999px;
-      background: linear-gradient(135deg, var(--primary-hover) 0%, var(--primary) 100%);
-      border: 1px solid rgba(255, 255, 255, 0.45);
-      box-shadow: 0 2px 6px rgba(14, 165, 233, 0.45), 0 0 10px rgba(var(--primary-rgb), 0.35);
+      height: 14px;
+      width: 14px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 2.5px solid #38bdf8;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
       cursor: grab;
     }
-    #prompter-toolbar .val {
-      color:var(--primary);
+
+    .val-badge {
+      color: #38bdf8;
       min-width: 36px;
       text-align: center;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 9.5px;
-      font-weight: 800;
-      background: rgba(var(--primary-rgb), 0.08);
-      border: 1px solid rgba(var(--primary-rgb), 0.25);
-      border-radius: 999px;
+      font-size: 10.5px;
+      font-weight: 700;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: 6px;
       padding: 1px 5px;
-      box-shadow: 0 0 6px rgba(var(--primary-rgb), 0.15);
+      flex-shrink: 0;
     }
+
+    /* Reading Stage */
     #prompter-stage {
       flex: 1 1 auto;
       overflow-y: auto;
       overflow-x: hidden;
-      padding: 14px 20px 40px;
+      padding: 20px 24px 60px;
       box-sizing: border-box;
-      background: linear-gradient(180deg, #0b1220 0%, #0f1e35 100%);
+      background: linear-gradient(180deg, #080d17 0%, #0c1524 100%);
       scrollbar-width: thin;
       scrollbar-color: #334155 transparent;
+      user-select: text;
     }
+
     .prompter-para {
       white-space: pre-wrap;
       font-size: var(--prompter-font);
-      line-height: 1.55;
-      margin: 0 0 18px;
-      color: #cbd5e1;
-      opacity: 0.55;
-      padding: 2px 10px;
+      line-height: 1.6;
+      margin: 0 0 20px;
+      color: #94a3b8;
+      opacity: 0.6;
+      padding: 4px 12px;
       border-left: 3px solid transparent;
-      border-radius: 4px;
-      transition: opacity 0.2s, background 0.2s;
+      border-radius: 6px;
+      transition: opacity 0.2s ease, background 0.2s ease, color 0.2s ease;
+      cursor: pointer;
+    }
+    .prompter-para:hover {
+      opacity: 0.85;
+      color: #cbd5e1;
     }
     .prompter-para.active {
       opacity: 1;
       color: #f8fafc;
-      background: rgba(14, 165, 233, 0.12);
-      border-left-color: var(--primary);
+      background: rgba(56, 189, 248, 0.12);
+      border-left-color: #38bdf8;
+      box-shadow: inset 0 0 16px rgba(56, 189, 248, 0.05);
     }
+
+    #prompter-track {
+      position: relative;
+      min-height: 100%;
+    }
+
+    /* Editor View */
+    #prompter-editor {
+      display: none;
+      width: 100%;
+      height: 100%;
+      min-height: 320px;
+      box-sizing: border-box;
+      background: rgba(11, 18, 32, 0.98);
+      color: #f8fafc;
+      font-size: 15px;
+      line-height: 1.65;
+      padding: 16px;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 8px;
+      resize: none;
+      outline: none;
+      font-family: inherit;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    }
+    #prompter-editor.open {
+      display: block;
+    }
+
+    /* Karaoke / Now-Reading Bottom Bar */
     #prompter-now {
-      padding: 6px 12px;
-      font-size: 12.5px;
-      color: var(--primary-light);
-      background: rgba(15, 30, 53, 0.95);
-      border-top: 1px solid rgba(var(--primary-rgb), 0.25);
-      border-radius: 0;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #38bdf8;
+      background: rgba(15, 23, 42, 0.96);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      flex: none;
-      min-height: 26px;
+      flex-shrink: 0;
+      min-height: 28px;
       box-sizing: border-box;
     }
+
+    /* Notes Drawer */
     #prompter-notes {
       display: none;
-      flex: 0 1 42%;
+      flex: 0 1 40%;
+      max-height: 200px;
       overflow-y: auto;
-      background: rgba(15, 30, 53, 0.95);
-      border-top: 1px solid rgba(148, 163, 184, 0.2);
-      padding: 6px 8px;
+      background: rgba(11, 18, 32, 0.96);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 8px 12px;
     }
-    #prompter-notes.open { display: block; }
+    #prompter-notes.open {
+      display: block;
+    }
     #prompter-notes-title {
       font-size: 10.5px;
       font-weight: 700;
-      color: #94a3b8;
+      color: #64748b;
       text-transform: uppercase;
-      letter-spacing: 0.4px;
-      margin-bottom: 5px;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
     }
     .prompter-note {
       font-size: 12px;
@@ -182,33 +324,154 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .prompter-note.active { color: #f8fafc; background: rgba(14, 165, 233, 0.2); }
+    .prompter-note:hover {
+      color: #94a3b8;
+      background: rgba(255, 255, 255, 0.04);
+    }
+    .prompter-note.active {
+      color: #f8fafc;
+      background: rgba(56, 189, 248, 0.18);
+    }
+
+    /* Empty State */
     #prompter-empty {
-      color: #64748b;
-      padding: 30px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 50px 20px;
       text-align: center;
+    }
+    .empty-icon-wrap {
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 14px;
+      color: #38bdf8;
+    }
+    .empty-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-bottom: 4px;
+    }
+    .empty-desc {
+      font-size: 12px;
+      color: #94a3b8;
+      max-width: 280px;
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+    .empty-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 16px;
+      background: linear-gradient(135deg, #0284c7 0%, #38bdf8 100%);
+      border: 1px solid #7dd3fc;
+      border-radius: 6px;
+      color: #041426;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);
+      transition: all 0.15s ease;
+    }
+    .empty-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(2, 132, 199, 0.5);
+    }
+
+    #prompter-loading {
+      color: #94a3b8;
+      text-align: center;
+      padding: 40px 10px;
       font-size: 13px;
+    }
+
+    @keyframes studioPulse {
+      0%, 100% { opacity: 0.3; transform: scale(0.9); }
+      50% { opacity: 1; transform: scale(1.15); box-shadow: 0 0 8px #ef4444; }
+    }
+    .studio-dot.is-recording {
+      opacity: 1 !important;
+      animation: studioPulse 1.2s infinite ease-in-out;
+    }
+    body.prompter-collapsed #prompter-stage,
+    body.prompter-collapsed #prompter-now,
+    body.prompter-collapsed #prompter-notes,
+    body.prompter-collapsed .prompter-tuners-row,
+    body.prompter-collapsed .prompter-actions-row {
+      display: none !important;
     }
   </style>
 </head>
 <body>
   <div id="prompter-toolbar">
-    <button id="prompter-toggle" class="primary" data-i18n="prompter_play">Phát</button>
-    <button id="prompter-reset" data-i18n="prompter_reset">Về đầu</button>
-    <div class="ctl">
-      <label data-i18n="prompter_speed">Tốc độ</label>
-      <input type="range" id="prompter-speed" min="0.3" max="3" step="0.1" value="1" title="0.3x - 3x" aria-label="Speed">
-      <span id="prompter-speed-val" class="val">1.0x</span>
+    <!-- Studio Header Row -->
+    <div id="studio-record-bar" style="display:flex; align-items:center; justify-content:space-between; padding:7px 12px; background:linear-gradient(90deg, #091322 0%, #0f1d32 100%); border-bottom:1px solid rgba(56,189,248,0.25);">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span id="studio-pulse-dot" class="studio-dot" style="width:8px; height:8px; border-radius:50%; background:#ef4444; display:inline-block; opacity:0.4;"></span>
+        <span id="studio-timer" style="font-family:ui-monospace, monospace; font-size:13px; font-weight:700; color:#f8fafc; letter-spacing:0.5px;">00:00</span>
+        <span id="studio-badge" style="font-size:10px; font-weight:700; color:#38bdf8; background:rgba(56,189,248,0.12); padding:2px 6px; border-radius:4px; border:1px solid rgba(56,189,248,0.25);">16:9 STUDIO</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:6px;">
+        <button id="studio-btn-record" type="button" class="studio-btn-rec" title="Bắt đầu quay chuẩn 16:9" data-i18n-title="rec_studio_rec" style="background:linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color:#ffffff; border:1px solid #f87171; font-weight:700; box-shadow:0 2px 6px rgba(239,68,68,0.35);">
+          🔴 <span id="studio-record-text" data-i18n="rec_studio_rec">Bắt đầu quay</span>
+        </button>
+        <button id="studio-btn-pause" type="button" style="display:none;" title="Tạm dừng / Tiếp tục" data-i18n-title="rec_studio_pause">
+          ⏸️ <span id="studio-pause-text" data-i18n="rec_studio_pause">Tạm dừng</span>
+        </button>
+        <button id="studio-btn-stop" type="button" style="display:none; background:#d97706; color:#ffffff; border-color:#fbbf24;" title="Dừng và lưu video (Alt+S)" data-i18n-title="rec_studio_stop">
+          ⏹️ <span data-i18n="rec_studio_stop">Dừng &amp; Lưu</span>
+        </button>
+        <button id="studio-btn-mic" type="button" title="Thu âm Mic" data-i18n-title="rec_studio_mic_on" style="padding:5px 8px;">
+          🎙️
+        </button>
+        <button id="studio-btn-toggle-prompter" type="button" title="Ẩn/Hiện kịch bản chữ" data-i18n-title="rec_studio_toggle_prompter" style="padding:5px 8px;">
+          📄
+        </button>
+      </div>
     </div>
-    <div class="ctl">
-      <label data-i18n="prompter_font">Cỡ chữ</label>
-      <input type="range" id="prompter-font" min="12" max="44" step="1" value="22" aria-label="Font size">
-      <span id="prompter-font-val" class="val">22</span>
+
+    <!-- Row 1: Actions -->
+    <div class="prompter-actions-row">
+      <div class="prompter-btn-group">
+        <button id="prompter-toggle" class="primary" data-i18n="prompter_play">Phát</button>
+        <button id="prompter-reset" data-i18n="prompter_reset">Về đầu</button>
+        <button id="prompter-edit-toggle" data-i18n="prompter_edit">Sửa</button>
+      </div>
+      <div class="prompter-btn-group">
+        <button id="prompter-notes-toggle" data-i18n="prompter_notes">Ghi chú</button>
+      </div>
     </div>
-    <button id="prompter-notes-toggle" data-i18n="prompter_notes">Ghi chú</button>
+
+    <!-- Row 2: Tuners -->
+    <div class="prompter-tuners-row">
+      <div class="prompter-tuner">
+        <label class="tuner-label" data-i18n="prompter_speed">Tốc độ</label>
+        <div class="slider-wrapper">
+          <input type="range" id="prompter-speed" min="0.3" max="3" step="0.1" value="1" title="0.3x - 3x" aria-label="Speed">
+        </div>
+        <span id="prompter-speed-val" class="val-badge">1.0x</span>
+      </div>
+      <div class="prompter-tuner">
+        <label class="tuner-label" data-i18n="prompter_font">Cỡ chữ</label>
+        <div class="slider-wrapper">
+          <input type="range" id="prompter-font" min="12" max="44" step="1" value="22" aria-label="Font size">
+        </div>
+        <span id="prompter-font-val" class="val-badge">22</span>
+      </div>
+    </div>
   </div>
 
   <div id="prompter-stage">
+    <textarea id="prompter-editor" placeholder="Nhập hoặc dán kịch bản vào đây..."></textarea>
     <div id="prompter-track">
       <div id="prompter-loading" data-i18n="script_prompter_loading">Đang tải kịch bản...</div>
     </div>
